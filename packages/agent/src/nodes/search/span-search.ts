@@ -7,7 +7,7 @@ import {
   TaskComplete,
   taskCompleteToolSchema,
 } from "../../types";
-import { formatChatHistory, formatLogResults, validateToolCalls } from "../utils";
+import { formatChatHistory, formatSpanResults, validateToolCalls } from "../utils";
 
 export interface SpanSearchAgentResponse {
   newSpanContext: Record<string, string>;
@@ -17,8 +17,8 @@ export interface SpanSearchAgentResponse {
 export type SpanSearchResponse = SpanSearchInput | TaskComplete;
 
 function createSpanSearchPrompt(params: {
-  issue: string;
-  request: string;
+  query: string;
+  spanRequest: string;
   chatHistory: string[];
   labelsMap: string;
   platformSpecificInstructions: string;
@@ -26,7 +26,7 @@ function createSpanSearchPrompt(params: {
   const currentTime = new Date().toISOString();
 
   return `
-You are an expert AI assistant that assists engineers debugging production issues. You specifically help by finding spans relevant to the issue and a description of what types of spans are needed.
+You are an expert AI assistant that assists engineers debugging production issues. You specifically help by finding spans relevant to the user's query and a description of what types of spans are needed.
 
 Given a request for the type of spans needed for the investigation, your task is to fetch spans relevant to the request. You will do so by outputting your intermediate reasoning for explaining what action you will take and then outputting either a \`SpanSearchInput\` to read spans from observability API OR a \`TaskComplete\` to indicate that you have completed the request.
 
@@ -51,9 +51,9 @@ Use the below history of context you already gathered to inform what steps you w
 ${currentTime}
 </current_time>
 
-<issue>
-${params.issue}
-</issue>
+<query>
+${params.query}
+</query>
 
 <labels>
 ${params.labelsMap}
@@ -63,9 +63,9 @@ ${params.labelsMap}
 ${params.platformSpecificInstructions}
 </platform_specific_instructions>
 
-<request>
-${params.request}
-</request>
+<span_request>
+${params.spanRequest}
+</span_request>
 
 <context_previously_gathered>
 ${formatChatHistory(params.chatHistory)}
@@ -74,24 +74,25 @@ ${formatChatHistory(params.chatHistory)}
 }
 
 function createSpanSearchSummaryPrompt(params: {
-  issue: string;
+  query: string;
   spanResults: Record<string, string>;
 }): string {
   const currentTime = new Date().toISOString();
 
   return `
-Given a set of span queries and the fetched span results, concisely summarize the main findings as they pertain to the provided issue and how we may debug the issue. Your response should be a short sequence of events you've observed through the spans that are relevant to the issue.
+Given a set span queries and the fetched span results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event. Your response just be a short sequence of events you've observed through the spans that are relevant to the user query. The response should not be speculative about any root causes or further issues—it should objectively summarize what the spans show.
+
 
 <current_time>
 ${currentTime}
 </current_time>
 
-<issue>
-${params.issue}
-</issue>
+<query>
+${params.query}
+</query>
 
 <span_results>
-${formatLogResults(params.spanResults)}
+${formatSpanResults(params.spanResults)}
 </span_results>
 `;
 }
@@ -106,8 +107,8 @@ class SpanSearch {
   }
 
   async invoke(params: {
-    issue: string;
-    request: string;
+    query: string;
+    spanRequest: string;
     chatHistory: string[];
     labelsMap: string;
   }): Promise<SpanSearchResponse> {
@@ -173,9 +174,8 @@ export class SpanSearchAgent {
   }
 
   async invoke(params: {
-    firstPass: boolean;
-    issue: string;
-    request: string;
+    query: string;
+    spanRequest: string;
     labelsMap: string;
     chatHistory: string[];
     maxIters?: number;
@@ -188,8 +188,8 @@ export class SpanSearchAgent {
 
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
       response = await this.spanSearch.invoke({
-        issue: params.issue,
-        request: params.request,
+        query: params.query,
+        spanRequest: params.spanRequest,
         chatHistory: chatHistory,
         labelsMap: params.labelsMap,
       });
@@ -240,7 +240,7 @@ export class SpanSearchAgent {
     }
 
     const summaryPrompt = createSpanSearchSummaryPrompt({
-      issue: params.issue,
+      query: params.query,
       spanResults,
     });
 

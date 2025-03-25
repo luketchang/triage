@@ -183,7 +183,6 @@ export class LogSearchAgent {
   }
 
   async invoke(params: {
-    firstPass: boolean;
     query: string;
     logRequest: string;
     labelsMap: string;
