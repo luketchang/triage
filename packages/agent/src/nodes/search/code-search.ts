@@ -7,7 +7,7 @@ import {
   logger,
   parseToolCallResultToString,
 } from "@triage/common";
-import { formatChatHistory } from "./utils";
+import { formatChatHistory } from "../utils";
 
 const DEFAULT_TOOL_CALL_TIMEOUT = 1200 * 1000; // 20 minutes
 export interface ClaudeCodeSearchResponse {

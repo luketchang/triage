@@ -6,8 +6,8 @@ import {
   spanSearchInputToolSchema,
   TaskComplete,
   taskCompleteToolSchema,
-} from "../types";
-import { formatChatHistory, formatLogResults, validateToolCalls } from "./utils";
+} from "../../types";
+import { formatChatHistory, formatLogResults, validateToolCalls } from "../utils";
 
 export interface SpanSearchAgentResponse {
   newSpanContext: Record<string, string>;

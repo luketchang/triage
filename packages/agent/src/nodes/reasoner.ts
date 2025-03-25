@@ -28,6 +28,7 @@ function createPrompt(params: {
   labelsMap: string;
   codeContext: Record<string, string>;
   logContext: Record<string, string>;
+  spanContext: Record<string, string>;
   chatHistory: string[];
 }) {
   return `
@@ -60,6 +61,10 @@ ${formatChatHistory(params.chatHistory)}
 ${formatLogResults(params.logContext)}
 </previous_log_context>
 
+<previous_span_context>
+${formatLogResults(params.spanContext)}
+</previous_span_context>
+
 <previous_code_context>
 ${formatCodeMap(params.codeContext)}
 </previous_code_context>
@@ -76,7 +81,7 @@ ${params.codebaseOverview}
 ${params.fileTree}
 </file_tree>
 
-If you feel like you received sufficient context or that some of the code or spans you retrieved are not relevant to the issue, you should attempt to choose a root cause analysis.
+If you feel like you received sufficient context or that some of the code, logs, or spans you retrieved are not relevant to the issue, you should attempt to choose a root cause analysis.
 `;
 }
 
@@ -95,6 +100,7 @@ export class Reasoner {
     labelsMap: string;
     codeContext: Record<string, string>;
     logContext: Record<string, string>;
+    spanContext: Record<string, string>;
     chatHistory: string[];
   }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about issue: ${params.issue}`);
