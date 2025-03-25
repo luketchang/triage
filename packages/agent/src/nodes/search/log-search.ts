@@ -17,7 +17,7 @@ export interface LogSearchAgentResponse {
 export type LogSearchResponse = LogSearchInput | TaskComplete;
 
 function createLogSearchPrompt(params: {
-  issue: string;
+  query: string;
   logRequest: string;
   chatHistory: string[];
   labelsMap: string;
@@ -32,13 +32,13 @@ Given a request for the type of logs needed for the investigation and all availa
 
 Query Synthesis Instructions:
 - Keep the keywords and regexes simple
-- Avoid speculating on keywords or phrases that are not directly related to the issue, do not assume the existence of keywords/phrases unless its specified in the issue or you have seen it in previous logs
+- Avoid speculating on keywords or phrases that are not directly related to the user's query, do not assume the existence of keywords/phrases unless its specified in the query or you have seen it in previous logs
 - Refer to the <platform_specific_instructions> for more information on how to formulate your query
 
 Information Gathering Process:
-- First identify the occurrence of the issue being described and find an identifier (e.g. username or id) to trace the sequence of events. Do not move on until you have found the area where the issue occurred.
+- First identify the occurrence of the issue/event being described and find an identifier (e.g. username or id) to trace the sequence of events. Do not move on until you have found the area where the issue/event occurred.
 - Then identifiers that are likely to trace a sequence of events in your keyword searches (e.g. usernames or ids) to filter out noise and get a broader picture of sequence of events. If you do not filter on these identifiers, there will be too many logs and it will be difficult to tell which events lead to others.
-- Try to obtain a broad view of logs that captures the issue, context surrounding it, and from multiple services to get a full picture.
+- Try to obtain a broad view of logs that captures the issue/event, context surrounding it, and from multiple services to get a full picture.
 - Once you have outlined a coherent/comprehensive sequence of events in your reasoning, you can output a \`TaskComplete\` to indicate that you have completed the request.
 
 Tips:
@@ -47,7 +47,7 @@ Tips:
 - The timezone for start and end dates should be Universal Coordinated Time (UTC).
 - If log search is not returning results (as may show in message history), adjust/widen query as needed.
 - Do not output \`TaskComplete\` until you have a broad view of logs captured at least once across multiple services to get full view.
-- Be generous on the time ranges and give +/- 15 minutes to ensure you capture the issue (e.g. 4:10am to 4:40am if issue was at 4:25am).
+- Be generous on the time ranges and give +/- 15 minutes to ensure you capture the issue/event (e.g. 4:10am to 4:40am if issue/event was at 4:25am).
 - If there is source code in your previously gathered context, use it to inform your log search.
 
 Rules:
@@ -69,9 +69,9 @@ ${params.platformSpecificInstructions}
 
 Use the below history of context you already gathered to inform what steps you will take next. DO NOT make the same query twice, it is a waste of the context window.
 
-<issue>
-${params.issue}
-</issue>
+<query>
+${params.query}
+</query>
 
 <log_request>
 ${params.logRequest}
@@ -84,21 +84,21 @@ ${formatChatHistory(params.chatHistory)}
 }
 
 function createLogSearchSummaryPrompt(params: {
-  issue: string;
+  query: string;
   logResults: Record<string, string>;
 }): string {
   const currentTime = new Date().toISOString();
 
   return `
-Given a set log queries and the fetched log results, concisely summarize the main findings as they pertain to the provided issue and how we may debug the issue. Your response just be a short sequence of events you've observed through the logs that are relevant to the issue.
+Given a set log queries and the fetched log results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event. Your response just be a short sequence of events you've observed through the logs that are relevant to the user query.
 
 <current_time>
 ${currentTime}
 </current_time>
 
-<issue>
-${params.issue}
-</issue>
+<query>
+${params.query}
+</query>
 
 <log_results>
 ${formatLogResults(params.logResults)}
@@ -116,7 +116,7 @@ class LogSearch {
   }
 
   async invoke(params: {
-    issue: string;
+    query: string;
     logRequest: string;
     chatHistory: string[];
     labelsMap: string;
@@ -184,7 +184,7 @@ export class LogSearchAgent {
 
   async invoke(params: {
     firstPass: boolean;
-    issue: string;
+    query: string;
     logRequest: string;
     labelsMap: string;
     chatHistory: string[];
@@ -198,7 +198,7 @@ export class LogSearchAgent {
 
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
       response = await this.logSearch.invoke({
-        issue: params.issue,
+        query: params.query,
         logRequest: params.logRequest,
         chatHistory: chatHistory,
         labelsMap: params.labelsMap,
@@ -249,7 +249,7 @@ export class LogSearchAgent {
     }
 
     const summaryPrompt = createLogSearchSummaryPrompt({
-      issue: params.issue,
+      query: params.query,
       logResults,
     });
 

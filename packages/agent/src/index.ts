@@ -44,7 +44,7 @@ export interface OncallAgentState {
   codeRequest: string | null;
   spanRequest: string | null;
   logRequest: string | null;
-  issue: string;
+  query: string;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
@@ -78,7 +78,7 @@ export class OnCallAgent {
     logger.info("\n\n" + "=".repeat(25) + " Planner " + "=".repeat(25));
     const planner = new Planner(this.reasoningModel);
     const response = await planner.invoke({
-      issue: state.issue,
+      query: state.query,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
@@ -123,7 +123,7 @@ export class OnCallAgent {
     );
     const response = await logSearchAgent.invoke({
       firstPass: state.firstPass,
-      issue: state.issue,
+      query: state.query,
       logRequest: state.logRequest ?? "",
       labelsMap: state.labelsMap,
       chatHistory: state.chatHistory,
@@ -177,7 +177,7 @@ export class OnCallAgent {
     );
     const response = await spanSearchAgent.invoke({
       firstPass: state.firstPass,
-      issue: state.issue,
+      issue: state.query,
       request: state.spanRequest ?? "",
       labelsMap: state.labelsMap,
       chatHistory: state.chatHistory,
@@ -208,7 +208,7 @@ export class OnCallAgent {
     logger.info("\n\n" + "=".repeat(25) + " Code Search " + "=".repeat(25));
     const codeSearch = new CodeSearch(state.repoPath);
     const response = await codeSearch.invoke({
-      issue: state.issue,
+      issue: state.query,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
@@ -231,7 +231,7 @@ export class OnCallAgent {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
     const reasoner = new Reasoner(this.reasoningModel);
     const response = await reasoner.invoke({
-      issue: state.issue,
+      issue: state.query,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
@@ -301,7 +301,7 @@ export class OnCallAgent {
     logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
     const reviewer = new Reviewer(this.reasoningModel);
     const response = await reviewer.invoke({
-      issue: state.issue,
+      issue: state.query,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
@@ -379,7 +379,7 @@ export class OnCallAgent {
       codeRequest: null,
       spanRequest: null,
       logRequest: null,
-      issue: "",
+      query: "",
       repoPath: "",
       codebaseOverview: "",
       fileTree: "",
@@ -481,11 +481,11 @@ async function main() {
 
   const fileTree = loadFileTree(repoPath);
 
-  const issue = `Getting some "order not found" errors in the payments service which is causing crashes. One of these happened around 03-06-2025 around 4am UTC. Why is this happening? DO NOT USE SPAN SEARCH, NOT ALLOWED.`;
+  const query = `Getting some "order not found" errors in the payments service which is causing crashes. One of these happened around 03-06-2025 around 4am UTC. Why is this happening? DO NOT USE SPAN SEARCH, NOT ALLOWED.`;
 
   const state: OncallAgentState = {
     firstPass: true,
-    issue,
+    query,
     repoPath,
     codebaseOverview: overview,
     fileTree,

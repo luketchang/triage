@@ -14,7 +14,7 @@ export interface PlannerResponse {
   logRequest: string;
 }
 const createPrompt = (params: {
-  issue: string;
+  query: string;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
@@ -23,9 +23,9 @@ const createPrompt = (params: {
   const currentTime = new Date().toISOString();
 
   return `
-You are an expert AI assistant that assists engineers debugging production issues. You specifically take a description of an issue and convert that into requests for code, logs, and spans you think will reveal the root cause of the issue.
+You are an expert AI assistant that assists engineers debugging production issues. You specifically take a query (question or issue description from an oncall engineer) and convert that into requests for code, logs, and spans you think will reveal the answer to the question or root cause of the issue.
 
-Given the issue encountered, an overview of the codebase, the codebase file tree, and potential log labels, your task is output requests for what code and logs you think will reveal the root cause of the issue. Output a \`CodeRequest\` describing what parts you system/codebase you need code from and a \`LogRequest\` describing what logs you need (e.g. from which services, relating to what, around what time).
+Given the query, an overview of the codebase, the codebase file tree, and potential log labels, your task is output requests for what code, logs, and spans you think will reveal the answer to the query. Output a \`CodeRequest\` describing what parts you system/codebase you need code from, a \`LogRequest\` describing what logs you need (e.g. from which services, relating to what, around what time), and a \`SpanRequest\` describing what spans you need (e.g. from which services, relating to what, around what time).
 
 Guidelines:
 - Be very concise and direct in your requests (see examples below)
@@ -35,8 +35,10 @@ Guidelines:
 Examples:
 - CodeRequest description: "Output code from the recommendations and posts services."
 - LogRequest description: "Output logs from the recommendations and posts services around the time of the issue (+/- 15m)."
+- SpanRequest description: "Output spans from the recommendations and posts services around the time of the issue (+/- 15m)."
 
 - DO NOT use XML tags
+
 <current_time>
 ${currentTime}
 </current_time>
@@ -57,14 +59,15 @@ ${params.fileTree}
 ${params.labelsMap}
 </labels>
 
-<issue>
-${params.issue}
-</issue>
+<query>
+${params.query}
+</query>
 
 Return your response in the following format, using XML tags:
 <response>
 <code_request>
 Your CodeRequest description here
+</code_request>
 </code_request>
 <span_request>
 Your SpanRequest description here
@@ -87,13 +90,13 @@ export class Planner {
   }
 
   async invoke(params: {
-    issue: string;
+    query: string;
     repoPath: string;
     codebaseOverview: string;
     fileTree: string;
     labelsMap: string;
   }): Promise<PlannerResponse> {
-    logger.info(`Planning step with issue: ${params.issue}`);
+    logger.info(`Planning step with query: ${params.query}`);
 
     const prompt = createPrompt(params);
 

@@ -1,7 +1,7 @@
 import { z, infer as zInfer } from "zod";
 
 const REASONING_DESCRIPTION =
-  "Intermediate reasoning to explain what is happening to the system given your existing context. Then enumerate the other services you may want to look into and ask if you are missing context on those services.";
+  "Intermediate reasoning to explain what is happening to the system given your existing context. Be concise and outline what you see as a sequence of events in a numbered list. Then enumerate the other services you may want to look into and ask if you are missing context on those services.";
 
 const rereviewRequestSchema = z.object({
   reasoning: z.string().describe("Reasoning process behind your hypothesis."),
