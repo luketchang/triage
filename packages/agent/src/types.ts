@@ -1,7 +1,7 @@
 import { z, infer as zInfer } from "zod";
 
-const REASONING_DESCRIPTION =
-  "Intermediate reasoning to explain what is happening to the system given your existing context. Be concise and outline what you see as a sequence of events in a numbered list. Then enumerate the other services you may want to look into and ask if you are missing context on those services.";
+const BASIC_REASONING_DESCRIPTION =
+  "Intermediate reasoning where you can explain what you see from the given information and what information you need next (if any).";
 
 const rereviewRequestSchema = z.object({
   reasoning: z.string().describe("Reasoning process behind your hypothesis."),
@@ -32,7 +32,7 @@ export const codeRequestSchema = z.object({
     .describe(
       "A directive to search for/explore a specific area of code. This should be a specific request for service, module, package, etc."
     ),
-  reasoning: z.string().describe(REASONING_DESCRIPTION),
+  reasoning: z.string().describe(BASIC_REASONING_DESCRIPTION),
 });
 
 export type CodeRequest = zInfer<typeof codeRequestSchema> & { type: "codeRequest" };
@@ -49,7 +49,7 @@ export const spanRequestSchema = z.object({
     .describe(
       "A directive to search for/explore a type of set of spans. This should be a specific request for spans related to specific events, services, etc."
     ),
-  reasoning: z.string().describe(REASONING_DESCRIPTION),
+  reasoning: z.string().describe(BASIC_REASONING_DESCRIPTION),
 });
 
 export type SpanRequest = zInfer<typeof spanRequestSchema> & { type: "spanRequest" };
@@ -66,7 +66,7 @@ export const logRequestSchema = z.object({
     .describe(
       "A directive to search for/explore specific logs. This should be a specific request for logs related to specific events, services, etc."
     ),
-  reasoning: z.string().describe(REASONING_DESCRIPTION),
+  reasoning: z.string().describe(BASIC_REASONING_DESCRIPTION),
 });
 
 export type LogRequest = zInfer<typeof logRequestSchema> & { type: "logRequest" };
@@ -108,7 +108,11 @@ export const logSearchInputSchema = z.object({
     ),
   query: z.string().describe("Log search query in the observability platform query language"),
   limit: z.number().describe("Maximum number of log lines to return, default to 500"),
-  reasoning: z.string().describe(REASONING_DESCRIPTION),
+  reasoning: z
+    .string()
+    .describe(
+      "Objectively outline what you observe in the logs as sequence of events formatted as a numbered list. Then enumerate what other services or areas of the logs you may want to explore next if you are missing context."
+    ),
 });
 
 export type LogSearchInput = zInfer<typeof logSearchInputSchema> & { type: "logSearchInput" };
@@ -125,7 +129,11 @@ export const spanSearchInputSchema = z.object({
   end: z.string().describe("End time in ISO format or human-readable format (will be converted)"),
   query: z.string().describe("Span search query in the observability platform query language"),
   pageLimit: z.number().describe("Maximum number of spans in the response."),
-  reasoning: z.string().describe(REASONING_DESCRIPTION),
+  reasoning: z
+    .string()
+    .describe(
+      "Objectively outline what you observe in the spans as sequence of events formatted as a numbered list. Then enumerate what other services or areas of the spans you may want to explore next if you are missing context."
+    ),
 });
 
 export type SpanSearchInput = zInfer<typeof spanSearchInputSchema> & { type: "spanSearchInput" };
@@ -137,7 +145,11 @@ export const spanSearchInputToolSchema = {
 
 export const codeSearchInputSchema = z.object({
   directoryPath: z.string().describe("The directory to search in"),
-  reasoning: z.string().describe(REASONING_DESCRIPTION),
+  reasoning: z
+    .string()
+    .describe(
+      "Objectively outline what you observe in the code so far as a numbered list. Then enumerate what other services or areas of the code you may want to explore next if you are missing context."
+    ),
 });
 
 export type CodeSearchInput = zInfer<typeof codeSearchInputSchema> & { type: "codeSearchInput" };
