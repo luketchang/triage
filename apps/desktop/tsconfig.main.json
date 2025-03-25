@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@triage/common": ["../packages/common/dist"],
+      "@triage/observability": ["../packages/observability/dist"],
+      "@triage/agent": ["../packages/agent/dist"],
+      "@triage/config": ["../packages/config/dist"]
+    },
+    "outDir": "dist",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "ES2022",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": false,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/main.ts", "src/preload.ts"]
+}

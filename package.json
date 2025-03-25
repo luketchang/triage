@@ -1,0 +1,49 @@
+{
+  "name": "triage",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm clean-tsbuildinfo && turbo clean && turbo build",
+    "clean": "turbo clean",
+    "clean-tsbuildinfo": "find . -name \"tsconfig.tsbuildinfo\" -delete",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "prepare": "husky",
+    "lint-staged": "lint-staged",
+    "desktop:dev": "cd apps/desktop && pnpm dev",
+    "desktop:build": "cd apps/desktop && pnpm build"
+  },
+  "lint-staged": {
+    "apps/api/**/*.{js,ts,tsx}": [
+      "prettier --write",
+      "cd apps/api && pnpm run lint"
+    ],
+    "packages/ui/**/*.{js,ts,tsx}": [
+      "prettier --write",
+      "cd packages/ui && pnpm run lint"
+    ],
+    "apps/web/**/*.{js,ts,tsx}": [
+      "prettier --write",
+      "cd apps/web && pnpm run lint"
+    ],
+    "apps/desktop/**/*.{js,ts,tsx}": [
+      "prettier --write",
+      "cd apps/desktop && pnpm run lint"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.0",
+    "turbo": "^2.4.2",
+    "typescript": "5.7.3"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": "^20.18.0"
+  }
+}
