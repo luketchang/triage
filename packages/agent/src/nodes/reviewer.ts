@@ -21,7 +21,7 @@ import { formatChatHistory, formatLogResults, validateToolCalls } from "./utils"
 export type ReviewerResponse = TaskComplete | CodeRequest | SpanRequest | LogRequest;
 
 function createPrompt(params: {
-  issue: string;
+  query: string;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
@@ -35,7 +35,7 @@ function createPrompt(params: {
   return `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review root cause analyses produced by another engineer and reason about its validity and whether or the engineer is missing key context from the codebase, logs or spans. You are not able to make any modifications to the system—you can only reason about the system by looking at the context and walking through sequences of events.
 
-Given the issue encountered, an overview of the codebase, the codebase file tree, the files you've previously read, potential log labels, previously gathered log and code context, and a proposed root cause analysis, your task is to question the validity of the analysis.
+Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, the files you've previously read, potential log labels, previously gathered log and code context, and a proposed root cause analysis, your task is to question the validity of the analysis.
 
 Go through the checklist below to determine if the analysis is too imprecise or if it has not considered enough thorough context. 
 
@@ -43,19 +43,19 @@ Question Checklist:
 - Is the analysis too vague or speculative without providing a real root cause?
 - Does the analysis use speculative words like "might" without providing a real root cause?
 - Has the engineer focused on a narrow aspect of the problem/codebase without considering the full picture?
-- Could the source of the issue be in other parts of the logs or code not discussed in the analysis?
-- Are there other services/sources of the issue that have not been considered (e.g. we've only considered logs from the failing service, but what about logs from other services?)?
-- Do the logs retrieved fail to actually reveal a sequence of events that leads to the issue?
-- Do the logs reveal any additional issues or context that might have been overlooked?
-- Does the code match the issues revealed in the logs?
+- Could the source of the issue/event be in other parts of the logs or code not discussed in the analysis?
+- Are there other services/sources of the issue/event that have not been considered (e.g. we've only considered logs from the failing service, but what about logs from other services?)?
+- Do the logs retrieved fail to actually reveal a sequence of events that leads to the issue/event?
+- Do the logs reveal any additional issues/events or context that might have been overlooked?
+- Does the code match the issues/events revealed in the logs?
 
 If the answer to any of the above questions is "yes", output either a \`LogRequest\` for additional logs or a \`CodeRequest\` for additional code. Note, you must pick one tool to output. 
 
 Guidelines:
 - Exact Sequence Requirement: Ensure that the root cause analysis includes an explicit, exact sequence of events that directly correlates with the provided context, logs, or code. If the analysis does not clearly describe such a sequence, do not output TaskComplete; instead, output a \`CodeRequest\` or \`LogRequest\` to guide next explorations.
 - Consider if the proposed analysis only examines a small part of the system. If you suspect the root cause lies upstream or downstream, specify which other services should be investigated.
-- When reviewing logs, verify that you have a comprehensive view rather than just logs from the error occurrence. The logs should encompass the activities of other services leading up to the issue.
-- Recognize that in microservices architectures, the failing service might not be the source of the issue; it could be caused by another interacting service. Outline any additional hypotheses regarding missing context.
+- When reviewing logs, verify that you have a comprehensive view rather than just logs from the error occurrence. The logs should encompass the activities of other services leading up to the issue/event.
+- Recognize that in microservices architectures, the failing service might not be the source of the issue/event; it could be caused by another interacting service. Outline any additional hypotheses regarding missing context.
 - If further code context is required, output a \`CodeRequest\` detailing what types of code should be examined. Similarly, if more logs are needed, output a \`LogRequest\` specifying the required log types.
 - Task Completion Condition: Only output TaskComplete if you are convinced that the engineer's root cause analysis is correct, precise, and is not speculative but actually complete.
 - The analysis must not rely on vague root causes like "Synchronization Issues" or "Performance Issues." It must be concrete, actionable, and provide an exact fix. Otherwise, it is a sign that further context is needed.
@@ -90,9 +90,9 @@ ${params.labelsMap}
 ${formatChatHistory(params.chatHistory)}
 </chat_history>
 
-<issue>
-${params.issue}
-</issue>
+<query>
+${params.query}
+</query>
 
 <code_context>
 ${formatCodeMap(params.codeContext)}
@@ -116,7 +116,7 @@ export class Reviewer {
   }
 
   async invoke(params: {
-    issue: string;
+    query: string;
     repoPath: string;
     codebaseOverview: string;
     fileTree: string;
@@ -126,7 +126,7 @@ export class Reviewer {
     logContext: Record<string, string>;
     rootCauseAnalysis: string;
   }): Promise<ReviewerResponse> {
-    logger.info(`Reviewing root cause analysis for issue: ${params.issue}`);
+    logger.info(`Reviewing root cause analysis for query: ${params.query}`);
 
     const prompt = createPrompt(params);
     logger.info(`Reviewer prompt: ${prompt}`);
