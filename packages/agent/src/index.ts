@@ -122,7 +122,6 @@ export class OnCallAgent {
       this.observabilityPlatform
     );
     const response = await logSearchAgent.invoke({
-      firstPass: state.firstPass,
       query: state.query,
       logRequest: state.logRequest ?? "",
       labelsMap: state.labelsMap,
@@ -176,9 +175,8 @@ export class OnCallAgent {
       this.observabilityPlatform
     );
     const response = await spanSearchAgent.invoke({
-      firstPass: state.firstPass,
-      issue: state.query,
-      request: state.spanRequest ?? "",
+      query: state.query,
+      spanRequest: state.spanRequest ?? "",
       labelsMap: state.labelsMap,
       chatHistory: state.chatHistory,
     });
@@ -208,7 +206,7 @@ export class OnCallAgent {
     logger.info("\n\n" + "=".repeat(25) + " Code Search " + "=".repeat(25));
     const codeSearch = new CodeSearch(state.repoPath);
     const response = await codeSearch.invoke({
-      issue: state.query,
+      query: state.query,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,

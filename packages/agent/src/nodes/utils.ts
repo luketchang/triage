@@ -28,3 +28,9 @@ export function formatLogResults(logResults: Record<string, string>): string {
     .map(([key, value]) => `${key}\n${value}`)
     .join("\n\n");
 }
+
+export function formatSpanResults(spanResults: Record<string, string>): string {
+  return Object.entries(spanResults)
+    .map(([key, value]) => `${key}\n${value}`)
+    .join("\n\n");
+}

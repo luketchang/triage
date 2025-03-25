@@ -108,6 +108,7 @@ export const logSearchInputSchema = z.object({
     ),
   query: z.string().describe("Log search query in the observability platform query language"),
   limit: z.number().describe("Maximum number of log lines to return, default to 500"),
+  // TODO: this is still not producing numbered lists
   reasoning: z
     .string()
     .describe(
