@@ -7,12 +7,12 @@ import {
 import { Command as CommanderCommand } from "commander";
 import fs from "fs/promises";
 import { z } from "zod";
-import { CodeSearch } from "./nodes/code-search";
-import { LogSearchAgent } from "./nodes/log-search";
 import { Planner } from "./nodes/planner";
 import { Reasoner } from "./nodes/reasoner";
 import { Reviewer } from "./nodes/reviewer";
-import { SpanSearchAgent } from "./nodes/span-search";
+import { CodeSearch } from "./nodes/search/code-search";
+import { LogSearchAgent } from "./nodes/search/log-search";
+import { SpanSearchAgent } from "./nodes/search/span-search";
 
 // Type definitions
 type NodeType =
@@ -238,6 +238,7 @@ export class OnCallAgent {
       chatHistory: state.chatHistory,
       codeContext: state.codeContext,
       logContext: state.logContext,
+      spanContext: state.spanContext,
       labelsMap: state.labelsMap,
     });
 
@@ -528,11 +529,10 @@ void main()
 export * from "./types";
 
 // Export nodes
-export * from "./nodes/code-search";
-export * from "./nodes/log-search";
-export * from "./nodes/naive-code-search";
 export * from "./nodes/planner";
 export * from "./nodes/reasoner";
 export * from "./nodes/reviewer";
-export * from "./nodes/span-search";
+export * from "./nodes/search/code-search";
+export * from "./nodes/search/log-search";
+export * from "./nodes/search/span-search";
 export * from "./nodes/utils";

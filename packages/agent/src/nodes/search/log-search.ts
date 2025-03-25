@@ -6,8 +6,8 @@ import {
   logSearchInputToolSchema,
   TaskComplete,
   taskCompleteToolSchema,
-} from "../types";
-import { formatChatHistory, formatLogResults, validateToolCalls } from "./utils";
+} from "../../types";
+import { formatChatHistory, formatLogResults, validateToolCalls } from "../utils";
 
 export interface LogSearchAgentResponse {
   newLogContext: Record<string, string>;
