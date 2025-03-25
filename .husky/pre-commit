@@ -1,0 +1,2 @@
+# Run lint-staged from the repository root
+pnpm lint-staged

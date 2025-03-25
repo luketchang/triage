@@ -1,0 +1,34 @@
+{
+  "name": "@triage/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/main.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.main.json && vite build",
+    "dev": "cross-env NODE_ENV=development concurrently \"tsc -p tsconfig.main.json -w\" \"vite\" \"electron .\"",
+    "start": "electron .",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "lint": "eslint \"src/**/*.{js,ts,tsx}\" --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@triage/agent": "workspace:*",
+    "@triage/common": "workspace:*",
+    "@triage/observability": "workspace:*",
+    "electron": "^29.1.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "eslint": "^9.20.0",
+    "typescript": "5.7.3",
+    "vite": "^5.0.12"
+  }
+}
