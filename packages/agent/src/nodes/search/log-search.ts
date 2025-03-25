@@ -90,7 +90,7 @@ function createLogSearchSummaryPrompt(params: {
   const currentTime = new Date().toISOString();
 
   return `
-Given a set log queries and the fetched log results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event. Your response just be a short sequence of events you've observed through the logs that are relevant to the user query.
+Given a set log queries and the fetched log results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event. Your response just be a short sequence of events you've observed through the logs that are relevant to the user query. The response should not be speculative about any root causes or further issues—it should objectively summarize what the logs show.
 
 <current_time>
 ${currentTime}
