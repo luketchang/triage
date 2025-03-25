@@ -21,7 +21,7 @@ import { formatChatHistory, formatLogResults, validateToolCalls } from "./utils"
 export type ReasoningResponse = RootCauseAnalysis | CodeRequest | SpanRequest | LogRequest;
 
 function createPrompt(params: {
-  issue: string;
+  query: string;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
@@ -34,14 +34,14 @@ function createPrompt(params: {
   return `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review context gathered from logs, spans, and code and question whether or not you have enough information. If you do you output a proposed root cause analysis. If not, you output a request for more logs or code. You are not able to make any modifications to the system—you can only reason about the system by looking at the context and walking through sequences of events.
 
-Given the issue encountered, an overview of the codebase, the codebase file tree, potential log labels, and previously gathered log and code context, your task is to question whether or not you have enough context. 
+Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, potential log labels, and previously gathered log and code context, your task is to question whether or not you have enough context. 
 
 Go through the below checklist to check if the analysis is too imprecise or has not considered enough thorough context. If any of the below questions reveal that you have not considered enough parts of the codebase or have not retrieved logs thoroughly enough, output a CodeRequest or SpanRequest respectively.
 
 Question Checklist (just to list a few):
-- Have you considered all services that could be causing the issue or have you only looked at the one demonstrating problems?
-- Do you retrieved logs show a wide enough picture of the various services or does your context only show logs from the actual issue occurrence for a single service?
-- Does your code match any issues revealed in the logs?
+- Have you considered all services that could be causing the issue/event or have you only looked at the one demonstrating problems?
+- Do you retrieved logs show a wide enough picture of the various services or does your context only show logs from the actual issue/event occurrence for a single service?
+- Does your code match any issues/events revealed in the logs?
 
 Guidelines:
 - Especially in microservices, the root cause may not be in the service that is failing, but in another service that is interacting with it. Consider other services when reasoning about what you may be missing and write down those hypotheses.
@@ -49,9 +49,9 @@ Guidelines:
 - The root cause analysis, if you choose you are ready, should not cite some vague root cause like "Synchronization Issues" or "Performance Issues" it must be very concrete and have an actionable and exact fix. If not, then that is a sign the analysis is missing information and needs more context.
 - Your root cause analysis should explicitly cite the blocks of code and where the are issues, adding inline comments to code to denote where the problem is.
 
-<issue>
-${params.issue}
-</issue>
+<query>
+${params.query}
+</query>
 
 <chat_history>
 ${formatChatHistory(params.chatHistory)}
@@ -93,7 +93,7 @@ export class Reasoner {
   }
 
   async invoke(params: {
-    issue: string;
+    query: string;
     repoPath: string;
     codebaseOverview: string;
     fileTree: string;
@@ -103,7 +103,7 @@ export class Reasoner {
     spanContext: Record<string, string>;
     chatHistory: string[];
   }): Promise<ReasoningResponse> {
-    logger.info(`Reasoning about issue: ${params.issue}`);
+    logger.info(`Reasoning about query: ${params.query}`);
 
     const prompt = createPrompt(params);
 

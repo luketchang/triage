@@ -1,4 +1,4 @@
-import { loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
+import { AnthropicModel, loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -229,7 +229,7 @@ export class OnCallAgent {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
     const reasoner = new Reasoner(this.reasoningModel);
     const response = await reasoner.invoke({
-      issue: state.query,
+      query: state.query,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
@@ -299,7 +299,7 @@ export class OnCallAgent {
     logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
     const reviewer = new Reviewer(this.reasoningModel);
     const response = await reviewer.invoke({
-      issue: state.query,
+      query: state.query,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
@@ -316,7 +316,7 @@ export class OnCallAgent {
     if (response.type === "codeRequest") {
       return {
         type: "next",
-        destination: "reasoner",
+        destination: "codeSearch",
         update: {
           chatHistory: [...state.chatHistory, response.reasoning],
           codeRequest: response.request,
@@ -499,7 +499,7 @@ async function main() {
   };
 
   const reasoningModel = OpenAIModel.O3_MINI;
-  const fastModel = OpenAIModel.GPT_4O;
+  const fastModel = AnthropicModel.CLAUDE_3_7_SONNET_20250219;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 
