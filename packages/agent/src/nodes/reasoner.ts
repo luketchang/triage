@@ -45,7 +45,8 @@ Question Checklist (just to list a few):
 
 Guidelines:
 - Especially in microservices, the root cause may not be in the service that is failing, but in another service that is interacting with it. Consider other services when reasoning about what you may be missing and write down those hypotheses.
-- Only output a RootCauseAnalysis if you have enough context, have reasoned about a confident answer, and did not previously indicate to yourself that there are other services/hypotheses to explore.
+- Reflect on 5-7 different possible sources of the issue/event and use that as a guide to your reasoning process before outputting a \`RootCauseAnalysis\`.
+- Only output a \`RootCauseAnalysis\` if you have enough context, have reasoned about a confident answer, and did not previously indicate to yourself that there are other services/hypotheses to explore.
 - The root cause analysis, if you choose you are ready, should not cite some vague root cause like "Synchronization Issues" or "Performance Issues" it must be very concrete and have an actionable and exact fix. If not, then that is a sign the analysis is missing information and needs more context.
 - Your root cause analysis should explicitly cite the blocks of code and where the are issues, adding inline comments to code to denote where the problem is.
 

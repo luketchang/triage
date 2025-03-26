@@ -31,6 +31,7 @@ Guidelines:
 - Be very concise and direct in your requests (see examples below)
 - Don't just narrow in directly in on just the code or logs directly related to or displaying the issue, but consider other services you think are most likely to also be involved.
 - Do not specify specific files or lines of code, keep requests higher level.
+- Especially in microservices, the root cause may not be in the service that is failing, but in another service that is interacting with it. Consider other services.
 
 Examples:
 - CodeRequest description: "Output code from the recommendations and posts services."

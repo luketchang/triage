@@ -159,3 +159,23 @@ export const codeSearchInputToolSchema = {
   description: "Input parameters for searching code.",
   parameters: codeSearchInputSchema,
 };
+
+export const logPostprocessingSchema = z.object({
+  relevantQueries: z
+    .array(z.string())
+    .describe("List of query strings who's results support the answer."),
+  summary: z
+    .string()
+    .describe(
+      "Summary of the log results in the form of a sequence of events (numberedlist). Be precise and sequential."
+    ),
+});
+
+export type LogPostprocessing = zInfer<typeof logPostprocessingSchema> & {
+  type: "logPostprocessing";
+};
+
+export const logPostprocessingToolSchema = {
+  description: "Postprocess log results.",
+  parameters: logPostprocessingSchema,
+};
