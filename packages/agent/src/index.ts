@@ -2,6 +2,7 @@ import { AnthropicModel, loadFileTree, logger, Model, OpenAIModel } from "@triag
 import {
   getObservabilityPlatform,
   IntegrationType,
+  Log,
   ObservabilityPlatform,
 } from "@triage/observability";
 import { Command as CommanderCommand } from "commander";
@@ -57,7 +58,7 @@ export interface OncallAgentState {
   labelsMap: string;
   chatHistory: string[];
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, string>;
+  logContext: Map<LogSearchInput, Log[]>;
   spanContext: Map<SpanSearchInput, string>;
   logPostprocessingResult: LogPostprocessing | null;
   codePostprocessingResult: CodePostprocessing | null;

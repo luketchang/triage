@@ -5,6 +5,7 @@ import {
   logger,
   OpenAIModel,
 } from "@triage/common";
+import { Log } from "@triage/observability";
 import { generateText } from "ai";
 import {
   CodeRequest,
@@ -29,7 +30,7 @@ function createPrompt(params: {
   fileTree: string;
   labelsMap: string;
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, string>;
+  logContext: Map<LogSearchInput, Log[]>;
   spanContext: Map<SpanSearchInput, string>;
   chatHistory: string[];
 }) {
@@ -102,7 +103,7 @@ export class Reasoner {
     fileTree: string;
     labelsMap: string;
     codeContext: Map<string, string>;
-    logContext: Map<LogSearchInput, string>;
+    logContext: Map<LogSearchInput, Log[]>;
     spanContext: Map<SpanSearchInput, string>;
     chatHistory: string[];
   }): Promise<ReasoningResponse> {

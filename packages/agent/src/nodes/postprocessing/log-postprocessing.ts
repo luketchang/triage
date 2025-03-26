@@ -1,4 +1,5 @@
 import { AnthropicModel, getModelWrapper, logger, OpenAIModel } from "@triage/common";
+import { Log } from "@triage/observability";
 import { generateText } from "ai";
 import {
   LogPostprocessing as LogPostprocessingResponse,
@@ -11,7 +12,7 @@ function createPrompt(params: {
   query: string;
   codebaseOverview: string;
   labelsMap: string;
-  logContext: Map<LogSearchInput, string>;
+  logContext: Map<LogSearchInput, Log[]>;
   answer: string;
 }) {
   return `
@@ -61,7 +62,7 @@ export class LogPostprocessor {
     query: string;
     codebaseOverview: string;
     labelsMap: string;
-    logContext: Map<LogSearchInput, string>;
+    logContext: Map<LogSearchInput, Log[]>;
     answer: string;
   }): Promise<LogPostprocessingResponse> {
     logger.info(`Log postprocessing for query: ${params.query}`);
