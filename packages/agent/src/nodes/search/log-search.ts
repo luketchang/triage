@@ -1,5 +1,5 @@
 import { AnthropicModel, getModelWrapper, logger, OpenAIModel } from "@triage/common";
-import { ObservabilityPlatform } from "@triage/observability";
+import { Log, ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
 import {
   LogSearchInput,
@@ -10,7 +10,7 @@ import {
 import { formatChatHistory, formatLogResults, validateToolCalls } from "../utils";
 
 export interface LogSearchAgentResponse {
-  newLogContext: Map<LogSearchInput, string>;
+  newLogContext: Map<LogSearchInput, Log[]>;
   summary: string;
 }
 
@@ -85,7 +85,7 @@ ${formatChatHistory(params.chatHistory)}
 
 function createLogSearchSummaryPrompt(params: {
   query: string;
-  logResults: Map<LogSearchInput, string>;
+  logResults: Map<LogSearchInput, Log[]>;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -190,7 +190,7 @@ export class LogSearchAgent {
     maxIters?: number;
   }): Promise<LogSearchAgentResponse> {
     let chatHistory: string[] = params.chatHistory;
-    let logResults: Map<LogSearchInput, string> = new Map();
+    let logResults: Map<LogSearchInput, Log[]> = new Map();
     let response: LogSearchResponse | null = null;
     const maxIters = params.maxIters || 10;
     let currentIter = 0;
@@ -219,14 +219,16 @@ export class LogSearchAgent {
             limit: response.limit,
           });
 
-          logger.info(`Log search results:\n${logContext}`);
+          const formattedLogs = formatLogResults(new Map([[response, logContext]]));
+
+          logger.info(`Log search results:\n${formattedLogs}`);
           logger.info(`Log search reasoning:\n${response.reasoning}`);
 
           logResults.set(response, logContext);
 
           chatHistory = [
             ...chatHistory,
-            `Query: ${response.query}.\nStart: ${response.start}.\nEnd: ${response.end}.\nLimit: ${response.limit}.\nLog search results:\n${logContext}\nReasoning:\n${response.reasoning}`,
+            `Query: ${response.query}.\nStart: ${response.start}.\nEnd: ${response.end}.\nLimit: ${response.limit}.\nLog search results:\n${formattedLogs}\nReasoning:\n${response.reasoning}`,
           ];
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);

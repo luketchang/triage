@@ -1,3 +1,4 @@
+import { Log } from "@triage/observability";
 import { ToolCallUnion, ToolSet } from "ai";
 import { LogSearchInput, SpanSearchInput } from "../types";
 
@@ -32,9 +33,17 @@ export function formatSpanQuery(spanQuery: Partial<SpanSearchInput>): string {
   return `Query: ${spanQuery.query}\nStart: ${spanQuery.start}\nEnd: ${spanQuery.end}\nLimit: ${spanQuery.pageLimit}`;
 }
 
-export function formatLogResults(logResults: Map<LogSearchInput, string>): string {
+export function formatLogResults(logResults: Map<LogSearchInput, Log[]>): string {
   return Array.from(logResults.entries())
-    .map(([input, value]) => `${formatLogQuery(input)}\nResults: ${value}`)
+    .map(([input, logs]) => {
+      const formattedLogs = logs
+        .map(
+          (log) => `[${log.timestamp}] ${log.level.toUpperCase()} [${log.service}] ${log.message}`
+        )
+        .join("\n");
+
+      return `${formatLogQuery(input)}\nResults:\n${formattedLogs || "No logs found"}`;
+    })
     .join("\n\n");
 }
 

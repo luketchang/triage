@@ -5,6 +5,7 @@ import {
   logger,
   OpenAIModel,
 } from "@triage/common";
+import { Log } from "@triage/observability";
 import { generateText } from "ai";
 import {
   CodeRequest,
@@ -29,7 +30,7 @@ function createPrompt(params: {
   labelsMap: string;
   chatHistory: string[];
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, string>;
+  logContext: Map<LogSearchInput, Log[]>;
   rootCauseAnalysis: string;
 }) {
   // TODO: add back SpanRequest
@@ -124,7 +125,7 @@ export class Reviewer {
     labelsMap: string;
     chatHistory: string[];
     codeContext: Map<string, string>;
-    logContext: Map<LogSearchInput, string>;
+    logContext: Map<LogSearchInput, Log[]>;
     rootCauseAnalysis: string;
   }): Promise<ReviewerResponse> {
     logger.info(`Reviewing root cause analysis for query: ${params.query}`);
