@@ -2,7 +2,7 @@ import { logger, renderFacetValues, toUnixNano } from "@triage/common";
 import { config } from "@triage/config";
 import axios from "axios";
 import { ObservabilityPlatform } from "./observability.interface";
-import { IntegrationType } from "./types";
+import { IntegrationType, Log } from "./types";
 
 export const GRAFANA_LOG_SEARCH_INSTRUCTIONS = `
 - Use Grafana LogQL queries to search for logs.
@@ -135,7 +135,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursor?: string;
-  }): Promise<string> {
+  }): Promise<Log[]> {
     try {
       const url = `${this.baseUrl}/loki/api/v1/query_range`;
 
@@ -159,11 +159,10 @@ export class GrafanaPlatform implements ObservabilityPlatform {
       });
 
       if (response.status === 200 && response.data && response.data.status === "success") {
-        const formattedLogs = this.formatLogs(response.data);
-        return formattedLogs;
+        return this.formatLogs(response.data);
       } else {
         logger.info("No logs found or query returned an error");
-        return "No logs found matching the query.";
+        return [];
       }
     } catch (error) {
       let errorMessage = "Unknown error";
@@ -180,16 +179,16 @@ export class GrafanaPlatform implements ObservabilityPlatform {
       }
 
       logger.error(`Error executing Loki query: ${String(errorMessage)}`);
-      return `Error executing Loki query: ${String(errorMessage)}`;
+      return [];
     }
   }
 
-  private formatLogs(logsResponse: GrafanaLogsResponse): string {
+  private formatLogs(logsResponse: GrafanaLogsResponse): Log[] {
     if (!logsResponse || !logsResponse.data || !logsResponse.data.result) {
-      return "No logs found matching the query.";
+      return [];
     }
 
-    const formattedLogs: string[] = [];
+    const formattedLogs: Log[] = [];
 
     for (const streamObj of logsResponse.data.result) {
       const streamLabels = streamObj.stream || {};
@@ -198,16 +197,19 @@ export class GrafanaPlatform implements ObservabilityPlatform {
       for (const [nsTs, rawLine] of streamObj.values || []) {
         let logMessage: string;
         let logTime: string | null = null;
+        let parsedJson: Record<string, any> | null = null;
 
         try {
           interface ParsedLog {
             log?: string;
             time?: string;
+            level?: string;
+            [key: string]: any;
           }
 
-          const parsedLine = JSON.parse(rawLine) as ParsedLog;
-          logMessage = parsedLine.log || rawLine;
-          logTime = parsedLine.time || null;
+          parsedJson = JSON.parse(rawLine) as ParsedLog;
+          logMessage = parsedJson.log || rawLine;
+          logTime = parsedJson.time || null;
         } catch {
           // Omit unused error variable
           logMessage = rawLine;
@@ -223,14 +225,48 @@ export class GrafanaPlatform implements ObservabilityPlatform {
           finalTime = date.toISOString();
         }
 
-        formattedLogs.push(`${service} ${finalTime} ${logMessage.trim()}`);
+        // Build metadata from stream labels and any additional parsed fields
+        const metadata: Record<string, string> = {
+          source: "grafana",
+        };
+
+        // Add all stream labels as metadata
+        Object.entries(streamLabels).forEach(([key, value]) => {
+          if (key !== GrafanaDefaultFacetsLogs.SERVICE_NAME) {
+            metadata[key] = value;
+          }
+        });
+
+        // Add any additional fields from parsed JSON
+        if (parsedJson) {
+          Object.entries(parsedJson).forEach(([key, value]) => {
+            if (!["log", "time", "level", "message"].includes(key) && typeof value === "string") {
+              metadata[key] = value;
+            }
+          });
+        }
+
+        // Determine log level
+        let level = "info"; // Default level
+        if (parsedJson?.level) {
+          level = parsedJson.level;
+        } else if (logMessage.toLowerCase().includes("error")) {
+          level = "error";
+        } else if (logMessage.toLowerCase().includes("warn")) {
+          level = "warn";
+        }
+
+        formattedLogs.push({
+          timestamp: finalTime,
+          message: logMessage.trim(),
+          service,
+          level,
+          metadata,
+        });
       }
     }
 
-    if (formattedLogs.length === 0) {
-      return "No logs found matching the query.";
-    }
-    return formattedLogs.join("\n");
+    return formattedLogs;
   }
 
   async fetchLabelsLogs(start: string, end: string): Promise<string[]> {
