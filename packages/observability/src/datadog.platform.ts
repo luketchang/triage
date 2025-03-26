@@ -2,7 +2,7 @@ import { client, v2 } from "@datadog/datadog-api-client";
 import { logger, renderFacetValues } from "@triage/common";
 import { config } from "@triage/config";
 import { ObservabilityPlatform } from "./observability.interface";
-import { IntegrationType } from "./types";
+import { IntegrationType, Log } from "./types";
 
 const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
 # Datadog APM Query Syntax Tutorial
@@ -429,7 +429,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursor?: string;
-  }): Promise<string> {
+  }): Promise<Log[]> {
     try {
       logger.info(`Executing GET query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);
@@ -450,28 +450,56 @@ export class DatadogPlatform implements ObservabilityPlatform {
         return this.formatLogs(response.data);
       } else {
         logger.info("No logs found with GET endpoint");
-        return "No logs found matching the query.";
+        return [];
       }
     } catch (error) {
       logger.error(`Error executing log query with GET endpoint: ${error}`);
-      return "Error executing log query with GET endpoint.";
+      return [];
     }
   }
 
-  private formatLogs(logs: v2.Log[]): string {
+  private formatLogs(logs: v2.Log[]): Log[] {
     if (!logs || logs.length === 0) {
-      return "No logs found matching the query.";
+      return [];
     }
-    return logs
-      .map((log) => {
-        const serviceName = log.attributes?.service || "N/A";
-        const timestamp = log.attributes?.timestamp
-          ? new Date(log.attributes.timestamp).toISOString()
-          : "N/A";
-        const content = log.attributes?.message || "N/A";
 
-        return `${serviceName} ${timestamp} ${content}`;
-      })
-      .join("\n");
+    return logs.map((log) => {
+      const serviceName = log.attributes?.service || "N/A";
+      const timestamp = log.attributes?.timestamp
+        ? new Date(log.attributes.timestamp).toISOString()
+        : new Date().toISOString();
+      const content = log.attributes?.message || "N/A";
+      const level = log.attributes?.status || "info";
+
+      // Extract all other attributes as metadata
+      const metadata: Record<string, string> = {};
+      if (log.attributes) {
+        Object.entries(log.attributes).forEach(([key, value]) => {
+          // Skip attributes we've already used in main fields
+          if (
+            !["service", "timestamp", "message", "status"].includes(key) &&
+            typeof value === "string"
+          ) {
+            metadata[key] = value;
+          }
+        });
+      }
+
+      // Add host if available
+      if (log.attributes?.host) {
+        metadata["host"] = String(log.attributes.host);
+      }
+
+      // Add Datadog-specific tags
+      metadata["source"] = "datadog";
+
+      return {
+        timestamp,
+        message: content,
+        service: serviceName,
+        level,
+        metadata,
+      };
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { IntegrationType } from "./types";
+import { IntegrationType, Log } from "./types";
 
 /**
  * Interface for observability platforms like Datadog and Grafana
@@ -59,7 +59,7 @@ export interface ObservabilityPlatform {
    * @param end - End time in ISO format
    * @param limit - Maximum number of results to return
    * @param pageCursor - Cursor for pagination
-   * @returns JSON string representation of logs
+   * @returns Array of Log objects
    */
   fetchLogs(params: {
     query: string;
@@ -67,5 +67,5 @@ export interface ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursor?: string;
-  }): Promise<string>;
+  }): Promise<Log[]>;
 }
