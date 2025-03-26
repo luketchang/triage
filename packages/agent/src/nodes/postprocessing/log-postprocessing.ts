@@ -67,8 +67,6 @@ export class LogPostprocessor {
 
     const prompt = createPrompt(params);
 
-    logger.info(`Log postprocessing prompt:\n${prompt}`);
-
     const { toolCalls } = await generateText({
       model: getModelWrapper(this.llm),
       prompt: prompt,

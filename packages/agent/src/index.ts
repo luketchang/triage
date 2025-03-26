@@ -1,4 +1,4 @@
-import { loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
+import { AnthropicModel, loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -8,13 +8,14 @@ import { Command as CommanderCommand } from "commander";
 import fs from "fs/promises";
 import { z } from "zod";
 import { Planner } from "./nodes/planner";
+import { CodePostprocessor } from "./nodes/postprocessing/code-postprocessing";
 import { LogPostprocessor } from "./nodes/postprocessing/log-postprocessing";
 import { Reasoner } from "./nodes/reasoner";
 import { Reviewer } from "./nodes/reviewer";
 import { CodeSearch } from "./nodes/search/code-search";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { SpanSearchAgent } from "./nodes/search/span-search";
-import { LogPostprocessing } from "./types";
+import { CodePostprocessing, LogPostprocessing } from "./types";
 
 // Type definitions
 type NodeType =
@@ -25,6 +26,7 @@ type NodeType =
   | "reasoner"
   | "reviewer"
   | "logPostprocessor"
+  | "codePostprocessor"
   | "END";
 
 interface BaseCommand {
@@ -57,6 +59,7 @@ export interface OncallAgentState {
   logContext: Record<string, string>;
   spanContext: Record<string, string>;
   logPostprocessingResult: LogPostprocessing | null;
+  codePostprocessingResult: CodePostprocessing | null;
   rootCauseAnalysis: string | null;
 }
 
@@ -370,12 +373,35 @@ export class OnCallAgent {
       answer: state.rootCauseAnalysis ?? "",
     });
 
-    logger.info(`Log postprocessing result: ${JSON.stringify(response)}`);
+    logger.info(`Log postprocessing summary: ${response.summary}`);
+    logger.info(`Log postprocessing relevant queries: ${response.relevantQueries}`);
+
+    return {
+      type: "next",
+      destination: "codePostprocessor",
+      update: {
+        logPostprocessingResult: response,
+      },
+    };
+  }
+
+  async postprocessCode(state: OncallAgentState): Promise<Command> {
+    logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
+    const postprocessor = new CodePostprocessor(this.reasoningModel);
+    const response = await postprocessor.invoke({
+      query: state.query,
+      codebaseOverview: state.codebaseOverview,
+      codeContext: state.codeContext,
+      answer: state.rootCauseAnalysis ?? "",
+    });
+
+    logger.info(`Code postprocessing summary: ${response.summary}`);
+    logger.info(`Code postprocessing relevant filepaths: ${response.relevantFilepaths}`);
 
     return {
       type: "end",
       update: {
-        logPostprocessingResult: response,
+        codePostprocessingResult: response,
       },
     };
   }
@@ -390,6 +416,7 @@ export class OnCallAgent {
     nodeMap.set("reasoner", this.reason.bind(this));
     nodeMap.set("reviewer", this.review.bind(this));
     nodeMap.set("logPostprocessor", this.postprocessLogs.bind(this));
+    nodeMap.set("codePostprocessor", this.postprocessCode.bind(this));
 
     return nodeMap;
   }
@@ -414,6 +441,7 @@ export class OnCallAgent {
       logContext: {},
       spanContext: {},
       logPostprocessingResult: null,
+      codePostprocessingResult: null,
       rootCauseAnalysis: null,
       ...input,
     };
@@ -525,10 +553,11 @@ async function main() {
     spanRequest: null,
     logRequest: null,
     logPostprocessingResult: null,
+    codePostprocessingResult: null,
   };
 
   const reasoningModel = OpenAIModel.O3_MINI;
-  const fastModel = OpenAIModel.GPT_4O;
+  const fastModel = AnthropicModel.CLAUDE_3_7_SONNET_20250219;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 

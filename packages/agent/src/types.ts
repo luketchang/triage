@@ -179,3 +179,23 @@ export const logPostprocessingToolSchema = {
   description: "Postprocess log results.",
   parameters: logPostprocessingSchema,
 };
+
+export const codePostprocessingSchema = z.object({
+  relevantFilepaths: z
+    .array(z.string())
+    .describe("List of filepaths that contain relevant code to the answer."),
+  summary: z
+    .string()
+    .describe(
+      "Summary of the relevant code files and how they contribute to the answer. Be precise and sequential."
+    ),
+});
+
+export type CodePostprocessing = zInfer<typeof codePostprocessingSchema> & {
+  type: "codePostprocessing";
+};
+
+export const codePostprocessingToolSchema = {
+  description: "Postprocess code results.",
+  parameters: codePostprocessingSchema,
+};

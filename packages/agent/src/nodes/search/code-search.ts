@@ -83,7 +83,6 @@ export class CodeSearch {
     logger.info(`Searching codebase for query: ${params.query}`);
     const mcpClient = await initMCPClient(this.repoPath);
     const mcpPrompt = createMcpPrompt(params);
-    logger.info(`MCP prompt: ${mcpPrompt}`);
 
     const mcpResponse = await mcpClient.callTool({
       name: "dispatch_agent",
