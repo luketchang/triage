@@ -12,7 +12,7 @@ import { formatChatHistory } from "../utils";
 const DEFAULT_TOOL_CALL_TIMEOUT = 1200 * 1000; // 20 minutes
 
 export interface ClaudeCodeSearchResponse {
-  newFilesRead: Record<string, string>;
+  newFilesRead: Map<string, string>;
   summary: string;
 }
 
@@ -22,7 +22,7 @@ function createMcpPrompt(params: {
   chatHistory: string[];
   repoPath: string;
   codebaseOverview: string;
-  filesRead: Record<string, string>;
+  filesRead: Map<string, string>;
   fileTree: string;
 }): string {
   return `
@@ -33,6 +33,8 @@ Given an user query (about a potential issue/event), previously gathered context
 As you explore the codebase, reflect on 5-7 different possible sources of the issue/event and use that to guide your search along with the code request.
 
 At the end of your search, list all _new_ files you opened/read (not including the ones already in the <previous_files_read> tag) in a comma-separated list wrapped in <new_files_read> tag. This means any file that was opened and read from the codebase during the process of exploring code. Then output a summary of your findings in the <summary> tags.
+
+Your summary should be a list of observations about the codebase that are relevant to the user query. The response should NOT be speculative about any root causes or further issues—it should objectively summarize what the code shows.
 
 <query>
 ${params.query}
@@ -78,7 +80,7 @@ export class CodeSearch {
     fileTree: string;
     chatHistory: string[];
     codeRequest: string;
-    filesRead: Record<string, string>;
+    filesRead: Map<string, string>;
   }): Promise<ClaudeCodeSearchResponse> {
     logger.info(`Searching codebase for query: ${params.query}`);
     const mcpClient = await initMCPClient(this.repoPath);
@@ -94,7 +96,6 @@ export class CodeSearch {
       },
     });
 
-    logger.info(`MCP response: ${JSON.stringify(mcpResponse)}`);
     const parsedMcpResponse = parseToolCallResultToString(mcpResponse);
 
     logger.info(`MCP response: ${parsedMcpResponse}`);

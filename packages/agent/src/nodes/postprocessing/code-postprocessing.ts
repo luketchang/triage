@@ -15,7 +15,7 @@ import { validateToolCalls } from "../utils";
 function createPrompt(params: {
   query: string;
   codebaseOverview: string;
-  codeContext: Record<string, string>;
+  codeContext: Map<string, string>;
   answer: string;
 }) {
   return `
@@ -51,7 +51,7 @@ export class CodePostprocessor {
   async invoke(params: {
     query: string;
     codebaseOverview: string;
-    codeContext: Record<string, string>;
+    codeContext: Map<string, string>;
     answer: string;
   }): Promise<CodePostprocessingResponse> {
     logger.info(`Code postprocessing for query: ${params.query}`);

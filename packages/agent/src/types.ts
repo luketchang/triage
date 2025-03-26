@@ -162,12 +162,12 @@ export const codeSearchInputToolSchema = {
 
 export const logPostprocessingSchema = z.object({
   relevantQueries: z
-    .array(z.string())
+    .array(logSearchInputSchema)
     .describe("List of query strings who's results support the answer."),
   summary: z
     .string()
     .describe(
-      "Summary of the log results in the form of a sequence of events (numberedlist). Be precise and sequential."
+      "Summary of the log results in the form of a sequence of events (numbered list). Be precise and sequential."
     ),
 });
 

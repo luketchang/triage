@@ -97,13 +97,13 @@ function setupIPC() {
       );
 
       const response = await agent.invoke({
-        issue,
+        query: issue,
         repoPath,
         fileTree,
         labelsMap,
         chatHistory: [],
-        codeContext: {},
-        logContext: {},
+        codeContext: new Map(),
+        logContext: new Map(),
         spanContext: {},
       });
 

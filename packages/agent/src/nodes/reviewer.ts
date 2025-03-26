@@ -11,6 +11,7 @@ import {
   codeRequestToolSchema,
   LogRequest,
   logRequestToolSchema,
+  LogSearchInput,
   SpanRequest,
   spanRequestToolSchema,
   TaskComplete,
@@ -27,8 +28,8 @@ function createPrompt(params: {
   fileTree: string;
   labelsMap: string;
   chatHistory: string[];
-  codeContext: Record<string, string>;
-  logContext: Record<string, string>;
+  codeContext: Map<string, string>;
+  logContext: Map<LogSearchInput, string>;
   rootCauseAnalysis: string;
 }) {
   // TODO: add back SpanRequest
@@ -122,8 +123,8 @@ export class Reviewer {
     fileTree: string;
     labelsMap: string;
     chatHistory: string[];
-    codeContext: Record<string, string>;
-    logContext: Record<string, string>;
+    codeContext: Map<string, string>;
+    logContext: Map<LogSearchInput, string>;
     rootCauseAnalysis: string;
   }): Promise<ReviewerResponse> {
     logger.info(`Reviewing root cause analysis for query: ${params.query}`);

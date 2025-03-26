@@ -15,7 +15,8 @@ import { Reviewer } from "./nodes/reviewer";
 import { CodeSearch } from "./nodes/search/code-search";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { SpanSearchAgent } from "./nodes/search/span-search";
-import { CodePostprocessing, LogPostprocessing } from "./types";
+import { CodePostprocessing, LogPostprocessing, LogSearchInput } from "./types";
+import { formatLogQuery } from "./nodes/utils";
 
 // Type definitions
 type NodeType =
@@ -55,8 +56,8 @@ export interface OncallAgentState {
   fileTree: string;
   labelsMap: string;
   chatHistory: string[];
-  codeContext: Record<string, string>;
-  logContext: Record<string, string>;
+  codeContext: Map<string, string>;
+  logContext: Map<LogSearchInput, string>;
   spanContext: Record<string, string>;
   logPostprocessingResult: LogPostprocessing | null;
   codePostprocessingResult: CodePostprocessing | null;
@@ -140,7 +141,7 @@ export class OnCallAgent {
         type: "next",
         destination: "spanSearch",
         update: {
-          logContext: { ...state.logContext, ...response.newLogContext },
+          logContext: new Map([...state.logContext, ...response.newLogContext]),
           chatHistory: [...state.chatHistory, response.summary],
         },
       };
@@ -150,7 +151,7 @@ export class OnCallAgent {
       type: "next",
       destination: "reasoner",
       update: {
-        logContext: { ...state.logContext, ...response.newLogContext },
+        logContext: new Map([...state.logContext, ...response.newLogContext]),
         chatHistory: [...state.chatHistory, response.summary],
       },
     };
@@ -227,7 +228,7 @@ export class OnCallAgent {
       destination: "reasoner",
       update: {
         chatHistory: [...state.chatHistory, response.summary],
-        codeContext: { ...state.codeContext, ...response.newFilesRead },
+        codeContext: new Map([...state.codeContext, ...response.newFilesRead]),
       },
     };
   }
@@ -374,7 +375,9 @@ export class OnCallAgent {
     });
 
     logger.info(`Log postprocessing summary: ${response.summary}`);
-    logger.info(`Log postprocessing relevant queries: ${response.relevantQueries}`);
+    logger.info(
+      `Log postprocessing relevant queries: ${response.relevantQueries.map(formatLogQuery)}`
+    );
 
     return {
       type: "next",
@@ -437,8 +440,8 @@ export class OnCallAgent {
       fileTree: "",
       labelsMap: "",
       chatHistory: [],
-      codeContext: {},
-      logContext: {},
+      codeContext: new Map(),
+      logContext: new Map(),
       spanContext: {},
       logPostprocessingResult: null,
       codePostprocessingResult: null,
@@ -545,8 +548,8 @@ async function main() {
     fileTree,
     labelsMap,
     chatHistory: [],
-    codeContext: {},
-    logContext: {},
+    codeContext: new Map(),
+    logContext: new Map(),
     spanContext: {},
     rootCauseAnalysis: null,
     codeRequest: null,
