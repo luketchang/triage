@@ -16,6 +16,7 @@ import {
   rootCauseAnalysisToolSchema,
   SpanRequest,
   spanRequestToolSchema,
+  SpanSearchInput,
 } from "../types";
 import { formatChatHistory, formatLogResults, formatSpanResults, validateToolCalls } from "./utils";
 
@@ -29,7 +30,7 @@ function createPrompt(params: {
   labelsMap: string;
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInput, string>;
-  spanContext: Record<string, string>;
+  spanContext: Map<SpanSearchInput, string>;
   chatHistory: string[];
 }) {
   return `
@@ -102,7 +103,7 @@ export class Reasoner {
     labelsMap: string;
     codeContext: Map<string, string>;
     logContext: Map<LogSearchInput, string>;
-    spanContext: Record<string, string>;
+    spanContext: Map<SpanSearchInput, string>;
     chatHistory: string[];
   }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${params.query}`);

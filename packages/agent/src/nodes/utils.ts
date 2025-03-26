@@ -1,5 +1,5 @@
 import { ToolCallUnion, ToolSet } from "ai";
-import { LogSearchInput } from "../types";
+import { LogSearchInput, SpanSearchInput } from "../types";
 
 export function validateToolCalls<TOOLS extends ToolSet>(
   toolCalls: Array<ToolCallUnion<TOOLS>>
@@ -28,14 +28,18 @@ export function formatLogQuery(logQuery: Partial<LogSearchInput>): string {
   return `Query: ${logQuery.query}\nStart: ${logQuery.start}\nEnd: ${logQuery.end}\nLimit: ${logQuery.limit}`;
 }
 
+export function formatSpanQuery(spanQuery: Partial<SpanSearchInput>): string {
+  return `Query: ${spanQuery.query}\nStart: ${spanQuery.start}\nEnd: ${spanQuery.end}\nLimit: ${spanQuery.pageLimit}`;
+}
+
 export function formatLogResults(logResults: Map<LogSearchInput, string>): string {
   return Array.from(logResults.entries())
     .map(([input, value]) => `${formatLogQuery(input)}\nResults: ${value}`)
     .join("\n\n");
 }
 
-export function formatSpanResults(spanResults: Record<string, string>): string {
-  return Object.entries(spanResults)
-    .map(([key, value]) => `${key}\n${value}`)
+export function formatSpanResults(spanResults: Map<SpanSearchInput, string>): string {
+  return Array.from(spanResults.entries())
+    .map(([input, value]) => `${formatSpanQuery(input)}\nResults: ${value}`)
     .join("\n\n");
 }

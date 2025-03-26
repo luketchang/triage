@@ -15,8 +15,8 @@ import { Reviewer } from "./nodes/reviewer";
 import { CodeSearch } from "./nodes/search/code-search";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { SpanSearchAgent } from "./nodes/search/span-search";
-import { CodePostprocessing, LogPostprocessing, LogSearchInput } from "./types";
 import { formatLogQuery } from "./nodes/utils";
+import { CodePostprocessing, LogPostprocessing, LogSearchInput, SpanSearchInput } from "./types";
 
 // Type definitions
 type NodeType =
@@ -58,7 +58,7 @@ export interface OncallAgentState {
   chatHistory: string[];
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInput, string>;
-  spanContext: Record<string, string>;
+  spanContext: Map<SpanSearchInput, string>;
   logPostprocessingResult: LogPostprocessing | null;
   codePostprocessingResult: CodePostprocessing | null;
   rootCauseAnalysis: string | null;
@@ -194,7 +194,7 @@ export class OnCallAgent {
         type: "next",
         destination: "codeSearch",
         update: {
-          spanContext: { ...state.spanContext, ...response.newSpanContext },
+          spanContext: new Map([...state.spanContext, ...response.newSpanContext]),
           chatHistory: [...state.chatHistory, response.summary],
         },
       };
@@ -204,7 +204,7 @@ export class OnCallAgent {
       type: "next",
       destination: "reasoner",
       update: {
-        spanContext: { ...state.spanContext, ...response.newSpanContext },
+        spanContext: new Map([...state.spanContext, ...response.newSpanContext]),
         chatHistory: [...state.chatHistory, response.summary],
       },
     };
@@ -364,7 +364,7 @@ export class OnCallAgent {
   }
 
   async postprocessLogs(state: OncallAgentState): Promise<Command> {
-    logger.info("\n\n" + "=".repeat(25) + " Postprocess Log " + "=".repeat(25));
+    logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
     const postprocessor = new LogPostprocessor(this.reasoningModel);
     const response = await postprocessor.invoke({
       query: state.query,
@@ -376,7 +376,9 @@ export class OnCallAgent {
 
     logger.info(`Log postprocessing summary: ${response.summary}`);
     logger.info(
-      `Log postprocessing relevant queries: ${response.relevantQueries.map(formatLogQuery)}`
+      `Log postprocessing relevant queries: ${response.relevantQueries
+        .map(formatLogQuery)
+        .join("\n\n")}`
     );
 
     return {
@@ -442,7 +444,7 @@ export class OnCallAgent {
       chatHistory: [],
       codeContext: new Map(),
       logContext: new Map(),
-      spanContext: {},
+      spanContext: new Map(),
       logPostprocessingResult: null,
       codePostprocessingResult: null,
       rootCauseAnalysis: null,
@@ -550,7 +552,7 @@ async function main() {
     chatHistory: [],
     codeContext: new Map(),
     logContext: new Map(),
-    spanContext: {},
+    spanContext: new Map(),
     rootCauseAnalysis: null,
     codeRequest: null,
     spanRequest: null,
