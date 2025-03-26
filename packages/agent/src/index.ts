@@ -1,4 +1,4 @@
-import { AnthropicModel, loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
+import { loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -8,11 +8,13 @@ import { Command as CommanderCommand } from "commander";
 import fs from "fs/promises";
 import { z } from "zod";
 import { Planner } from "./nodes/planner";
+import { LogPostprocessor } from "./nodes/postprocessing/log-postprocessing";
 import { Reasoner } from "./nodes/reasoner";
 import { Reviewer } from "./nodes/reviewer";
 import { CodeSearch } from "./nodes/search/code-search";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { SpanSearchAgent } from "./nodes/search/span-search";
+import { LogPostprocessing } from "./types";
 
 // Type definitions
 type NodeType =
@@ -22,6 +24,7 @@ type NodeType =
   | "codeSearch"
   | "reasoner"
   | "reviewer"
+  | "logPostprocessor"
   | "END";
 
 interface BaseCommand {
@@ -53,6 +56,7 @@ export interface OncallAgentState {
   codeContext: Record<string, string>;
   logContext: Record<string, string>;
   spanContext: Record<string, string>;
+  logPostprocessingResult: LogPostprocessing | null;
   rootCauseAnalysis: string | null;
 }
 
@@ -346,12 +350,34 @@ export class OnCallAgent {
       };
     } else {
       return {
-        type: "end",
+        type: "next",
+        destination: "logPostprocessor",
         update: {
           chatHistory: [...state.chatHistory, response.reasoning],
         },
       };
     }
+  }
+
+  async postprocessLogs(state: OncallAgentState): Promise<Command> {
+    logger.info("\n\n" + "=".repeat(25) + " Postprocess Log " + "=".repeat(25));
+    const postprocessor = new LogPostprocessor(this.reasoningModel);
+    const response = await postprocessor.invoke({
+      query: state.query,
+      codebaseOverview: state.codebaseOverview,
+      labelsMap: state.labelsMap,
+      logContext: state.logContext,
+      answer: state.rootCauseAnalysis ?? "",
+    });
+
+    logger.info(`Log postprocessing result: ${JSON.stringify(response)}`);
+
+    return {
+      type: "end",
+      update: {
+        logPostprocessingResult: response,
+      },
+    };
   }
 
   buildGraph(): Map<NodeType, (state: OncallAgentState) => Promise<Command> | Command> {
@@ -363,6 +389,7 @@ export class OnCallAgent {
     nodeMap.set("codeSearch", this.codeSearch.bind(this));
     nodeMap.set("reasoner", this.reason.bind(this));
     nodeMap.set("reviewer", this.review.bind(this));
+    nodeMap.set("logPostprocessor", this.postprocessLogs.bind(this));
 
     return nodeMap;
   }
@@ -386,6 +413,7 @@ export class OnCallAgent {
       codeContext: {},
       logContext: {},
       spanContext: {},
+      logPostprocessingResult: null,
       rootCauseAnalysis: null,
       ...input,
     };
@@ -496,10 +524,11 @@ async function main() {
     codeRequest: null,
     spanRequest: null,
     logRequest: null,
+    logPostprocessingResult: null,
   };
 
   const reasoningModel = OpenAIModel.O3_MINI;
-  const fastModel = AnthropicModel.CLAUDE_3_7_SONNET_20250219;
+  const fastModel = OpenAIModel.GPT_4O;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 
