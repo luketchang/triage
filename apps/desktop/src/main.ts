@@ -104,7 +104,7 @@ function setupIPC() {
         chatHistory: [],
         codeContext: new Map(),
         logContext: new Map(),
-        spanContext: {},
+        spanContext: new Map(),
       });
 
       return {

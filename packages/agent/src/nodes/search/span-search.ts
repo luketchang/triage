@@ -10,7 +10,7 @@ import {
 import { formatChatHistory, formatSpanResults, validateToolCalls } from "../utils";
 
 export interface SpanSearchAgentResponse {
-  newSpanContext: Record<string, string>;
+  newSpanContext: Map<SpanSearchInput, string>;
   summary: string;
 }
 
@@ -75,7 +75,7 @@ ${formatChatHistory(params.chatHistory)}
 
 function createSpanSearchSummaryPrompt(params: {
   query: string;
-  spanResults: Record<string, string>;
+  spanResults: Map<SpanSearchInput, string>;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -181,7 +181,7 @@ export class SpanSearchAgent {
     maxIters?: number;
   }): Promise<SpanSearchAgentResponse> {
     let chatHistory: string[] = params.chatHistory;
-    let spanResults: Record<string, string> = {};
+    let spanResults: Map<SpanSearchInput, string> = new Map();
     let response: SpanSearchResponse | null = null;
     const maxIters = params.maxIters || 10;
     let currentIter = 0;
@@ -213,10 +213,7 @@ export class SpanSearchAgent {
           logger.info(`Span search results:\n${spanContext}`);
           logger.info(`Span search reasoning:\n${response.reasoning}`);
 
-          spanResults = {
-            ...spanResults,
-            [response.query]: spanContext,
-          };
+          spanResults.set(response, spanContext);
 
           chatHistory = [
             ...chatHistory,
