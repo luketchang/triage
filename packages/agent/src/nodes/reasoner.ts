@@ -11,12 +11,13 @@ import {
   codeRequestToolSchema,
   LogRequest,
   logRequestToolSchema,
+  LogSearchInput,
   RootCauseAnalysis,
   rootCauseAnalysisToolSchema,
   SpanRequest,
   spanRequestToolSchema,
 } from "../types";
-import { formatChatHistory, formatLogResults, validateToolCalls } from "./utils";
+import { formatChatHistory, formatLogResults, formatSpanResults, validateToolCalls } from "./utils";
 
 export type ReasoningResponse = RootCauseAnalysis | CodeRequest | SpanRequest | LogRequest;
 
@@ -26,8 +27,8 @@ function createPrompt(params: {
   codebaseOverview: string;
   fileTree: string;
   labelsMap: string;
-  codeContext: Record<string, string>;
-  logContext: Record<string, string>;
+  codeContext: Map<string, string>;
+  logContext: Map<LogSearchInput, string>;
   spanContext: Record<string, string>;
   chatHistory: string[];
 }) {
@@ -63,7 +64,7 @@ ${formatLogResults(params.logContext)}
 </previous_log_context>
 
 <previous_span_context>
-${formatLogResults(params.spanContext)}
+${formatSpanResults(params.spanContext)}
 </previous_span_context>
 
 <previous_code_context>
@@ -99,8 +100,8 @@ export class Reasoner {
     codebaseOverview: string;
     fileTree: string;
     labelsMap: string;
-    codeContext: Record<string, string>;
-    logContext: Record<string, string>;
+    codeContext: Map<string, string>;
+    logContext: Map<LogSearchInput, string>;
     spanContext: Record<string, string>;
     chatHistory: string[];
   }): Promise<ReasoningResponse> {

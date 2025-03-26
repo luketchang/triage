@@ -3,6 +3,7 @@ import { generateText } from "ai";
 import {
   LogPostprocessing as LogPostprocessingResponse,
   logPostprocessingToolSchema,
+  LogSearchInput,
 } from "../../types";
 import { formatLogResults, validateToolCalls } from "../utils";
 
@@ -10,7 +11,7 @@ function createPrompt(params: {
   query: string;
   codebaseOverview: string;
   labelsMap: string;
-  logContext: Record<string, string>;
+  logContext: Map<LogSearchInput, string>;
   answer: string;
 }) {
   return `
@@ -60,7 +61,7 @@ export class LogPostprocessor {
     query: string;
     codebaseOverview: string;
     labelsMap: string;
-    logContext: Record<string, string>;
+    logContext: Map<LogSearchInput, string>;
     answer: string;
   }): Promise<LogPostprocessingResponse> {
     logger.info(`Log postprocessing for query: ${params.query}`);

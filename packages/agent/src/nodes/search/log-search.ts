@@ -10,7 +10,7 @@ import {
 import { formatChatHistory, formatLogResults, validateToolCalls } from "../utils";
 
 export interface LogSearchAgentResponse {
-  newLogContext: Record<string, string>;
+  newLogContext: Map<LogSearchInput, string>;
   summary: string;
 }
 
@@ -85,12 +85,12 @@ ${formatChatHistory(params.chatHistory)}
 
 function createLogSearchSummaryPrompt(params: {
   query: string;
-  logResults: Record<string, string>;
+  logResults: Map<LogSearchInput, string>;
 }): string {
   const currentTime = new Date().toISOString();
 
   return `
-Given a set log queries and the fetched log results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event. Your response just be a short sequence of events you've observed through the logs that are relevant to the user query. The response should not be speculative about any root causes or further issues—it should objectively summarize what the logs show.
+Given a set log queries and the fetched log results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event. Your response just be a short sequence of events you've observed through the logs that are relevant to the user query. The response should NOT be speculative about any root causes or further issues—it should objectively summarize what the logs show.
 
 <current_time>
 ${currentTime}
@@ -190,7 +190,7 @@ export class LogSearchAgent {
     maxIters?: number;
   }): Promise<LogSearchAgentResponse> {
     let chatHistory: string[] = params.chatHistory;
-    let logResults: Record<string, string> = {};
+    let logResults: Map<LogSearchInput, string> = new Map();
     let response: LogSearchResponse | null = null;
     const maxIters = params.maxIters || 10;
     let currentIter = 0;
@@ -222,10 +222,7 @@ export class LogSearchAgent {
           logger.info(`Log search results:\n${logContext}`);
           logger.info(`Log search reasoning:\n${response.reasoning}`);
 
-          logResults = {
-            ...logResults,
-            [response.query]: logContext,
-          };
+          logResults.set(response, logContext);
 
           chatHistory = [
             ...chatHistory,

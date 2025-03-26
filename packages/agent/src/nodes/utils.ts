@@ -1,4 +1,5 @@
 import { ToolCallUnion, ToolSet } from "ai";
+import { LogSearchInput } from "../types";
 
 export function validateToolCalls<TOOLS extends ToolSet>(
   toolCalls: Array<ToolCallUnion<TOOLS>>
@@ -23,9 +24,13 @@ export function formatChatHistory(chatHistory: string[]): string {
     : "No previous context gathered.";
 }
 
-export function formatLogResults(logResults: Record<string, string>): string {
-  return Object.entries(logResults)
-    .map(([key, value]) => `${key}\n${value}`)
+export function formatLogQuery(logQuery: Partial<LogSearchInput>): string {
+  return `Query: ${logQuery.query}\nStart: ${logQuery.start}\nEnd: ${logQuery.end}\nLimit: ${logQuery.limit}`;
+}
+
+export function formatLogResults(logResults: Map<LogSearchInput, string>): string {
+  return Array.from(logResults.entries())
+    .map(([input, value]) => `${formatLogQuery(input)}\nResults: ${value}`)
     .join("\n\n");
 }
 

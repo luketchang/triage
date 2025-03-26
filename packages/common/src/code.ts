@@ -8,16 +8,16 @@ import { logger } from "./logger";
  * @param filePaths The file paths to get the source code from.
  * @returns A mapping from file paths to their source code.
  */
-export function getSourceCodeFromPaths(filePaths: string[]): Record<string, string> {
-  const pathToSourceCode: Record<string, string> = {};
+export function getSourceCodeFromPaths(filePaths: string[]): Map<string, string> {
+  const pathToSourceCode: Map<string, string> = new Map();
 
   filePaths.forEach((filePath) => {
     try {
       const content = fs.readFileSync(filePath, { encoding: "utf-8" });
-      pathToSourceCode[filePath] = content;
+      pathToSourceCode.set(filePath, content);
     } catch (error) {
       const errMsg = `Error reading file: ${error}`;
-      pathToSourceCode[filePath] = errMsg;
+      pathToSourceCode.set(filePath, errMsg);
       console.error(`Could not read file ${filePath}: ${error}`);
       throw error;
     }
@@ -129,7 +129,7 @@ export function ripgrepSearch(params: {
     }
   }
 
-  return formatCodeMap(resultMap);
+  return formatCodeMap(new Map(Object.entries(resultMap)));
 }
 
 /**
@@ -138,12 +138,12 @@ export function ripgrepSearch(params: {
  * @param codeMap - Mapping from file path to code content.
  * @returns A formatted string.
  */
-export function formatCodeMap(codeMap: Record<string, string>): string {
+export function formatCodeMap(codeMap: Map<string, string>): string {
   let formattedOutput = "";
-  for (const filePath in codeMap) {
+  for (const [filePath, code] of codeMap.entries()) {
     const header = `File: ${filePath}`;
     const separator = "-".repeat(header.length);
-    formattedOutput += `${header}\n${separator}\n${codeMap[filePath]}\n\n`;
+    formattedOutput += `${header}\n${separator}\n${code}\n\n`;
   }
   return formattedOutput;
 }
