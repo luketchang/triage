@@ -15,10 +15,11 @@ export interface Span {
   spanId: string;
   traceId: string;
   service: string;
+  operation: string;
   startTime: string | number;
   endTime: string | number;
   duration: number;
   status?: string;
   environment?: string;
-  operation?: string;
+  metadata: Record<string, string>;
 }

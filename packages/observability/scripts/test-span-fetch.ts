@@ -3,6 +3,7 @@ import { logger } from "@triage/common";
 import { config } from "@triage/config";
 import { Command } from "commander";
 import { DatadogPlatform } from "../src";
+import { Span } from "../src/types";
 
 // Setup command line options
 const program = new Command();
@@ -33,15 +34,31 @@ if (!validPlatforms.includes(options.platform)) {
 }
 
 // Display spans results
-function displaySpans(spansOutput: string, platform: string): void {
+function displaySpans(spans: Span[], platform: string): void {
   logger.info(`\n${platform.toUpperCase()} SPANS:`);
 
-  if (spansOutput === "No spans found matching the query.") {
+  if (spans.length === 0) {
     logger.info("No spans found for the given query.");
     return;
   }
 
-  logger.info(spansOutput);
+  const formattedSpans = spans
+    .map((span, index) => {
+      return `[${index + 1}] Span ID: ${span.spanId}
+    Service: ${span.service}
+    Operation: ${span.operation}
+    Trace ID: ${span.traceId}
+    Start: ${span.startTime}
+    End: ${span.endTime}
+    Duration: ${span.duration} ms
+    Status: ${span.status || "N/A"}
+    Environment: ${span.environment || "N/A"}
+    Metadata: ${JSON.stringify(span.metadata, null, 2)}
+    `;
+    })
+    .join("\n\n");
+
+  logger.info(formattedSpans);
 }
 
 async function testDatadogSpanFetch(): Promise<void> {
@@ -52,14 +69,14 @@ async function testDatadogSpanFetch(): Promise<void> {
     logger.info(`Limit: ${options.limit}`);
 
     const datadogPlatform = new DatadogPlatform();
-    const spansOutput = await datadogPlatform.fetchSpans({
+    const spans = await datadogPlatform.fetchSpans({
       query: options.query,
       start: options.start,
       end: options.end,
       limit: parseInt(options.limit, 10),
     });
 
-    displaySpans(spansOutput, "datadog");
+    displaySpans(spans, "datadog");
   } catch (error) {
     logger.error("Error testing Datadog span fetching:", error);
   }

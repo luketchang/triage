@@ -1,5 +1,5 @@
 import { AnthropicModel, getModelWrapper, logger, OpenAIModel } from "@triage/common";
-import { ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityPlatform, Span } from "@triage/observability";
 import { generateText } from "ai";
 import {
   SpanSearchInput,
@@ -10,7 +10,7 @@ import {
 import { formatChatHistory, formatSpanResults, validateToolCalls } from "../utils";
 
 export interface SpanSearchAgentResponse {
-  newSpanContext: Map<SpanSearchInput, string>;
+  newSpanContext: Map<SpanSearchInput, Span[]>;
   summary: string;
 }
 
@@ -75,7 +75,7 @@ ${formatChatHistory(params.chatHistory)}
 
 function createSpanSearchSummaryPrompt(params: {
   query: string;
-  spanResults: Map<SpanSearchInput, string>;
+  spanResults: Map<SpanSearchInput, Span[]>;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -181,7 +181,7 @@ export class SpanSearchAgent {
     maxIters?: number;
   }): Promise<SpanSearchAgentResponse> {
     let chatHistory: string[] = params.chatHistory;
-    let spanResults: Map<SpanSearchInput, string> = new Map();
+    let spanResults: Map<SpanSearchInput, Span[]> = new Map();
     let response: SpanSearchResponse | null = null;
     const maxIters = params.maxIters || 10;
     let currentIter = 0;
@@ -203,21 +203,24 @@ export class SpanSearchAgent {
 
         try {
           logger.info("Fetching spans from observability platform...");
-          const spanContext = await this.observabilityPlatform.fetchSpans({
+          const spans = await this.observabilityPlatform.fetchSpans({
             query: response.query,
             start: response.start,
             end: response.end,
             limit: response.pageLimit,
           });
 
-          logger.info(`Span search results:\n${spanContext}`);
+          // Create a simplified version for logging (not the full formatSingleSpan output)
+          const formattedSpans = formatSpanResults(new Map([[response, spans]]));
+
+          logger.info(`Span search results:\n${formattedSpans}`);
           logger.info(`Span search reasoning:\n${response.reasoning}`);
 
-          spanResults.set(response, spanContext);
+          spanResults.set(response, spans);
 
           chatHistory = [
             ...chatHistory,
-            `Query: ${response.query}.\nStart: ${response.start}.\nEnd: ${response.end}.\nLimit: ${response.pageLimit}.\nSpan search results:\n${spanContext}\nReasoning:\n${response.reasoning}`,
+            `Query: ${response.query}.\nStart: ${response.start}.\nEnd: ${response.end}.\nLimit: ${response.pageLimit}.\nSpan search results: ${spans.length} spans found.\nReasoning:\n${response.reasoning}`,
           ];
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);

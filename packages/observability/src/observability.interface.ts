@@ -1,4 +1,4 @@
-import { IntegrationType, Log } from "./types";
+import { IntegrationType, Log, Span } from "./types";
 
 /**
  * Interface for observability platforms like Datadog and Grafana
@@ -36,13 +36,13 @@ export interface ObservabilityPlatform {
   getLogsFacetValues(start: string, end: string): Promise<string>;
 
   /**
-   * Fetch spans start the observability platform
+   * Fetch spans from the observability platform
    * @param query - Query string to filter spans
    * @param start - Start time in ISO format
-   * @param to - End time in ISO format
+   * @param end - End time in ISO format
    * @param limit - Maximum number of results to return
    * @param pageCursor - Cursor for pagination
-   * @returns JSON string representation of spans
+   * @returns Array of Span objects
    */
   fetchSpans(params: {
     query: string;
@@ -50,10 +50,10 @@ export interface ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursor?: string;
-  }): Promise<string>;
+  }): Promise<Span[]>;
 
   /**
-   * Fetch logs start the observability platform
+   * Fetch logs from the observability platform
    * @param query - Query string to filter logs
    * @param start - Start time in ISO format
    * @param end - End time in ISO format
