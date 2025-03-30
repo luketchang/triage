@@ -5,7 +5,7 @@ import {
   logger,
   OpenAIModel,
 } from "@triage/common";
-import { Log } from "@triage/observability";
+import { Log, Span } from "@triage/observability";
 import { generateText } from "ai";
 import {
   CodeRequest,
@@ -31,7 +31,7 @@ function createPrompt(params: {
   labelsMap: string;
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInput, Log[]>;
-  spanContext: Map<SpanSearchInput, string>;
+  spanContext: Map<SpanSearchInput, Span[]>;
   chatHistory: string[];
 }) {
   return `
@@ -104,7 +104,7 @@ export class Reasoner {
     labelsMap: string;
     codeContext: Map<string, string>;
     logContext: Map<LogSearchInput, Log[]>;
-    spanContext: Map<SpanSearchInput, string>;
+    spanContext: Map<SpanSearchInput, Span[]>;
     chatHistory: string[];
   }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${params.query}`);

@@ -2,7 +2,7 @@ import { client, v2 } from "@datadog/datadog-api-client";
 import { logger, renderFacetValues } from "@triage/common";
 import { config } from "@triage/config";
 import { ObservabilityPlatform } from "./observability.interface";
-import { IntegrationType, Log } from "./types";
+import { IntegrationType, Log, Span } from "./types";
 
 const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
 # Datadog APM Query Syntax Tutorial
@@ -374,7 +374,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursor?: string;
-  }): Promise<string> {
+  }): Promise<Span[]> {
     try {
       logger.info(`Executing GET query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);
@@ -395,32 +395,86 @@ export class DatadogPlatform implements ObservabilityPlatform {
         return this.formatSpans(response.data);
       } else {
         logger.info("No spans found with GET endpoint");
-        return "No spans found matching the query.";
+        return [];
       }
     } catch (error) {
       logger.error(`Error executing span query with GET endpoint: ${error}`);
-      return "Error executing span query with GET endpoint.";
+      return [];
     }
   }
 
-  private formatSpans(spans: v2.Span[]): string {
+  private formatSpans(spans: v2.Span[]): Span[] {
     if (!spans || spans.length === 0) {
-      return "No spans found matching the query.";
+      return [];
     }
-    return spans
-      .map((span, index) => {
-        return `[${index + 1}] Span ID: ${span.id || "N/A"}
-      Service: ${span.attributes?.service || "N/A"}
-      Resource: ${span.attributes?.resourceName || "N/A"}
-      Trace ID: ${span.attributes?.traceId || "N/A"}
-      Span ID: ${span.attributes?.spanId || "N/A"}
-      Parent ID: ${span.attributes?.parentId || "N/A"}
-      Start: ${span.attributes?.startTimestamp ? new Date(span.attributes.startTimestamp).toISOString() : "N/A"}
-      End: ${span.attributes?.endTimestamp ? new Date(span.attributes.endTimestamp).toISOString() : "N/A"}
-      Additional Attributes: ${JSON.stringify(span.attributes)}
-      `;
-      })
-      .join("\n\n");
+
+    return spans.map((span) => {
+      // Extract core attributes
+      const spanId = span.attributes?.spanId || span.id || "N/A";
+      const traceId = span.attributes?.traceId || "N/A";
+      const service = span.attributes?.service || "N/A";
+      const operation = span.attributes?.additionalProperties?.operation_name || "N/A";
+
+      // Calculate timestamps and duration
+      const startTimeDate = span.attributes?.startTimestamp
+        ? new Date(span.attributes.startTimestamp)
+        : new Date(0);
+      const endTimeDate = span.attributes?.endTimestamp
+        ? new Date(span.attributes.endTimestamp)
+        : new Date(0);
+
+      // Convert to ISO string for compatibility with the Span type
+      const startTime = startTimeDate.toISOString();
+      const endTime = endTimeDate.toISOString();
+
+      const duration = Math.round(endTimeDate.getTime() - startTimeDate.getTime());
+
+      // Extract status and environment
+      // Access status through additionalProperties since it's not directly on attributes
+      const status = span.attributes?.additionalProperties?.status || undefined;
+      const environment = span.attributes?.additionalProperties?.env || undefined;
+
+      // Extract additional metadata
+      const metadata: Record<string, string> = {
+        source: "datadog",
+      };
+
+      // Add resource name if available
+      if (span.attributes?.resourceName) {
+        metadata["resource"] = span.attributes.resourceName;
+      }
+
+      // Add parent ID if available
+      if (span.attributes?.parentId) {
+        metadata["parentId"] = span.attributes.parentId;
+      }
+
+      // Add other additional properties as metadata
+      if (span.attributes?.additionalProperties) {
+        Object.entries(span.attributes.additionalProperties).forEach(([key, value]) => {
+          if (key !== "status" && key !== "env" && key !== "operation_name") {
+            if (typeof value === "string") {
+              metadata[key] = value;
+            } else if (value !== null && value !== undefined) {
+              metadata[key] = String(value);
+            }
+          }
+        });
+      }
+
+      return {
+        spanId,
+        traceId,
+        service,
+        operation,
+        startTime,
+        endTime,
+        duration,
+        status,
+        environment,
+        metadata,
+      };
+    });
   }
 
   async fetchLogs(params: {

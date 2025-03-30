@@ -2,7 +2,7 @@ import { logger, renderFacetValues, toUnixNano } from "@triage/common";
 import { config } from "@triage/config";
 import axios from "axios";
 import { ObservabilityPlatform } from "./observability.interface";
-import { IntegrationType, Log } from "./types";
+import { IntegrationType, Log, Span } from "./types";
 
 export const GRAFANA_LOG_SEARCH_INSTRUCTIONS = `
 - Use Grafana LogQL queries to search for logs.
@@ -125,7 +125,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursor?: string;
-  }): Promise<string> {
+  }): Promise<Span[]> {
     throw new Error("fetchSpans is not implemented for Grafana platform");
   }
 
