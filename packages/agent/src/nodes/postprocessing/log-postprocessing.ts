@@ -11,7 +11,7 @@ import { formatLogResults, validateToolCalls } from "../utils";
 function createPrompt(params: {
   query: string;
   codebaseOverview: string;
-  labelsMap: string;
+  logLabelsMap: string;
   logContext: Map<LogSearchInput, Log[]>;
   answer: string;
 }) {
@@ -41,9 +41,9 @@ function createPrompt(params: {
   ${params.codebaseOverview}
   </codebase_overview>
 
-  <labels_map>
-  ${params.labelsMap}
-  </labels_map>
+  <log_labels>
+  ${params.logLabelsMap}
+  </log_labels>
   
   <previous_log_context>
   ${formatLogResults(params.logContext)}
@@ -61,7 +61,7 @@ export class LogPostprocessor {
   async invoke(params: {
     query: string;
     codebaseOverview: string;
-    labelsMap: string;
+    logLabelsMap: string;
     logContext: Map<LogSearchInput, Log[]>;
     answer: string;
   }): Promise<LogPostprocessingResponse> {

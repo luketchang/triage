@@ -20,7 +20,7 @@ function createSpanSearchPrompt(params: {
   query: string;
   spanRequest: string;
   chatHistory: string[];
-  labelsMap: string;
+  spanLabelsMap: string;
   platformSpecificInstructions: string;
 }): string {
   const currentTime = new Date().toISOString();
@@ -56,7 +56,7 @@ ${params.query}
 </query>
 
 <labels>
-${params.labelsMap}
+${params.spanLabelsMap}
 </labels>
 
 <platform_specific_instructions>
@@ -110,7 +110,7 @@ class SpanSearch {
     query: string;
     spanRequest: string;
     chatHistory: string[];
-    labelsMap: string;
+    spanLabelsMap: string;
   }): Promise<SpanSearchResponse> {
     const prompt = createSpanSearchPrompt({
       ...params,
@@ -176,7 +176,7 @@ export class SpanSearchAgent {
   async invoke(params: {
     query: string;
     spanRequest: string;
-    labelsMap: string;
+    spanLabelsMap: string;
     chatHistory: string[];
     maxIters?: number;
   }): Promise<SpanSearchAgentResponse> {
@@ -191,7 +191,7 @@ export class SpanSearchAgent {
         query: params.query,
         spanRequest: params.spanRequest,
         chatHistory: chatHistory,
-        labelsMap: params.labelsMap,
+        spanLabelsMap: params.spanLabelsMap,
       });
 
       currentIter++;

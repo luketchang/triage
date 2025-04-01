@@ -18,7 +18,8 @@ const createPrompt = (params: {
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
-  labelsMap: string;
+  logLabelsMap: string;
+  spanLabelsMap: string;
 }) => {
   const currentTime = new Date().toISOString();
 
@@ -56,9 +57,13 @@ ${params.codebaseOverview}
 ${params.fileTree}
 </file_tree>
 
-<labels>
-${params.labelsMap}
-</labels>
+<log_labels>
+${params.logLabelsMap}
+</log_labels>
+
+<span_labels>
+${params.spanLabelsMap}
+</span_labels>
 
 <query>
 ${params.query}
@@ -95,7 +100,8 @@ export class Planner {
     repoPath: string;
     codebaseOverview: string;
     fileTree: string;
-    labelsMap: string;
+    logLabelsMap: string;
+    spanLabelsMap: string;
   }): Promise<PlannerResponse> {
     logger.info(`Planning step with query: ${params.query}`);
 

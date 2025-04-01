@@ -76,7 +76,11 @@ function setupIPC() {
       const endDate = new Date();
 
       // Get labels map
-      const labelsMap = await observabilityPlatform.getLogsFacetValues(
+      const logLabelsMap = await observabilityPlatform.getLogsFacetValues(
+        startDate.toISOString(),
+        endDate.toISOString()
+      );
+      const spanLabelsMap = await observabilityPlatform.getSpansFacetValues(
         startDate.toISOString(),
         endDate.toISOString()
       );
@@ -100,7 +104,8 @@ function setupIPC() {
         query: issue,
         repoPath,
         fileTree,
-        labelsMap,
+        logLabelsMap,
+        spanLabelsMap,
         chatHistory: [],
         codeContext: new Map(),
         logContext: new Map(),
