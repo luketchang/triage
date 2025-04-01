@@ -34,7 +34,15 @@ export function formatSpanQuery(spanQuery: Partial<SpanSearchInput>): string {
 }
 
 export function formatSingleLog(log: Log): string {
-  return `[${log.timestamp}] ${log.level.toUpperCase()} [${log.service}] ${log.message}`;
+  const attributesString = log.attributes
+    ? Object.entries(log.attributes)
+        .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+        .join(", ")
+    : "";
+
+  return `[${log.timestamp}] ${log.level.toUpperCase()} [${log.service}] ${log.message}${
+    attributesString ? ` [attributes: ${attributesString}]` : ""
+  }`;
 }
 
 export function formatSingleSpan(span: Span, index?: number): string {

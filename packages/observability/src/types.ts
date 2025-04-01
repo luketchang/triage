@@ -8,6 +8,10 @@ export interface Log {
   message: string;
   service: string;
   level: string;
+  attributes?: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    [key: string]: any;
+  };
   metadata: Record<string, string>;
 }
 
