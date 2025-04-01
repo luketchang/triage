@@ -33,6 +33,7 @@ Given a request for the type of logs needed for the investigation and all availa
 Query Synthesis Instructions:
 - Keep the keywords and regexes simple
 - Avoid speculating on keywords or phrases that are not directly related to the user's query, do not assume the existence of keywords/phrases unless its specified in the query or you have seen it in previous logs
+- Always constrain your searches to a finite set of services. If you do not you will end up with lots of system logs and noisy results.
 - Refer to the <platform_specific_instructions> for more information on how to formulate your query
 
 Information Gathering Process:

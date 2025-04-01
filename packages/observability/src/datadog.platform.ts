@@ -70,15 +70,9 @@ host:datadog-agent.railway.internal
 env:production status:error
 
 ## Pro Tips
-
-1. **Use the autocomplete feature** in the search bar to discover available attributes and tags
-2. **Save common searches** for quick access later
-3. **Escape special characters** like =, :, or spaces with a backslash (\\)
-4. **Use time range selector** to narrow your focus to relevant time periods
-5. **Add columns** to the span table to see important attributes at a glance
+- Always include the following components in your query to reduce noise: (NOT service:agent NOT service:cluster-agent NOT service:desktop-vpnkit-controller)
 
 ## Real-World Examples for Our Services
-
 
 # Track all AI API calls
 operation_name:(openai.request OR anthropic.request)
@@ -96,117 +90,11 @@ Remember that building effective queries allows you to quickly identify and trou
 `;
 
 const DATADOG_LOG_SEARCH_INSTRUCTIONS = `
-# Datadog Log Query Syntax Tutorial
-
-This guide will help you quickly understand how to create effective queries in Datadog Log Explorer.
-
-## Basic Query Structure
-
-Datadog log queries consist of:
-- **Log attributes**: Properties of logs (prefixed with @ when used for attribute searches)
-- **Log tags**: Metadata attached to logs (commonly inherited from hosts and integrations)
-- **Keyword search**: Finds text within log messages or all attributes
-- **Boolean operators**: AND, OR, - (NOT)
-
-## Keyword Search
-
-### Basic Keyword Search
-# Find logs containing "timeout" in the message
-timeout
-
-# Find logs containing "database error" as an exact phrase
-"database error"
-
-### Full-Text Search (All Attributes)
-# Search for "timeout" in any log attribute (not just the message)
-*:timeout
-
-# Search for logs containing an exact phrase in any attribute
-*:"database connection failed"
-
-### Wildcards
-# Match all logs with words starting with "error"
-*:error*
-
-# Find logs with messages that contain "network" anywhere
-*network*
-
-### Excluding Keywords
-# Find error logs but exclude those containing "timeout"
-status:error AND -"timeout"
-
-### Escaping Special Characters
-# Search for an email address stored in an attribute
-@user.email:john.doe@example.com
-
-## Query Examples by Complexity
-
-### Simple Queries
-
-# Find logs from a specific source
-@source:concierge-server
-
-# Find all error logs
-status:error
-
-# Find logs containing a specific keyword in the message
-"database error"
-
-### Using Wildcards
-
-# Find logs from a service starting with "web"
-service:web*
-
-# Find all logs with messages that contain "timeout"
-*timeout*
-
-### Numerical Comparisons
-
-# Find logs with response times over 500ms
-@http.response_time:>500ms
-
-# Find HTTP logs with 4xx status codes
-@http.status_code:[400 TO 499]
-
-### Combining Conditions
-
-# Find API errors from specific sources
-(@source:nexus-server OR @source:nexus-worker) AND status:error AND "fastapi"
-
-# Exclude logs from a particular process
-@service:concierge-worker AND -("zendesk")
-
-### Advanced Attribute Searches
-
-# Search nested attributes in logs
-@git.commit.sha:12345
-
-# Search for logs with specific error messages
-status:error AND @error.msg:*timeout*
-
-### Infrastructure Tags
-
-# Find logs from a specific host
-host:datadog-agent.railway.internal
-
-# Find logs from the production environment with errors
-env:production AND status:error
-
-## Real-World Examples for Our Services
-
-# Track all AI API call logs
-("openai.request" OR "anthropic.request")
-
-# Find slow file processing logs
-("file" OR "document") AND @duration:>1s 
-
-# Debug Zendesk ticket handling errors in logs
-@service:concierge-worker AND "zendesk" AND status:error
-
-# Monitor database performance logs
-(@service:postgres OR @service:redis) AND @duration:>200ms
-
-Building effective log queries helps you quickly identify and troubleshoot issues across your systems!
+- Use Datadog Log Search Syntax to search for logs.
+- All log queries must be formulated as valid Datadog Log Search Syntax queries.
+- Example query: service:<service_name> <keyword in log line> *:<keyword in attributes>
+- You can inspect multiple services' logs in same query as in this example: (service:<service1> OR service:<service2>)
+- Log attributes are not well exposed so use *:<keyword in attributes> to full-text search for keywords in attributes (often times keywords will be in attributes not the plain log line)
 `;
 
 enum DatadogDefaultFacetsSpans {
