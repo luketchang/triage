@@ -28,16 +28,17 @@ function createPrompt(params: {
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
-  labelsMap: string;
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInput, Log[]>;
   spanContext: Map<SpanSearchInput, Span[]>;
+  logLabelsMap: string;
+  spanLabelsMap: string;
   chatHistory: string[];
 }) {
   return `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review context gathered from logs, spans, and code and question whether or not you have enough information. If you do you output a proposed root cause analysis. If not, you output a request for more logs or code. You are not able to make any modifications to the system—you can only reason about the system by looking at the context and walking through sequences of events.
 
-Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, potential log labels, and previously gathered log and code context, your task is to question whether or not you have enough context. 
+Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, log labels, span labels, and previously gathered log and code context, your task is to question whether or not you have enough context. 
 
 Go through the below checklist to check if the analysis is too imprecise or has not considered enough thorough context. If any of the below questions reveal that you have not considered enough parts of the codebase or have not retrieved logs thoroughly enough, output a CodeRequest or SpanRequest respectively.
 
@@ -60,6 +61,14 @@ ${params.query}
 <chat_history>
 ${formatChatHistory(params.chatHistory)}
 </chat_history>
+
+<log_labels>
+${params.logLabelsMap}
+</log_labels>
+
+<span_labels>
+${params.spanLabelsMap}
+</span_labels>
 
 <previous_log_context>
 ${formatLogResults(params.logContext)}
@@ -101,10 +110,11 @@ export class Reasoner {
     repoPath: string;
     codebaseOverview: string;
     fileTree: string;
-    labelsMap: string;
     codeContext: Map<string, string>;
     logContext: Map<LogSearchInput, Log[]>;
     spanContext: Map<SpanSearchInput, Span[]>;
+    logLabelsMap: string;
+    spanLabelsMap: string;
     chatHistory: string[];
   }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${params.query}`);

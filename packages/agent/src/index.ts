@@ -56,7 +56,8 @@ export interface OncallAgentState {
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
-  labelsMap: string;
+  logLabelsMap: string;
+  spanLabelsMap: string;
   chatHistory: string[];
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInput, Log[]>;
@@ -92,12 +93,13 @@ export class OnCallAgent {
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
-      labelsMap: state.labelsMap,
+      logLabelsMap: state.logLabelsMap,
+      spanLabelsMap: state.spanLabelsMap,
     });
 
     return {
       type: "next",
-      destination: "logSearch",
+      destination: "spanSearch",
       update: {
         codeRequest: response.codeRequest,
         spanRequest: response.spanRequest,
@@ -114,7 +116,7 @@ export class OnCallAgent {
       if (state.firstPass) {
         return {
           type: "next",
-          destination: "spanSearch",
+          destination: "codeSearch",
           update: {},
         };
       }
@@ -134,14 +136,14 @@ export class OnCallAgent {
     const response = await logSearchAgent.invoke({
       query: state.query,
       logRequest: state.logRequest ?? "",
-      labelsMap: state.labelsMap,
+      logLabelsMap: state.logLabelsMap,
       chatHistory: state.chatHistory,
     });
 
     if (state.firstPass) {
       return {
         type: "next",
-        destination: "spanSearch",
+        destination: "codeSearch",
         update: {
           logContext: new Map([...state.logContext, ...response.newLogContext]),
           chatHistory: [...state.chatHistory, response.summary],
@@ -167,7 +169,7 @@ export class OnCallAgent {
       if (state.firstPass) {
         return {
           type: "next",
-          destination: "codeSearch",
+          destination: "logSearch",
           update: {},
         };
       }
@@ -187,14 +189,14 @@ export class OnCallAgent {
     const response = await spanSearchAgent.invoke({
       query: state.query,
       spanRequest: state.spanRequest ?? "",
-      labelsMap: state.labelsMap,
+      spanLabelsMap: state.spanLabelsMap,
       chatHistory: state.chatHistory,
     });
 
     if (state.firstPass) {
       return {
         type: "next",
-        destination: "codeSearch",
+        destination: "logSearch",
         update: {
           spanContext: new Map([...state.spanContext, ...response.newSpanContext]),
           chatHistory: [...state.chatHistory, response.summary],
@@ -247,7 +249,8 @@ export class OnCallAgent {
       codeContext: state.codeContext,
       logContext: state.logContext,
       spanContext: state.spanContext,
-      labelsMap: state.labelsMap,
+      logLabelsMap: state.logLabelsMap,
+      spanLabelsMap: state.spanLabelsMap,
     });
 
     logger.info(`Reasoning response: ${JSON.stringify(response)}`);
@@ -313,7 +316,8 @@ export class OnCallAgent {
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
-      labelsMap: state.labelsMap,
+      logLabelsMap: state.logLabelsMap,
+      spanLabelsMap: state.spanLabelsMap,
       chatHistory: state.chatHistory,
       codeContext: state.codeContext,
       logContext: state.logContext,
@@ -371,7 +375,7 @@ export class OnCallAgent {
     const response = await postprocessor.invoke({
       query: state.query,
       codebaseOverview: state.codebaseOverview,
-      labelsMap: state.labelsMap,
+      logLabelsMap: state.logLabelsMap,
       logContext: state.logContext,
       answer: state.rootCauseAnalysis ?? "",
     });
@@ -442,7 +446,8 @@ export class OnCallAgent {
       repoPath: "",
       codebaseOverview: "",
       fileTree: "",
-      labelsMap: "",
+      logLabelsMap: "",
+      spanLabelsMap: "",
       chatHistory: [],
       codeContext: new Map(),
       logContext: new Map(),
@@ -519,13 +524,21 @@ async function main() {
   const observabilityPlatform = getObservabilityPlatform(integrationType);
 
   // Get formatted labels map for time range
-  const startDate = new Date("2025-03-31T04:00:00Z");
-  const endDate = new Date("2025-03-31T06:00:00Z");
-  const labelsMap = await observabilityPlatform.getLogsFacetValues(
+  const startDate = new Date("2025-04-01T04:00:00Z");
+  const endDate = new Date("2025-04-01T06:00:00Z");
+
+  // TODO: make this Map<string, string[]>
+  const logLabelsMap = await observabilityPlatform.getLogsFacetValues(
     startDate.toISOString(),
     endDate.toISOString()
   );
-  logger.info(labelsMap);
+  logger.info(logLabelsMap);
+
+  const spanLabelsMap = await observabilityPlatform.getSpansFacetValues(
+    startDate.toISOString(),
+    endDate.toISOString()
+  );
+  logger.info(spanLabelsMap);
 
   const repoPath = "/Users/luketchang/code/ticketing";
 
@@ -550,7 +563,8 @@ async function main() {
     repoPath,
     codebaseOverview: overview,
     fileTree,
-    labelsMap,
+    logLabelsMap,
+    spanLabelsMap,
     chatHistory: [],
     codeContext: new Map(),
     logContext: new Map(),

@@ -27,7 +27,8 @@ function createPrompt(params: {
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
-  labelsMap: string;
+  logLabelsMap: string;
+  spanLabelsMap: string;
   chatHistory: string[];
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInput, Log[]>;
@@ -85,8 +86,12 @@ ${params.fileTree}
 </file_tree>
 
 <log_labels>
-${params.labelsMap}
+${params.logLabelsMap}
 </log_labels>
+
+<span_labels>
+${params.spanLabelsMap}
+</span_labels>
 
 <chat_history>
 ${formatChatHistory(params.chatHistory)}
@@ -122,7 +127,8 @@ export class Reviewer {
     repoPath: string;
     codebaseOverview: string;
     fileTree: string;
-    labelsMap: string;
+    logLabelsMap: string;
+    spanLabelsMap: string;
     chatHistory: string[];
     codeContext: Map<string, string>;
     logContext: Map<LogSearchInput, Log[]>;

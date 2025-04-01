@@ -20,7 +20,7 @@ function createLogSearchPrompt(params: {
   query: string;
   logRequest: string;
   chatHistory: string[];
-  labelsMap: string;
+  logLabelsMap: string;
   platformSpecificInstructions: string;
 }): string {
   const currentTime = new Date().toISOString();
@@ -61,7 +61,7 @@ ${currentTime}
 </current_time>
 
 <log_labels>
-${params.labelsMap}
+${params.logLabelsMap}
 </log_labels>
 
 <platform_specific_instructions>
@@ -120,7 +120,7 @@ class LogSearch {
     query: string;
     logRequest: string;
     chatHistory: string[];
-    labelsMap: string;
+    logLabelsMap: string;
   }): Promise<LogSearchResponse> {
     const prompt = createLogSearchPrompt({
       ...params,
@@ -186,7 +186,7 @@ export class LogSearchAgent {
   async invoke(params: {
     query: string;
     logRequest: string;
-    labelsMap: string;
+    logLabelsMap: string;
     chatHistory: string[];
     maxIters?: number;
   }): Promise<LogSearchAgentResponse> {
@@ -201,7 +201,7 @@ export class LogSearchAgent {
         query: params.query,
         logRequest: params.logRequest,
         chatHistory: chatHistory,
-        labelsMap: params.labelsMap,
+        logLabelsMap: params.logLabelsMap,
       });
 
       currentIter++;

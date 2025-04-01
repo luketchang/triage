@@ -5,93 +5,20 @@ import { ObservabilityPlatform } from "./observability.interface";
 import { IntegrationType, Log, Span } from "./types";
 
 const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
-# Datadog APM Query Syntax Tutorial
-
-This guide will help you quickly understand how to create effective queries in Datadog APM Trace Explorer.
-
-## Basic Query Structure
-
-Datadog APM queries consist of:
-- **Span attributes**: Properties of spans (prefixed with @)
-- **Span tags**: Metadata about spans (no prefix needed)
-- **Boolean operators**: AND, OR, - (NOT)
-
-## Query Examples by Complexity
-
-### Simple Queries
-
-# Find traces from a specific service
-service:concierge-server
-
-# Find all error spans
-status:error
-
-# Find spans with a specific operation
-operation_name:http.request
-
-### Using Wildcards
-
-# Find all async worker operations
-operation_name:async.worker_*
-
-# Find all document-related operations
-operation_name:*document*
-
-### Numerical Comparisons
-
-# Find slow database queries (>500ms)
-service:postgres @duration:>500ms
-
-# Find HTTP requests with 4xx status codes
-operation_name:http.request @http.status_code:[400 TO 499]
-
-### Combining Conditions
-
-# Find API errors from specific services
-service:(nexus-server OR nexus-worker) status:error operation_name:fastapi.request
-
-# Exclude certain spans
-service:concierge-worker -operation_name:*zendesk*
-
-### Advanced Attribute Searches
-
-# Search nested attributes
-@git.commit.sha:12345
-
-# Search for specific error messages
-status:error @error.msg:*timeout*
-
-### Infrastructure Tags
-
-# Find spans from a specific host
-host:datadog-agent.railway.internal
-
-# Find spans from production environment with errors
-env:production status:error
-
-## Pro Tips
-- Always include the following components in your query to reduce noise: (NOT service:agent NOT service:cluster-agent NOT service:desktop-vpnkit-controller)
-
-## Real-World Examples for Our Services
-
-# Track all AI API calls
-operation_name:(openai.request OR anthropic.request)
-
-# Find slow file processing operations
-operation_name:(*file* OR *document*) @duration:>1s 
-
-# Debug Zendesk ticket handling errors
-service:concierge-worker operation_name:*zendesk* status:error
-
-# Monitor database performance
-service:(postgres OR redis) @duration:>200ms
-
-Remember that building effective queries allows you to quickly identify and troubleshoot issues in complex distributed systems!
+- Use Datadog Span Search syntax to query spans within APM traces.
+- Example query with reserved attributes: service:<service_name> env:prod operation_name:<operation>
+- Example query for span attributes (requires '@'): @http.url:/api/v1/users @http.status_code:>=500
+- You can inspect multiple services in the same query, e.g.: (service:<service1> OR service:<service2>)
+- Use wildcard (*) for partial matches, e.g.: service:auth* @resource_name:*/login
+- Use '-' to exclude terms, e.g.: service:web-service AND -@http.status_code:200
+- For non-standard tags use: tags:"non.standard/tag-name"
+- Numeric range search example: @http.response_time:[100 TO 500]
+- Attribute keyword search (full-text wildcard match): @error.message:*timeout*
+- Special characters (?, >, <, :, =, ", ~, /, \, spaces) must be escaped, e.g.: @url:*user\\=JaneDoe*
 `;
 
 const DATADOG_LOG_SEARCH_INSTRUCTIONS = `
 - Use Datadog Log Search Syntax to search for logs.
-- All log queries must be formulated as valid Datadog Log Search Syntax queries.
 - Example query: service:<service_name> <keyword in log line> *:<keyword in attributes>
 - You can inspect multiple services' logs in same query as in this example: (service:<service1> OR service:<service2>)
 - Log attributes are not well exposed so use *:<keyword in attributes> to full-text search for keywords in attributes (often times keywords will be in attributes not the plain log line)
@@ -101,9 +28,9 @@ enum DatadogDefaultFacetsSpans {
   SERVICE = "service",
   RESOURCE = "resource",
   OPERATION_NAME = "operation_name",
-  HOST = "host",
+  // HOST = "host",
   STATUS = "status",
-  ENV = "env",
+  // ENV = "env",
 }
 enum DatadogDefaultFacetsLogs {
   SERVICE = "service",
@@ -165,7 +92,9 @@ export class DatadogPlatform implements ObservabilityPlatform {
   ): Promise<Map<DatadogDefaultFacetsSpans, string[]>> {
     const spansMap = new Map<DatadogDefaultFacetsSpans, string[]>();
     for (const facet of facetList) {
+      logger.info(`Fetching facet values for ${facet}`);
       const spanValues = await this.fetchFacetValuesSpans(start, end, facet);
+      logger.info(`Facet values for ${facet}: ${spanValues}`);
       spansMap.set(facet, spanValues);
     }
     return spansMap;
