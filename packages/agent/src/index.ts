@@ -1,4 +1,4 @@
-import { AnthropicModel, loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
+import { loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -519,8 +519,8 @@ async function main() {
   const observabilityPlatform = getObservabilityPlatform(integrationType);
 
   // Get formatted labels map for time range
-  const startDate = new Date("2025-03-03T03:00:00");
-  const endDate = new Date("2025-03-03T03:30:00");
+  const startDate = new Date("2025-03-31T04:00:00Z");
+  const endDate = new Date("2025-03-31T06:00:00Z");
   const labelsMap = await observabilityPlatform.getLogsFacetValues(
     startDate.toISOString(),
     endDate.toISOString()
@@ -542,7 +542,7 @@ async function main() {
 
   const fileTree = loadFileTree(repoPath);
 
-  const query = `Getting some "order not found" errors in the payments service which is causing crashes. One of these happened around 03-06-2025 around 4am UTC. Why is this happening? DO NOT USE SPAN SEARCH, NOT ALLOWED.`;
+  const query = `Getting some "order not found" errors in the payments service which is causing crashes. One of these happened around 04-01-2025 around 5am UTC. Why is this happening? DO NOT USE SPAN SEARCH, NOT ALLOWED.`;
 
   const state: OncallAgentState = {
     firstPass: true,
@@ -564,7 +564,7 @@ async function main() {
   };
 
   const reasoningModel = OpenAIModel.O3_MINI;
-  const fastModel = AnthropicModel.CLAUDE_3_7_SONNET_20250219;
+  const fastModel = OpenAIModel.GPT_4O;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 
