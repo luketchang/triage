@@ -183,6 +183,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     }
   }
 
+  // TODO: check if you need to destructure attributes same as in DD
   private formatLogs(logsResponse: GrafanaLogsResponse): Log[] {
     if (!logsResponse || !logsResponse.data || !logsResponse.data.result) {
       return [];

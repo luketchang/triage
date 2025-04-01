@@ -49,6 +49,9 @@ function displayLogs(logs: Log[], platform: string): void {
     if (metadataEntries.length > 0) {
       logger.info(`    Metadata: ${JSON.stringify(log.metadata, null, 2)}`);
     }
+    if (log.attributes) {
+      logger.info(`    Attributes: ${JSON.stringify(log.attributes, null, 2)}`);
+    }
   });
 }
 

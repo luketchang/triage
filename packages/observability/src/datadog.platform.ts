@@ -435,11 +435,31 @@ export class DatadogPlatform implements ObservabilityPlatform {
       // Add Datadog-specific tags
       metadata["source"] = "datadog";
 
+      // Look for a specific nested 'attributes' field
+      let nestedAttributes;
+
+      // Check if attributes itself has an 'attributes' field
+      if (log.attributes?.attributes) {
+        if (typeof log.attributes.attributes === "string") {
+          try {
+            // Try to parse it as JSON if it's a string
+            nestedAttributes = JSON.parse(log.attributes.attributes);
+          } catch (e) {
+            // If not valid JSON, use as is
+            nestedAttributes = log.attributes.attributes;
+          }
+        } else {
+          // Use as is if it's already an object
+          nestedAttributes = log.attributes.attributes;
+        }
+      }
+
       return {
         timestamp,
         message: content,
         service: serviceName,
         level,
+        attributes: nestedAttributes,
         metadata,
       };
     });
