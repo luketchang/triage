@@ -19,9 +19,37 @@ const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
 
 const DATADOG_LOG_SEARCH_INSTRUCTIONS = `
 - Use Datadog Log Search Syntax to search for logs.
-- Example query: service:<service_name> <keyword in log line> *:<keyword in attributes>
-- You can inspect multiple services' logs in same query as in this example: (service:<service1> OR service:<service2>)
-- Log attributes are not well exposed so use *:<keyword in attributes> to full-text search for keywords in attributes (often times keywords will be in attributes not the plain log line)
+- Example queries:
+  - service:<service_name>
+  - service:<service_name> AND <keyword in log line>
+  - service:<service_name> AND *:<keyword in attributes>
+
+## Query Strategy
+1. EXPLORATION PHASE: Begin with broad queries that capture the overall system behavior
+   - When debugging, start with a broad query for just a service or a small set of related services without additional filters.
+   - The most effective initial queries often start with just the service names.
+   - Example: (service:orders OR service:payments OR service:tickets OR service:expiration)
+
+2. REFINEMENT PHASE: Once you understand the system flow, create targeted queries that:
+   - Include specific entity IDs found during exploration (orderId, userId, messageId, etc.)
+   - Filter out noisy logs you've already determined are irrelevant or are clearly from mistformatted logging or overflowed messages
+   - Focus on specific time windows where important activity happens
+   - Example: (service:orders OR service:tickets) AND (*:67ec59004bb8930018a81adc OR *:67ec599d2185520019af85cf)
+   - Example: service:orders AND -message:heartbeat AND (*:"No matching document" OR *:"duplicate key")
+
+- For initial searches, avoid adding restricting conditions beyond service names, level, or time ranges.
+- If you're not finding any logs, try a query that includes ONLY service names.
+- Avoid using error message patterns too early in your search process.
+- Use NOT (-) to exclude noise once you've identified patterns of irrelevant logs.
+- When you find specific identifiers in logs (IDs, transaction references), use these to track events across services.
+
+## Best practices (examples):
+- DO: (service:orders OR service:payments OR service:tickets OR service:expiration)
+- DO: service:tickets AND level:info
+- DO: (service:orders OR service:payments) AND (*:67ec59004bb8930018a81adc OR *:orderId)
+- DO LATER: service:orders AND (*:"No matching document" OR *:"duplicate key")
+- DON'T: (service:orders OR service:payments OR service:tickets) AND ("No matching document" OR "duplicate key error") as initial query
+- DON'T: service:orders AND *:base-listener AND *:abstract AND *:parse
 `;
 
 enum DatadogDefaultFacetsSpans {
