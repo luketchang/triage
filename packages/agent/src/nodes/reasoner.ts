@@ -1,10 +1,4 @@
-import {
-  AnthropicModel,
-  formatCodeMap,
-  getModelWrapper,
-  logger,
-  OpenAIModel,
-} from "@triage/common";
+import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
 import { Log, Span } from "@triage/observability";
 import { generateText } from "ai";
 import {
@@ -95,9 +89,9 @@ If you feel like you received sufficient context or that some of the code, logs,
 }
 
 export class Reasoner {
-  private llm: OpenAIModel | AnthropicModel;
+  private llm: Model;
 
-  constructor(llm: OpenAIModel | AnthropicModel) {
+  constructor(llm: Model) {
     this.llm = llm;
   }
 

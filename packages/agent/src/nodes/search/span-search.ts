@@ -1,4 +1,4 @@
-import { AnthropicModel, getModelWrapper, logger, OpenAIModel } from "@triage/common";
+import { getModelWrapper, logger, Model } from "@triage/common";
 import { ObservabilityPlatform, Span } from "@triage/observability";
 import { generateText } from "ai";
 import {
@@ -98,10 +98,10 @@ ${formatSpanResults(params.spanResults)}
 }
 
 class SpanSearch {
-  private llm: OpenAIModel | AnthropicModel;
+  private llm: Model;
   private observabilityPlatform: ObservabilityPlatform;
 
-  constructor(llm: OpenAIModel | AnthropicModel, observabilityPlatform: ObservabilityPlatform) {
+  constructor(llm: Model, observabilityPlatform: ObservabilityPlatform) {
     this.llm = llm;
     this.observabilityPlatform = observabilityPlatform;
   }
@@ -157,14 +157,14 @@ class SpanSearch {
 }
 
 export class SpanSearchAgent {
-  private fastModel: OpenAIModel | AnthropicModel;
-  private reasoningModel: OpenAIModel | AnthropicModel;
+  private fastModel: Model;
+  private reasoningModel: Model;
   private observabilityPlatform: ObservabilityPlatform;
   private spanSearch: SpanSearch;
 
   constructor(
-    fastModel: OpenAIModel | AnthropicModel,
-    reasoningModel: OpenAIModel | AnthropicModel,
+    fastModel: Model,
+    reasoningModel: Model,
     observabilityPlatform: ObservabilityPlatform
   ) {
     this.fastModel = fastModel;
