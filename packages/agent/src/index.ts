@@ -524,8 +524,8 @@ async function main() {
   const observabilityPlatform = getObservabilityPlatform(integrationType);
 
   // Get formatted labels map for time range
-  const startDate = new Date("2025-04-01T04:00:00Z");
-  const endDate = new Date("2025-04-01T06:00:00Z");
+  const startDate = new Date("2025-04-01T21:00:00Z");
+  const endDate = new Date("2025-04-01T22:00:00Z");
 
   // TODO: make this Map<string, string[]>
   const logLabelsMap = await observabilityPlatform.getLogsFacetValues(
@@ -534,11 +534,11 @@ async function main() {
   );
   logger.info(logLabelsMap);
 
-  const spanLabelsMap = await observabilityPlatform.getSpansFacetValues(
-    startDate.toISOString(),
-    endDate.toISOString()
-  );
-  logger.info(spanLabelsMap);
+  // const spanLabelsMap = await observabilityPlatform.getSpansFacetValues(
+  //   startDate.toISOString(),
+  //   endDate.toISOString()
+  // );
+  // logger.info(spanLabelsMap);
 
   const repoPath = "/Users/luketchang/code/ticketing";
 
@@ -555,7 +555,7 @@ async function main() {
 
   const fileTree = loadFileTree(repoPath);
 
-  const query = `Getting some "order not found" errors in the payments service which is causing crashes. One of these happened around 04-01-2025 around 5am UTC. Why is this happening? DO NOT USE SPAN SEARCH, NOT ALLOWED.`;
+  const query = `I just migrated from nats server to rabbitmq (may have introduced bug) but getting some "No matching document found", duplicate key errors, and validation errors in some services around 2025-04-01T21:15:00.00Z. Figure out the root cause of the issue and propose a concrete code fix.`;
 
   const state: OncallAgentState = {
     firstPass: true,
@@ -564,7 +564,7 @@ async function main() {
     codebaseOverview: overview,
     fileTree,
     logLabelsMap,
-    spanLabelsMap,
+    spanLabelsMap: "",
     chatHistory: [],
     codeContext: new Map(),
     logContext: new Map(),

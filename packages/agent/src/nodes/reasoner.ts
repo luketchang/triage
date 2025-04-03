@@ -19,7 +19,7 @@ import {
   spanRequestToolSchema,
   SpanSearchInput,
 } from "../types";
-import { formatChatHistory, formatLogResults, formatSpanResults, validateToolCalls } from "./utils";
+import { formatLogResults, formatSpanResults, validateToolCalls } from "./utils";
 
 export type ReasoningResponse = RootCauseAnalysis | CodeRequest | SpanRequest | LogRequest;
 
@@ -33,7 +33,7 @@ function createPrompt(params: {
   spanContext: Map<SpanSearchInput, Span[]>;
   logLabelsMap: string;
   spanLabelsMap: string;
-  chatHistory: string[];
+  chatHistory: string[]; // TODO: add back in if needed
 }) {
   return `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review context gathered from logs, spans, and code and question whether or not you have enough information. If you do you output a proposed root cause analysis. If not, you output a request for more logs or code. You are not able to make any modifications to the system—you can only reason about the system by looking at the context and walking through sequences of events.
@@ -57,10 +57,6 @@ Guidelines:
 <query>
 ${params.query}
 </query>
-
-<chat_history>
-${formatChatHistory(params.chatHistory)}
-</chat_history>
 
 <log_labels>
 ${params.logLabelsMap}

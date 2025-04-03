@@ -18,7 +18,7 @@ export type LogSearchResponse = LogSearchInput | TaskComplete;
 
 function createLogSearchPrompt(params: {
   query: string;
-  logRequest: string;
+  logRequest: string; // TODO: add back in if needed
   chatHistory: string[];
   logLabelsMap: string;
   platformSpecificInstructions: string;
@@ -26,35 +26,51 @@ function createLogSearchPrompt(params: {
   const currentTime = new Date().toISOString();
 
   return `
-You are an expert AI assistant that helps engineers debug production issues by searching through logs. Your task is to explore/surface logs based on the request.
+You are an expert AI assistant that helps engineers debug production issues by searching through logs. Your task is to explore/surface logs based on the issue/event.
 
-Given a request for the type of logs needed for the investigation and all available log labels, your task is to fetch logs relevant to the request. You will do so by outputting your intermediate reasoning for explaining what action you will take and then outputting either a \`LogSearchInput\` to read logs from observability API OR a \`TaskComplete\` to indicate that you have completed the request.
+Given all available log labels and a user query about the issue/event, your task is to fetch logs relevant to the issue/event that will give you a full picture of the issue/event. You will do so by outputting either a \`LogSearchInput\` to read logs from observability API OR a \`TaskComplete\` to indicate that you have completed your search.
 
 Query Synthesis Instructions:
-- Keep the keywords and regexes simple
-- Avoid speculating on keywords or phrases that are not directly related to the user's query, do not assume the existence of keywords/phrases unless its specified in the query or you have seen it in previous logs
-- Always constrain your searches to a finite set of services. If you do not you will end up with lots of system logs and noisy results.
-- Refer to the <platform_specific_instructions> for more information on how to formulate your query
-
-Information Gathering Process:
-- First identify the occurrence of the issue/event being described and find an identifier (e.g. username or id) to trace the sequence of events. Do not move on until you have found the area where the issue/event occurred.
-- Then identifiers that are likely to trace a sequence of events in your keyword searches (e.g. usernames or ids) to filter out noise and get a broader picture of sequence of events. If you do not filter on these identifiers, there will be too many logs and it will be difficult to tell which events lead to others.
-- Try to obtain a broad view of logs that captures the issue/event, context surrounding it, and from multiple services to get a full picture.
-- Once you have outlined a coherent/comprehensive sequence of events in your reasoning, you can output a \`TaskComplete\` to indicate that you have completed the request.
+- Use a two-phase approach to log search:
+  1. EXPLORATION PHASE: Start with broad service-only queries to understand overall system behavior
+  2. REFINEMENT PHASE: Create targeted queries that include relevant IDs, filter noise, and capture the full issue lifecycle
+- For initial exploration, use simple queries with just service names (e.g., "service:orders OR service:payments OR service:tickets OR service:expiration") 
+- After identifying relevant services and events, refine your queries to include:
+  * Specific transaction/order/entity IDs that relate to the issue
+  * Relevant time windows that span before, during, and after the issue
+  * Filtering expressions to exclude noisy logs (using NOT or dash operators)
+- Aim for your final queries to capture the complete story of what happened, not just error moments
+- If you are not getting any results, it is okay to just give a time range and constrain the number of services being queried.
+- Refer to the <platform_specific_instructions> for more information on how to formulate your query.
+- Trust the platform-specific instructions over your own general knowledge about how to query logs.
 
 Tips:
-- Prefer relatively simple queries at the beginning while you're gathering initial understanding.
-- DO NOT query system or database logs for now (this includes logs from database pods, NATS message queues/servers, etc.).
+- Begin with the most basic service-only queries before adding any constraints.
+- PREFER SIMPLE QUERIES at the beginning to capture a broad view of system activity.
+- Avoid overly complex queries that combine multiple services with specific error messages.
+- DO NOT query logs from any non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, rabbitmq, cluster-agent, desktop-vpnkit-controller, metrics-server, etc. These will add noise to results and are not helpful.
 - The timezone for start and end dates should be Universal Coordinated Time (UTC).
-- If log search is not returning results (as may show in message history), adjust/widen query as needed.
+- If log search is not returning results (as may show in message history), try:
+  1. Using only service filters without message patterns
+  2. Changing the set of services you're querying
+  3. Widening the time range further
+- Once you've found relevant logs with IDs or other identifiers, use those in follow-up queries to track specific events across services
+- When you spot specific transaction IDs, order IDs, or relevant entity IDs in logs, use these to craft targeted queries
 - Do not output \`TaskComplete\` until you have a broad view of logs captured at least once across multiple services to get full view.
 - Be generous on the time ranges and give +/- 15 minutes to ensure you capture the issue/event (e.g. 4:10am to 4:40am if issue/event was at 4:25am).
 - If there is source code in your previously gathered context, use it to inform your log search.
 
 Rules:
 - Output just 1 single \`LogSearchInput\` at a time. DO NOT output multiple \`LogSearchInput\`s.
-- Look at the context previously gathered to see what logs you have already fetched and what queries you've tried, DO NOT repeat past queries
+- Look at the context previously gathered to see what logs you have already fetched and what queries you've tried, DO NOT repeat past queries.
 - Returned logs will be displayed in this format for each log line: <service> <timestamp> <content>
+- If you're not finding any logs with specific error keywords, switch to service-only queries to get a system overview first.
+- Output \`TaskComplete\` when you believe you have gathered sufficient logs to understand the issue/event and additional queries would be redundant or provide diminishing returns. Signs you should complete the task:
+  * You have logs from all relevant services showing the full lifecycle of the issue
+  * You've traced specific entity IDs across multiple services
+  * You've captured logs from before, during, and after the issue occurred
+  * Additional queries are becoming repetitive and returning similar information
+  * You've tried multiple query strategies and have a comprehensive view of system behavior
 
 <current_time>
 ${currentTime}
@@ -74,10 +90,6 @@ Use the below history of context you already gathered to inform what steps you w
 ${params.query}
 </query>
 
-<log_request>
-${params.logRequest}
-</log_request>
-
 <context_previously_gathered>
 ${formatChatHistory(params.chatHistory)}
 </context_previously_gathered>
@@ -91,7 +103,23 @@ function createLogSearchSummaryPrompt(params: {
   const currentTime = new Date().toISOString();
 
   return `
-Given a set log queries and the fetched log results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event. Your response just be a short sequence of events you've observed through the logs that are relevant to the user query. The response should NOT be speculative about any root causes or further issues—it should objectively summarize what the logs show.
+Given a set of log queries and the fetched log results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event. 
+
+Focus on capturing the full sequence of system events from BEFORE, DURING, and AFTER any errors or issues. Look for patterns in the logs that would help understand:
+1. The normal system behavior and message flows between services
+2. Critical events leading up to any errors
+3. The response of the system after errors occurred
+4. How different services interact with each other (especially messaging patterns)
+5. Key transaction/entity IDs that appear across multiple services
+
+Provide a detailed analysis that:
+- Identifies specific entity IDs (order IDs, transaction IDs, message IDs) that are relevant to the issue
+- Traces how these entities moved through different services over time
+- Highlights where errors or unexpected behavior occurred
+- Connects related events across different services
+- Shows the complete lifecycle of important transactions
+
+Your response should be a chronological sequence of significant events observed through the logs that are relevant to the user query, including service interactions, startup sequences, message passing, and error conditions. The response should provide an accurate, objective summary of what the logs show without being speculative.
 
 <current_time>
 ${currentTime}
@@ -158,9 +186,10 @@ class LogSearch {
         type: "logSearchInput",
         start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
         end: new Date().toISOString(),
-        query: "status:error",
-        limit: 100,
-        reasoning: "Failed to generate query with LLM. Using fallback query.",
+        query: "service:orders OR service:payments OR service:tickets OR service:expiration",
+        limit: 500,
+        reasoning:
+          "Failed to generate query with LLM. Using fallback query to get a broad view of microservices.",
       };
     }
   }
@@ -252,16 +281,16 @@ export class LogSearchAgent {
       logResults,
     });
 
-    const { text } = await generateText({
-      model: getModelWrapper(this.reasoningModel),
-      prompt: summaryPrompt,
-    });
+    // const { text } = await generateText({
+    //   model: getModelWrapper(this.reasoningModel),
+    //   prompt: summaryPrompt,
+    // });
 
-    logger.info(`Log search summary:\n${text}`);
+    logger.info(`Log search summary:\n${""}`);
 
     return {
       newLogContext: logResults,
-      summary: text,
+      summary: "",
     };
   }
 }
