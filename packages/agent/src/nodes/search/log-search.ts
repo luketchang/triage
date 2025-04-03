@@ -34,7 +34,7 @@ Query Synthesis Instructions:
 - Use a two-phase approach to log search:
   1. EXPLORATION PHASE: Start with broad service-only queries to understand overall system behavior
   2. REFINEMENT PHASE: Create targeted queries that include relevant IDs, filter noise, and capture the full issue lifecycle
-- For initial exploration, use simple queries with just service names (e.g., "service:orders OR service:payments OR service:tickets OR service:expiration") 
+- For initial exploration, use simple queries with just 2-4 related service names (e.g., "service:orders OR service:payments")
 - After identifying relevant services and events, refine your queries to include:
   * Specific transaction/order/entity IDs that relate to the issue
   * Relevant time windows that span before, during, and after the issue
@@ -48,29 +48,33 @@ Tips:
 - Begin with the most basic service-only queries before adding any constraints.
 - PREFER SIMPLE QUERIES at the beginning to capture a broad view of system activity.
 - Avoid overly complex queries that combine multiple services with specific error messages.
-- DO NOT query logs from any non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, rabbitmq, cluster-agent, desktop-vpnkit-controller, metrics-server, etc. These will add noise to results and are not helpful.
+- DO NOT query logs from any non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, cluster-agent, desktop-vpnkit-controller, metrics-server, etc. These will add noise to results and are not helpful.
+- DO filter out verbose startup, initialization, and shutdown logs that aren't related to the actual error. 
+- DO filter out common service logs like "Handling request for current user" or metadata logs that don't provide useful debugging info.
 - The timezone for start and end dates should be Universal Coordinated Time (UTC).
-- If log search is not returning results (as may show in message history), try:
-  1. Using only service filters without message patterns
-  2. Changing the set of services you're querying
-  3. Widening the time range further
+- Use "level:error" or "level:warn" to filter for error and warning logs when you're ready to focus on problems.
 - Once you've found relevant logs with IDs or other identifiers, use those in follow-up queries to track specific events across services
 - When you spot specific transaction IDs, order IDs, or relevant entity IDs in logs, use these to craft targeted queries
-- Do not output \`TaskComplete\` until you have a broad view of logs captured at least once across multiple services to get full view.
+- If you're getting the same types of logs in consecutive queries, IMMEDIATELY issue TaskComplete as you're not finding new information.
 - Be generous on the time ranges and give +/- 15 minutes to ensure you capture the issue/event (e.g. 4:10am to 4:40am if issue/event was at 4:25am).
 - If there is source code in your previously gathered context, use it to inform your log search.
 
 Rules:
 - Output just 1 single \`LogSearchInput\` at a time. DO NOT output multiple \`LogSearchInput\`s.
 - Look at the context previously gathered to see what logs you have already fetched and what queries you've tried, DO NOT repeat past queries.
+- DO NOT query the same services multiple times with slightly different configurations - this wastes iterations and provides redundant information.
 - Returned logs will be displayed in this format for each log line: <service> <timestamp> <content>
 - If you're not finding any logs with specific error keywords, switch to service-only queries to get a system overview first.
-- Output \`TaskComplete\` when you believe you have gathered sufficient logs to understand the issue/event and additional queries would be redundant or provide diminishing returns. Signs you should complete the task:
-  * You have logs from all relevant services showing the full lifecycle of the issue
+- Output \`TaskComplete\` IMMEDIATELY if:
+  * You see the same class of logs being returned in consecutive queries
+  * You've already captured logs showing the key errors mentioned in the query
+  * You've already seen error logs from the relevant services
+  * You've gathered sufficient logs to understand the issue and error patterns
   * You've traced specific entity IDs across multiple services
   * You've captured logs from before, during, and after the issue occurred
-  * Additional queries are becoming repetitive and returning similar information
+  * Additional queries are becoming repetitive or returning similar information
   * You've tried multiple query strategies and have a comprehensive view of system behavior
+  * You have sufficient information to determine the root cause of the issue
 
 <current_time>
 ${currentTime}
