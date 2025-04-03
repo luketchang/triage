@@ -7,7 +7,9 @@ import {
   logger,
   parseToolCallResultToString,
 } from "@triage/common";
-
+import { Log } from "@triage/observability";
+import { LogSearchInput } from "../../types";
+import { formatLogResults } from "../utils";
 const DEFAULT_TOOL_CALL_TIMEOUT = 1200 * 1000; // 20 minutes
 
 export interface ClaudeCodeSearchResponse {
@@ -22,12 +24,13 @@ function createMcpPrompt(params: {
   repoPath: string;
   codebaseOverview: string;
   filesRead: Map<string, string>;
+  logContext: Map<LogSearchInput, Log[]>;
   fileTree: string;
 }): string {
   return `
 You are an expert AI assistant that helps engineers debug production issues by navigating the codebase.
 
-Given an user query (about a potential issue/event), previously gathered context, a codebase overview, the files you've previously read, your taks is to figure out the root cause of the issue and propose a fix. Propose an exact code change and do not stop exploring until you are fully sure of your exact code changes. Again you must propose exact fixes in the code
+Given an user query (about a potential issue/event), previously gathered code and logs, a codebase overview, the files you've previously read, your taks is to figure out the root cause of the issue and propose a fix. Propose an exact code change and do not stop exploring until you are fully sure of your exact code changes. Again you must propose exact fixes in the code
 
 At the end of your search, list all _new_ files you opened/read (not including the ones already in the <previous_files_read> tag) in a comma-separated list wrapped in <new_files_read> tag. This means any file that was opened and read from the codebase during the process of exploring code. Then output your fully-detailed root cause analysis and your exact code-level changes (with code in the answer) in the <summary> tags.
 
@@ -38,6 +41,10 @@ ${params.query}
 <previous_files_read>
 ${formatCodeMap(params.filesRead)}
 </previous_files_read>
+
+<previous_read_logs>
+${formatLogResults(params.logContext)}
+</previous_read_logs>
 
 <repo_path>
 ${params.repoPath}
@@ -68,6 +75,7 @@ export class CodeSearch {
     chatHistory: string[];
     codeRequest: string;
     filesRead: Map<string, string>;
+    logContext: Map<LogSearchInput, Log[]>;
   }): Promise<ClaudeCodeSearchResponse> {
     logger.info(`Searching codebase for query: ${params.query}`);
     const mcpClient = await initMCPClient(this.repoPath);

@@ -225,6 +225,7 @@ export class OnCallAgent {
       chatHistory: state.chatHistory,
       codeRequest: state.codeRequest ?? "",
       filesRead: state.codeContext,
+      logContext: state.logContext,
     });
 
     return {
