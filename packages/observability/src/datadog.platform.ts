@@ -24,32 +24,13 @@ const DATADOG_LOG_SEARCH_INSTRUCTIONS = `
   - service:<service_name> AND <keyword in log line>
   - service:<service_name> AND *:<keyword in attributes>
 
-## Query Strategy
-1. EXPLORATION PHASE: Begin with broad queries that capture the overall system behavior
-   - When debugging, start with a broad query for just a service or a small set of related services without additional filters.
-   - The most effective initial queries often start with just the service names.
-   - Example: (service:orders OR service:payments OR service:tickets OR service:expiration)
-
-2. REFINEMENT PHASE: Once you understand the system flow, create targeted queries that:
-   - Include specific entity IDs found during exploration (orderId, userId, messageId, etc.)
-   - Filter out noisy logs you've already determined are irrelevant or are clearly from mistformatted logging or overflowed messages
-   - Focus on specific time windows where important activity happens
-   - Example: (service:orders OR service:tickets) AND (*:67ec59004bb8930018a81adc OR *:67ec599d2185520019af85cf)
-   - Example: service:orders AND -message:heartbeat AND (*:"No matching document" OR *:"duplicate key")
-
-- For initial searches, avoid adding restricting conditions beyond service names, level, or time ranges.
-- If you're not finding any logs, try a query that includes ONLY service names.
-- Avoid using error message patterns too early in your search process.
-- Use NOT (-) to exclude noise once you've identified patterns of irrelevant logs.
-- When you find specific identifiers in logs (IDs, transaction references), use these to track events across services.
-
 ## Best practices (examples):
-- DO: (service:orders OR service:payments OR service:tickets OR service:expiration)
-- DO: service:tickets AND level:info
-- DO: (service:orders OR service:payments) AND (*:67ec59004bb8930018a81adc OR *:orderId)
-- DO LATER: service:orders AND (*:"No matching document" OR *:"duplicate key")
-- DON'T: (service:orders OR service:payments OR service:tickets) AND ("No matching document" OR "duplicate key error") as initial query
-- DON'T: service:orders AND *:base-listener AND *:abstract AND *:parse
+- GOOD: (service:orders OR service:payments) AND (*:67ec59004bb8930018a81adc OR *:orderId)
+- GOOD: (service:orders OR service:payments OR service:tickets OR service:expiration)
+- GOOD: service:tickets AND level:info
+- GOOD: service:orders AND (*:"No matching document" OR *:"duplicate key")
+- BAD (missing AND clauses): service:orders *:base-listener *:abstract *:parse
+- BAD (doesn't include service names): *
 `;
 
 enum DatadogDefaultFacetsSpans {
@@ -230,7 +211,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
         filterQuery: params.query,
         filterFrom: params.start,
         filterTo: params.end,
-        sort: "-timestamp",
+        sort: "timestamp",
         pageLimit: params.limit,
         pageCursor: params.pageCursor,
       });
@@ -339,7 +320,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
         filterQuery: params.query,
         filterFrom: new Date(params.start),
         filterTo: new Date(params.end),
-        sort: "-timestamp",
+        sort: "timestamp",
         pageLimit: params.limit,
         pageCursor: params.pageCursor,
       });

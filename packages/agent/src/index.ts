@@ -556,7 +556,7 @@ async function main() {
 
   const fileTree = loadFileTree(repoPath);
 
-  const query = `I just migrated from nats server to rabbitmq (may have introduced bug) but getting some "No matching document found", duplicate key errors, and validation errors in some services around 2025-04-01T21:15:00.00Z. Figure out the root cause of the issue and propose a concrete code fix.`;
+  const query = `I just migrated from nats server to rabbitmq (may have introduced bug) but getting some "No matching document found", duplicate key errors, and validation errors in some services around 2025-04-01T21:15:00.00Z. Figure out the root cause of the issue and propose a concrete code fix. Do not stop exploring code or logs until you have a concrete fix in code.`;
 
   const state: OncallAgentState = {
     firstPass: true,
