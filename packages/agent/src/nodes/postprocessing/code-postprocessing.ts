@@ -1,10 +1,4 @@
-import {
-  AnthropicModel,
-  formatCodeMap,
-  getModelWrapper,
-  logger,
-  OpenAIModel,
-} from "@triage/common";
+import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
 import { generateText } from "ai";
 import {
   CodePostprocessing as CodePostprocessingResponse,
@@ -42,9 +36,9 @@ function createPrompt(params: {
 }
 
 export class CodePostprocessor {
-  private llm: OpenAIModel | AnthropicModel;
+  private llm: Model;
 
-  constructor(llm: OpenAIModel | AnthropicModel) {
+  constructor(llm: Model) {
     this.llm = llm;
   }
 

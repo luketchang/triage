@@ -1,4 +1,4 @@
-import { AnthropicModel, getModelWrapper, logger, OpenAIModel } from "@triage/common";
+import { getModelWrapper, logger, Model } from "@triage/common";
 import { Log, ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
 import {
@@ -32,6 +32,7 @@ Given all available log labels and a user query about the issue/event, your task
 
 Tips:
 - DO NOT query logs from non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, cluster-agent, desktop-vpnkit-controller, metrics-server, etcd, redis, etc (think anything collector or infrastructure related).
+- Your goal is to eventually find a query that returns logs across the related services with as much important surrounding context and events as possible .
 
 Rules:
 - Output just 1 single \`LogSearchInput\` at a time. DO NOT output multiple \`LogSearchInput\`s.
@@ -113,10 +114,10 @@ ${formatLogResults(params.logResults)}
 }
 
 class LogSearch {
-  private llm: OpenAIModel | AnthropicModel;
+  private llm: Model;
   private observabilityPlatform: ObservabilityPlatform;
 
-  constructor(llm: OpenAIModel | AnthropicModel, observabilityPlatform: ObservabilityPlatform) {
+  constructor(llm: Model, observabilityPlatform: ObservabilityPlatform) {
     this.llm = llm;
     this.observabilityPlatform = observabilityPlatform;
   }
@@ -173,14 +174,14 @@ class LogSearch {
 }
 
 export class LogSearchAgent {
-  private fastModel: OpenAIModel | AnthropicModel;
-  private reasoningModel: OpenAIModel | AnthropicModel;
+  private fastModel: Model;
+  private reasoningModel: Model;
   private observabilityPlatform: ObservabilityPlatform;
   private logSearch: LogSearch;
 
   constructor(
-    fastModel: OpenAIModel | AnthropicModel,
-    reasoningModel: OpenAIModel | AnthropicModel,
+    fastModel: Model,
+    reasoningModel: Model,
     observabilityPlatform: ObservabilityPlatform
   ) {
     this.fastModel = fastModel;

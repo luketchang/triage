@@ -12,14 +12,16 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@triage/config": "workspace:*",
     "@ai-sdk/anthropic": "^1.1.16",
+    "@ai-sdk/google": "^1.2.5",
     "@ai-sdk/openai": "^1.2.3",
     "@ai-sdk/provider": "^1.1.0",
     "@anthropic-ai/sdk": "^0.39.0",
     "@datadog/datadog-api-client": "^1.32.0",
+    "@google/generative-ai": "^0.24.0",
     "@modelcontextprotocol/sdk": "^1.6.1",
     "@prisma/client": "^6.5.0",
+    "@triage/config": "workspace:*",
     "@types/axios": "^0.14.4",
     "ai": "^4.1.58",
     "axios": "^1.7.9",

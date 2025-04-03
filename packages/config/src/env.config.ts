@@ -13,6 +13,7 @@ const envSchema = z.object({
   PROCESS_LABEL: z.string().default("oncall-api"),
   OPENAI_API_KEY: z.string(),
   ANTHROPIC_API_KEY: z.string(),
+  GOOGLE_API_KEY: z.string().optional(),
 
   // Datadog variables (optional by default)
   DATADOG_API_KEY: z.string().optional(),
@@ -55,6 +56,7 @@ const configObject = {
   processLabel: env.PROCESS_LABEL,
   openaiApiKey: env.OPENAI_API_KEY,
   anthropicApiKey: env.ANTHROPIC_API_KEY,
+  googleApiKey: env.GOOGLE_API_KEY,
   datadog: {
     apiKey: env.DATADOG_API_KEY,
     appKey: env.DATADOG_APP_KEY,

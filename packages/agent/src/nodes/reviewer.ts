@@ -1,10 +1,4 @@
-import {
-  AnthropicModel,
-  formatCodeMap,
-  getModelWrapper,
-  logger,
-  OpenAIModel,
-} from "@triage/common";
+import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
 import { Log } from "@triage/observability";
 import { generateText } from "ai";
 import {
@@ -116,9 +110,9 @@ ${params.rootCauseAnalysis}
 }
 
 export class Reviewer {
-  private llm: OpenAIModel | AnthropicModel;
+  private llm: Model;
 
-  constructor(llm: OpenAIModel | AnthropicModel) {
+  constructor(llm: Model) {
     this.llm = llm;
   }
 

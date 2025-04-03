@@ -1,10 +1,4 @@
-import {
-  AnthropicModel,
-  extractXmlContent,
-  getModelWrapper,
-  logger,
-  OpenAIModel,
-} from "@triage/common";
+import { extractXmlContent, getModelWrapper, logger, Model } from "@triage/common";
 import { generateText } from "ai";
 
 export interface PlannerResponse {
@@ -89,9 +83,9 @@ Your reasoning here
 };
 
 export class Planner {
-  private llm: AnthropicModel | OpenAIModel;
+  private llm: Model;
 
-  constructor(llm: AnthropicModel | OpenAIModel) {
+  constructor(llm: Model) {
     this.llm = llm;
   }
 
