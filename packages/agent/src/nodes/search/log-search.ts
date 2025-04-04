@@ -36,18 +36,22 @@ function createLogSearchPrompt(params: {
   return `
 Given all available log labels and a user query about the issue/event, your task is to fetch logs relevant to the issue/event that will give you a full picture of the issue/event. You will do so by outputting \`LogSearchInput\` outputs to read logs from observability API.
 
-Tips:
+## Tips
 - DO NOT query logs from non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, cluster-agent, desktop-vpnkit-controller, metrics-server, etcd, redis, etc (think anything collector or infrastructure related).
+- Early on in exploration, tag multiple services in your queries instead of doing multiple searches each with one service tagged.
 - As you make queries, pay attention to the results in <previous_log_query_result> to see the results of your last query and <log_results_history> to see the results of all previous queries. You should make decisions on future queries based on the results of your previous queries.
-- As you find log results indicative of the exact issue/event, you should try to find prior context that explains how/why that issue/event is related to the user query.
+- As you find log results indicative of the exact issue/event, you should try to find preceding logs that explain how/why that issue/event is related to the user query.
 - Your goal is to eventually find a query that returns logs across the related services with as much important surrounding context and events as possible. All log results fetched at the end of your log search iterations will be merged together to form a complete picture of the issue/event.
+- Do not filter on random keywords. Random is anything that is not one of the following: service name, part of an error message, an ID, or a known keyword that is directly critical to the issue/event occurring.
+- Do not filter on code snippets (e.g. file names, classes, methods, component tags, etc).
 - If you are getting empty log results, try the following:
   - Shorten keyword filters
   - Remove keyword filters
+  - Use attribute filters in place of plain keyword filters
   - Widen time range
   - Add more services to the query
 
-Rules:
+## Rules:
 - Output just 1 single \`LogSearchInput\` at a time. DO NOT output multiple \`LogSearchInput\`s.
 - Look at the context previously gathered to see what logs you have already fetched and what queries you've tried, DO NOT repeat past queries.
 - DO NOT query the same services multiple times with slightly different configurations - this wastes iterations and provides redundant information.
@@ -139,7 +143,7 @@ class LogSearch {
       platformSpecificInstructions: this.observabilityPlatform.getLogSearchQueryInstructions(),
     });
 
-    logger.info(`Log search prompt:\n${prompt}`);
+    // logger.info(`Log search prompt:\n${prompt}`);
 
     try {
       const { toolCalls } = await generateText({
@@ -218,7 +222,7 @@ export class LogSearchAgent {
     let previousLogResult: { query: LogSearchInput; logs: Log[] | string } | undefined = undefined;
 
     let response: LogSearchResponse | null = null;
-    const maxIters = params.maxIters || 15;
+    const maxIters = params.maxIters || 30;
     let currentIter = 0;
 
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
