@@ -1,56 +1,53 @@
-import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
+import { getModelWrapper, logger, Model } from "@triage/common";
 import { Log, Span } from "@triage/observability";
 import { generateText } from "ai";
 import {
   CodeRequest,
-  codeRequestToolSchema,
   LogRequest,
   logRequestToolSchema,
   LogSearchInput,
   RootCauseAnalysis,
   rootCauseAnalysisToolSchema,
   SpanRequest,
-  spanRequestToolSchema,
   SpanSearchInput,
 } from "../types";
 import { formatLogResults, formatSpanResults, validateToolCalls } from "./utils";
 
 export type ReasoningResponse = RootCauseAnalysis | CodeRequest | SpanRequest | LogRequest;
 
+const SYSTEM_PROMPT = `
+You are an expert AI assistant that assists engineers debugging production issues. You specifically review context gathered from logs, spans, and code and hypothesize about the root cause of the issue/event.
+`;
+
 function createPrompt(params: {
   query: string;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
-  codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, Log[]>;
+  codebaseSourceCode: string;
+  logContext: Map<LogSearchInput, Log[] | string>;
   spanContext: Map<SpanSearchInput, Span[]>;
   logLabelsMap: string;
   spanLabelsMap: string;
   chatHistory: string[]; // TODO: add back in if needed
 }) {
   return `
-You are an expert AI assistant that assists engineers debugging production issues. You specifically review context gathered from logs, spans, and code and question whether or not you have enough information. If you do you output a proposed root cause analysis. If not, you output a request for more logs or code. You are not able to make any modifications to the system—you can only reason about the system by looking at the context and walking through sequences of events.
+Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, log labels, span labels, and previously gathered log and code context, your task is to come up with a hypothesis about the root cause of the issue/event and propose an concrete and unambiguous code fix if possible.
 
-Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, log labels, span labels, and previously gathered log and code context, your task is to question whether or not you have enough context. 
 
-Go through the below checklist to check if the analysis is too imprecise or has not considered enough thorough context. If any of the below questions reveal that you have not considered enough parts of the codebase or have not retrieved logs thoroughly enough, output a CodeRequest or SpanRequest respectively.
-
-Question Checklist (just to list a few):
-- Have you considered all services that could be causing the issue/event or have you only looked at the one demonstrating problems?
-- Do you retrieved logs show a wide enough picture of the various services or does your context only show logs from the actual issue/event occurrence for a single service?
-- Does your code match any issues/events revealed in the logs?
-
-Guidelines:
+Tips:
 - Especially in microservices, the root cause may not be in the service that is failing, but in another service that is interacting with it. Consider other services when reasoning about what you may be missing and write down those hypotheses.
 - Reflect on 5-7 different possible sources of the issue/event and use that as a guide to your reasoning process before outputting a \`RootCauseAnalysis\`.
-- Only output a \`RootCauseAnalysis\` if you have enough context, have reasoned about a confident answer, and did not previously indicate to yourself that there are other services/hypotheses to explore.
-- The root cause analysis, if you choose you are ready, should not cite some vague root cause like "Synchronization Issues" or "Performance Issues" it must be very concrete and have an actionable and exact fix. If not, then that is a sign the analysis is missing information and needs more context.
 - Your root cause analysis should explicitly cite the blocks of code and where the are issues, adding inline comments to code to denote where the problem is.
+- If you believe you are missing key context, output a \`CodeRequest\` or \`SpanRequest\` to gather more context.
 
 <query>
 ${params.query}
 </query>
+
+<codebase_overview>
+${params.codebaseOverview}
+</codebase_overview>
 
 <log_labels>
 ${params.logLabelsMap}
@@ -68,21 +65,9 @@ ${formatLogResults(params.logContext)}
 ${formatSpanResults(params.spanContext)}
 </previous_span_context>
 
-<previous_code_context>
-${formatCodeMap(params.codeContext)}
-</previous_code_context>
-
-<repo_path>
-${params.repoPath}
-</repo_path>
-
-<codebase_overview>
-${params.codebaseOverview}
-</codebase_overview>
-
-<file_tree>
-${params.fileTree}
-</file_tree>
+<codebase_context>
+${params.codebaseSourceCode}
+</codebase_context>
 
 If you feel like you received sufficient context or that some of the code, logs, or spans you retrieved are not relevant to the issue, you should attempt to choose a root cause analysis.
 `;
@@ -100,8 +85,8 @@ export class Reasoner {
     repoPath: string;
     codebaseOverview: string;
     fileTree: string;
-    codeContext: Map<string, string>;
-    logContext: Map<LogSearchInput, Log[]>;
+    codebaseSourceCode: string;
+    logContext: Map<LogSearchInput, Log[] | string>;
     spanContext: Map<SpanSearchInput, Span[]>;
     logLabelsMap: string;
     spanLabelsMap: string;
@@ -113,18 +98,21 @@ export class Reasoner {
 
     logger.info(`Reasoning prompt:\n${prompt}`);
 
-    const { toolCalls } = await generateText({
+    const { toolCalls, text } = await generateText({
       model: getModelWrapper(this.llm),
+      system: SYSTEM_PROMPT,
       prompt: prompt,
       tools: {
-        codeRequest: codeRequestToolSchema,
-        spanRequest: spanRequestToolSchema,
+        // codeRequest: codeRequestToolSchema,
+        // spanRequest: spanRequestToolSchema,
         logRequest: logRequestToolSchema,
         rootCauseAnalysis: rootCauseAnalysisToolSchema,
       },
       toolChoice: "required",
     });
 
+    logger.info(`Reasoning response:\n${text}`);
+    logger.info(`Reasoning tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
     const toolCall = validateToolCalls(toolCalls);
 
     // Create the appropriate output object based on the type

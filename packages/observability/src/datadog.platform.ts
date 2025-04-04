@@ -21,16 +21,19 @@ const DATADOG_LOG_SEARCH_INSTRUCTIONS = `
 - Use Datadog Log Search Syntax to search for logs.
 - Example queries:
   - service:<service_name>
-  - service:<service_name> AND <keyword in log line>
-  - service:<service_name> AND *:<keyword in attributes>
+  - service:<service_name> AND "<keyword in log line>"
+  - service:<service_name> AND *:"<keyword in attributes>"
+  - service:<service_name> AND status:error
 
 ## Best practices (examples):
-- GOOD: (service:orders OR service:payments) AND (*:67ec59004bb8930018a81adc OR *:orderId)
+- GOOD: (service:orders OR service:payments) AND (*:"67ec59004bb8930018a81adc" OR *:"orderId")
 - GOOD: (service:orders OR service:payments OR service:tickets OR service:expiration)
-- GOOD: service:tickets AND level:info
+- GOOD: service:tickets AND status:info
 - GOOD: service:orders AND (*:"No matching document" OR *:"duplicate key")
-- BAD (missing AND clauses): service:orders *:base-listener *:abstract *:parse
+- BAD (missing AND clauses): service:orders *:"base-listener" *:"abstract"
 - BAD (doesn't include service names): *
+- BAD (wrong tag for log severity, should be "status" not "level"): service:orders AND level:error
+- BAD (missing quotes around keyword terms): service:orders *:No matching document *:duplicate key
 `;
 
 enum DatadogDefaultFacetsSpans {

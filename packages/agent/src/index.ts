@@ -1,4 +1,4 @@
-import { loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
+import { GeminiModel, loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -55,12 +55,13 @@ export interface OncallAgentState {
   query: string;
   repoPath: string;
   codebaseOverview: string;
+  codebaseSourceCode: string;
   fileTree: string;
   logLabelsMap: string;
   spanLabelsMap: string;
   chatHistory: string[];
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, Log[]>;
+  logContext: Map<LogSearchInput, Log[] | string>;
   spanContext: Map<SpanSearchInput, Span[]>;
   logPostprocessingResult: LogPostprocessing | null;
   codePostprocessingResult: CodePostprocessing | null;
@@ -137,13 +138,13 @@ export class OnCallAgent {
       query: state.query,
       logRequest: state.logRequest ?? "",
       logLabelsMap: state.logLabelsMap,
-      chatHistory: state.chatHistory,
+      logResultHistory: state.logContext,
     });
 
     if (state.firstPass) {
       return {
         type: "next",
-        destination: "codeSearch",
+        destination: "reasoner",
         update: {
           logContext: new Map([...state.logContext, ...response.newLogContext]),
           chatHistory: [...state.chatHistory, response.summary],
@@ -247,7 +248,7 @@ export class OnCallAgent {
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
       chatHistory: state.chatHistory,
-      codeContext: state.codeContext,
+      codebaseSourceCode: state.codebaseSourceCode,
       logContext: state.logContext,
       spanContext: state.spanContext,
       logLabelsMap: state.logLabelsMap,
@@ -446,6 +447,7 @@ export class OnCallAgent {
       query: "",
       repoPath: "",
       codebaseOverview: "",
+      codebaseSourceCode: "",
       fileTree: "",
       logLabelsMap: "",
       spanLabelsMap: "",
@@ -460,7 +462,7 @@ export class OnCallAgent {
     };
 
     const nodeMap = this.buildGraph();
-    let currentNode: NodeType = "planner";
+    let currentNode: NodeType = "logSearch";
     let currentState = initialState;
     let recursionCount = 0;
     const recursionLimit = 50;
@@ -545,6 +547,7 @@ async function main() {
 
   // Load or generate the codebase overview
   const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
+  const sourceCodePath = "/Users/luketchang/code/triage/repos/ticketing/codebase-source.txt";
 
   let overview = "";
   try {
@@ -552,6 +555,14 @@ async function main() {
   } catch (error) {
     console.error("Failed to load codebase overview:", error);
     overview = "Codebase overview not available";
+  }
+
+  let sourceCode = "";
+  try {
+    sourceCode = await fs.readFile(sourceCodePath, "utf-8");
+  } catch (error) {
+    console.error("Failed to load codebase source code:", error);
+    sourceCode = "Codebase source code not available";
   }
 
   const fileTree = loadFileTree(repoPath);
@@ -563,6 +574,7 @@ async function main() {
     query,
     repoPath,
     codebaseOverview: overview,
+    codebaseSourceCode: sourceCode,
     fileTree,
     logLabelsMap,
     spanLabelsMap: "",
@@ -578,7 +590,7 @@ async function main() {
     codePostprocessingResult: null,
   };
 
-  const reasoningModel = OpenAIModel.O3_MINI;
+  const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
   const fastModel = OpenAIModel.GPT_4O;
 
   logger.info(`Observability features: ${observabilityFeatures}`);

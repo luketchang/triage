@@ -25,7 +25,7 @@ function createPrompt(params: {
   spanLabelsMap: string;
   chatHistory: string[];
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, Log[]>;
+  logContext: Map<LogSearchInput, Log[] | string>;
   rootCauseAnalysis: string;
 }) {
   // TODO: add back SpanRequest
@@ -125,7 +125,7 @@ export class Reviewer {
     spanLabelsMap: string;
     chatHistory: string[];
     codeContext: Map<string, string>;
-    logContext: Map<LogSearchInput, Log[]>;
+    logContext: Map<LogSearchInput, Log[] | string>;
     rootCauseAnalysis: string;
   }): Promise<ReviewerResponse> {
     logger.info(`Reviewing root cause analysis for query: ${params.query}`);
