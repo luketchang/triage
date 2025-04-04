@@ -547,31 +547,20 @@ async function main() {
 
   // Load or generate the codebase overview
   const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
-  const sourceCodePath = "/Users/luketchang/code/triage/repos/ticketing/codebase-source.txt";
+  const sourceCodePath =
+    "/Users/luketchang/code/triage/repos/ticketing/source-code/order-cancelled-publish-bug.txt";
+  const bugPath =
+    "/Users/luketchang/code/triage/repos/ticketing/bugs/order-cancelled-publish-bug.txt";
 
-  let overview = "";
-  try {
-    overview = await fs.readFile(overviewPath, "utf-8");
-  } catch (error) {
-    console.error("Failed to load codebase overview:", error);
-    overview = "Codebase overview not available";
-  }
-
-  let sourceCode = "";
-  try {
-    sourceCode = await fs.readFile(sourceCodePath, "utf-8");
-  } catch (error) {
-    console.error("Failed to load codebase source code:", error);
-    sourceCode = "Codebase source code not available";
-  }
+  const overview = await fs.readFile(overviewPath, "utf-8");
+  const sourceCode = await fs.readFile(sourceCodePath, "utf-8");
+  const bug = await fs.readFile(bugPath, "utf-8");
 
   const fileTree = loadFileTree(repoPath);
 
-  const query = `I just migrated from nats server to rabbitmq (may have introduced bug) but getting some "No matching document found", duplicate key errors, and validation errors in some services around 2025-04-01T21:15:00.00Z. Figure out the root cause of the issue and propose a concrete code fix. Do not stop exploring code or logs until you have a concrete fix in code.`;
-
   const state: OncallAgentState = {
     firstPass: true,
-    query,
+    query: bug,
     repoPath,
     codebaseOverview: overview,
     codebaseSourceCode: sourceCode,
