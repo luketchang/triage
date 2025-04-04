@@ -18,15 +18,19 @@ const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
 `;
 
 const DATADOG_LOG_SEARCH_INSTRUCTIONS = `
-- Use Datadog Log Search Syntax to search for logs.
-- Example queries:
+Use Datadog Log Search Syntax to search for logs.
+
+## Example queries:
   - service:<service_name>
   - service:<service_name> AND "<keyword in log line>"
   - service:<service_name> AND *:"<keyword in attributes>"
   - service:<service_name> AND status:error
 
+## Tips
+- Excluding the service attribute, when using attribute filters, use *:"<keyword>" instead of a specific attribute like <attribute>:"<keyword>" ()
+
 ## Best practices (examples):
-- GOOD: (service:orders OR service:payments) AND (*:"67ec59004bb8930018a81adc" OR *:"orderId")
+- GOOD: (service:orders OR service:payments) AND (*:"67ec59004bb8930018a81adc" OR *:"67ec59004bb8930018a81def")
 - GOOD: (service:orders OR service:payments OR service:tickets OR service:expiration)
 - GOOD: service:tickets AND status:info
 - GOOD: service:orders AND (*:"No matching document" OR *:"duplicate key")
@@ -34,6 +38,7 @@ const DATADOG_LOG_SEARCH_INSTRUCTIONS = `
 - BAD (doesn't include service names): *
 - BAD (wrong tag for log severity, should be "status" not "level"): service:orders AND level:error
 - BAD (missing quotes around keyword terms): service:orders *:No matching document *:duplicate key
+- BAD (uses specific attribute tag instead of using *): service:orders item:"<keyword>"
 `;
 
 enum DatadogDefaultFacetsSpans {
