@@ -24,7 +24,7 @@ function createMcpPrompt(params: {
   repoPath: string;
   codebaseOverview: string;
   filesRead: Map<string, string>;
-  logContext: Map<LogSearchInput, Log[]>;
+  logContext: Map<LogSearchInput, Log[] | string>;
   fileTree: string;
 }): string {
   return `
@@ -75,7 +75,7 @@ export class CodeSearch {
     chatHistory: string[];
     codeRequest: string;
     filesRead: Map<string, string>;
-    logContext: Map<LogSearchInput, Log[]>;
+    logContext: Map<LogSearchInput, Log[] | string>;
   }): Promise<ClaudeCodeSearchResponse> {
     logger.info(`Searching codebase for query: ${params.query}`);
     const mcpClient = await initMCPClient(this.repoPath);

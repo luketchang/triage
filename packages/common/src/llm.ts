@@ -32,8 +32,8 @@ export enum OpenAIModel {
 }
 
 export enum GeminiModel {
-  GEMINI_2_5_PRO = "models/gemini-2.5-pro",
-  GEMINI_2_0_FLASH = "models/gemini-2.0-flash",
+  GEMINI_2_5_PRO = "gemini-2.5-pro-exp-03-25",
+  GEMINI_2_0_FLASH = "gemini-2.0-flash",
 }
 
 export type Model = AnthropicModel | OpenAIModel | GeminiModel;

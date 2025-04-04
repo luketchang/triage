@@ -1,58 +1,65 @@
 import { getModelWrapper, logger, Model } from "@triage/common";
 import { Log, ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
-import {
-  LogSearchInput,
-  logSearchInputToolSchema,
-  TaskComplete,
-  taskCompleteToolSchema,
-} from "../../types";
-import { formatChatHistory, formatLogResults, validateToolCalls } from "../utils";
+import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../../types";
+import { formatLogResults, validateToolCalls } from "../utils";
 
 export interface LogSearchAgentResponse {
-  newLogContext: Map<LogSearchInput, Log[]>;
+  newLogContext: Map<LogSearchInput, Log[] | string>;
+  queryHistory: Map<LogSearchInput, Log[] | string>;
   summary: string;
 }
 
 export type LogSearchResponse = LogSearchInput | TaskComplete;
 
+const SYSTEM_PROMPT = `
+You are an expert AI assistant that helps engineers debug production issues by searching through logs. Your task is to find logs relevant to the issue/event.
+`;
+
 function createLogSearchPrompt(params: {
   query: string;
   logRequest: string; // TODO: add back in if needed
-  chatHistory: string[];
+  logResultHistory: Map<LogSearchInput, Log[] | string>;
   logLabelsMap: string;
   platformSpecificInstructions: string;
+  previousLogQueryResult?: { input: LogSearchInput; logs: Log[] | string };
 }): string {
   const currentTime = new Date().toISOString();
 
-  return `
-You are an expert AI assistant that helps engineers debug production issues by searching through logs. Your task is to explore/surface logs based on the issue/event.
+  // Format the previous log query result for display
+  const formattedPreviousResult = params.previousLogQueryResult
+    ? formatLogResults(
+        new Map([[params.previousLogQueryResult.input, params.previousLogQueryResult.logs]])
+      )
+    : "";
 
-Given all available log labels and a user query about the issue/event, your task is to fetch logs relevant to the issue/event that will give you a full picture of the issue/event. You will do so by outputting either a \`LogSearchInput\` to read logs from observability API OR a \`TaskComplete\` to indicate that you have completed your search.
+  return `
+Given all available log labels and a user query about the issue/event, your task is to fetch logs relevant to the issue/event that will give you a full picture of the issue/event. You will do so by outputting \`LogSearchInput\` outputs to read logs from observability API.
 
 Tips:
 - DO NOT query logs from non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, cluster-agent, desktop-vpnkit-controller, metrics-server, etcd, redis, etc (think anything collector or infrastructure related).
-- Your goal is to eventually find a query that returns logs across the related services with as much important surrounding context and events as possible .
+- As you make queries, pay attention to the results in <previous_log_query_result> to see the results of your last query and <log_results_history> to see the results of all previous queries. You should make decisions on future queries based on the results of your previous queries.
+- As you find log results indicative of the exact issue/event, you should try to find prior context that explains how/why that issue/event is related to the user query.
+- Your goal is to eventually find a query that returns logs across the related services with as much important surrounding context and events as possible. All log results fetched at the end of your log search iterations will be merged together to form a complete picture of the issue/event.
+- If you are getting empty log results, try the following:
+  - Shorten keyword filters
+  - Remove keyword filters
+  - Widen time range
+  - Add more services to the query
 
 Rules:
 - Output just 1 single \`LogSearchInput\` at a time. DO NOT output multiple \`LogSearchInput\`s.
 - Look at the context previously gathered to see what logs you have already fetched and what queries you've tried, DO NOT repeat past queries.
 - DO NOT query the same services multiple times with slightly different configurations - this wastes iterations and provides redundant information.
 - If you're not finding any logs with specific error keywords, switch to service-only queries to get a system overview first.
-- Output \`TaskComplete\` IMMEDIATELY if:
-  * You see the same class of logs being returned in consecutive queries
-  * You've already captured logs showing the key errors mentioned in the query
-  * You've already seen error logs from the relevant services
-  * You've gathered sufficient logs to understand the issue and error patterns
-  * You've traced specific entity IDs across multiple services
-  * You've captured logs from before, during, and after the issue occurred
-  * Additional queries are becoming repetitive or returning similar information
-  * You've tried multiple query strategies and have a comprehensive view of system behavior
-  * You have sufficient information to determine the root cause of the issue
 
 <current_time>
 ${currentTime}
 </current_time>
+
+<query>
+${params.query}
+</query>
 
 <log_labels>
 ${params.logLabelsMap}
@@ -62,21 +69,19 @@ ${params.logLabelsMap}
 ${params.platformSpecificInstructions}
 </platform_specific_instructions>
 
-Use the below history of context you already gathered to inform what steps you will take next. DO NOT make the same query twice, it is a waste of the context window.
+<previous_log_query_result>
+${formattedPreviousResult}
+</previous_log_query_result>
 
-<query>
-${params.query}
-</query>
-
-<context_previously_gathered>
-${formatChatHistory(params.chatHistory)}
-</context_previously_gathered>
+<log_results_history>
+${formatLogResults(params.logResultHistory)}
+</log_results_history>
 `;
 }
 
 function createLogSearchSummaryPrompt(params: {
   query: string;
-  logResults: Map<LogSearchInput, Log[]>;
+  logResults: Map<LogSearchInput, Log[] | string>;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -125,21 +130,25 @@ class LogSearch {
   async invoke(params: {
     query: string;
     logRequest: string;
-    chatHistory: string[];
+    logResultHistory: Map<LogSearchInput, Log[] | string>;
     logLabelsMap: string;
+    previousLogQueryResult?: { input: LogSearchInput; logs: Log[] | string };
   }): Promise<LogSearchResponse> {
     const prompt = createLogSearchPrompt({
       ...params,
       platformSpecificInstructions: this.observabilityPlatform.getLogSearchQueryInstructions(),
     });
 
+    logger.info(`Log search prompt:\n${prompt}`);
+
     try {
       const { toolCalls } = await generateText({
         model: getModelWrapper(this.llm),
+        system: SYSTEM_PROMPT,
         prompt: prompt,
         tools: {
           logSearchInput: logSearchInputToolSchema,
-          taskComplete: taskCompleteToolSchema,
+          // taskComplete: taskCompleteToolSchema,
         },
         toolChoice: "required",
       });
@@ -194,21 +203,36 @@ export class LogSearchAgent {
     query: string;
     logRequest: string;
     logLabelsMap: string;
-    chatHistory: string[];
+    logResultHistory?: Map<LogSearchInput, Log[] | string>;
     maxIters?: number;
   }): Promise<LogSearchAgentResponse> {
-    let chatHistory: string[] = params.chatHistory;
-    let logResults: Map<LogSearchInput, Log[]> = new Map();
+    // Convert string[] logResultHistory to Map if needed, or create empty map if not provided
+    let logResultHistory: Map<LogSearchInput, Log[] | string>;
+    if (!params.logResultHistory) {
+      logResultHistory = new Map();
+    } else {
+      logResultHistory = params.logResultHistory;
+    }
+
+    // Variable to store the previous query result (initially undefined)
+    let previousLogResult: { query: LogSearchInput; logs: Log[] | string } | undefined = undefined;
+
     let response: LogSearchResponse | null = null;
-    const maxIters = params.maxIters || 10;
+    const maxIters = params.maxIters || 15;
     let currentIter = 0;
 
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
+      // Convert previousLogResult to the format expected by LogSearch
+      const previousLogQueryResult = previousLogResult
+        ? { input: previousLogResult.query, logs: previousLogResult.logs }
+        : undefined;
+
       response = await this.logSearch.invoke({
         query: params.query,
         logRequest: params.logRequest,
-        chatHistory: chatHistory,
         logLabelsMap: params.logLabelsMap,
+        logResultHistory: logResultHistory,
+        previousLogQueryResult: previousLogQueryResult,
       });
 
       currentIter++;
@@ -227,24 +251,43 @@ export class LogSearchAgent {
             limit: response.limit,
           });
 
-          const formattedLogs = formatLogResults(new Map([[response, logContext]]));
+          // Add previous result to log history if it exists
+          if (previousLogResult) {
+            logResultHistory.set(previousLogResult.query, previousLogResult.logs);
+          }
 
-          logger.info(`Log search results:\n${formattedLogs}`);
+          // Add current query to history
+          logResultHistory.set(response, logContext);
+
+          // Set current result as previous for next iteration
+          previousLogResult = {
+            query: response,
+            logs: logContext,
+          };
+
+          // Log the current query results
+          const currentQueryFormatted = formatLogResults(new Map([[response, logContext]]));
+          logger.info(`Log search results:\n${currentQueryFormatted}`);
           logger.info(`Log search reasoning:\n${response.reasoning}`);
-
-          logResults.set(response, logContext);
-
-          chatHistory = [
-            ...chatHistory,
-            `Query: ${response.query}.\nStart: ${response.start}.\nEnd: ${response.end}.\nLimit: ${response.limit}.\nLog search results:\n${formattedLogs}\nReasoning:\n${response.reasoning}`,
-          ];
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error(`Error executing log search: ${errorMessage}`);
-          chatHistory = [...chatHistory, `Error executing log search: ${errorMessage}`];
+
+          // Store error message in log history
+          if (response) {
+            previousLogResult = {
+              query: response,
+              logs: errorMessage,
+            };
+          }
         }
       } else {
         logger.info("Log search complete");
+
+        // Add the last query to log history if it exists
+        if (previousLogResult) {
+          logResultHistory.set(previousLogResult.query, previousLogResult.logs);
+        }
       }
     }
 
@@ -252,23 +295,30 @@ export class LogSearchAgent {
       logger.info(
         `Log search reached maximum iterations (${maxIters}). Completing search forcibly.`
       );
+
+      // Add the last query to log history if it exists and wasn't added already
+      if (previousLogResult) {
+        logResultHistory.set(previousLogResult.query, previousLogResult.logs);
+      }
     }
 
     const summaryPrompt = createLogSearchSummaryPrompt({
       query: params.query,
-      logResults,
+      logResults: logResultHistory,
     });
 
+    // logger.info("Generating log search summary...");
     // const { text } = await generateText({
     //   model: getModelWrapper(this.reasoningModel),
     //   prompt: summaryPrompt,
     // });
 
-    logger.info(`Log search summary:\n${""}`);
+    // logger.info(`Log search summary:\n${text}`);
 
     return {
-      newLogContext: logResults,
-      summary: "",
+      newLogContext: logResultHistory,
+      queryHistory: logResultHistory,
+      summary: "TODO",
     };
   }
 }

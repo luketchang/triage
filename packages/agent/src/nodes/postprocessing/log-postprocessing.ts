@@ -1,4 +1,4 @@
-import { getModelWrapper, logger, Model } from "@triage/common";
+import { getModelWrapper, Model } from "@triage/common";
 import { Log } from "@triage/observability";
 import { generateText } from "ai";
 import {
@@ -12,7 +12,7 @@ function createPrompt(params: {
   query: string;
   codebaseOverview: string;
   logLabelsMap: string;
-  logContext: Map<LogSearchInput, Log[]>;
+  logContext: Map<LogSearchInput, Log[] | string>;
   answer: string;
 }) {
   return `
@@ -62,10 +62,10 @@ export class LogPostprocessor {
     query: string;
     codebaseOverview: string;
     logLabelsMap: string;
-    logContext: Map<LogSearchInput, Log[]>;
+    logContext: Map<LogSearchInput, Log[] | string>;
     answer: string;
   }): Promise<LogPostprocessingResponse> {
-    logger.info(`Log postprocessing for query: ${params.query}`);
+    // logger.info(`Log postprocessing for query: ${params.query}`);
 
     const prompt = createPrompt(params);
 

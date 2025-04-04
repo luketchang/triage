@@ -59,12 +59,23 @@ export function formatSingleSpan(span: Span, index?: number): string {
     Environment: ${span.environment || "N/A"}`;
 }
 
-export function formatLogResults(logResults: Map<LogSearchInput, Log[]>): string {
+export function formatLogResults(logResults: Map<LogSearchInput, Log[] | string>): string {
   return Array.from(logResults.entries())
-    .map(([input, logs]) => {
-      const formattedLogs = logs.map((log) => formatSingleLog(log)).join("\n");
+    .map(([input, logsOrError]) => {
+      let formattedContent: string;
 
-      return `${formatLogQuery(input)}\nResults:\n${formattedLogs || "No logs found"}`;
+      if (typeof logsOrError === "string") {
+        // It's an error message
+        formattedContent = `Error: ${logsOrError}`;
+      } else {
+        // It's a log array
+        formattedContent = logsOrError.map((log) => formatSingleLog(log)).join("\n");
+        if (!formattedContent) {
+          formattedContent = "No logs found";
+        }
+      }
+
+      return `${formatLogQuery(input)}\nResults:\n${formattedContent}`;
     })
     .join("\n\n");
 }
