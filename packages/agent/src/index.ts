@@ -1,4 +1,4 @@
-import { GeminiModel, loadFileTree, logger, Model } from "@triage/common";
+import { GeminiModel, loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -486,7 +486,7 @@ async function main() {
   };
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
-  const fastModel = GeminiModel.GEMINI_2_0_FLASH;
+  const fastModel = OpenAIModel.GPT_4O;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 

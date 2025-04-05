@@ -143,7 +143,7 @@ export function formatCodeMap(codeMap: Map<string, string>): string {
   for (const [filePath, code] of codeMap.entries()) {
     const header = `File: ${filePath}`;
     const separator = "-".repeat(header.length);
-    formattedOutput += `${header}\n${separator}\n${code}\n\n`;
+    formattedOutput += `${separator}\n${header}\n${separator}\n${code}\n\n`;
   }
   return formattedOutput;
 }
