@@ -1,4 +1,4 @@
-import { GeminiModel, loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
+import { GeminiModel, loadFileTree, logger, Model } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -51,7 +51,6 @@ export interface OncallAgentState {
   query: string;
   repoPath: string;
   codebaseOverview: string;
-  codebaseSourceCode: string;
   fileTree: string;
   logLabelsMap: string;
   spanLabelsMap: string;
@@ -177,7 +176,7 @@ export class OnCallAgent {
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
       chatHistory: state.chatHistory,
-      codebaseSourceCode: state.codebaseSourceCode,
+      codeContext: state.codeContext,
       logContext: state.logContext,
       spanContext: state.spanContext,
       logLabelsMap: state.logLabelsMap,
@@ -353,7 +352,6 @@ export class OnCallAgent {
       query: "",
       repoPath: "",
       codebaseOverview: "",
-      codebaseSourceCode: "",
       fileTree: "",
       logLabelsMap: "",
       spanLabelsMap: "",
@@ -453,12 +451,16 @@ async function main() {
 
   // Load or generate the codebase overview
   const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
-  const sourceCodePath =
-    "/Users/luketchang/code/triage/repos/ticketing/source-code/rabbitmq-bug.txt";
+  const sourceCodeJsonPath =
+    "/Users/luketchang/code/triage/repos/ticketing/source-code/rabbitmq-bug.json";
   const bugPath = "/Users/luketchang/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
 
   const overview = await fs.readFile(overviewPath, "utf-8");
-  const sourceCode = await fs.readFile(sourceCodePath, "utf-8");
+
+  // Load code context from JSON file
+  const sourceCodeJson = await fs.readFile(sourceCodeJsonPath, "utf-8");
+  const codeContext = new Map<string, string>(Object.entries(JSON.parse(sourceCodeJson)));
+
   const bug = await fs.readFile(bugPath, "utf-8");
 
   const fileTree = loadFileTree(repoPath);
@@ -468,12 +470,11 @@ async function main() {
     query: bug,
     repoPath,
     codebaseOverview: overview,
-    codebaseSourceCode: sourceCode,
     fileTree,
     logLabelsMap,
     spanLabelsMap: "",
     chatHistory: [],
-    codeContext: new Map(),
+    codeContext,
     logContext: new Map(),
     spanContext: new Map(),
     rootCauseAnalysis: null,
@@ -485,7 +486,7 @@ async function main() {
   };
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
-  const fastModel = OpenAIModel.GPT_4O;
+  const fastModel = GeminiModel.GEMINI_2_0_FLASH;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 

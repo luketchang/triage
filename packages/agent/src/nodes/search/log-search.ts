@@ -222,7 +222,7 @@ export class LogSearchAgent {
     let previousLogResult: { query: LogSearchInput; logs: Log[] | string } | undefined = undefined;
 
     let response: LogSearchResponse | null = null;
-    const maxIters = params.maxIters || 10;
+    const maxIters = params.maxIters || 15;
     let currentIter = 0;
 
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
