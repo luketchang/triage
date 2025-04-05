@@ -16,7 +16,7 @@ import { formatLogResults, formatSpanResults, validateToolCalls } from "./utils"
 export type ReasoningResponse = RootCauseAnalysis | CodeRequest | SpanRequest | LogRequest;
 
 const SYSTEM_PROMPT = `
-You are an expert AI assistant that assists engineers debugging production issues. You specifically review context gathered from logs, spans, and code and hypothesize about the root cause of the issue/event.
+You are an expert AI assistant that assists engineers debugging production issues. You are an expert at tracing through logs, spans, and code and reasoning about the root cause of issues.
 `;
 
 function createPrompt(params: {
