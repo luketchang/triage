@@ -9,12 +9,10 @@ import {
 import { Command as CommanderCommand } from "commander";
 import fs from "fs/promises";
 import { z } from "zod";
-import { Planner } from "./nodes/planner";
 import { CodePostprocessor } from "./nodes/postprocessing/code-postprocessing";
 import { LogPostprocessor } from "./nodes/postprocessing/log-postprocessing";
 import { Reasoner } from "./nodes/reasoner";
 import { Reviewer } from "./nodes/reviewer";
-import { CodeSearch } from "./nodes/search/code-search";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { SpanSearchAgent } from "./nodes/search/span-search";
 import { formatLogQuery } from "./nodes/utils";
@@ -22,10 +20,8 @@ import { CodePostprocessing, LogPostprocessing, LogSearchInput, SpanSearchInput 
 
 // Type definitions
 type NodeType =
-  | "planner"
   | "spanSearch"
   | "logSearch"
-  | "codeSearch"
   | "reasoner"
   | "reviewer"
   | "logPostprocessor"
@@ -86,29 +82,6 @@ export class OnCallAgent {
     this.observabilityFeatures = observabilityFeatures;
   }
 
-  async plan(state: OncallAgentState): Promise<Command> {
-    logger.info("\n\n" + "=".repeat(25) + " Planner " + "=".repeat(25));
-    const planner = new Planner(this.reasoningModel);
-    const response = await planner.invoke({
-      query: state.query,
-      repoPath: state.repoPath,
-      codebaseOverview: state.codebaseOverview,
-      fileTree: state.fileTree,
-      logLabelsMap: state.logLabelsMap,
-      spanLabelsMap: state.spanLabelsMap,
-    });
-
-    return {
-      type: "next",
-      destination: "spanSearch",
-      update: {
-        codeRequest: response.codeRequest,
-        spanRequest: response.spanRequest,
-        logRequest: response.logRequest,
-      },
-    };
-  }
-
   async logSearch(state: OncallAgentState): Promise<Command> {
     logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
 
@@ -117,7 +90,7 @@ export class OnCallAgent {
       if (state.firstPass) {
         return {
           type: "next",
-          destination: "codeSearch",
+          destination: "spanSearch",
           update: {},
         };
       }
@@ -144,7 +117,7 @@ export class OnCallAgent {
     if (state.firstPass) {
       return {
         type: "next",
-        destination: "reasoner",
+        destination: "spanSearch",
         update: {
           logContext: new Map([...state.logContext, ...response.newLogContext]),
           chatHistory: [...state.chatHistory, response.summary],
@@ -166,15 +139,6 @@ export class OnCallAgent {
     logger.info("\n\n" + "=".repeat(25) + " Span Search " + "=".repeat(25));
 
     if (!this.observabilityFeatures.includes("spans")) {
-      logger.info("Span search not enabled, skipping");
-      if (state.firstPass) {
-        return {
-          type: "next",
-          destination: "logSearch",
-          update: {},
-        };
-      }
-
       return {
         type: "next",
         destination: "reasoner",
@@ -194,47 +158,12 @@ export class OnCallAgent {
       chatHistory: state.chatHistory,
     });
 
-    if (state.firstPass) {
-      return {
-        type: "next",
-        destination: "logSearch",
-        update: {
-          spanContext: new Map([...state.spanContext, ...response.newSpanContext]),
-          chatHistory: [...state.chatHistory, response.summary],
-        },
-      };
-    }
-
     return {
       type: "next",
       destination: "reasoner",
       update: {
         spanContext: new Map([...state.spanContext, ...response.newSpanContext]),
         chatHistory: [...state.chatHistory, response.summary],
-      },
-    };
-  }
-
-  async codeSearch(state: OncallAgentState): Promise<Command> {
-    logger.info("\n\n" + "=".repeat(25) + " Code Search " + "=".repeat(25));
-    const codeSearch = new CodeSearch(state.repoPath);
-    const response = await codeSearch.invoke({
-      query: state.query,
-      repoPath: state.repoPath,
-      codebaseOverview: state.codebaseOverview,
-      fileTree: state.fileTree,
-      chatHistory: state.chatHistory,
-      codeRequest: state.codeRequest ?? "",
-      filesRead: state.codeContext,
-      logContext: state.logContext,
-    });
-
-    return {
-      type: "next",
-      destination: "reasoner",
-      update: {
-        chatHistory: [...state.chatHistory, response.summary],
-        codeContext: new Map([...state.codeContext, ...response.newFilesRead]),
       },
     };
   }
@@ -283,7 +212,7 @@ export class OnCallAgent {
           firstPass: false,
         },
       };
-    } else if (response.type === "logRequest") {
+    } else {
       return {
         type: "next",
         destination: "logSearch",
@@ -292,18 +221,6 @@ export class OnCallAgent {
           logRequest: response.request,
           codeRequest: null,
           spanRequest: null,
-          firstPass: false,
-        },
-      };
-    } else {
-      return {
-        type: "next",
-        destination: "codeSearch",
-        update: {
-          chatHistory: [...state.chatHistory, response.reasoning],
-          codeRequest: response.request,
-          spanRequest: null,
-          logRequest: null,
           firstPass: false,
         },
       };
@@ -329,16 +246,7 @@ export class OnCallAgent {
     logger.info(`Reviewer reasoning: ${response.reasoning}`);
     logger.info(`Reviewer output: ${JSON.stringify(response)}`);
 
-    if (response.type === "codeRequest") {
-      return {
-        type: "next",
-        destination: "codeSearch",
-        update: {
-          chatHistory: [...state.chatHistory, response.reasoning],
-          codeRequest: response.request,
-        },
-      };
-    } else if (response.type === "spanRequest") {
+    if (response.type === "spanRequest") {
       return {
         type: "next",
         destination: "spanSearch",
@@ -422,10 +330,8 @@ export class OnCallAgent {
   buildGraph(): Map<NodeType, (state: OncallAgentState) => Promise<Command> | Command> {
     const nodeMap = new Map<NodeType, (state: OncallAgentState) => Promise<Command> | Command>();
 
-    nodeMap.set("planner", this.plan.bind(this));
     nodeMap.set("spanSearch", this.spanSearch.bind(this));
     nodeMap.set("logSearch", this.logSearch.bind(this));
-    nodeMap.set("codeSearch", this.codeSearch.bind(this));
     nodeMap.set("reasoner", this.reason.bind(this));
     nodeMap.set("reviewer", this.review.bind(this));
     nodeMap.set("logPostprocessor", this.postprocessLogs.bind(this));
@@ -548,9 +454,8 @@ async function main() {
   // Load or generate the codebase overview
   const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
   const sourceCodePath =
-    "/Users/luketchang/code/triage/repos/ticketing/source-code/order-cancelled-publish-bug.txt";
-  const bugPath =
-    "/Users/luketchang/code/triage/repos/ticketing/bugs/order-cancelled-publish-bug.txt";
+    "/Users/luketchang/code/triage/repos/ticketing/source-code/rabbitmq-bug.txt";
+  const bugPath = "/Users/luketchang/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
 
   const overview = await fs.readFile(overviewPath, "utf-8");
   const sourceCode = await fs.readFile(sourceCodePath, "utf-8");
@@ -608,10 +513,8 @@ void main()
 export * from "./types";
 
 // Export nodes
-export * from "./nodes/planner";
 export * from "./nodes/reasoner";
 export * from "./nodes/reviewer";
-export * from "./nodes/search/code-search";
 export * from "./nodes/search/log-search";
 export * from "./nodes/search/span-search";
 export * from "./nodes/utils";
