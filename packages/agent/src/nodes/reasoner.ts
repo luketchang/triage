@@ -1,4 +1,4 @@
-import { getModelWrapper, logger, Model } from "@triage/common";
+import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
 import { Log, Span } from "@triage/observability";
 import { generateText } from "ai";
 import {
@@ -24,7 +24,7 @@ function createPrompt(params: {
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
-  codebaseSourceCode: string;
+  codeContext: Map<string, string>;
   logContext: Map<LogSearchInput, Log[] | string>;
   spanContext: Map<SpanSearchInput, Span[]>;
   logLabelsMap: string;
@@ -66,7 +66,7 @@ ${formatSpanResults(params.spanContext)}
 </previous_span_context>
 
 <codebase_context>
-${params.codebaseSourceCode}
+${formatCodeMap(params.codeContext)}
 </codebase_context>
 
 If you feel like you received sufficient context or that some of the code, logs, or spans you retrieved are not relevant to the issue, you should attempt to choose a root cause analysis.
@@ -85,7 +85,7 @@ export class Reasoner {
     repoPath: string;
     codebaseOverview: string;
     fileTree: string;
-    codebaseSourceCode: string;
+    codeContext: Map<string, string>;
     logContext: Map<LogSearchInput, Log[] | string>;
     spanContext: Map<SpanSearchInput, Span[]>;
     logLabelsMap: string;
