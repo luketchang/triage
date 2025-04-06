@@ -1,16 +1,6 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
-import { join } from "path";
+import { app, BrowserWindow, shell } from "electron";
 import { autoUpdater } from "electron-updater";
-
-// The built directory structure
-//
-// ├─┬─┬ dist
-// │ │ └── index.html
-// │ │
-// │ ├─┬ dist-electron
-// │ │ ├── main.js
-// │ │ └── preload.js
-// │
+import { join } from "path";
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -28,7 +18,7 @@ function createWindow(): void {
     mainWindow.webContents.openDevTools();
   } else {
     // Load the index.html when not in development
-    mainWindow.loadFile(join(process.env.DIST, "index.html"));
+    mainWindow.loadFile(join(process.env.DIST || "dist", "index.html"));
   }
 
   // Make all links open with the browser, not with the application
