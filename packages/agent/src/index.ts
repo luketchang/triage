@@ -498,14 +498,14 @@ async function main() {
   logger.info(`Code Post-processing: ${JSON.stringify(response.codePostprocessing)}`);
 }
 
-void main()
-  // eslint-disable-next-line no-process-exit
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error("Error in main:", error);
-    // eslint-disable-next-line no-process-exit
-    process.exit(1);
-  });
+// void main()
+//   // eslint-disable-next-line no-process-exit
+//   .then(() => process.exit(0))
+//   .catch((error) => {
+//     console.error("Error in main:", error);
+//     // eslint-disable-next-line no-process-exit
+//     process.exit(1);
+//   });
 
 // Agent package exports
 export * from "./nodes/reasoner";

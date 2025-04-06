@@ -1,6 +1,3 @@
-import { OnCallAgent } from "@triage/agent";
-import { logger, OpenAIModel } from "@triage/common";
-import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -16,30 +13,91 @@ const isDevelopment = process.env.NODE_ENV === "development" || !app.isPackaged;
 let mainWindow: BrowserWindow | null = null;
 
 async function createWindow() {
+  console.log("Creating main window");
+
   // Create the browser window
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 700,
+    width: 1200,
+    height: 800,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
       contextIsolation: true,
+      // Enable development tools in all environments for debugging
+      devTools: true,
     },
+  });
+
+  // Always open DevTools for debugging
+  mainWindow.webContents.openDevTools();
+
+  // Log all console messages from the renderer to the main process console
+  mainWindow.webContents.on("console-message", (_, level, message, line, sourceId) => {
+    const levels = ["verbose", "info", "warning", "error"];
+    console.log(`[${levels[level] || "info"}] (${sourceId}:${line}): ${message}`);
   });
 
   // Load the app - differently based on dev or production
   if (isDevelopment) {
-    // Load from Vite dev server in development
-    await mainWindow.loadURL("http://localhost:3000");
-    mainWindow.webContents.openDevTools();
+    console.log("Development mode: Loading from http://localhost:3000");
+
+    // In development, load from Vite dev server
+    try {
+      await mainWindow.loadURL("http://localhost:3000");
+      console.log("Successfully loaded from development server");
+    } catch (error) {
+      console.error("Failed to load from development server:", error);
+
+      // Show error message in the window
+      mainWindow.loadURL(`data:text/html,
+        <html>
+          <head><title>Development Server Error</title></head>
+          <body style="font-family: Arial; padding: 20px; background: #f8f8f8;">
+            <h2>Failed to connect to development server</h2>
+            <p>Make sure Vite is running on port 3000.</p>
+            <p>Error: ${error instanceof Error ? error.message : String(error)}</p>
+            <script>
+              // Reload every 3 seconds to attempt reconnection
+              setTimeout(() => location.reload(), 3000);
+            </script>
+          </body>
+        </html>
+      `);
+    }
   } else {
-    // Load the built HTML file in production
-    await mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+    console.log("Production mode: Loading from file");
+
+    // In production, load the HTML file from the renderer directory
+    try {
+      const indexPath = path.join(__dirname, "../renderer", "index.html");
+      console.log("Loading index.html from:", indexPath);
+      await mainWindow.loadFile(indexPath);
+      console.log("Successfully loaded index.html from file");
+    } catch (error) {
+      console.error("Failed to load index.html from file:", error);
+
+      // Show error message in the window
+      mainWindow.loadURL(`data:text/html,
+        <html>
+          <head><title>Error Loading App</title></head>
+          <body style="font-family: Arial; padding: 20px; background: #f8f8f8;">
+            <h2>Failed to load application</h2>
+            <p>Error: ${error instanceof Error ? error.message : String(error)}</p>
+          </body>
+        </html>
+      `);
+    }
   }
+
+  // Log window load errors
+  mainWindow.webContents.on("did-fail-load", (_, errorCode, errorDescription) => {
+    console.error("Failed to load content:", errorCode, errorDescription);
+  });
 }
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(async () => {
+  console.log("Electron app ready, creating window");
   await createWindow();
 
   app.on("activate", async () => {
@@ -48,9 +106,6 @@ app.whenReady().then(async () => {
       await createWindow();
     }
   });
-
-  // Set up IPC handlers
-  setupIPC();
 });
 
 // Quit when all windows are closed, except on macOS
@@ -60,85 +115,11 @@ app.on("window-all-closed", () => {
   }
 });
 
-function setupIPC() {
-  ipcMain.handle("invoke-agent", async (_, issue: string, repoPath: string) => {
-    try {
-      logger.info("Starting agent invocation with issue:", issue);
+// Basic IPC setup
+ipcMain.handle("get-path", (_, name) => {
+  return app.getPath(name as any);
+});
 
-      // Set up the observability platform (using Grafana as default)
-      const integrationType = IntegrationType.GRAFANA;
-      const observabilityPlatform = getObservabilityPlatform(integrationType);
-      const observabilityFeatures = ["logs"];
-
-      // Example time range for logs
-      const startDate = new Date();
-      startDate.setHours(startDate.getHours() - 1);
-      const endDate = new Date();
-
-      // Get labels map
-      const logLabelsMap = await observabilityPlatform.getLogsFacetValues(
-        startDate.toISOString(),
-        endDate.toISOString()
-      );
-      const spanLabelsMap = await observabilityPlatform.getSpansFacetValues(
-        startDate.toISOString(),
-        endDate.toISOString()
-      );
-
-      // Generate file tree
-      const fileTree = ""; // In a real implementation, you'd call loadFileTree(repoPath)
-
-      // Initialize models
-      const reasoningModel = OpenAIModel.O3_MINI;
-      const fastModel = OpenAIModel.GPT_4O;
-
-      // Create and invoke agent
-      const agent = new OnCallAgent(
-        reasoningModel,
-        fastModel,
-        observabilityPlatform,
-        observabilityFeatures
-      );
-
-      const response = await agent.invoke({
-        firstPass: true,
-        toolCalls: observabilityFeatures.includes("logs")
-          ? [
-              {
-                type: "logRequest",
-                request: "fetch logs relevant to the issue/event",
-                reasoning: "",
-              },
-            ]
-          : [{ type: "reasoningRequest" }],
-        query: issue,
-        repoPath,
-        codebaseOverview: "",
-        fileTree,
-        logLabelsMap,
-        spanLabelsMap,
-        chatHistory: [],
-        codeContext: new Map(),
-        logContext: new Map(),
-        spanContext: new Map(),
-        rootCauseAnalysis: null,
-        logPostprocessingResult: null,
-        codePostprocessingResult: null,
-      });
-
-      return {
-        success: true,
-        chatHistory: response.chatHistory,
-        rootCauseAnalysis: response.rca,
-        logPostprocessing: response.logPostprocessing,
-        codePostprocessing: response.codePostprocessing,
-      };
-    } catch (error) {
-      logger.error("Error invoking agent:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  });
-}
+ipcMain.handle("getCurrentDirectory", () => {
+  return process.cwd();
+});
