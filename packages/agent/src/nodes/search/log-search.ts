@@ -25,6 +25,7 @@ function createLogSearchPrompt(params: {
   logLabelsMap: string;
   platformSpecificInstructions: string;
   previousLogQueryResult?: { input: LogSearchInput; logs: Log[] | string };
+  remainingQueries: number;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -35,6 +36,7 @@ function createLogSearchPrompt(params: {
       )
     : "";
 
+  // TODO: consider removing the line about removing all filters
   return `
 Given all available log labels and a user query about the issue/event, your task is to fetch logs for the following objective: ${params.logRequest}. You will do so by outputting \`LogSearchInput\` outputs to read logs from observability API.
 
@@ -44,6 +46,7 @@ Given all available log labels and a user query about the issue/event, your task
 - As you make queries, pay attention to the results in <previous_log_query_result> to see the results of your last query and <log_results_history> to see the results of all previous queries. You should make decisions on future queries based on the results of your previous queries.
 - Look for important identifiers such as user or object IDs and use those in future queries.
 - As you find log results indicative of the exact issue/event, you should try to find preceding logs that explain how/why that issue/event is related to the user query.
+- Every once in a while, you may zoom out and remove all filters to get a broader view of the system.
 - Your goal is to eventually find a query that returns logs across the related services with as much important surrounding context and events as possible. All log results fetched at the end of your log search iterations will be merged together to form a complete picture of the issue/event.
 - Do not filter on random keywords. You should only filter on: service name, part of an error message, or a unique identifier.
 - Do not filter on code snippets (e.g. file names, classes, methods, component tags, etc).
@@ -59,6 +62,10 @@ Given all available log labels and a user query about the issue/event, your task
 - Look at the context previously gathered to see what logs you have already fetched and what queries you've tried, DO NOT repeat past queries.
 - DO NOT query the same services multiple times with slightly different configurations - this wastes iterations and provides redundant information.
 - If you're not finding any logs with specific error keywords, switch to service-only queries to get a system overview first.
+
+<remaining_queries>
+${params.remainingQueries}
+</remaining_queries>
 
 <current_time>
 ${currentTime}
@@ -140,6 +147,7 @@ class LogSearch {
     logResultHistory: Map<LogSearchInput, Log[] | string>;
     logLabelsMap: string;
     previousLogQueryResult?: { input: LogSearchInput; logs: Log[] | string };
+    remainingQueries: number;
   }): Promise<LogSearchResponse> {
     const prompt = createLogSearchPrompt({
       ...params,
@@ -238,6 +246,7 @@ export class LogSearchAgent {
         logLabelsMap: params.logLabelsMap,
         logResultHistory: logResultHistory,
         previousLogQueryResult: previousLogQueryResult,
+        remainingQueries: maxIters - currentIter,
       });
 
       currentIter++;
