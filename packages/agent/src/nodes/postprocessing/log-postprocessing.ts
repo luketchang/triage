@@ -6,7 +6,7 @@ import {
   logPostprocessingToolSchema,
   LogSearchInput,
 } from "../../types";
-import { formatLogResults, validateToolCalls } from "../utils";
+import { ensureSingleToolCall, formatLogResults } from "../utils";
 
 function createPrompt(params: {
   query: string;
@@ -78,7 +78,7 @@ export class LogPostprocessor {
       toolChoice: "required",
     });
 
-    const toolCall = validateToolCalls(toolCalls);
+    const toolCall = ensureSingleToolCall(toolCalls);
 
     const outputObj: LogPostprocessingResponse = {
       type: "logPostprocessing",

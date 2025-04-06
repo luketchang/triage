@@ -7,8 +7,6 @@ const rereviewRequestSchema = z.object({
   reasoning: z.string().describe("Reasoning process behind your hypothesis."),
 });
 
-export type RereviewRequest = zInfer<typeof rereviewRequestSchema> & { type: "rereviewRequest" };
-
 export const rereviewRequestToolSchema = {
   description: "Indicate that you need to re-review the root cause analysis with the same context",
   parameters: rereviewRequestSchema,
@@ -77,8 +75,35 @@ export const logRequestToolSchema = {
   parameters: logRequestSchema,
 };
 
+export interface ReasoningRequest {
+  type: "reasoningRequest";
+}
+
+export interface ReviewRequest {
+  type: "reviewRequest";
+}
+
+export interface LogPostprocessingRequest {
+  type: "logPostprocessing";
+}
+
+export interface CodePostprocessingRequest {
+  type: "codePostprocessing";
+}
+
+export type RequestToolCalls = {
+  type: "toolCalls";
+  toolCalls: Array<
+    | SpanRequest
+    | LogRequest
+    | ReasoningRequest
+    | ReviewRequest
+    | LogPostprocessingRequest
+    | CodePostprocessingRequest
+  >;
+};
+
 export const rootCauseAnalysisSchema = z.object({
-  reasoning: z.string().describe("Reasoning process behind your hypothesis."),
   rootCause: z
     .string()
     .describe(

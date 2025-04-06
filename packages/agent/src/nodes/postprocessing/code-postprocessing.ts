@@ -4,7 +4,7 @@ import {
   CodePostprocessing as CodePostprocessingResponse,
   codePostprocessingToolSchema,
 } from "../../types";
-import { validateToolCalls } from "../utils";
+import { ensureSingleToolCall } from "../utils";
 
 function createPrompt(params: {
   query: string;
@@ -61,7 +61,7 @@ export class CodePostprocessor {
       toolChoice: "required",
     });
 
-    const toolCall = validateToolCalls(toolCalls);
+    const toolCall = ensureSingleToolCall(toolCalls);
 
     const outputObj: CodePostprocessingResponse = {
       type: "codePostprocessing",

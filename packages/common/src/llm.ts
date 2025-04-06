@@ -27,8 +27,8 @@ export enum AnthropicModel {
 }
 
 export enum OpenAIModel {
-  O3_MINI = "o3-mini",
-  GPT_4O = "gpt-4o",
+  O3_MINI = "o3-mini-2025-01-31",
+  GPT_4O = "gpt-4o-2024-08-06",
 }
 
 export enum GeminiModel {

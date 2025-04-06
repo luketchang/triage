@@ -7,7 +7,7 @@ import {
   TaskComplete,
   taskCompleteToolSchema,
 } from "../../types";
-import { formatChatHistory, formatSpanResults, validateToolCalls } from "../utils";
+import { ensureSingleToolCall, formatChatHistory, formatSpanResults } from "../utils";
 
 export interface SpanSearchAgentResponse {
   newSpanContext: Map<SpanSearchInput, Span[]>;
@@ -128,7 +128,7 @@ class SpanSearch {
         toolChoice: "required",
       });
 
-      const toolCall = validateToolCalls(toolCalls);
+      const toolCall = ensureSingleToolCall(toolCalls);
 
       if (toolCall.toolName === "spanSearchInput") {
         return {
