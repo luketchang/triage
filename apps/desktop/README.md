@@ -1,111 +1,61 @@
-# Triage Desktop Application
+# Triage Desktop
 
-A desktop application built with Electron and React that provides a GUI for invoking the Triage Agent.
+A desktop application for the Triage system, built with Electron and React.
 
 ## Features
 
-- Simple, intuitive interface for specifying repository path and issue description
-- Invokes the Triage Agent to analyze and diagnose issues
-- Displays agent chat history and root cause analysis
-- Real-time status updates during processing
+- Chat interface for interacting with the Triage agent
+- Artifact display for logs and code snippets
+- Split-pane UI with resizable panels
 
 ## Development
 
 ### Prerequisites
 
-- Node.js (v20.18.0 or higher)
-- PNPM package manager
+- Node.js v20.18.0+
+- pnpm v9.0.0+
 
-### First-time Setup
-
-The desktop app is part of the Triage monorepo. Follow these steps to set it up:
+### Setup
 
 ```bash
-# From the root of the monorepo
+# Install dependencies
 pnpm install
 
-# Install dependencies specifically for the desktop app
-cd apps/desktop
-pnpm install
-```
-
-### Running in Development Mode
-
-From the root directory:
-
-```bash
-# Start the desktop app in development mode
-pnpm desktop:dev
-```
-
-Or from the desktop app directory:
-
-```bash
-cd apps/desktop
+# Start the development server
 pnpm dev
 ```
 
-This will:
-
-1. Compile TypeScript files
-2. Start Vite dev server for React
-3. Launch Electron pointing to the dev server
-
-### Building for Production
-
-From the root directory:
+### Build
 
 ```bash
-pnpm desktop:build
-```
-
-Or from the desktop app directory:
-
-```bash
-cd apps/desktop
+# Build the application
 pnpm build
 ```
 
-## Troubleshooting
+### Linting
 
-### TypeScript/React Errors
+```bash
+# Run linter
+pnpm lint
 
-If you encounter TypeScript errors related to React:
-
-1. Make sure all dependencies are installed:
-
-   ```bash
-   cd apps/desktop
-   pnpm install
-   ```
-
-2. If the error persists, you may need to restart the TypeScript server in your IDE.
-
-3. For "Cannot find module 'react'" errors, try running:
-   ```bash
-   pnpm add -D @types/react @types/react-dom
-   ```
-
-### Electron Connection Issues
-
-If Electron can't connect to the Vite dev server:
-
-1. Make sure Vite is running on port 3000
-2. Check if there are any firewall or security settings blocking the connection
-3. Try running the dev script again with explicit NODE_ENV setting:
-   ```bash
-   cross-env NODE_ENV=development pnpm dev
-   ```
+# Type checking
+pnpm check-types
+```
 
 ## Architecture
 
-- **Main Process**: Handles Electron initialization and IPC communication with the agent
-- **Renderer Process**: React application for the user interface
-- **Preload Script**: Securely exposes IPC methods to the renderer
+The application consists of:
 
-## Dependencies
+- **Electron Main Process**: Handles application lifecycle and native functionality
+- **Preload Script**: Securely exposes APIs to the renderer process
+- **Renderer Process**: React application for the UI
 
-- Electron: Desktop application framework
-- React: UI library
-- Vite: Build tool and development server
-- TypeScript: Type safety
+### UI Layout
+
+- **Left Sidebar**: Chat interface for interacting with the Triage agent
+- **Main Content**: Overview of available artifacts
+- **Right Sidebar**: Detailed view of selected artifacts (logs or code)
+
+## License
+
+Internal use only.

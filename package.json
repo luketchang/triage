@@ -12,6 +12,7 @@
     "prepare": "husky",
     "lint-staged": "lint-staged",
     "desktop:dev": "cd apps/desktop && pnpm dev",
+    "desktop:electron": "cd apps/desktop && pnpm electron:dev",
     "desktop:build": "cd apps/desktop && pnpm build"
   },
   "lint-staged": {

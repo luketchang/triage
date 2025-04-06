@@ -29,6 +29,7 @@ logs
 out/
 build
 dist
+dist-electron
 mcp-build
 
 
