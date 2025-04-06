@@ -1,4 +1,11 @@
-import { GeminiModel, loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
+import {
+  collectSourceCode,
+  GeminiModel,
+  loadFileTree,
+  logger,
+  Model,
+  OpenAIModel,
+} from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -423,19 +430,13 @@ async function main() {
   // logger.info(spanLabelsMap);
 
   const repoPath = "/Users/luketchang/code/ticketing";
+  const codeContext = collectSourceCode(repoPath);
 
   // Load or generate the codebase overview
   const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
-  const sourceCodeJsonPath =
-    "/Users/luketchang/code/triage/repos/ticketing/source-code/rabbitmq-bug.json";
   const bugPath = "/Users/luketchang/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
 
   const overview = await fs.readFile(overviewPath, "utf-8");
-
-  // Load code context from JSON file
-  const sourceCodeJson = await fs.readFile(sourceCodeJsonPath, "utf-8");
-  const codeContext = new Map<string, string>(Object.entries(JSON.parse(sourceCodeJson)));
-
   const bug = await fs.readFile(bugPath, "utf-8");
 
   const fileTree = loadFileTree(repoPath);
@@ -498,14 +499,14 @@ async function main() {
   logger.info(`Code Post-processing: ${JSON.stringify(response.codePostprocessing)}`);
 }
 
-// void main()
-//   // eslint-disable-next-line no-process-exit
-//   .then(() => process.exit(0))
-//   .catch((error) => {
-//     console.error("Error in main:", error);
-//     // eslint-disable-next-line no-process-exit
-//     process.exit(1);
-//   });
+void main()
+  // eslint-disable-next-line no-process-exit
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("Error in main:", error);
+    // eslint-disable-next-line no-process-exit
+    process.exit(1);
+  });
 
 // Agent package exports
 export * from "./nodes/reasoner";

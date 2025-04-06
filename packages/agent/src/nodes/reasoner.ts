@@ -12,10 +12,6 @@ import { formatLogResults, formatSpanResults } from "./utils";
 
 type ReasoningResponse = RootCauseAnalysis | RequestToolCalls;
 
-const SYSTEM_PROMPT = `
-You are an expert AI assistant that assists engineers debugging production issues. You are an expert at tracing through logs, spans, and code and reasoning about the root cause of issues.
-`;
-
 function createPrompt(params: {
   query: string;
   repoPath: string;
@@ -97,7 +93,6 @@ export class Reasoner {
 
     const { toolCalls, text } = await generateText({
       model: getModelWrapper(this.llm),
-      system: SYSTEM_PROMPT,
       prompt: prompt,
       tools: {
         // spanRequest: spanRequestToolSchema,
