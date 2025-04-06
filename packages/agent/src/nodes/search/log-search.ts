@@ -34,7 +34,7 @@ function createLogSearchPrompt(params: {
     : "";
 
   return `
-Given all available log labels and a user query about the issue/event, your task is the following: ${params.logRequest}. You will do so by outputting \`LogSearchInput\` outputs to read logs from observability API.
+Given all available log labels and a user query about the issue/event, your task is to fetch logs for the following objective: ${params.logRequest}. You will do so by outputting \`LogSearchInput\` outputs to read logs from observability API.
 
 ## Tips
 - DO NOT query logs from non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, cluster-agent, desktop-vpnkit-controller, metrics-server, etcd, redis, etc (think anything collector or infrastructure related).
