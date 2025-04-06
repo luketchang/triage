@@ -2,25 +2,20 @@ import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
 import { Log } from "@triage/observability";
 import { generateText } from "ai";
 import {
-  CodeRequest,
-  codeRequestToolSchema,
-  LogRequest,
   logRequestToolSchema,
   LogSearchInput,
-  SpanRequest,
+  RequestToolCalls,
+  RootCauseAnalysis,
   spanRequestToolSchema,
-  TaskComplete,
-  taskCompleteToolSchema,
 } from "../types";
 import { formatChatHistory, formatLogResults, validateToolCalls } from "./utils";
 
-export type ReviewerResponse = TaskComplete | CodeRequest | SpanRequest | LogRequest;
+export type ReviewerResponse = RequestToolCalls | RootCauseAnalysis;
 
 function createPrompt(params: {
   query: string;
   repoPath: string;
   codebaseOverview: string;
-  fileTree: string;
   logLabelsMap: string;
   spanLabelsMap: string;
   chatHistory: string[];
@@ -28,7 +23,6 @@ function createPrompt(params: {
   logContext: Map<LogSearchInput, Log[] | string>;
   rootCauseAnalysis: string;
 }) {
-  // TODO: add back SpanRequest
   return `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review root cause analyses produced by another engineer and reason about its validity and whether or the engineer is missing key context from the codebase, logs or spans. You are not able to make any modifications to the system—you can only reason about the system by looking at the context and walking through sequences of events.
 
@@ -46,22 +40,19 @@ Question Checklist:
 - Do the logs reveal any additional issues/events or context that might have been overlooked?
 - Does the code match the issues/events revealed in the logs?
 
-If the answer to any of the above questions is "yes", output either a \`LogRequest\` for additional logs or a \`CodeRequest\` for additional code. Note, you must pick one tool to output. 
+If the answer to any of the above questions is "yes", output a \`LogRequest\` or \`SpanRequest\` for additional information. If you believe the root cause analysis is correct and complete, provide no tool calls and instead critique the analysis directly.
 
 Guidelines:
-- Exact Sequence Requirement: Ensure that the root cause analysis includes an explicit, exact sequence of events that directly correlates with the provided context, logs, or code. If the analysis does not clearly describe such a sequence, do not output TaskComplete; instead, output a \`CodeRequest\` or \`LogRequest\` to guide next explorations.
+- Exact Sequence Requirement: Ensure that the root cause analysis includes an explicit, exact sequence of events that directly correlates with the provided context, logs, or code.
 - Consider if the proposed analysis only examines a small part of the system. If you suspect the root cause lies upstream or downstream, specify which other services should be investigated.
 - When reviewing logs, verify that you have a comprehensive view rather than just logs from the error occurrence. The logs should encompass the activities of other services leading up to the issue/event.
 - Recognize that in microservices architectures, the failing service might not be the source of the issue/event; it could be caused by another interacting service. Outline any additional hypotheses regarding missing context.
-- If further code context is required, output a \`CodeRequest\` detailing what types of code should be examined. Similarly, if more logs are needed, output a \`LogRequest\` specifying the required log types.
-- Task Completion Condition: Only output TaskComplete if you are convinced that the engineer's root cause analysis is correct, precise, and is not speculative but actually complete.
 - The analysis must not rely on vague root causes like "Synchronization Issues" or "Performance Issues." It must be concrete, actionable, and provide an exact fix. Otherwise, it is a sign that further context is needed.
 - Refer to the content in the <files_read> to verify implementation details of the codebase.
 
 - DO NOT use XML tags
-- A request for more logs MUST output a \`LogRequest\`, and a request for more code MUST output a \`CodeRequest\`.
-- DO NOT output a \`CodeRequest\` if you have already read the file (e.g. if the file is in the <files_read> tag).
-- You may only output one tool call at a time.
+- A request for more logs should output a \`LogRequest\` for additional logs, and a request for more spans should output a \`SpanRequest\` for additional spans.
+- You may output multiple tool calls if needed.
 
 <current_time>
 ${new Date().toUTCString()}
@@ -74,10 +65,6 @@ ${params.repoPath}
 <codebase_overview>
 ${params.codebaseOverview}
 </codebase_overview>
-
-<file_tree>
-${params.fileTree}
-</file_tree>
 
 <log_labels>
 ${params.logLabelsMap}
@@ -120,7 +107,6 @@ export class Reviewer {
     query: string;
     repoPath: string;
     codebaseOverview: string;
-    fileTree: string;
     logLabelsMap: string;
     spanLabelsMap: string;
     chatHistory: string[];
@@ -133,46 +119,55 @@ export class Reviewer {
     const prompt = createPrompt(params);
     logger.info(`Reviewer prompt: ${prompt}`);
 
-    const { toolCalls } = await generateText({
+    const { toolCalls, text } = await generateText({
       model: getModelWrapper(this.llm),
       prompt: prompt,
       tools: {
-        codeRequest: codeRequestToolSchema,
         spanRequest: spanRequestToolSchema,
         logRequest: logRequestToolSchema,
-        taskComplete: taskCompleteToolSchema,
       },
-      toolChoice: "required",
+      toolChoice: "auto",
     });
 
-    const toolCall = validateToolCalls(toolCalls);
+    logger.info(`Reviewer response:\n${text}`);
+    logger.info(`Reviewer tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
+    const validatedToolCalls = validateToolCalls(toolCalls);
 
     // Create the appropriate output object based on the type
-    let outputObj: TaskComplete | CodeRequest | SpanRequest | LogRequest;
-    if (toolCall.toolName === "taskComplete") {
-      outputObj = {
-        type: "taskComplete",
-        reasoning: toolCall.args.reasoning,
-        summary: toolCall.args.summary,
-      };
-    } else if (
-      toolCall.toolName === "codeRequest" ||
-      toolCall.toolName === "spanRequest" ||
-      toolCall.toolName === "logRequest"
-    ) {
-      // For CodeRequest, SpanRequest, and LogRequest, they all have the same structure
-      outputObj = {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-        type: toolCall.toolName as "codeRequest" | "spanRequest" | "logRequest",
-        request: toolCall.args.request,
-        reasoning: toolCall.args.reasoning,
+    let output: ReviewerResponse;
+    if (validatedToolCalls.length === 0) {
+      // If no tool calls, return the root cause analysis as-is
+      output = {
+        type: "rootCauseAnalysis",
+        rootCause: params.rootCauseAnalysis,
       };
     } else {
-      // At this point TypeScript narrows toolCall.toolName to 'never' type
-      // since it should have been caught by the previous conditions
-      throw new Error("Unexpected tool name received");
+      // For tool calls, construct the RequestToolCalls object
+      output = {
+        type: "toolCalls",
+        toolCalls: [],
+      };
+
+      for (const toolCall of validatedToolCalls) {
+        const toolName = toolCall.toolName as string;
+        if (toolName === "logRequest") {
+          output.toolCalls.push({
+            type: "logRequest",
+            request: toolCall.args.request,
+            reasoning: toolCall.args.reasoning,
+          });
+        } else if (toolName === "spanRequest") {
+          output.toolCalls.push({
+            type: "spanRequest",
+            request: toolCall.args.request,
+            reasoning: toolCall.args.reasoning,
+          });
+        } else {
+          throw new Error(`Unexpected tool name: ${toolName}`);
+        }
+      }
     }
 
-    return outputObj;
+    return output;
   }
 }

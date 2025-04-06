@@ -2,18 +2,19 @@ import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
 import { Log, Span } from "@triage/observability";
 import { generateText } from "ai";
 import {
-  CodeRequest,
   LogRequest,
   logRequestToolSchema,
   LogSearchInput,
+  RequestToolCalls,
   RootCauseAnalysis,
-  rootCauseAnalysisToolSchema,
   SpanRequest,
   SpanSearchInput,
 } from "../types";
 import { formatLogResults, formatSpanResults, validateToolCalls } from "./utils";
 
-export type ReasoningResponse = RootCauseAnalysis | CodeRequest | SpanRequest | LogRequest;
+
+
+type ReasoningResponse = RootCauseAnalysis | RequestToolCalls;
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that assists engineers debugging production issues. You are an expert at tracing through logs, spans, and code and reasoning about the root cause of issues.
@@ -103,35 +104,47 @@ export class Reasoner {
       system: SYSTEM_PROMPT,
       prompt: prompt,
       tools: {
-        // codeRequest: codeRequestToolSchema,
         // spanRequest: spanRequestToolSchema,
         logRequest: logRequestToolSchema,
-        rootCauseAnalysis: rootCauseAnalysisToolSchema,
       },
-      toolChoice: "required",
+      toolChoice: "auto",
     });
 
     logger.info(`Reasoning response:\n${text}`);
     logger.info(`Reasoning tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
-    const toolCall = validateToolCalls(toolCalls);
+    const validatedToolCalls = validateToolCalls(toolCalls);
 
     // Create the appropriate output object based on the type
-    let outputObj: RootCauseAnalysis | CodeRequest | SpanRequest | LogRequest;
-    if (toolCall.toolName === "rootCauseAnalysis") {
-      outputObj = {
+    let output: ReasoningResponse;
+    if (validatedToolCalls.length === 0) {
+      output = {
         type: "rootCauseAnalysis",
-        reasoning: toolCall.args.reasoning,
-        rootCause: toolCall.args.rootCause,
+        rootCause: text,
       };
     } else {
-      // For CodeRequest, LogRequest, and SpanRequest, they all have the same structure
-      outputObj = {
-        type: toolCall.toolName,
-        request: toolCall.args.request,
-        reasoning: toolCall.args.reasoning,
+      output = {
+        type: "toolCalls",
+        toolCalls: [],
       };
+      for (const toolCall of validatedToolCalls) {
+        if (toolCall.toolName === "logRequest") {
+          output.toolCalls.push({
+            type: "logRequest",
+            request: toolCall.args.request,
+            reasoning: toolCall.args.reasoning,
+          });
+        } else if (toolCall.toolName === "spanRequest") {
+          output.toolCalls.push({
+            type: "spanRequest",
+            request: toolCall.args.request,
+            reasoning: toolCall.args.reasoning,
+          });
+        } else {
+          throw new Error(`Unexpected tool name: ${toolCall.toolName}`);
+        }
+      }
     }
 
-    return outputObj;
+    return output;
   }
 }

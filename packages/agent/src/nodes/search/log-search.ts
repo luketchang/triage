@@ -2,7 +2,7 @@ import { getModelWrapper, logger, Model } from "@triage/common";
 import { Log, ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
 import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../../types";
-import { formatLogResults, validateToolCalls } from "../utils";
+import { ensureSingleToolCall, formatLogResults } from "../utils";
 
 export interface LogSearchAgentResponse {
   newLogContext: Map<LogSearchInput, Log[] | string>;
@@ -18,7 +18,7 @@ You are an expert AI assistant that helps engineers debug production issues by s
 
 function createLogSearchPrompt(params: {
   query: string;
-  logRequest: string; // TODO: add back in if needed
+  logRequest: string;
   logResultHistory: Map<LogSearchInput, Log[] | string>;
   logLabelsMap: string;
   platformSpecificInstructions: string;
@@ -34,7 +34,7 @@ function createLogSearchPrompt(params: {
     : "";
 
   return `
-Given all available log labels and a user query about the issue/event, your task is to fetch logs relevant to the issue/event that will give you a full picture of the issue/event. You will do so by outputting \`LogSearchInput\` outputs to read logs from observability API.
+Given all available log labels and a user query about the issue/event, your task is the following: ${params.logRequest}. You will do so by outputting \`LogSearchInput\` outputs to read logs from observability API.
 
 ## Tips
 - DO NOT query logs from non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, cluster-agent, desktop-vpnkit-controller, metrics-server, etcd, redis, etc (think anything collector or infrastructure related).
@@ -143,7 +143,7 @@ class LogSearch {
       platformSpecificInstructions: this.observabilityPlatform.getLogSearchQueryInstructions(),
     });
 
-    // logger.info(`Log search prompt:\n${prompt}`);
+    logger.info(`Log search prompt:\n${prompt}`);
 
     try {
       const { toolCalls } = await generateText({
@@ -157,7 +157,7 @@ class LogSearch {
         toolChoice: "required",
       });
 
-      const toolCall = validateToolCalls(toolCalls);
+      const toolCall = ensureSingleToolCall(toolCalls);
 
       if (toolCall.toolName === "logSearchInput") {
         return {
@@ -222,7 +222,7 @@ export class LogSearchAgent {
     let previousLogResult: { query: LogSearchInput; logs: Log[] | string } | undefined = undefined;
 
     let response: LogSearchResponse | null = null;
-    const maxIters = params.maxIters || 15;
+    const maxIters = params.maxIters || 20;
     let currentIter = 0;
 
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {

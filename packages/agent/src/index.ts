@@ -16,7 +16,31 @@ import { Reviewer } from "./nodes/reviewer";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { SpanSearchAgent } from "./nodes/search/span-search";
 import { formatLogQuery } from "./nodes/utils";
-import { CodePostprocessing, LogPostprocessing, LogSearchInput, SpanSearchInput } from "./types";
+import {
+  CodePostprocessing,
+  CodePostprocessingRequest,
+  LogPostprocessing,
+  LogPostprocessingRequest,
+  LogRequest,
+  LogSearchInput,
+  ReasoningRequest,
+  ReviewRequest,
+  SpanRequest,
+  SpanSearchInput,
+} from "./types";
+
+const INITIAL_LOG_REQUEST: LogRequest = {
+  type: "logRequest",
+  request:
+    "fetch logs relevant to the issue/event that will give you a full picture of the issue/event",
+  reasoning: "",
+};
+const INITIAL_SPAN_REQUEST: SpanRequest = {
+  type: "spanRequest",
+  request:
+    "fetch spans relevant to the issue/event that will give you a full picture of the issue/event",
+  reasoning: "",
+};
 
 // Type definitions
 type NodeType =
@@ -45,9 +69,14 @@ type Command = NextNodeCommand | EndCommand;
 
 export interface OncallAgentState {
   firstPass: boolean;
-  codeRequest: string | null;
-  spanRequest: string | null;
-  logRequest: string | null;
+  toolCalls: Array<
+    | SpanRequest
+    | LogRequest
+    | ReasoningRequest
+    | ReviewRequest
+    | LogPostprocessingRequest
+    | CodePostprocessingRequest
+  >;
   query: string;
   repoPath: string;
   codebaseOverview: string;
@@ -81,24 +110,15 @@ export class OnCallAgent {
     this.observabilityFeatures = observabilityFeatures;
   }
 
-  async logSearch(state: OncallAgentState): Promise<Command> {
+  async processLogRequest(
+    state: OncallAgentState,
+    request: LogRequest
+  ): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
 
     if (!this.observabilityFeatures.includes("logs")) {
       logger.info("Log search not enabled, skipping");
-      if (state.firstPass) {
-        return {
-          type: "next",
-          destination: "spanSearch",
-          update: {},
-        };
-      }
-
-      return {
-        type: "next",
-        destination: "reasoner",
-        update: {},
-      };
+      return {};
     }
 
     const logSearchAgent = new LogSearchAgent(
@@ -106,43 +126,36 @@ export class OnCallAgent {
       this.reasoningModel,
       this.observabilityPlatform
     );
+
     const response = await logSearchAgent.invoke({
       query: state.query,
-      logRequest: state.logRequest ?? "",
+      logRequest: request.request,
       logLabelsMap: state.logLabelsMap,
       logResultHistory: state.logContext,
     });
 
-    if (state.firstPass) {
-      return {
-        type: "next",
-        destination: "spanSearch",
-        update: {
-          logContext: new Map([...state.logContext, ...response.newLogContext]),
-          chatHistory: [...state.chatHistory, response.summary],
-        },
-      };
+    // Check if this is the last tool call in queue and if so, add a reasoning call to the queue
+    const updatedToolCalls = [...state.toolCalls];
+    if (updatedToolCalls.length === 0) {
+      updatedToolCalls.push({ type: "reasoningRequest" });
     }
 
     return {
-      type: "next",
-      destination: "reasoner",
-      update: {
-        logContext: new Map([...state.logContext, ...response.newLogContext]),
-        chatHistory: [...state.chatHistory, response.summary],
-      },
+      logContext: new Map([...state.logContext, ...response.newLogContext]),
+      chatHistory: [...state.chatHistory, response.summary],
+      toolCalls: updatedToolCalls,
     };
   }
 
-  async spanSearch(state: OncallAgentState): Promise<Command> {
+  async processSpanRequest(
+    state: OncallAgentState,
+    request: SpanRequest
+  ): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Span Search " + "=".repeat(25));
 
     if (!this.observabilityFeatures.includes("spans")) {
-      return {
-        type: "next",
-        destination: "reasoner",
-        update: {},
-      };
+      logger.info("Span search not enabled, skipping");
+      return {};
     }
 
     const spanSearchAgent = new SpanSearchAgent(
@@ -150,24 +163,28 @@ export class OnCallAgent {
       this.reasoningModel,
       this.observabilityPlatform
     );
+
     const response = await spanSearchAgent.invoke({
       query: state.query,
-      spanRequest: state.spanRequest ?? "",
+      spanRequest: request.request,
       spanLabelsMap: state.spanLabelsMap,
       chatHistory: state.chatHistory,
     });
 
+    // Check if this is the last tool call in queue and if so, add a reasoning call to the queue
+    const updatedToolCalls = [...state.toolCalls];
+    if (updatedToolCalls.length === 0) {
+      updatedToolCalls.push({ type: "reasoningRequest" });
+    }
+
     return {
-      type: "next",
-      destination: "reasoner",
-      update: {
-        spanContext: new Map([...state.spanContext, ...response.newSpanContext]),
-        chatHistory: [...state.chatHistory, response.summary],
-      },
+      spanContext: new Map([...state.spanContext, ...response.newSpanContext]),
+      chatHistory: [...state.chatHistory, response.summary],
+      toolCalls: updatedToolCalls,
     };
   }
 
-  async reason(state: OncallAgentState): Promise<Command> {
+  async processReasoningRequest(state: OncallAgentState): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
     const reasoner = new Reasoner(this.reasoningModel);
     const response = await reasoner.invoke({
@@ -185,55 +202,42 @@ export class OnCallAgent {
 
     logger.info(`Reasoning response: ${JSON.stringify(response)}`);
 
+    // Define base updates
+    const updates: Partial<OncallAgentState> = {
+      firstPass: false,
+    };
+
     if (response.type === "rootCauseAnalysis") {
-      return {
-        type: "next",
-        destination: "reviewer",
-        update: {
-          rootCauseAnalysis: response.rootCause,
-          chatHistory: [...state.chatHistory, response.reasoning],
-          // NOTE: we intentionally reset requests so future calls are not anchored by them
-          codeRequest: null,
-          spanRequest: null,
-          logRequest: null,
-          firstPass: false,
-        },
-      };
-    } else if (response.type === "spanRequest") {
-      return {
-        type: "next",
-        destination: "spanSearch",
-        update: {
-          chatHistory: [...state.chatHistory, response.reasoning],
-          spanRequest: response.request,
-          codeRequest: null,
-          logRequest: null,
-          firstPass: false,
-        },
-      };
-    } else {
-      return {
-        type: "next",
-        destination: "logSearch",
-        update: {
-          chatHistory: [...state.chatHistory, response.reasoning],
-          logRequest: response.request,
-          codeRequest: null,
-          spanRequest: null,
-          firstPass: false,
-        },
-      };
+      // Add to chat history the root cause and set it in state
+      updates.rootCauseAnalysis = response.rootCause;
+      updates.chatHistory = [...state.chatHistory, response.rootCause];
+
+      // TODO: pretty sure this should always hold
+      if (state.toolCalls.length === 0) {
+        throw new Error("Tool calls should be empty");
+      }
+      updates.toolCalls = [{ type: "reviewRequest" }];
+    } else if (response.type === "toolCalls") {
+      // Add reasoning summary to chat history (will need to create if it doesn't exist)
+      const reasoning = response.toolCalls
+        .map((toolCall) => (toolCall as LogRequest | SpanRequest).reasoning)
+        .join("\n\n");
+      updates.chatHistory = [...state.chatHistory, reasoning];
+
+      // Add new tool calls to the beginning of the queue
+      updates.toolCalls = [...response.toolCalls, ...state.toolCalls];
     }
+
+    return updates;
   }
 
-  async review(state: OncallAgentState): Promise<Command> {
+  async processReviewRequest(state: OncallAgentState): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
     const reviewer = new Reviewer(this.reasoningModel);
     const response = await reviewer.invoke({
       query: state.query,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
-      fileTree: state.fileTree,
       logLabelsMap: state.logLabelsMap,
       spanLabelsMap: state.spanLabelsMap,
       chatHistory: state.chatHistory,
@@ -242,43 +246,31 @@ export class OnCallAgent {
       rootCauseAnalysis: state.rootCauseAnalysis ?? "",
     });
 
-    logger.info(`Reviewer reasoning: ${response.reasoning}`);
-    logger.info(`Reviewer output: ${JSON.stringify(response)}`);
+    // Define base updates
+    const updates: Partial<OncallAgentState> = {
+      chatHistory: [...state.chatHistory],
+    };
 
-    if (response.type === "spanRequest") {
-      return {
-        type: "next",
-        destination: "spanSearch",
-        update: {
-          chatHistory: [...state.chatHistory, response.reasoning],
-          spanRequest: response.request,
-          codeRequest: null,
-          logRequest: null,
-        },
-      };
-    } else if (response.type === "logRequest") {
-      return {
-        type: "next",
-        destination: "logSearch",
-        update: {
-          chatHistory: [...state.chatHistory, response.reasoning],
-          logRequest: response.request,
-          codeRequest: null,
-          spanRequest: null,
-        },
-      };
-    } else {
-      return {
-        type: "next",
-        destination: "logPostprocessor",
-        update: {
-          chatHistory: [...state.chatHistory, response.reasoning],
-        },
-      };
+    if (response.type === "rootCauseAnalysis") {
+      // The review has confirmed the root cause analysis, proceed to postprocessing
+      logger.info("Reviewer confirmed root cause analysis");
+    } else if (response.type === "toolCalls") {
+      // Add reasoning message to chat history
+      const reasoningSummary = response.toolCalls
+        .map((toolCall) => (toolCall as LogRequest | SpanRequest).reasoning)
+        .join("\n\n");
+      updates.chatHistory = [...state.chatHistory, reasoningSummary];
+
+      // Add the new tool calls to the beginning of the queue
+      updates.toolCalls = [...response.toolCalls, ...state.toolCalls];
     }
+
+    return updates;
   }
 
-  async postprocessLogs(state: OncallAgentState): Promise<Command> {
+  async processLogPostprocessingRequest(
+    state: OncallAgentState
+  ): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
     const postprocessor = new LogPostprocessor(this.reasoningModel);
     const response = await postprocessor.invoke({
@@ -297,15 +289,13 @@ export class OnCallAgent {
     );
 
     return {
-      type: "next",
-      destination: "codePostprocessor",
-      update: {
-        logPostprocessingResult: response,
-      },
+      logPostprocessingResult: response,
     };
   }
 
-  async postprocessCode(state: OncallAgentState): Promise<Command> {
+  async processCodePostprocessingRequest(
+    state: OncallAgentState
+  ): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
     const postprocessor = new CodePostprocessor(this.reasoningModel);
     const response = await postprocessor.invoke({
@@ -319,82 +309,55 @@ export class OnCallAgent {
     logger.info(`Code postprocessing relevant filepaths: ${response.relevantFilepaths}`);
 
     return {
-      type: "end",
-      update: {
-        codePostprocessingResult: response,
-      },
+      codePostprocessingResult: response,
     };
   }
 
-  buildGraph(): Map<NodeType, (state: OncallAgentState) => Promise<Command> | Command> {
-    const nodeMap = new Map<NodeType, (state: OncallAgentState) => Promise<Command> | Command>();
+  async invoke(state: OncallAgentState): Promise<{ chatHistory: string[]; rca: string | null }> {
+    let currentState = state;
+    let iterationCount = 0;
+    const maxIterations = 50;
 
-    nodeMap.set("spanSearch", this.spanSearch.bind(this));
-    nodeMap.set("logSearch", this.logSearch.bind(this));
-    nodeMap.set("reasoner", this.reason.bind(this));
-    nodeMap.set("reviewer", this.review.bind(this));
-    nodeMap.set("logPostprocessor", this.postprocessLogs.bind(this));
-    nodeMap.set("codePostprocessor", this.postprocessCode.bind(this));
+    // Process tool calls from the queue until empty or max iterations reached
+    while (currentState.toolCalls.length > 0 && iterationCount < maxIterations) {
+      // Get the next tool call from the queue
+      const [nextToolCall, ...remainingCalls] = currentState.toolCalls;
 
-    return nodeMap;
-  }
-
-  async invoke(
-    input: Partial<OncallAgentState>
-  ): Promise<{ chatHistory: string[]; rca: string | null }> {
-    // Initialize state with defaults and input
-    // TODO: Should probably be part of a database / figure out that as well eventually
-    const initialState: OncallAgentState = {
-      firstPass: true,
-      codeRequest: null,
-      spanRequest: null,
-      logRequest: null,
-      query: "",
-      repoPath: "",
-      codebaseOverview: "",
-      fileTree: "",
-      logLabelsMap: "",
-      spanLabelsMap: "",
-      chatHistory: [],
-      codeContext: new Map(),
-      logContext: new Map(),
-      spanContext: new Map(),
-      logPostprocessingResult: null,
-      codePostprocessingResult: null,
-      rootCauseAnalysis: null,
-      ...input,
-    };
-
-    const nodeMap = this.buildGraph();
-    let currentNode: NodeType = "logSearch";
-    let currentState = initialState;
-    let recursionCount = 0;
-    const recursionLimit = 50;
-
-    while (currentNode !== "END" && recursionCount < recursionLimit) {
-      const nodeFunction = nodeMap.get(currentNode);
-      if (!nodeFunction) {
-        throw new Error(`Node ${currentNode} not found in graph`);
-      }
-
-      const command = await nodeFunction(currentState);
-
-      // Update state immutably
+      // Update the queue in the state
       currentState = {
         ...currentState,
-        ...command.update,
+        toolCalls: remainingCalls,
       };
 
-      // Set next node based on command type
-      if (command.type === "end") {
-        currentNode = "END";
-      } else {
-        currentNode = command.destination;
+      // Process the tool call based on its type
+      let stateUpdates: Partial<OncallAgentState> = {};
+
+      if (nextToolCall) {
+        if (nextToolCall.type === "logRequest") {
+          stateUpdates = await this.processLogRequest(currentState, nextToolCall);
+        } else if (nextToolCall.type === "spanRequest") {
+          stateUpdates = await this.processSpanRequest(currentState, nextToolCall);
+        } else if (nextToolCall.type === "reasoningRequest") {
+          stateUpdates = await this.processReasoningRequest(currentState);
+        } else if (nextToolCall.type === "reviewRequest") {
+          stateUpdates = await this.processReviewRequest(currentState);
+        } else if (nextToolCall.type === "logPostprocessing") {
+          stateUpdates = await this.processLogPostprocessingRequest(currentState);
+        } else if (nextToolCall.type === "codePostprocessing") {
+          stateUpdates = await this.processCodePostprocessingRequest(currentState);
+        }
       }
 
-      recursionCount++;
+      // Update the state with the results
+      currentState = {
+        ...currentState,
+        ...stateUpdates,
+      };
+
+      iterationCount++;
     }
 
+    // Return the final results
     return {
       chatHistory: currentState.chatHistory,
       rca: currentState.rootCauseAnalysis,
@@ -465,8 +428,25 @@ async function main() {
 
   const fileTree = loadFileTree(repoPath);
 
+  let toolCalls: Array<SpanRequest | LogRequest | ReasoningRequest> = [];
+  if (observabilityFeatures.includes("logs")) {
+    toolCalls.push(INITIAL_LOG_REQUEST);
+  }
+
+  // Add default span request if spans feature is enabled
+  if (observabilityFeatures.includes("spans")) {
+    toolCalls.push(INITIAL_SPAN_REQUEST);
+  }
+
+  // If no observability features are enabled, start with reasoning
+  // TODO: is this the behavior we want?
+  if (toolCalls.length === 0) {
+    toolCalls.push({ type: "reasoningRequest" });
+  }
+
   const state: OncallAgentState = {
     firstPass: true,
+    toolCalls,
     query: bug,
     repoPath,
     codebaseOverview: overview,
@@ -478,9 +458,6 @@ async function main() {
     logContext: new Map(),
     spanContext: new Map(),
     rootCauseAnalysis: null,
-    codeRequest: null,
-    spanRequest: null,
-    logRequest: null,
     logPostprocessingResult: null,
     codePostprocessingResult: null,
   };
@@ -512,6 +489,12 @@ void main()
 
 // Agent package exports
 export * from "./types";
+// These types are declared in this file, so no need to re-export
+// export {
+//   ReviewRequest,
+//   LogPostprocessingRequest,
+//   CodePostprocessingRequest
+// };
 
 // Export nodes
 export * from "./nodes/reasoner";

@@ -4,6 +4,18 @@ import { LogSearchInput, SpanSearchInput } from "../types";
 
 export function validateToolCalls<TOOLS extends ToolSet>(
   toolCalls: Array<ToolCallUnion<TOOLS>>
+): ToolCallUnion<TOOLS>[] {
+  if (!toolCalls || toolCalls.length !== 1) {
+    throw new Error(
+      `Expected exactly one tool call, got ${toolCalls?.length}. Calls: ${toolCalls?.map((call) => call.toolName).join(", ")}`
+    );
+  }
+
+  return toolCalls;
+}
+
+export function ensureSingleToolCall<TOOLS extends ToolSet>(
+  toolCalls: Array<ToolCallUnion<TOOLS>>
 ): ToolCallUnion<TOOLS> {
   if (!toolCalls || toolCalls.length !== 1) {
     throw new Error(
