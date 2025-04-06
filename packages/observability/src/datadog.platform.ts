@@ -34,7 +34,7 @@ Use Datadog Log Search Syntax to search for logs.
 - GOOD: (service:orders OR service:payments OR service:tickets OR service:expiration)
 - GOOD: service:tickets AND status:info
 - GOOD: service:orders AND (*:"No matching document" OR *:"duplicate key")
-- BAD (missing AND clauses): service:orders *:"base-listener" *:"abstract"
+- BAD (missing AND clauses): service:orders (*:"No matching document" OR *:"duplicate key")
 - BAD (doesn't include service names): *
 - BAD (wrong tag for log severity, should be "status" not "level"): service:orders AND level:error
 - BAD (missing quotes around keyword terms): service:orders *:No matching document *:duplicate key
