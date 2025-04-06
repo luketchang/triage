@@ -5,12 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:electron": "pnpm run build:preload && vite & (wait-on http://localhost:5174 && cross-env NODE_ENV=development electron electron/main.js)",
-    "start": "pnpm run dev:electron",
-    "build": "pnpm run build:preload && vite build",
-    "build:electron": "electron-builder",
-    "build:preload": "tsc -p tsconfig.preload.json",
-    "build:prod": "pnpm run build && pnpm run build:electron",
+    "start": "pnpm run compile && vite & (wait-on http://localhost:5174 && cross-env NODE_ENV=development electron dist-electron/electron/main.js)",
+    "compile": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json",
+    "build": "pnpm run compile && vite build",
+    "package": "pnpm run build && electron-builder",
     "lint": "eslint src --ext ts,tsx --max-warnings 0",
     "check-types": "tsc --noEmit",
     "preview": "vite preview"

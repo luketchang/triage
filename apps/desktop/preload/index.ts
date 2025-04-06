@@ -22,3 +22,27 @@ contextBridge.exposeInMainWorld("electronAPI", {
    */
   updateAgentConfig: (newConfig: unknown) => ipcRenderer.invoke("update-agent-config", newConfig),
 });
+
+/**
+ * Helper function to wait for DOM to be ready
+ * @param condition ReadyState conditions to check
+ * @returns Promise that resolves when DOM is ready
+ */
+function domReady(condition: DocumentReadyState[] = ["complete", "interactive"]): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (condition.includes(document.readyState)) {
+      resolve(true);
+    } else {
+      document.addEventListener("readystatechange", () => {
+        if (condition.includes(document.readyState)) {
+          resolve(true);
+        }
+      });
+    }
+  });
+}
+
+// Perform any initialization logic when DOM is ready
+domReady().then(() => {
+  console.log("Preload script initialized");
+});
