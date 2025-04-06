@@ -1,25 +1,27 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-// Expose simplified API to the renderer process
-contextBridge.exposeInMainWorld("api", {
-  // Get the current working directory
-  getCurrentDirectory: () => {
-    return ipcRenderer.invoke("getCurrentDirectory");
-  },
+// Expose protected methods that allow the renderer process to use
+// the ipcRenderer without exposing the entire object
+contextBridge.exposeInMainWorld("electronAPI", {
+  // Example of exposing an API to the renderer process
+  // getLogs: (query: string) => ipcRenderer.invoke("get-logs", query),
+  // getCode: (paths: string[]) => ipcRenderer.invoke("get-code", paths),
+});
 
-  // Get an app path
-  getPath: (name: string) => {
-    return ipcRenderer.invoke("get-path", name);
-  },
+function domReady(condition: DocumentReadyState[] = ["complete", "interactive"]): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (condition.includes(document.readyState)) {
+      resolve(true);
+    } else {
+      document.addEventListener("readystatechange", () => {
+        if (condition.includes(document.readyState)) {
+          resolve(true);
+        }
+      });
+    }
+  });
+}
 
-  // Expose some system info for debugging
-  getSystemInfo: () => {
-    return {
-      platform: process.platform,
-      arch: process.arch,
-      nodeVersion: process.versions.node,
-      electronVersion: process.versions.electron,
-      userAgent: navigator.userAgent,
-    };
-  },
+domReady().then(() => {
+  // Add any preload initialization here
 });

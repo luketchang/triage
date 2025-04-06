@@ -1,35 +1,33 @@
 {
-  "name": "@triage/desktop",
-  "version": "0.1.0",
+  "name": "triage-desktop",
   "private": true,
-  "main": "./dist/main.js",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.main.json && vite build",
-    "dev": "cross-env NODE_ENV=development concurrently \"tsc -p tsconfig.main.json -w\" \"vite\" \"electron .\"",
-    "start": "electron .",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "lint": "eslint \"src/**/*.{js,ts,tsx}\" --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "dev": "vite",
+    "dev:electron": "vite & (wait-on http://localhost:5174 && cross-env NODE_ENV=development electron electron/main.js)",
+    "start": "pnpm run dev:electron",
+    "build": "vite build",
+    "lint": "eslint src --ext ts,tsx --max-warnings 0",
+    "check-types": "tsc --noEmit",
+    "preview": "vite preview"
   },
   "dependencies": {
+    "@triage/observability": "workspace:*",
     "@triage/agent": "workspace:*",
     "@triage/common": "workspace:*",
-    "@triage/observability": "workspace:*",
-    "electron": "^29.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.3"
+    "react-split-pane": "^0.1.92"
   },
   "devDependencies": {
-    "@types/node": "^22",
-    "@types/react": "^18.2.48",
-    "@types/react-dom": "^18.2.18",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "^4.2.1",
-    "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "eslint": "^9.20.0",
-    "typescript": "5.7.3",
-    "vite": "^5.0.12"
+    "electron": "^35.1.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.0",
+    "wait-on": "^7.2.0"
   }
 }

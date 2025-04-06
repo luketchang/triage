@@ -1,16 +1,9 @@
-export interface AgentResult {
-  success: boolean;
-  chatHistory?: string[];
-  rootCauseAnalysis?: string | null;
-  error?: string;
-}
+// This file ensures TypeScript recognizes the types from the Triage packages
+import type { Log } from "@triage/observability/src/types";
 
-export interface ElectronAPI {
-  invokeAgent: (issue: string, repoPath: string) => Promise<AgentResult>;
-}
-
+// A placeholder for future Electron API integration
 declare global {
   interface Window {
-    api: ElectronAPI;
+    // Will be defined when we add Electron integration
   }
 }
