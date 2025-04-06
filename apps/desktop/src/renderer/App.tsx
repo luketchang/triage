@@ -2,6 +2,10 @@ import type { Log } from "@triage/observability/src/types";
 import { useState } from "react";
 import "./styles.css";
 
+// Make TypeScript aware of our electron API
+// No need to import, but TS will pick up the global augmentation
+import "./electron.d";
+
 // Type for code artifacts
 type CodeMap = Map<string, string>;
 
@@ -137,31 +141,113 @@ if __name__ == "__main__":
   // Currently selected artifact
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
 
-  const sendMessage = (): void => {
+  const sendMessage = async (): Promise<void> => {
     if (newMessage.trim() === "") return;
 
-    setMessages([
-      ...messages,
-      {
-        id: `msg${messages.length + 1}`,
-        role: "user",
-        content: newMessage,
-      },
-    ]);
+    // Add user message to chat
+    const userMessage: ChatMessage = {
+      id: `msg${messages.length + 1}`,
+      role: "user",
+      content: newMessage,
+    };
+
+    setMessages([...messages, userMessage]);
     setNewMessage("");
 
-    // Mock assistant response after a short delay
-    setTimeout(() => {
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          id: `msg${prevMessages.length + 1}`,
+    try {
+      // Show loading message
+      const loadingMessage: ChatMessage = {
+        id: `msg${messages.length + 2}`,
+        role: "assistant",
+        content: "Thinking...",
+      };
+
+      setMessages((prev) => [...prev, loadingMessage]);
+
+      // Call the agent API (window.electronAPI is now properly typed)
+      const response = await window.electronAPI.invokeAgent(newMessage);
+
+      if (response.success && response.data) {
+        // Remove the loading message
+        setMessages((prev) => prev.filter((message) => message.id !== loadingMessage.id));
+
+        // Add the agent response to the chat
+        const assistantMessage: ChatMessage = {
+          id: `msg${messages.length + 2}`,
           role: "assistant",
-          content:
-            "I'm here to help with your questions about artifacts and any other topics you'd like to explore.",
-        },
+          content: response.data.chatHistory.join("\n\n") || "No response from agent",
+        };
+
+        // Add root cause analysis if available
+        if (response.data.rca) {
+          assistantMessage.content += `\n\n**Root Cause Analysis:**\n${response.data.rca}`;
+        }
+
+        // Add artifacts if available
+        const artifacts: Artifact[] = [];
+
+        if (response.data.logPostprocessing) {
+          artifacts.push({
+            id: `artifact-log-${Date.now()}`,
+            type: "log",
+            title: "Log Analysis",
+            description: "Log postprocessing results",
+            data: JSON.stringify(response.data.logPostprocessing),
+          });
+        }
+
+        if (response.data.codePostprocessing) {
+          // Create a code map from the code postprocessing
+          const codeMap = new Map<string, string>();
+          const codePostprocessing = response.data.codePostprocessing as any;
+
+          if (codePostprocessing.relevantCode) {
+            for (const [filePath, content] of Object.entries(codePostprocessing.relevantCode)) {
+              codeMap.set(filePath, content as string);
+            }
+          }
+
+          artifacts.push({
+            id: `artifact-code-${Date.now()}`,
+            type: "code",
+            title: "Code Analysis",
+            description: "Code postprocessing results",
+            data: codeMap,
+          });
+        }
+
+        if (artifacts.length > 0) {
+          assistantMessage.artifacts = artifacts;
+        }
+
+        setMessages((prev) => [...prev, assistantMessage]);
+      } else {
+        // Remove the loading message
+        setMessages((prev) => prev.filter((message) => message.id !== loadingMessage.id));
+
+        // Add error message
+        const errorMessage: ChatMessage = {
+          id: `msg${messages.length + 2}`,
+          role: "assistant",
+          content: `Error: ${response.error || "Unknown error"}`,
+        };
+
+        setMessages((prev) => [...prev, errorMessage]);
+      }
+    } catch (error) {
+      // Handle any errors
+      const errorMessage: ChatMessage = {
+        id: `msg${messages.length + 2}`,
+        role: "assistant",
+        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+      };
+
+      // Remove any loading message
+      setMessages((prev) => [
+        ...prev.filter((message) => !message.content.includes("Thinking...")),
+        errorMessage,
       ]);
-    }, 1000);
+    }
   };
 
   const renderArtifactContent = (artifact: Artifact): JSX.Element | null => {
