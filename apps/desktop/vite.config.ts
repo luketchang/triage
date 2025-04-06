@@ -8,6 +8,7 @@ export default defineConfig({
   server: {
     port: 3000,
   },
+  base: "./",
   build: {
     outDir: "dist/renderer",
     emptyOutDir: true,
@@ -16,6 +17,13 @@ export default defineConfig({
         main: resolve(__dirname, "src/renderer/index.html"),
       },
       external: ["electron", "@triage/agent", "@triage/common", "@triage/observability"],
+      output: {
+        entryFileNames: "assets/[name]-[hash].js",
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash].[ext]",
+      },
     },
+    assetsDir: "assets",
+    copyPublicDir: true,
   },
 });
