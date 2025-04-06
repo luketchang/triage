@@ -1,4 +1,4 @@
-import { AnthropicModel, GeminiModel, loadFileTree, logger, Model } from "@triage/common";
+import { GeminiModel, loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -223,9 +223,7 @@ export class OnCallAgent {
         .map((toolCall) => (toolCall as LogRequest | SpanRequest).reasoning)
         .join("\n\n");
       updates.chatHistory = [...state.chatHistory, reasoning];
-
-      // Add new tool calls to the beginning of the queue
-      updates.toolCalls = [...response.toolCalls, ...state.toolCalls];
+      updates.toolCalls = [...state.toolCalls, ...response.toolCalls];
     }
 
     return updates;
@@ -254,15 +252,22 @@ export class OnCallAgent {
     if (response.type === "rootCauseAnalysis") {
       // The review has confirmed the root cause analysis, proceed to postprocessing
       logger.info("Reviewer confirmed root cause analysis");
+
+      // Add log and code post-processing requests to the queue
+      const postProcessingCalls = [];
+      if (this.observabilityFeatures.includes("logs")) {
+        postProcessingCalls.push({ type: "logPostprocessing" } as LogPostprocessingRequest);
+      }
+      postProcessingCalls.push({ type: "codePostprocessing" } as CodePostprocessingRequest);
+
+      updates.toolCalls = [...state.toolCalls, ...postProcessingCalls];
     } else if (response.type === "toolCalls") {
       // Add reasoning message to chat history
       const reasoningSummary = response.toolCalls
         .map((toolCall) => (toolCall as LogRequest | SpanRequest).reasoning)
         .join("\n\n");
       updates.chatHistory = [...state.chatHistory, reasoningSummary];
-
-      // Add the new tool calls to the beginning of the queue
-      updates.toolCalls = [...response.toolCalls, ...state.toolCalls];
+      updates.toolCalls = [...state.toolCalls, ...response.toolCalls];
     }
 
     return updates;
@@ -313,7 +318,12 @@ export class OnCallAgent {
     };
   }
 
-  async invoke(state: OncallAgentState): Promise<{ chatHistory: string[]; rca: string | null }> {
+  async invoke(state: OncallAgentState): Promise<{
+    chatHistory: string[];
+    rca: string | null;
+    logPostprocessing: LogPostprocessing | null;
+    codePostprocessing: CodePostprocessing | null;
+  }> {
     let currentState = state;
     let iterationCount = 0;
     const maxIterations = 50;
@@ -357,10 +367,12 @@ export class OnCallAgent {
       iterationCount++;
     }
 
-    // Return the final results
+    // Return the final results including post-processing
     return {
       chatHistory: currentState.chatHistory,
       rca: currentState.rootCauseAnalysis,
+      logPostprocessing: currentState.logPostprocessingResult,
+      codePostprocessing: currentState.codePostprocessingResult,
     };
   }
 }
@@ -428,7 +440,13 @@ async function main() {
 
   const fileTree = loadFileTree(repoPath);
 
-  let toolCalls: Array<SpanRequest | LogRequest | ReasoningRequest> = [];
+  let toolCalls: Array<
+    | SpanRequest
+    | LogRequest
+    | ReasoningRequest
+    | LogPostprocessingRequest
+    | CodePostprocessingRequest
+  > = [];
   if (observabilityFeatures.includes("logs")) {
     toolCalls.push(INITIAL_LOG_REQUEST);
   }
@@ -463,7 +481,7 @@ async function main() {
   };
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
-  const fastModel = AnthropicModel.CLAUDE_3_7_SONNET_20250219;
+  const fastModel = OpenAIModel.GPT_4O;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 
@@ -476,6 +494,8 @@ async function main() {
   const response = await agent.invoke(state);
   logger.info(`Chat History: ${response.chatHistory}`);
   logger.info(`RCA: ${response.rca}`);
+  logger.info(`Log Post-processing: ${JSON.stringify(response.logPostprocessing)}`);
+  logger.info(`Code Post-processing: ${JSON.stringify(response.codePostprocessing)}`);
 }
 
 void main()
@@ -488,17 +508,9 @@ void main()
   });
 
 // Agent package exports
-export * from "./types";
-// These types are declared in this file, so no need to re-export
-// export {
-//   ReviewRequest,
-//   LogPostprocessingRequest,
-//   CodePostprocessingRequest
-// };
-
-// Export nodes
 export * from "./nodes/reasoner";
 export * from "./nodes/reviewer";
 export * from "./nodes/search/log-search";
 export * from "./nodes/search/span-search";
 export * from "./nodes/utils";
+export * from "./types";
