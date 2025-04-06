@@ -46,7 +46,7 @@ Given all available log labels and a user query about the issue/event, your task
 - As you make queries, pay attention to the results in <previous_log_query_result> to see the results of your last query and <log_results_history> to see the results of all previous queries. You should make decisions on future queries based on the results of your previous queries.
 - Look for important identifiers such as user or object IDs and use those in future queries.
 - As you find log results indicative of the exact issue/event, you should try to find preceding logs that explain how/why that issue/event is related to the user query.
-- Every once in a while, you may zoom out and remove all filters to get a broader view of the system.
+- For at least one query, zoom out and remove all filters to get a broader view of the system.
 - Your goal is to eventually find a query that returns logs across the related services with as much important surrounding context and events as possible. All log results fetched at the end of your log search iterations will be merged together to form a complete picture of the issue/event.
 - Do not filter on random keywords. You should only filter on: service name, part of an error message, or a unique identifier.
 - Do not filter on code snippets (e.g. file names, classes, methods, component tags, etc).
