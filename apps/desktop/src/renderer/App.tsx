@@ -1,31 +1,83 @@
-import { useState } from "react";
-import SplitPane from "react-split-pane";
-import "./styles.css";
 import type { Log } from "@triage/observability/src/types";
+import { useState } from "react";
+import "./styles.css";
 
 // Type for code artifacts
 type CodeMap = Map<string, string>;
 
+// Type for artifact types
+type ArtifactType = "code" | "image" | "document" | "log";
+
 interface Artifact {
   id: string;
-  type: "log" | "code";
-  data: Log[] | CodeMap;
+  type: ArtifactType;
   title: string;
+  description: string;
+  data: Log[] | CodeMap | string;
 }
 
 // Interface for chat messages
 interface ChatMessage {
+  id: string;
   role: "user" | "assistant";
   content: string;
+  artifacts?: Artifact[];
 }
 
 function App(): JSX.Element {
-  const [artifacts, setArtifacts] = useState<Artifact[]>([
-    // Mock artifacts for development
+  // Sample artifacts for development
+  const sampleArtifacts: Artifact[] = [
     {
       id: "1",
+      type: "code",
+      title: "Fibonacci Sequence Generator",
+      description: "Code",
+      data: new Map([
+        [
+          "fibonacci.py",
+          `def fibonacci(n):
+    """
+    Generate the first n numbers in the Fibonacci sequence.
+    
+    Args:
+        n (int): The number of Fibonacci numbers to generate
+        
+    Returns:
+        list: The first n Fibonacci numbers
+    """
+    if n <= 0:
+        return []
+    elif n == 1:
+        return [0]
+    elif n == 2:
+        return [0, 1]
+        
+    fib_sequence = [0, 1]
+    for i in range(2, n):
+        fib_sequence.append(fib_sequence[i-1] + fib_sequence[i-2])
+        
+    return fib_sequence
+
+# Example usage
+if __name__ == "__main__":
+    n = 10
+    result = fibonacci(n)
+    print(f"The first {n} Fibonacci numbers are: {result}")`,
+        ],
+      ]),
+    },
+    {
+      id: "2",
+      type: "image",
+      title: "Simple Bar Chart",
+      description: "Image",
+      data: "sample_chart.svg", // In a real app, this could be a URL or Base64 data
+    },
+    {
+      id: "3",
       type: "log",
       title: "Error Logs",
+      description: "Logs",
       data: [
         {
           timestamp: "2025-04-06T08:30:00Z",
@@ -43,47 +95,59 @@ function App(): JSX.Element {
         },
       ],
     },
-    {
-      id: "2",
-      type: "code",
-      title: "Database Connection",
-      data: new Map([
-        [
-          "/src/db/connection.ts",
-          `import { Pool } from 'pg';\n\nexport const pool = new Pool({\n  host: process.env.DB_HOST,\n  port: parseInt(process.env.DB_PORT || '5432'),\n  user: process.env.DB_USER,\n  password: process.env.DB_PASSWORD,\n  database: process.env.DB_NAME,\n});`,
-        ],
-      ]),
-    },
-  ]);
-
-  const [selectedArtifact, setSelectedArtifact] = useState<string | null>(null);
-  const [showArtifactSidebar, setShowArtifactSidebar] = useState(true);
+  ];
 
   // Mock chat messages for development
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "assistant", content: "Hello! How can I help you with your application?" },
-    { role: "user", content: "I'm seeing database connection errors in production" },
     {
+      id: "msg1",
       role: "assistant",
-      content: "I'll look into that. Let me check the logs and connection code.",
+      content: "Hello! How can I help you with your application?",
+    },
+    {
+      id: "msg2",
+      role: "user",
+      content: "Can you show me an example of some artifacts?",
+    },
+    {
+      id: "msg3",
+      role: "assistant",
+      content:
+        "I'd be happy to demonstrate how artifacts work! Artifacts are a way to create and reference structured content within our conversation. Let me create an example artifact with some Python code.",
+      artifacts: [sampleArtifacts[0]],
+    },
+    {
+      id: "msg4",
+      role: "assistant",
+      content:
+        "I can create other types of artifacts as well. Here's an example of a simple SVG graphic:",
+      artifacts: [sampleArtifacts[1]],
+    },
+    {
+      id: "msg5",
+      role: "assistant",
+      content:
+        "These artifacts are useful when you need:\n\n1. Code that you can easily copy and reference\n2. Visual elements like charts, diagrams, or images\n3. Structured documents that benefit from dedicated formatting\n4. Content that you might want to download or reuse outside our conversation",
     },
   ]);
 
   // New message being composed
   const [newMessage, setNewMessage] = useState("");
 
-  const toggleArtifactSidebar = (): void => {
-    setShowArtifactSidebar(!showArtifactSidebar);
-  };
-
-  const selectArtifact = (id: string): void => {
-    setSelectedArtifact(id === selectedArtifact ? null : id);
-  };
+  // Currently selected artifact
+  const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
 
   const sendMessage = (): void => {
     if (newMessage.trim() === "") return;
 
-    setMessages([...messages, { role: "user", content: newMessage }]);
+    setMessages([
+      ...messages,
+      {
+        id: `msg${messages.length + 1}`,
+        role: "user",
+        content: newMessage,
+      },
+    ]);
     setNewMessage("");
 
     // Mock assistant response after a short delay
@@ -91,233 +155,232 @@ function App(): JSX.Element {
       setMessages((prevMessages) => [
         ...prevMessages,
         {
+          id: `msg${prevMessages.length + 1}`,
           role: "assistant",
           content:
-            "I'm examining the logs and code to troubleshoot your database connection issue.",
+            "I'm here to help with your questions about artifacts and any other topics you'd like to explore.",
         },
       ]);
     }, 1000);
   };
 
-  const renderLogArtifact = (logs: Log[]): JSX.Element[] => {
-    return logs.map((log, index) => (
-      <div key={index} className={`log-entry log-level-${log.level}`}>
-        <div>
-          <span style={{ opacity: 0.7 }}>{new Date(log.timestamp).toLocaleTimeString()}</span>{" "}
-          <strong>[{log.service}]</strong> <span>{log.level.toUpperCase()}</span>
-        </div>
-        <div>{log.message}</div>
-        {log.attributes && (
-          <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
-            {Object.entries(log.attributes).map(([key, value]) => (
-              <div key={key}>
-                {key}: {JSON.stringify(value)}
+  const renderArtifactContent = (artifact: Artifact): JSX.Element | null => {
+    switch (artifact.type) {
+      case "code":
+        const codeMap = artifact.data as CodeMap;
+        return (
+          <div className="artifact-detail-content">
+            {Array.from(codeMap.entries()).map(([filePath, content], index) => (
+              <div key={index} className="code-file">
+                <div className="code-file-header">{filePath}</div>
+                <pre className="code-block">{content}</pre>
               </div>
             ))}
           </div>
-        )}
-      </div>
-    ));
-  };
-
-  const renderCodeArtifact = (codeMap: CodeMap): JSX.Element[] => {
-    return Array.from(codeMap.entries()).map(([filePath, content], index) => (
-      <div key={index} style={{ marginBottom: "1rem" }}>
-        <div style={{ fontWeight: "bold", marginBottom: "0.5rem", opacity: 0.7 }}>{filePath}</div>
-        <pre style={{ margin: 0 }}>{content}</pre>
-      </div>
-    ));
-  };
-
-  const renderArtifact = (artifact: Artifact): JSX.Element | null => {
-    if (artifact.type === "log") {
-      return <>{renderLogArtifact(artifact.data as Log[])}</>;
-    } else if (artifact.type === "code") {
-      return <>{renderCodeArtifact(artifact.data as CodeMap)}</>;
+        );
+      case "log":
+        const logs = artifact.data as Log[];
+        return (
+          <div className="artifact-detail-content">
+            {logs.map((log, index) => (
+              <div key={index} className={`log-entry log-level-${log.level}`}>
+                <div>
+                  <span className="log-timestamp">
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                  </span>{" "}
+                  <strong>[{log.service}]</strong>{" "}
+                  <span className="log-level">{log.level.toUpperCase()}</span>
+                </div>
+                <div className="log-message">{log.message}</div>
+                {log.metadata && (
+                  <div className="log-metadata">
+                    {Object.entries(log.metadata).map(([key, value]) => (
+                      <div key={key}>
+                        {key}: {JSON.stringify(value)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      case "image":
+        return (
+          <div className="artifact-detail-content">
+            <div className="image-placeholder">
+              <svg
+                width="100%"
+                height="100%"
+                viewBox="0 0 200 120"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect x="20" y="20" width="30" height="80" fill="#e67e22" />
+                <rect x="60" y="40" width="30" height="60" fill="#3498db" />
+                <rect x="100" y="30" width="30" height="70" fill="#2ecc71" />
+                <rect x="140" y="50" width="30" height="50" fill="#9b59b6" />
+              </svg>
+            </div>
+          </div>
+        );
+      default:
+        return <div className="artifact-detail-content">Unsupported artifact type</div>;
     }
-    return null;
+  };
+
+  const handleArtifactClick = (artifact: Artifact): void => {
+    setSelectedArtifact(selectedArtifact?.id === artifact.id ? null : artifact);
+  };
+
+  const renderArtifactCard = (artifact: Artifact): JSX.Element => {
+    return (
+      <div
+        key={artifact.id}
+        className="artifact-card"
+        onClick={() => handleArtifactClick(artifact)}
+      >
+        <div className="artifact-card-header">
+          <span className="artifact-card-title">{artifact.title}</span>
+          <span className="artifact-card-type">{artifact.description}</span>
+        </div>
+        <div className="artifact-card-preview">
+          {artifact.type === "code" && (
+            <div className="code-preview">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="preview-icon"
+              >
+                <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
+              </svg>
+            </div>
+          )}
+          {artifact.type === "image" && (
+            <div className="image-preview">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="preview-icon"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            </div>
+          )}
+          {artifact.type === "log" && (
+            <div className="log-preview">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="preview-icon"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
     <div className="app-container">
-      <SplitPane
-        split="vertical"
-        minSize={200}
-        defaultSize={300}
-        resizerClassName="vertical-divider"
-        className="split-pane-row"
-      >
-        {/* Chat Sidebar */}
-        <div className="chat-sidebar">
-          <h2>Triage Chat</h2>
-          <div style={{ flex: 1, overflow: "auto" }}>
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`chat-message ${
-                  message.role === "user" ? "user-message" : "assistant-message"
-                }`}
-              >
-                <strong>{message.role === "user" ? "You" : "Assistant"}:</strong>
-                <div>{message.content}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: "auto", paddingTop: "1rem" }}>
-            <textarea
-              placeholder="Type your message..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                borderRadius: "4px",
-                backgroundColor: "#333",
-                color: "white",
-                border: "1px solid #555",
-                resize: "vertical",
-                minHeight: "60px",
-              }}
-            />
-            <button
-              onClick={sendMessage}
-              style={{
-                marginTop: "0.5rem",
-                padding: "0.5rem 1rem",
-                backgroundColor: "#4CAF50",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                width: "100%",
-              }}
+      <div className={`chat-container ${selectedArtifact ? "with-sidebar" : ""}`}>
+        <div className="chat-messages">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`chat-message ${message.role === "user" ? "user-message" : "assistant-message"}`}
             >
-              Send
-            </button>
-          </div>
-        </div>
-
-        {/* Main content */}
-        <div className="main-content">
-          <SplitPane
-            split="vertical"
-            minSize={300}
-            defaultSize={showArtifactSidebar ? "70%" : "100%"}
-            resizerClassName="vertical-divider"
-            pane2Style={{ display: showArtifactSidebar ? "block" : "none" }}
-          >
-            {/* Content area */}
-            <div style={{ padding: "1rem", height: "100%", overflow: "auto" }}>
-              <h2>Artifacts</h2>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
-                {artifacts.map((artifact) => (
-                  <div
-                    key={artifact.id}
-                    className={`artifact-container ${
-                      artifact.type === "log" ? "log-artifact" : "code-artifact"
-                    }`}
-                    style={{
-                      cursor: "pointer",
-                      width: "calc(50% - 0.5rem)",
-                      backgroundColor: selectedArtifact === artifact.id ? "#333" : "transparent",
-                    }}
-                    onClick={() => selectArtifact(artifact.id)}
-                  >
-                    <div className="artifact-header">
-                      <div>
-                        {artifact.type === "log" ? "📋" : "📄"} {artifact.title}
-                      </div>
-                      <div>
-                        {artifact.type === "log"
-                          ? `${(artifact.data as Log[]).length} logs`
-                          : `${(artifact.data as Map<string, string>).size} files`}
-                      </div>
-                    </div>
-                    <div
-                      className="artifact-content"
-                      style={{ maxHeight: "100px", overflow: "hidden" }}
-                    >
-                      {renderArtifact(artifact)}
-                    </div>
-                  </div>
-                ))}
+              <div className="message-header">
+                <div className="avatar">{message.role === "user" ? "LT" : "AI"}</div>
+                <div className="message-sender">{message.role === "user" ? "You" : "Claude"}</div>
               </div>
-            </div>
+              <div className="message-content">
+                {message.content}
 
-            {/* Artifact sidebar */}
-            {showArtifactSidebar && (
-              <div className="artifact-sidebar">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  <h3 style={{ margin: 0 }}>Details</h3>
-                  <button
-                    onClick={toggleArtifactSidebar}
-                    style={{
-                      backgroundColor: "transparent",
-                      border: "none",
-                      color: "white",
-                      cursor: "pointer",
-                      fontSize: "1.2rem",
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-
-                {selectedArtifact ? (
-                  <div>
-                    {artifacts
-                      .filter((a) => a.id === selectedArtifact)
-                      .map((artifact) => (
-                        <div key={artifact.id}>
-                          <h3>{artifact.title}</h3>
-                          <div className="artifact-content" style={{ maxHeight: "none" }}>
-                            {renderArtifact(artifact)}
-                          </div>
-                        </div>
-                      ))}
+                {message.artifacts && message.artifacts.length > 0 && (
+                  <div className="artifacts-container">
+                    {message.artifacts.map((artifact) => renderArtifactCard(artifact))}
                   </div>
-                ) : (
-                  <div style={{ opacity: 0.7 }}>Select an artifact to view details</div>
                 )}
               </div>
-            )}
-          </SplitPane>
-
-          {/* Toggle button for artifact sidebar when closed */}
-          {!showArtifactSidebar && (
-            <button
-              onClick={toggleArtifactSidebar}
-              style={{
-                position: "absolute",
-                right: "0",
-                top: "1rem",
-                backgroundColor: "#333",
-                border: "none",
-                borderTopLeftRadius: "4px",
-                borderBottomLeftRadius: "4px",
-                color: "white",
-                padding: "0.5rem",
-                cursor: "pointer",
-              }}
-            >
-              ◀ Details
-            </button>
-          )}
+            </div>
+          ))}
         </div>
-      </SplitPane>
+
+        <div className="message-input-container">
+          <textarea
+            className="message-input"
+            placeholder="Message Claude..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+          />
+          <button className="send-button" onClick={sendMessage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {selectedArtifact && (
+        <div className="artifact-sidebar">
+          <div className="artifact-sidebar-header">
+            <div className="artifact-sidebar-title">{selectedArtifact.title}</div>
+            <button className="close-sidebar-button" onClick={() => setSelectedArtifact(null)}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div className="artifact-sidebar-content">{renderArtifactContent(selectedArtifact)}</div>
+        </div>
+      )}
     </div>
   );
 }
