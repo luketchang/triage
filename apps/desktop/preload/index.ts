@@ -1,7 +1,9 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-// Expose protected methods that allow the renderer process to use
-// the ipcRenderer without exposing the entire object
+/**
+ * Expose protected methods that allow the renderer process to use
+ * the ipcRenderer without exposing the entire object
+ */
 contextBridge.exposeInMainWorld("electronAPI", {
   /**
    * Invoke the agent with a query and return the result
@@ -19,22 +21,4 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param newConfig The new configuration to set
    */
   updateAgentConfig: (newConfig: unknown) => ipcRenderer.invoke("update-agent-config", newConfig),
-});
-
-function domReady(condition: DocumentReadyState[] = ["complete", "interactive"]): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (condition.includes(document.readyState)) {
-      resolve(true);
-    } else {
-      document.addEventListener("readystatechange", () => {
-        if (condition.includes(document.readyState)) {
-          resolve(true);
-        }
-      });
-    }
-  });
-}
-
-domReady().then(() => {
-  // Add any preload initialization here
 });

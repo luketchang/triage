@@ -405,39 +405,47 @@ const parseArgs = () => {
   return argsSchema.parse(program.opts());
 };
 
-async function main() {
-  const { integration, features: observabilityFeatures } = parseArgs();
+/**
+ * Invokes the agent with the given parameters
+ */
+export async function invokeAgent({
+  query,
+  repoPath,
+  codebaseOverviewPath,
+  observabilityPlatform: platformType = "grafana",
+  observabilityFeatures = ["logs"],
+  startDate = new Date("2025-04-01T21:00:00Z"),
+  endDate = new Date("2025-04-01T22:00:00Z"),
+}: {
+  query: string;
+  repoPath: string;
+  codebaseOverviewPath: string;
+  observabilityPlatform?: string;
+  observabilityFeatures?: string[];
+  startDate?: Date;
+  endDate?: Date;
+}): Promise<{
+  chatHistory: string[];
+  rca: string | null;
+  logPostprocessing: LogPostprocessing | null;
+  codePostprocessing: CodePostprocessing | null;
+}> {
   const integrationType =
-    integration === "datadog" ? IntegrationType.DATADOG : IntegrationType.GRAFANA;
+    platformType === "datadog" ? IntegrationType.DATADOG : IntegrationType.GRAFANA;
 
   const observabilityPlatform = getObservabilityPlatform(integrationType);
 
   // Get formatted labels map for time range
-  const startDate = new Date("2025-04-01T21:00:00Z");
-  const endDate = new Date("2025-04-01T22:00:00Z");
-
-  // TODO: make this Map<string, string[]>
   const logLabelsMap = await observabilityPlatform.getLogsFacetValues(
     startDate.toISOString(),
     endDate.toISOString()
   );
   logger.info(logLabelsMap);
 
-  // const spanLabelsMap = await observabilityPlatform.getSpansFacetValues(
-  //   startDate.toISOString(),
-  //   endDate.toISOString()
-  // );
-  // logger.info(spanLabelsMap);
-
-  const repoPath = "/Users/luketchang/code/ticketing";
   const codeContext = collectSourceCode(repoPath);
 
-  // Load or generate the codebase overview
-  const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
-  const bugPath = "/Users/luketchang/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
-
-  const overview = await fs.readFile(overviewPath, "utf-8");
-  const bug = await fs.readFile(bugPath, "utf-8");
+  // Load the codebase overview
+  const overview = await fs.readFile(codebaseOverviewPath, "utf-8");
 
   const fileTree = loadFileTree(repoPath);
 
@@ -458,7 +466,6 @@ async function main() {
   }
 
   // If no observability features are enabled, start with reasoning
-  // TODO: is this the behavior we want?
   if (toolCalls.length === 0) {
     toolCalls.push({ type: "reasoningRequest" });
   }
@@ -466,7 +473,7 @@ async function main() {
   const state: OncallAgentState = {
     firstPass: true,
     toolCalls,
-    query: bug,
+    query,
     repoPath,
     codebaseOverview: overview,
     fileTree,
@@ -492,7 +499,40 @@ async function main() {
     observabilityPlatform,
     observabilityFeatures
   );
-  const response = await agent.invoke(state);
+
+  return await agent.invoke(state);
+}
+
+async function main() {
+  const { integration, features: observabilityFeatures } = parseArgs();
+  const integrationType =
+    integration === "datadog" ? IntegrationType.DATADOG : IntegrationType.GRAFANA;
+
+  const observabilityPlatform = getObservabilityPlatform(integrationType);
+
+  // Get formatted labels map for time range
+  const startDate = new Date("2025-04-01T21:00:00Z");
+  const endDate = new Date("2025-04-01T22:00:00Z");
+
+  const repoPath = "/Users/luketchang/code/ticketing";
+
+  // Load or generate the codebase overview
+  const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
+  const bugPath = "/Users/luketchang/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
+
+  const bug = await fs.readFile(bugPath, "utf-8");
+
+  // Use invokeAgent instead of duplicating the logic
+  const response = await invokeAgent({
+    query: bug,
+    repoPath,
+    codebaseOverviewPath: overviewPath,
+    observabilityPlatform: integration,
+    observabilityFeatures,
+    startDate,
+    endDate,
+  });
+
   logger.info(`Chat History: ${response.chatHistory}`);
   logger.info(`RCA: ${response.rca}`);
   logger.info(`Log Post-processing: ${JSON.stringify(response.logPostprocessing)}`);

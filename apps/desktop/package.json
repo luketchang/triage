@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:electron": "vite & (wait-on http://localhost:5174 && cross-env NODE_ENV=development electron electron/main.js)",
+    "dev:electron": "pnpm run build:preload && vite & (wait-on http://localhost:5174 && cross-env NODE_ENV=development electron electron/main.js)",
     "start": "pnpm run dev:electron",
-    "build": "vite build",
+    "build": "pnpm run build:preload && vite build",
+    "build:electron": "electron-builder",
+    "build:preload": "tsc -p tsconfig.preload.json",
+    "build:prod": "pnpm run build && pnpm run build:electron",
     "lint": "eslint src --ext ts,tsx --max-warnings 0",
     "check-types": "tsc --noEmit",
     "preview": "vite preview"
@@ -15,7 +18,9 @@
   "dependencies": {
     "@triage/agent": "workspace:*",
     "@triage/common": "workspace:*",
+    "@triage/config": "workspace:*",
     "@triage/observability": "workspace:*",
+    "dotenv": "^16.4.7",
     "electron-updater": "^6.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -27,6 +32,7 @@
     "@vitejs/plugin-react": "^4.2.1",
     "cross-env": "^7.0.3",
     "electron": "^35.1.0",
+    "electron-builder": "^24.9.1",
     "typescript": "^5.3.3",
     "vite": "^5.1.0",
     "wait-on": "^7.2.0"
