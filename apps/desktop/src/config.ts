@@ -1,4 +1,15 @@
 /**
+ * Desktop app-specific configuration
+ *
+ * This module provides desktop-specific configuration options and defaults.
+ * Environment variables are loaded by env-loader.ts before any imports.
+ */
+
+/**
+ * Desktop app-specific configuration types
+ */
+
+/**
  * Configuration for the agent
  */
 export interface AgentConfig {
@@ -25,10 +36,14 @@ export interface AgentConfig {
  * Default configuration for the agent
  */
 export const defaultConfig: AgentConfig = {
-  repoPath: "/Users/luketchang/code/ticketing",
-  codebaseOverviewPath: "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-  observabilityPlatform: "datadog",
-  observabilityFeatures: ["logs"],
-  startDate: new Date("2025-04-01T21:00:00Z"),
-  endDate: new Date("2025-04-01T22:00:00Z"),
+  repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
+  codebaseOverviewPath:
+    process.env.CODEBASE_OVERVIEW_PATH ||
+    "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
+  observabilityPlatform: process.env.OBSERVABILITY_PLATFORM || "datadog",
+  observabilityFeatures: process.env.OBSERVABILITY_FEATURES
+    ? process.env.OBSERVABILITY_FEATURES.split(",")
+    : ["logs"],
+  startDate: new Date(process.env.START_DATE || "2025-04-01T21:00:00Z"),
+  endDate: new Date(process.env.END_DATE || "2025-04-01T22:00:00Z"),
 };

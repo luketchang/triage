@@ -384,27 +384,6 @@ export class OnCallAgent {
   }
 }
 
-const parseArgs = () => {
-  const argsSchema = z.object({
-    orgId: z.string().optional(),
-    integration: z.enum(["datadog", "grafana"]).default("grafana"),
-    features: z
-      .string()
-      .default("logs")
-      .transform((str) => str.split(",").map((f) => f.trim()))
-      .refine((f) => f.every((feat) => ["logs", "spans"].includes(feat)), {
-        message: "Features must be: logs, spans",
-      }),
-  });
-
-  const program = new CommanderCommand()
-    .option("-i, --integration <integration>", "Integration type (datadog or grafana)")
-    .option("-f, --features <features>", "Features to enable (logs,spans)")
-    .parse();
-
-  return argsSchema.parse(program.opts());
-};
-
 /**
  * Invokes the agent with the given parameters
  */
@@ -502,6 +481,27 @@ export async function invokeAgent({
 
   return await agent.invoke(state);
 }
+
+const parseArgs = () => {
+  const argsSchema = z.object({
+    orgId: z.string().optional(),
+    integration: z.enum(["datadog", "grafana"]).default("grafana"),
+    features: z
+      .string()
+      .default("logs")
+      .transform((str) => str.split(",").map((f) => f.trim()))
+      .refine((f) => f.every((feat) => ["logs", "spans"].includes(feat)), {
+        message: "Features must be: logs, spans",
+      }),
+  });
+
+  const program = new CommanderCommand()
+    .option("-i, --integration <integration>", "Integration type (datadog or grafana)")
+    .option("-f, --features <features>", "Features to enable (logs,spans)")
+    .parse();
+
+  return argsSchema.parse(program.opts());
+};
 
 async function main() {
   const { integration, features: observabilityFeatures } = parseArgs();

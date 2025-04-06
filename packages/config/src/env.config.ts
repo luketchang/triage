@@ -32,6 +32,12 @@ const envSchema = z.object({
 });
 
 function validateEnv() {
+  // Allow skipping validation in development environments
+  if (process.env.SKIP_ENV_VALIDATION === "true") {
+    console.log("Skipping environment validation");
+    return envSchema.partial().parse(process.env);
+  }
+
   try {
     return envSchema.parse(process.env);
   } catch (error) {

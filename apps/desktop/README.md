@@ -1,60 +1,70 @@
 # Triage Desktop
 
-A desktop application for the Triage system, built with Electron and React.
+A desktop application for the Triage platform, built with Electron, React, and TypeScript.
 
-## Features
+## Project Structure
 
-- Chat interface for interacting with the Triage agent
-- Artifact display for logs and code snippets
-- Split-pane UI with resizable panels
+The project is organized with a clear separation of concerns:
+
+```
+apps/desktop/
+├── electron/         # Electron main process code (TypeScript)
+│   └── main.ts       # Main process entry point
+├── preload/          # Preload scripts for Electron (TypeScript)
+│   └── index.ts      # Preload script that exposes a safe API to the renderer
+├── src/              # Application source code
+│   ├── config.ts     # Centralized configuration with environment loading
+│   └── renderer/     # React application for the renderer process
+│       ├── App.tsx   # Main React component
+│       ├── electron.d.ts  # TypeScript definitions for Electron API
+│       ├── main.tsx  # React entry point
+│       └── styles.css # Application styles
+├── dist/             # Build output for the renderer process
+├── dist-electron/    # Build output for the Electron processes
+├── index.html        # HTML entry point
+├── tsconfig.json     # Base TypeScript configuration
+├── tsconfig.electron.json # TypeScript config for Electron main process
+├── tsconfig.preload.json  # TypeScript config for preload scripts
+└── vite.config.ts    # Vite configuration
+```
 
 ## Development
 
-### Prerequisites
+### Environment Setup
 
-- Node.js v20.18.0+
-- pnpm v9.0.0+
+1. Create a `.env` file in the project root with the necessary environment variables:
 
-### Setup
+```env
+# Required API keys
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
 
-```bash
-# Install dependencies
-pnpm install
-
-# Start the development server
-pnpm dev
+# Optional configuration
+REPO_PATH=/path/to/your/repo
+CODEBASE_OVERVIEW_PATH=/path/to/overview.md
+OBSERVABILITY_PLATFORM=datadog
 ```
 
-### Build
+### Development Commands
 
-```bash
-# Build the application
-pnpm build
-```
+- `pnpm start`: Start the development environment
+- `pnpm build`: Build the application for production
+- `pnpm lint`: Lint the codebase
+- `pnpm check-types`: Check TypeScript types
 
-### Linting
+## Building for Production
 
-```bash
-# Run linter
-pnpm lint
-
-# Type checking
-pnpm check-types
-```
+Run `pnpm build:prod` to build the application for production. The output will be in the `dist` directory.
 
 ## Architecture
 
-The application consists of:
+The application follows the Electron architecture with three main processes:
 
-- **Electron Main Process**: Handles application lifecycle and native functionality
-- **Preload Script**: Securely exposes APIs to the renderer process
-- **Renderer Process**: React application for the UI
+1. **Main Process** (Electron): Handles the application lifecycle and creates windows
+2. **Renderer Process** (React): Renders the UI and handles user interactions
+3. **Preload Scripts**: Provide a secure bridge between the main and renderer processes
 
-### UI Layout
-
-- **Left Sidebar**: Chat interface for interacting with the Triage agent
-- **Main Content**: Overview of available artifacts
-- **Right Sidebar**: Detailed view of selected artifacts (logs or code)
+All code is written in TypeScript for improved type safety and developer experience.
 
 ## License
 
