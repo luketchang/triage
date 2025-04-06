@@ -499,14 +499,29 @@ async function main() {
   logger.info(`Code Post-processing: ${JSON.stringify(response.codePostprocessing)}`);
 }
 
-void main()
-  // eslint-disable-next-line no-process-exit
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error("Error in main:", error);
-    // eslint-disable-next-line no-process-exit
-    process.exit(1);
-  });
+/**
+ * Run the CLI application
+ * @returns A promise that resolves when the CLI completes
+ */
+export async function runCLI(): Promise<void> {
+  return (
+    main()
+      // eslint-disable-next-line no-process-exit
+      .then(() => process.exit(0))
+      .catch((error) => {
+        console.error("Error in main:", error);
+        // eslint-disable-next-line no-process-exit
+        process.exit(1);
+      })
+  );
+}
+
+// Only run the main function if this file is being executed directly
+// This is the Node.js equivalent of Python's if __name__ == "__main__":
+// Using typeof check to avoid issues in different module systems
+if (typeof require !== "undefined" && typeof module !== "undefined" && require.main === module) {
+  void runCLI();
+}
 
 // Agent package exports
 export * from "./nodes/reasoner";
