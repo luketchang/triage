@@ -8,7 +8,7 @@ import {
   RootCauseAnalysis,
   spanRequestToolSchema,
 } from "../types";
-import { formatChatHistory, formatLogResults, validateToolCalls } from "./utils";
+import { formatChatHistory, formatLogResults } from "./utils";
 
 export type ReviewerResponse = RequestToolCalls | RootCauseAnalysis;
 
@@ -131,11 +131,10 @@ export class Reviewer {
 
     logger.info(`Reviewer response:\n${text}`);
     logger.info(`Reviewer tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
-    const validatedToolCalls = validateToolCalls(toolCalls);
 
     // Create the appropriate output object based on the type
     let output: ReviewerResponse;
-    if (validatedToolCalls.length === 0) {
+    if (toolCalls.length === 0) {
       // If no tool calls, return the root cause analysis as-is
       output = {
         type: "rootCauseAnalysis",
@@ -148,7 +147,7 @@ export class Reviewer {
         toolCalls: [],
       };
 
-      for (const toolCall of validatedToolCalls) {
+      for (const toolCall of toolCalls) {
         const toolName = toolCall.toolName as string;
         if (toolName === "logRequest") {
           output.toolCalls.push({

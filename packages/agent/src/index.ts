@@ -1,4 +1,4 @@
-import { GeminiModel, loadFileTree, logger, Model, OpenAIModel } from "@triage/common";
+import { AnthropicModel, GeminiModel, loadFileTree, logger, Model } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -213,7 +213,7 @@ export class OnCallAgent {
       updates.chatHistory = [...state.chatHistory, response.rootCause];
 
       // TODO: pretty sure this should always hold
-      if (state.toolCalls.length === 0) {
+      if (state.toolCalls.length !== 0) {
         throw new Error("Tool calls should be empty");
       }
       updates.toolCalls = [{ type: "reviewRequest" }];
@@ -463,7 +463,7 @@ async function main() {
   };
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
-  const fastModel = OpenAIModel.GPT_4O;
+  const fastModel = AnthropicModel.CLAUDE_3_7_SONNET_20250219;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 

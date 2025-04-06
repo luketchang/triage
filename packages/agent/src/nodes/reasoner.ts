@@ -2,17 +2,13 @@ import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
 import { Log, Span } from "@triage/observability";
 import { generateText } from "ai";
 import {
-  LogRequest,
   logRequestToolSchema,
   LogSearchInput,
   RequestToolCalls,
   RootCauseAnalysis,
-  SpanRequest,
   SpanSearchInput,
 } from "../types";
-import { formatLogResults, formatSpanResults, validateToolCalls } from "./utils";
-
-
+import { formatLogResults, formatSpanResults } from "./utils";
 
 type ReasoningResponse = RootCauseAnalysis | RequestToolCalls;
 
@@ -33,7 +29,7 @@ function createPrompt(params: {
   chatHistory: string[]; // TODO: add back in if needed
 }) {
   return `
-Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, log labels, span labels, and previously gathered log and code context, your task is to come up with a hypothesis about the root cause of the issue/event and propose an concrete and unambiguous code fix if possible.
+Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, log labels, span labels, and previously gathered log and code context, your task is to come up with a hypothesis about the root cause of the issue/event and propose an concrete and unambiguous code fix if possible. Your response should clearly explain the answer and propose a fix if needed.
 
 
 Tips:
@@ -112,11 +108,10 @@ export class Reasoner {
 
     logger.info(`Reasoning response:\n${text}`);
     logger.info(`Reasoning tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
-    const validatedToolCalls = validateToolCalls(toolCalls);
 
     // Create the appropriate output object based on the type
     let output: ReasoningResponse;
-    if (validatedToolCalls.length === 0) {
+    if (toolCalls.length === 0) {
       output = {
         type: "rootCauseAnalysis",
         rootCause: text,
@@ -126,7 +121,7 @@ export class Reasoner {
         type: "toolCalls",
         toolCalls: [],
       };
-      for (const toolCall of validatedToolCalls) {
+      for (const toolCall of toolCalls) {
         if (toolCall.toolName === "logRequest") {
           output.toolCalls.push({
             type: "logRequest",
