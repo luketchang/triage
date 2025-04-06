@@ -101,8 +101,19 @@ function setupIPC() {
       );
 
       const response = await agent.invoke({
+        firstPass: true,
+        toolCalls: observabilityFeatures.includes("logs")
+          ? [
+              {
+                type: "logRequest",
+                request: "fetch logs relevant to the issue/event",
+                reasoning: "",
+              },
+            ]
+          : [{ type: "reasoningRequest" }],
         query: issue,
         repoPath,
+        codebaseOverview: "",
         fileTree,
         logLabelsMap,
         spanLabelsMap,
@@ -110,12 +121,17 @@ function setupIPC() {
         codeContext: new Map(),
         logContext: new Map(),
         spanContext: new Map(),
+        rootCauseAnalysis: null,
+        logPostprocessingResult: null,
+        codePostprocessingResult: null,
       });
 
       return {
         success: true,
         chatHistory: response.chatHistory,
         rootCauseAnalysis: response.rca,
+        logPostprocessing: response.logPostprocessing,
+        codePostprocessing: response.codePostprocessing,
       };
     } catch (error) {
       logger.error("Error invoking agent:", error);
