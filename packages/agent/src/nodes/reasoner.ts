@@ -33,9 +33,11 @@ Tips:
 - Reflect on 5-7 different possible sources of the issue/event and use that as a guide to your reasoning process before outputting a \`RootCauseAnalysis\`.
 - Your root cause analysis should explicitly cite the blocks of code and where the are issues, adding inline comments to code to denote where the problem is.
 - If you believe you are missing key context, output a \`CodeRequest\` or \`SpanRequest\` to gather more context.
-- If you propose code fixes, they must follow the these rules:
+- If you propose code fixes, they must follow the these rules/steps:
   - They must be extremely concrete changes to the actual codebase, no examples or conceptual illustrations or how you "might" make changes.
   - They must not introduce any new bugs or unintended behavior. They must lead to the correct overall behavior and not just be a fix in the narrow context of the issue/event. Think about this as you come up with the fixes.
+  - Rerun the issue/event in your head given your proposed fix and ensure the end behavior is correct.
+  - Should take into account overall best practices for using various libraries, tooling, etc and not miss the forest for the trees. Zoom out and make sure you're fix is not just a hotfix for a narrow issue but fully address the broader problem.
 
 <query>
 ${params.query}
