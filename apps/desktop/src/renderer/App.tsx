@@ -145,110 +145,122 @@ if __name__ == "__main__":
   const sendMessage = async (): Promise<void> => {
     if (newMessage.trim() === "") return;
 
-    // Add user message to chat
-    const userMessage: ChatMessage = {
-      id: `msg${messages.length + 1}`,
-      role: "user",
-      content: newMessage,
-    };
+    // Store message content for API call
+    const messageContent = newMessage.trim();
 
-    setMessages([...messages, userMessage]);
+    // Clear input field FIRST before any async operations
     setNewMessage("");
 
-    try {
-      // Show loading message
-      const loadingMessage: ChatMessage = {
-        id: `msg${messages.length + 2}`,
-        role: "assistant",
-        content: "Thinking...",
-      };
+    // THEN add user message to chat
+    const userMessage: ChatMessage = {
+      id: `msg${Date.now()}-user`,
+      role: "user",
+      content: messageContent,
+    };
 
-      setMessages((prev) => [...prev, loadingMessage]);
+    // Update messages state with user message
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
 
-      // Call the agent API (window.electronAPI is now properly typed)
-      const response = await window.electronAPI.invokeAgent(newMessage);
+    // Create and add loading message immediately, with unique timestamp ID
+    const loadingMessageId = `msg${Date.now()}-loading`;
+    const loadingMessage: ChatMessage = {
+      id: loadingMessageId,
+      role: "assistant",
+      content: "Thinking...",
+    };
 
-      if (response.success && response.data) {
-        // Remove the loading message
-        setMessages((prev) => prev.filter((message) => message.id !== loadingMessage.id));
+    // Separate state update for loading message to ensure it appears quickly
+    setMessages((prevMessages) => [...prevMessages, loadingMessage]);
 
-        // Add the agent response to the chat
-        const assistantMessage: ChatMessage = {
-          id: `msg${messages.length + 2}`,
-          role: "assistant",
-          content: response.data.chatHistory.join("\n\n") || "No response from agent",
-        };
+    // Use setTimeout to push the API call to the next event loop cycle
+    // This allows the UI updates to render first
+    setTimeout(async () => {
+      try {
+        // Call the agent API in the next event loop cycle
+        const response = await window.electronAPI.invokeAgent(messageContent);
 
-        // Add root cause analysis if available
-        if (response.data.rca) {
-          assistantMessage.content += `\n\n**Root Cause Analysis:**\n${response.data.rca}`;
-        }
+        if (response.success && response.data) {
+          // Remove the loading message
+          setMessages((prev) => prev.filter((message) => message.id !== loadingMessageId));
 
-        // Add artifacts if available
-        const artifacts: Artifact[] = [];
+          // Add the agent response to the chat
+          const assistantMessage: ChatMessage = {
+            id: `msg${Date.now()}-assistant`,
+            role: "assistant",
+            content: response.data.chatHistory.join("\n\n") || "No response from agent",
+          };
 
-        if (response.data.logPostprocessing) {
-          artifacts.push({
-            id: `artifact-log-${Date.now()}`,
-            type: "log",
-            title: "Log Analysis",
-            description: "Log postprocessing results",
-            data: JSON.stringify(response.data.logPostprocessing),
-          });
-        }
-
-        if (response.data.codePostprocessing) {
-          // Create a code map from the code postprocessing
-          const codeMap = new Map<string, string>();
-          const codePostprocessing = response.data.codePostprocessing as any;
-
-          if (codePostprocessing.relevantCode) {
-            for (const [filePath, content] of Object.entries(codePostprocessing.relevantCode)) {
-              codeMap.set(filePath, content as string);
-            }
+          // Add root cause analysis if available
+          if (response.data.rca) {
+            assistantMessage.content += `\n\n**Root Cause Analysis:**\n${response.data.rca}`;
           }
 
-          artifacts.push({
-            id: `artifact-code-${Date.now()}`,
-            type: "code",
-            title: "Code Analysis",
-            description: "Code postprocessing results",
-            data: codeMap,
-          });
+          // Add artifacts if available
+          const artifacts: Artifact[] = [];
+
+          if (response.data.logPostprocessing) {
+            artifacts.push({
+              id: `artifact-log-${Date.now()}`,
+              type: "log",
+              title: "Log Analysis",
+              description: "Log postprocessing results",
+              data: JSON.stringify(response.data.logPostprocessing),
+            });
+          }
+
+          if (response.data.codePostprocessing) {
+            // Create a code map from the code postprocessing
+            const codeMap = new Map<string, string>();
+            const codePostprocessing = response.data.codePostprocessing as any;
+
+            if (codePostprocessing.relevantCode) {
+              for (const [filePath, content] of Object.entries(codePostprocessing.relevantCode)) {
+                codeMap.set(filePath, content as string);
+              }
+            }
+
+            artifacts.push({
+              id: `artifact-code-${Date.now()}`,
+              type: "code",
+              title: "Code Analysis",
+              description: "Code postprocessing results",
+              data: codeMap,
+            });
+          }
+
+          if (artifacts.length > 0) {
+            assistantMessage.artifacts = artifacts;
+          }
+
+          setMessages((prev) => [...prev, assistantMessage]);
+        } else {
+          // Remove the loading message
+          setMessages((prev) => prev.filter((message) => message.id !== loadingMessageId));
+
+          // Add error message
+          const errorMessage: ChatMessage = {
+            id: `msg${Date.now()}-error`,
+            role: "assistant",
+            content: `Error: ${response.error || "Unknown error"}`,
+          };
+
+          setMessages((prev) => [...prev, errorMessage]);
         }
-
-        if (artifacts.length > 0) {
-          assistantMessage.artifacts = artifacts;
-        }
-
-        setMessages((prev) => [...prev, assistantMessage]);
-      } else {
-        // Remove the loading message
-        setMessages((prev) => prev.filter((message) => message.id !== loadingMessage.id));
-
-        // Add error message
+      } catch (error) {
+        // Handle any errors
         const errorMessage: ChatMessage = {
-          id: `msg${messages.length + 2}`,
+          id: `msg${Date.now()}-error`,
           role: "assistant",
-          content: `Error: ${response.error || "Unknown error"}`,
+          content: `Error: ${error instanceof Error ? error.message : String(error)}`,
         };
 
-        setMessages((prev) => [...prev, errorMessage]);
+        // Remove any loading message
+        setMessages((prev) => [
+          ...prev.filter((message) => message.id !== loadingMessageId),
+          errorMessage,
+        ]);
       }
-    } catch (error) {
-      // Handle any errors
-      const errorMessage: ChatMessage = {
-        id: `msg${messages.length + 2}`,
-        role: "assistant",
-        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
-      };
-
-      // Remove any loading message
-      setMessages((prev) => [
-        ...prev.filter((message) => !message.content.includes("Thinking...")),
-        errorMessage,
-      ]);
-    }
+    }, 0);
   };
 
   const renderArtifactContent = (artifact: Artifact): JSX.Element | null => {
@@ -266,19 +278,56 @@ if __name__ == "__main__":
           </div>
         );
       case "log":
-        const logs = artifact.data as Log[];
+        let logs: Log[] = [];
+        try {
+          // Handle the case where data might be a string (JSON stringified)
+          if (typeof artifact.data === "string") {
+            logs = JSON.parse(artifact.data) as Log[];
+          } else {
+            logs = artifact.data as Log[];
+          }
+
+          // If logs isn't an array or is empty, show a message
+          if (!Array.isArray(logs) || logs.length === 0) {
+            return (
+              <div className="artifact-detail-content">
+                <div className="empty-artifact-message">
+                  <p>No log data available or invalid format.</p>
+                  <button className="back-button" onClick={() => setSelectedArtifact(null)}>
+                    Back to Chat
+                  </button>
+                </div>
+              </div>
+            );
+          }
+        } catch (error) {
+          // Show error message if JSON parsing fails
+          return (
+            <div className="artifact-detail-content">
+              <div className="empty-artifact-message">
+                <p>
+                  Error parsing log data: {error instanceof Error ? error.message : String(error)}
+                </p>
+                <button className="back-button" onClick={() => setSelectedArtifact(null)}>
+                  Back to Chat
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="artifact-detail-content">
             {logs.map((log, index) => (
-              <div key={index} className={`log-entry log-level-${log.level}`}>
+              <div key={index} className={`log-entry log-level-${log.level || "info"}`}>
                 <div>
                   <span className="log-timestamp">
-                    {new Date(log.timestamp).toLocaleTimeString()}
+                    {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "No timestamp"}
                   </span>{" "}
-                  <strong>[{log.service}]</strong>{" "}
-                  <span className="log-level">{log.level.toUpperCase()}</span>
+                  <strong>[{log.service || "unknown"}]</strong>{" "}
+                  <span className="log-level">{(log.level || "info").toUpperCase()}</span>
                 </div>
-                <div className="log-message">{log.message}</div>
+                <div className="log-message">{log.message || "No message"}</div>
                 {log.metadata && (
                   <div className="log-metadata">
                     {Object.entries(log.metadata).map(([key, value]) => (
@@ -290,6 +339,12 @@ if __name__ == "__main__":
                 )}
               </div>
             ))}
+
+            <div className="artifact-navigation">
+              <button className="back-button" onClick={() => setSelectedArtifact(null)}>
+                Back to Chat
+              </button>
+            </div>
           </div>
         );
       case "image":
@@ -308,10 +363,25 @@ if __name__ == "__main__":
                 <rect x="140" y="50" width="30" height="50" fill="#9b59b6" />
               </svg>
             </div>
+
+            <div className="artifact-navigation">
+              <button className="back-button" onClick={() => setSelectedArtifact(null)}>
+                Back to Chat
+              </button>
+            </div>
           </div>
         );
       default:
-        return <div className="artifact-detail-content">Unsupported artifact type</div>;
+        return (
+          <div className="artifact-detail-content">
+            <div className="empty-artifact-message">
+              <p>Unsupported artifact type</p>
+              <button className="back-button" onClick={() => setSelectedArtifact(null)}>
+                Back to Chat
+              </button>
+            </div>
+          </div>
+        );
     }
   };
 
@@ -405,7 +475,9 @@ if __name__ == "__main__":
               </div>
               <div className="message-content">
                 {message.content === "Thinking..." ? (
-                  <div className="thinking-indicator">{message.content}</div>
+                  <div className="thinking-indicator">
+                    <span className="thinking-text">Thinking</span>
+                  </div>
                 ) : (
                   <Markdown>{message.content}</Markdown>
                 )}
