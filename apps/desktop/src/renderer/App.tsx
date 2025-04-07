@@ -85,18 +85,32 @@ if __name__ == "__main__":
       description: "Logs",
       data: [
         {
-          timestamp: "2025-04-06T08:30:00Z",
+          timestamp: "2023-04-06T08:30:00Z",
           message: "Failed to connect to database",
           service: "api",
           level: "error",
-          metadata: { requestId: "req-123" },
+          metadata: { requestId: "req-123", dbHost: "db.example.com" },
         },
         {
-          timestamp: "2025-04-06T08:29:50Z",
+          timestamp: "2023-04-06T08:29:50Z",
           message: "Connection timeout",
           service: "api",
           level: "warn",
+          metadata: { requestId: "req-123", timeout: "5000ms" },
+        },
+        {
+          timestamp: "2023-04-06T08:29:40Z",
+          message: "Attempting database connection",
+          service: "api",
+          level: "info",
           metadata: { requestId: "req-123" },
+        },
+        {
+          timestamp: "2023-04-06T08:29:30Z",
+          message: "API request received",
+          service: "gateway",
+          level: "info",
+          metadata: { requestId: "req-123", endpoint: "/users", method: "GET" },
         },
       ],
     },
@@ -132,7 +146,14 @@ if __name__ == "__main__":
       id: "msg5",
       role: "assistant",
       content:
-        "These artifacts are useful when you need:\n\n1. Code that you can easily copy and reference\n2. Visual elements like charts, diagrams, or images\n3. Structured documents that benefit from dedicated formatting\n4. Content that you might want to download or reuse outside our conversation",
+        "Another useful artifact type is logs. Here's an example of error logs that you might see when debugging an issue:",
+      artifacts: [sampleArtifacts[2]],
+    },
+    {
+      id: "msg6",
+      role: "assistant",
+      content:
+        "These artifacts are useful when you need:\n\n1. Code that you can easily copy and reference\n2. Visual elements like charts, diagrams, or images\n3. Error logs and debugging information\n4. Structured documents that benefit from dedicated formatting\n5. Content that you might want to download or reuse outside our conversation",
     },
   ]);
 
@@ -300,6 +321,13 @@ if __name__ == "__main__":
               </div>
             );
           }
+
+          // Sort logs by timestamp (newest first)
+          logs = [...logs].sort((a, b) => {
+            const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return timeB - timeA;
+          });
         } catch (error) {
           // Show error message if JSON parsing fails
           return (
@@ -316,8 +344,30 @@ if __name__ == "__main__":
           );
         }
 
+        // Helper function to format JSON objects nicely
+        const formatMetadata = (value: any): string => {
+          try {
+            if (typeof value === "object" && value !== null) {
+              return JSON.stringify(value, null, 2);
+            }
+            return String(value);
+          } catch (e) {
+            return String(value);
+          }
+        };
+
         return (
           <div className="artifact-detail-content">
+            <div className="artifact-summary">
+              <span className="log-count">{logs.length} log entries</span>
+              {logs.length > 0 && (
+                <span className="log-timespan">
+                  From {new Date(logs[logs.length - 1].timestamp).toLocaleString()} to{" "}
+                  {new Date(logs[0].timestamp).toLocaleString()}
+                </span>
+              )}
+            </div>
+
             {logs.map((log, index) => (
               <div key={index} className={`log-entry log-level-${log.level || "info"}`}>
                 <div>
@@ -331,8 +381,9 @@ if __name__ == "__main__":
                 {log.metadata && (
                   <div className="log-metadata">
                     {Object.entries(log.metadata).map(([key, value]) => (
-                      <div key={key}>
-                        {key}: {JSON.stringify(value)}
+                      <div key={key} className="metadata-item">
+                        <span className="metadata-key">{key}:</span>
+                        <pre className="metadata-value">{formatMetadata(value)}</pre>
                       </div>
                     ))}
                   </div>
