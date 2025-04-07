@@ -1,4 +1,5 @@
 import type { Log } from "@triage/observability/src/types";
+import Markdown from "markdown-to-jsx";
 import { useState } from "react";
 import "./styles.css";
 
@@ -403,7 +404,11 @@ if __name__ == "__main__":
                 <div className="message-sender">{message.role === "user" ? "You" : "Claude"}</div>
               </div>
               <div className="message-content">
-                {message.content}
+                {message.content === "Thinking..." ? (
+                  <div className="thinking-indicator">{message.content}</div>
+                ) : (
+                  <Markdown>{message.content}</Markdown>
+                )}
 
                 {message.artifacts && message.artifacts.length > 0 && (
                   <div className="artifacts-container">

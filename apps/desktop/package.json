@@ -22,6 +22,7 @@
     "electron-updater": "^6.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^9.0.1",
     "react-split-pane": "^0.1.92"
   },
   "devDependencies": {
