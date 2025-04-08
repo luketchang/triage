@@ -9,9 +9,9 @@ import {
 import {
   getObservabilityPlatform,
   IntegrationType,
-  Log,
   ObservabilityPlatform,
   Span,
+  LogsWithPagination,
 } from "@triage/observability";
 import { Command as CommanderCommand } from "commander";
 import fs from "fs/promises";
@@ -59,21 +59,6 @@ type NodeType =
   | "codePostprocessor"
   | "END";
 
-interface BaseCommand {
-  update: Partial<OncallAgentState>;
-}
-
-interface NextNodeCommand extends BaseCommand {
-  type: "next";
-  destination: NodeType;
-}
-
-interface EndCommand extends BaseCommand {
-  type: "end";
-}
-
-type Command = NextNodeCommand | EndCommand;
-
 export interface OncallAgentState {
   firstPass: boolean;
   toolCalls: Array<
@@ -92,7 +77,7 @@ export interface OncallAgentState {
   spanLabelsMap: string;
   chatHistory: string[];
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, Log[] | string>;
+  logContext: Map<LogSearchInput, LogsWithPagination | string>;
   spanContext: Map<SpanSearchInput, Span[]>;
   logPostprocessingResult: LogPostprocessing | null;
   codePostprocessingResult: CodePostprocessing | null;

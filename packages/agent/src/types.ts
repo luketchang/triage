@@ -1,5 +1,4 @@
 import { z, infer as zInfer } from "zod";
-
 const BASIC_REASONING_DESCRIPTION =
   "Intermediate reasoning where you can explain what you see from the given information and what information you need next (if any).";
 
@@ -133,7 +132,12 @@ export const logSearchInputSchema = z.object({
     ),
   query: z.string().describe("Log search query in the observability platform query language"),
   limit: z.number().describe("Maximum number of log lines to return, default to 500"),
-  // TODO: this is still not producing numbered lists
+  pageCursor: z
+    .string()
+    .optional()
+    .describe(
+      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms."
+    ),
   reasoning: z
     .string()
     .describe(

@@ -1,6 +1,6 @@
 import type { Log } from "@triage/observability/src/types";
-import Markdown from "markdown-to-jsx";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import "./styles.css";
 
 // Make TypeScript aware of our electron API
@@ -530,7 +530,7 @@ if __name__ == "__main__":
                     <span className="thinking-text">Thinking</span>
                   </div>
                 ) : (
-                  <Markdown>{message.content}</Markdown>
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
                 )}
 
                 {message.artifacts && message.artifacts.length > 0 && (

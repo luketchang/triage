@@ -1,3 +1,8 @@
+export enum PaginationStatus {
+  PAGINATION = "More pages available",
+  NO_PAGINATION = "End of pagination",
+}
+
 export enum IntegrationType {
   DATADOG = "datadog",
   GRAFANA = "grafana",
@@ -13,6 +18,11 @@ export interface Log {
     [key: string]: any;
   };
   metadata: Record<string, string>;
+}
+
+export interface LogsWithPagination {
+  logs: Log[];
+  pageCursorOrIndicator?: string; // NOTE: hacky but in case of platform that doesn't support pagination, we'll just use this to communicate whether or not there are more results
 }
 
 export interface Span {

@@ -1,4 +1,4 @@
-import { IntegrationType, Log, Span } from "./types";
+import { IntegrationType, LogsWithPagination, Span } from "./types";
 
 /**
  * Interface for observability platforms like Datadog and Grafana
@@ -67,5 +67,5 @@ export interface ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursor?: string;
-  }): Promise<Log[]>;
+  }): Promise<LogsWithPagination>;
 }

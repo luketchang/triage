@@ -1,5 +1,5 @@
 import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
-import { Log, Span } from "@triage/observability";
+import { LogsWithPagination, Span } from "@triage/observability";
 import { generateText } from "ai";
 import {
   logRequestToolSchema,
@@ -18,7 +18,7 @@ function createPrompt(params: {
   codebaseOverview: string;
   fileTree: string;
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, Log[] | string>;
+  logContext: Map<LogSearchInput, LogsWithPagination | string>;
   spanContext: Map<SpanSearchInput, Span[]>;
   logLabelsMap: string;
   spanLabelsMap: string;
@@ -84,7 +84,7 @@ export class Reasoner {
     codebaseOverview: string;
     fileTree: string;
     codeContext: Map<string, string>;
-    logContext: Map<LogSearchInput, Log[] | string>;
+    logContext: Map<LogSearchInput, LogsWithPagination | string>;
     spanContext: Map<SpanSearchInput, Span[]>;
     logLabelsMap: string;
     spanLabelsMap: string;

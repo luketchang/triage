@@ -1,12 +1,11 @@
 import { getModelWrapper, logger, Model } from "@triage/common";
-import { Log, ObservabilityPlatform } from "@triage/observability";
+import { LogsWithPagination, ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
 import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../../types";
 import { ensureSingleToolCall, formatLogResults } from "../utils";
 
 export interface LogSearchAgentResponse {
-  newLogContext: Map<LogSearchInput, Log[] | string>;
-  queryHistory: Map<LogSearchInput, Log[] | string>;
+  newLogContext: Map<LogSearchInput, LogsWithPagination | string>;
   summary: string;
 }
 
@@ -21,10 +20,13 @@ You are an expert AI assistant that helps engineers debug production issues by s
 function createLogSearchPrompt(params: {
   query: string;
   logRequest: string;
-  logResultHistory: Map<LogSearchInput, Log[] | string>;
+  logResultHistory: Map<LogSearchInput, LogsWithPagination | string>;
   logLabelsMap: string;
   platformSpecificInstructions: string;
-  previousLogQueryResult?: { input: LogSearchInput; logs: Log[] | string };
+  previousLogQueryResult?: {
+    input: LogSearchInput;
+    logs: LogsWithPagination | string;
+  };
   remainingQueries: number;
 }): string {
   const currentTime = new Date().toISOString();
@@ -95,7 +97,7 @@ ${formatLogResults(params.logResultHistory)}
 
 function createLogSearchSummaryPrompt(params: {
   query: string;
-  logResults: Map<LogSearchInput, Log[] | string>;
+  logResults: Map<LogSearchInput, LogsWithPagination | string>;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -144,9 +146,12 @@ class LogSearch {
   async invoke(params: {
     query: string;
     logRequest: string;
-    logResultHistory: Map<LogSearchInput, Log[] | string>;
+    logResultHistory: Map<LogSearchInput, LogsWithPagination | string>;
     logLabelsMap: string;
-    previousLogQueryResult?: { input: LogSearchInput; logs: Log[] | string };
+    previousLogQueryResult?: {
+      input: LogSearchInput;
+      logs: LogsWithPagination | string;
+    };
     remainingQueries: number;
   }): Promise<LogSearchResponse> {
     const prompt = createLogSearchPrompt({
@@ -216,11 +221,11 @@ export class LogSearchAgent {
     query: string;
     logRequest: string;
     logLabelsMap: string;
-    logResultHistory?: Map<LogSearchInput, Log[] | string>;
+    logResultHistory?: Map<LogSearchInput, LogsWithPagination | string>;
     maxIters?: number;
   }): Promise<LogSearchAgentResponse> {
     // Convert string[] logResultHistory to Map if needed, or create empty map if not provided
-    let logResultHistory: Map<LogSearchInput, Log[] | string>;
+    let logResultHistory: Map<LogSearchInput, LogsWithPagination | string>;
     if (!params.logResultHistory) {
       logResultHistory = new Map();
     } else {
@@ -228,7 +233,9 @@ export class LogSearchAgent {
     }
 
     // Variable to store the previous query result (initially undefined)
-    let previousLogResult: { query: LogSearchInput; logs: Log[] | string } | undefined = undefined;
+    let previousLogResult:
+      | { query: LogSearchInput; logs: LogsWithPagination | string }
+      | undefined = undefined;
 
     let response: LogSearchResponse | null = null;
     const maxIters = params.maxIters || MAX_ITERS;
@@ -331,7 +338,6 @@ export class LogSearchAgent {
 
     return {
       newLogContext: logResultHistory,
-      queryHistory: logResultHistory,
       summary: "TODO",
     };
   }

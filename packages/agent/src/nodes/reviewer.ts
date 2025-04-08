@@ -1,5 +1,5 @@
 import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
-import { Log } from "@triage/observability";
+import { LogsWithPagination } from "@triage/observability";
 import { generateText } from "ai";
 import {
   logRequestToolSchema,
@@ -20,7 +20,7 @@ function createPrompt(params: {
   spanLabelsMap: string;
   chatHistory: string[];
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, Log[] | string>;
+  logContext: Map<LogSearchInput, LogsWithPagination | string>;
   rootCauseAnalysis: string;
 }) {
   return `
@@ -111,7 +111,7 @@ export class Reviewer {
     spanLabelsMap: string;
     chatHistory: string[];
     codeContext: Map<string, string>;
-    logContext: Map<LogSearchInput, Log[] | string>;
+    logContext: Map<LogSearchInput, LogsWithPagination | string>;
     rootCauseAnalysis: string;
   }): Promise<ReviewerResponse> {
     logger.info(`Reviewing root cause analysis for query: ${params.query}`);
