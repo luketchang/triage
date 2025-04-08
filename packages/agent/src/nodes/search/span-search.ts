@@ -7,7 +7,7 @@ import {
   TaskComplete,
   taskCompleteToolSchema,
 } from "../../types";
-import { ensureSingleToolCall, formatChatHistory, formatSpanResults } from "../utils";
+import { ensureSingleToolCall, formatSpanResults } from "../utils";
 
 export interface SpanSearchAgentResponse {
   newSpanContext: Map<SpanSearchInput, SpansWithPagination | string>;
@@ -16,25 +16,43 @@ export interface SpanSearchAgentResponse {
 
 export type SpanSearchResponse = SpanSearchInput | TaskComplete;
 
+const MAX_ITERS = 10;
+
+const SYSTEM_PROMPT = `
+You are an expert AI assistant that helps engineers debug production issues by searching through distributed traces. Your task is to find spans relevant to the issue/event.
+`;
+
 function createSpanSearchPrompt(params: {
   query: string;
   spanRequest: string;
-  chatHistory: string[];
+  spanResultHistory: Map<SpanSearchInput, SpansWithPagination | string>;
   spanLabelsMap: string;
   platformSpecificInstructions: string;
+  previousSpanQueryResult?: {
+    input: SpanSearchInput;
+    spans: SpansWithPagination | string;
+  };
+  remainingQueries: number;
 }): string {
   const currentTime = new Date().toISOString();
+
+  // Format the previous span query result for display
+  const formattedPreviousResult = params.previousSpanQueryResult
+    ? formatSpanResults(
+        new Map([[params.previousSpanQueryResult.input, params.previousSpanQueryResult.spans]])
+      )
+    : "";
 
   return `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically help by finding spans relevant to the user's query and a description of what types of spans are needed.
 
-Given a request for the type of spans needed for the investigation, your task is to fetch spans relevant to the request. You will do so by outputting your intermediate reasoning for explaining what action you will take and then outputting either a \`SpanSearchInput\` to read spans from observability API OR a \`TaskComplete\` to indicate that you have completed the request.
+Given a request for the type of spans needed for the investigation, your task is to fetch spans relevant to the request. You will do so by outputting your intermediate reasoning for explaining what action you will take and then outputting a \`SpanSearchInput\` to read spans from observability API.
 
 Guidelines:
 - Spans are distributed traces that show the flow of requests through microservices
 - Every span query must include at least one service name or other identifier
 - The timezone for start and end dates should be Universal Coordinated Time (UTC)
-- If span search is not returning results (as may show in message history), adjust/widen query as needed
+- If span search is not returning results (as may show in previous results), adjust/widen query as needed
 - Be generous on the time ranges and give +/- 15 minutes to ensure you capture the issue
 - If there is source code in your previously gathered context, use it to inform your span search
 - DO NOT output \`TaskComplete\` until you have a broad view of spans captured at least once
@@ -43,9 +61,11 @@ Guidelines:
 
 Rules:
 - Output just 1 single \`SpanSearchInput\` at a time. DO NOT output multiple \`SpanSearchInput\`s.
-- Look at the context previously gathered to see what spans you have already fetched and what queries you've tried, DO NOT repeat past queries
+- Look at the span result history to see what spans you have already fetched and what queries you've tried, DO NOT repeat past queries.
 
-Use the below history of context you already gathered to inform what steps you will take next. DO NOT make the same query twice, it is a waste of the context window.
+<remaining_queries>
+${params.remainingQueries}
+</remaining_queries>
 
 <current_time>
 ${currentTime}
@@ -67,9 +87,13 @@ ${params.platformSpecificInstructions}
 ${params.spanRequest}
 </span_request>
 
-<context_previously_gathered>
-${formatChatHistory(params.chatHistory)}
-</context_previously_gathered>
+<previous_span_query_result>
+${formattedPreviousResult}
+</previous_span_query_result>
+
+<span_results_history>
+${formatSpanResults(params.spanResultHistory)}
+</span_results_history>
 `;
 }
 
@@ -109,8 +133,13 @@ class SpanSearch {
   async invoke(params: {
     query: string;
     spanRequest: string;
-    chatHistory: string[];
+    spanResultHistory: Map<SpanSearchInput, SpansWithPagination | string>;
     spanLabelsMap: string;
+    previousSpanQueryResult?: {
+      input: SpanSearchInput;
+      spans: SpansWithPagination | string;
+    };
+    remainingQueries: number;
   }): Promise<SpanSearchResponse> {
     const prompt = createSpanSearchPrompt({
       ...params,
@@ -120,6 +149,7 @@ class SpanSearch {
     try {
       const { toolCalls } = await generateText({
         model: getModelWrapper(this.llm),
+        system: SYSTEM_PROMPT,
         prompt: prompt,
         tools: {
           spanSearchInput: spanSearchInputToolSchema,
@@ -177,21 +207,39 @@ export class SpanSearchAgent {
     query: string;
     spanRequest: string;
     spanLabelsMap: string;
-    chatHistory: string[];
+    spanResultHistory?: Map<SpanSearchInput, SpansWithPagination | string>;
     maxIters?: number;
   }): Promise<SpanSearchAgentResponse> {
-    let chatHistory: string[] = params.chatHistory;
-    let spanResults: Map<SpanSearchInput, SpansWithPagination | string> = new Map();
+    // Convert spanResultHistory to Map if provided or create empty map
+    let spanResultHistory: Map<SpanSearchInput, SpansWithPagination | string>;
+    if (!params.spanResultHistory) {
+      spanResultHistory = new Map();
+    } else {
+      spanResultHistory = params.spanResultHistory;
+    }
+
+    // Variable to store the previous query result (initially undefined)
+    let previousSpanResult:
+      | { input: SpanSearchInput; spans: SpansWithPagination | string }
+      | undefined = undefined;
+
     let response: SpanSearchResponse | null = null;
-    const maxIters = params.maxIters || 10;
+    const maxIters = params.maxIters || MAX_ITERS;
     let currentIter = 0;
 
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
+      // Convert previousSpanResult to the format expected by SpanSearch
+      const previousSpanQueryResult = previousSpanResult
+        ? { input: previousSpanResult.input, spans: previousSpanResult.spans }
+        : undefined;
+
       response = await this.spanSearch.invoke({
         query: params.query,
         spanRequest: params.spanRequest,
-        chatHistory: chatHistory,
+        spanResultHistory: spanResultHistory,
         spanLabelsMap: params.spanLabelsMap,
+        previousSpanQueryResult: previousSpanQueryResult,
+        remainingQueries: maxIters - currentIter,
       });
 
       currentIter++;
@@ -216,20 +264,35 @@ export class SpanSearchAgent {
           logger.info(`Span search results:\n${formattedSpans}`);
           logger.info(`Span search reasoning:\n${response.reasoning}`);
 
-          spanResults.set(response, spansWithPagination);
+          // Add previous result to span history if it exists
+          if (previousSpanResult) {
+            spanResultHistory.set(previousSpanResult.input, previousSpanResult.spans);
+          }
 
-          chatHistory = [
-            ...chatHistory,
-            `Query: ${response.query}.\nStart: ${response.start}.\nEnd: ${response.end}.\nLimit: ${response.pageLimit}.\nSpan search results: ${spansWithPagination.spans.length} spans found.\nPage Cursor Or Indicator: ${spansWithPagination.pageCursorOrIndicator || "None"}.\nReasoning:\n${response.reasoning}`,
-          ];
+          // Set current result as previous for next iteration
+          previousSpanResult = {
+            input: response,
+            spans: spansWithPagination,
+          };
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error(`Error executing span search: ${errorMessage}`);
-          spanResults.set(response, errorMessage);
-          chatHistory = [...chatHistory, `Error executing span search: ${errorMessage}`];
+
+          // Store error message in span history
+          if (response) {
+            previousSpanResult = {
+              input: response,
+              spans: errorMessage,
+            };
+          }
         }
       } else {
         logger.info("Span search complete");
+
+        // Add the last query to span history if it exists
+        if (previousSpanResult) {
+          spanResultHistory.set(previousSpanResult.input, previousSpanResult.spans);
+        }
       }
     }
 
@@ -238,11 +301,16 @@ export class SpanSearchAgent {
       logger.info(
         `Span search reached maximum iterations (${maxIters}). Completing search forcibly.`
       );
+
+      // Add the last query to span history if it exists and wasn't added already
+      if (previousSpanResult) {
+        spanResultHistory.set(previousSpanResult.input, previousSpanResult.spans);
+      }
     }
 
     const summaryPrompt = createSpanSearchSummaryPrompt({
       query: params.query,
-      spanResults,
+      spanResults: spanResultHistory,
     });
 
     const { text } = await generateText({
@@ -253,7 +321,7 @@ export class SpanSearchAgent {
     logger.info(`Span search summary:\n${text}`);
 
     return {
-      newSpanContext: spanResults,
+      newSpanContext: spanResultHistory,
       summary: text,
     };
   }

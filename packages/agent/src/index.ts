@@ -160,7 +160,6 @@ export class OnCallAgent {
       query: state.query,
       spanRequest: request.request,
       spanLabelsMap: state.spanLabelsMap,
-      chatHistory: state.chatHistory,
     });
 
     // Check if this is the last tool call in queue and if so, add a reasoning call to the queue
