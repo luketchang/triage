@@ -7,6 +7,19 @@ import "./styles.css";
 // No need to import, but TS will pick up the global augmentation
 import "./electron.d";
 
+// Add interfaces for log and code postprocessing results
+interface LogPostprocessingResult {
+  type: string;
+  relevantQueries: any[];
+  summary: string;
+}
+
+interface CodePostprocessingResult {
+  type: string;
+  relevantCode?: Record<string, string>;
+  summary?: string;
+}
+
 // Type for code artifacts
 type CodeMap = Map<string, string>;
 
@@ -163,6 +176,16 @@ if __name__ == "__main__":
   // Currently selected artifact
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
 
+  // Track expanded log entries
+  const [expandedLogs, setExpandedLogs] = useState<Record<number, boolean>>({});
+
+  const toggleLogExpansion = (index: number) => {
+    setExpandedLogs((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
   const sendMessage = async (): Promise<void> => {
     if (newMessage.trim() === "") return;
 
@@ -220,33 +243,68 @@ if __name__ == "__main__":
           const artifacts: Artifact[] = [];
 
           if (response.data.logPostprocessing) {
+            // Log postprocessing should be stored as an array for the Log[] data type
+            const logPostprocessing = response.data.logPostprocessing as LogPostprocessingResult;
+            let logData: Log[] = [];
+
+            // Create an array from the relevant queries only - skipping summary
+            const relevantQueries = logPostprocessing.relevantQueries || [];
+            logData = relevantQueries.map((query, index) => {
+              // Check if the query result already has a timestamp
+              return {
+                // Use the existing timestamp if available, or create a new one
+                timestamp: query.timestamp || new Date().toISOString(),
+                level: "info",
+                service: "agent",
+                message: `Query ${index + 1}: ${JSON.stringify(query)}`,
+                metadata: { query },
+              };
+            });
+
+            // Don't add summary as a log entry - as requested
+
             artifacts.push({
               id: `artifact-log-${Date.now()}`,
               type: "log",
               title: "Log Analysis",
               description: "Log postprocessing results",
-              data: JSON.stringify(response.data.logPostprocessing),
+              data: logData,
             });
           }
 
           if (response.data.codePostprocessing) {
             // Create a code map from the code postprocessing
             const codeMap = new Map<string, string>();
-            const codePostprocessing = response.data.codePostprocessing as any;
+            const codePostprocessing = response.data.codePostprocessing as CodePostprocessingResult;
 
+            // Handle different possible structures of codePostprocessing
             if (codePostprocessing.relevantCode) {
               for (const [filePath, content] of Object.entries(codePostprocessing.relevantCode)) {
-                codeMap.set(filePath, content as string);
+                codeMap.set(filePath, content);
+              }
+            }
+            // If the object itself is a map of file paths to code content
+            else {
+              // Only process if it's an object and not null
+              if (codePostprocessing && typeof codePostprocessing === "object") {
+                for (const [key, value] of Object.entries(codePostprocessing)) {
+                  if (typeof value === "string" && key !== "type" && key !== "summary") {
+                    codeMap.set(key, value);
+                  }
+                }
               }
             }
 
-            artifacts.push({
-              id: `artifact-code-${Date.now()}`,
-              type: "code",
-              title: "Code Analysis",
-              description: "Code postprocessing results",
-              data: codeMap,
-            });
+            // Only add the artifact if we have at least one code entry
+            if (codeMap.size > 0) {
+              artifacts.push({
+                id: `artifact-code-${Date.now()}`,
+                type: "code",
+                title: "Code Analysis",
+                description: "Code postprocessing results",
+                data: codeMap,
+              });
+            }
           }
 
           if (artifacts.length > 0) {
@@ -359,7 +417,15 @@ if __name__ == "__main__":
         return (
           <div className="artifact-detail-content">
             <div className="artifact-summary">
-              <span className="log-count">{logs.length} log entries</span>
+              <div className="summary-header">
+                <span className="log-count">{logs.length} log entries</span>
+                <button
+                  className="back-button compact-button"
+                  onClick={() => setSelectedArtifact(null)}
+                >
+                  Back to Chat
+                </button>
+              </div>
               {logs.length > 0 && (
                 <span className="log-timespan">
                   From {new Date(logs[logs.length - 1].timestamp).toLocaleString()} to{" "}
@@ -368,33 +434,36 @@ if __name__ == "__main__":
               )}
             </div>
 
-            {logs.map((log, index) => (
-              <div key={index} className={`log-entry log-level-${log.level || "info"}`}>
-                <div>
-                  <span className="log-timestamp">
-                    {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "No timestamp"}
-                  </span>{" "}
-                  <strong>[{log.service || "unknown"}]</strong>{" "}
-                  <span className="log-level">{(log.level || "info").toUpperCase()}</span>
-                </div>
-                <div className="log-message">{log.message || "No message"}</div>
-                {log.metadata && (
-                  <div className="log-metadata">
-                    {Object.entries(log.metadata).map(([key, value]) => (
-                      <div key={key} className="metadata-item">
-                        <span className="metadata-key">{key}:</span>
-                        <pre className="metadata-value">{formatMetadata(value)}</pre>
-                      </div>
-                    ))}
+            <div className="logs-container">
+              {logs.map((log, index) => (
+                <div key={index} className={`log-entry log-level-${log.level || "info"}`}>
+                  <div className="log-entry-header" onClick={() => toggleLogExpansion(index)}>
+                    <span className="log-timestamp">
+                      {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "—"}
+                    </span>
+                    <span className="log-service">[{log.service || "unknown"}]</span>
+                    <span className="log-level">{(log.level || "info").toUpperCase()}</span>
+                    <span className="log-message-compact">{log.message || "No message"}</span>
+                    <span className="log-expand-icon">{expandedLogs[index] ? "▼" : "▶"}</span>
                   </div>
-                )}
-              </div>
-            ))}
 
-            <div className="artifact-navigation">
-              <button className="back-button" onClick={() => setSelectedArtifact(null)}>
-                Back to Chat
-              </button>
+                  {expandedLogs[index] && (
+                    <div className="log-details">
+                      <div className="log-message-full">{log.message || "No message"}</div>
+                      {log.metadata && (
+                        <div className="log-metadata">
+                          {Object.entries(log.metadata).map(([key, value]) => (
+                            <div key={key} className="metadata-item">
+                              <span className="metadata-key">{key}:</span>
+                              <pre className="metadata-value">{formatMetadata(value)}</pre>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         );
@@ -437,6 +506,10 @@ if __name__ == "__main__":
   };
 
   const handleArtifactClick = (artifact: Artifact): void => {
+    if (selectedArtifact?.id !== artifact.id) {
+      // If selecting a different artifact, reset expanded logs
+      setExpandedLogs({});
+    }
     setSelectedArtifact(selectedArtifact?.id === artifact.id ? null : artifact);
   };
 

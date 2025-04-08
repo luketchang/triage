@@ -6,6 +6,19 @@
 // Import the AgentConfig type from our configuration
 import type { AgentConfig } from "../config";
 
+// Define the interfaces for log and code postprocessing
+interface LogPostprocessingResult {
+  type: string;
+  relevantQueries: any[];
+  summary: string;
+}
+
+interface CodePostprocessingResult {
+  type: string;
+  relevantCode?: Record<string, string>;
+  summary?: string;
+}
+
 // Augment the Window interface to include our Electron API
 declare global {
   interface Window {
@@ -20,8 +33,8 @@ declare global {
         data?: {
           chatHistory: string[];
           rca: string | null;
-          logPostprocessing: unknown | null;
-          codePostprocessing: unknown | null;
+          logPostprocessing: LogPostprocessingResult | null;
+          codePostprocessing: CodePostprocessingResult | null;
         };
         error?: string;
       }>;
