@@ -1,4 +1,4 @@
-import { Log, LogsWithPagination, Span } from "@triage/observability";
+import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
 import { ToolCallUnion, ToolSet } from "ai";
 import { LogSearchInput, SpanSearchInput } from "../types";
 
@@ -80,20 +80,33 @@ export function formatLogResults(
         pageCursor = logsOrError.pageCursorOrIndicator;
       }
 
-      return `${formatLogQuery(input)}\nPage Cursor: ${pageCursor}\nResults:\n${formattedContent}`;
+      return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
     })
     .join("\n\n");
 }
 
-export function formatSpanResults(spanResults: Map<SpanSearchInput, Span[]>): string {
+export function formatSpanResults(
+  spanResults: Map<SpanSearchInput, SpansWithPagination | string>
+): string {
   return Array.from(spanResults.entries())
-    .map(([input, spans]) => {
-      const formattedSpans =
-        spans.length > 0
-          ? spans.map((span, index) => formatSingleSpan(span, index)).join("\n\n")
-          : "No spans found";
+    .map(([input, spansOrError]) => {
+      let formattedContent: string;
+      let pageCursor: string | undefined;
 
-      return `${formatSpanQuery(input)}\nResults:\n${formattedSpans}`;
+      if (typeof spansOrError === "string") {
+        // It's an error message
+        formattedContent = `Error: ${spansOrError}`;
+        pageCursor = undefined;
+      } else {
+        // It's a spans object
+        formattedContent =
+          spansOrError.spans.length > 0
+            ? spansOrError.spans.map((span, index) => formatSingleSpan(span, index)).join("\n\n")
+            : "No spans found";
+        pageCursor = spansOrError.pageCursorOrIndicator;
+      }
+
+      return `${formatSpanQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
     })
     .join("\n\n");
 }

@@ -2,7 +2,13 @@ import { logger, renderFacetValues, toUnixNano } from "@triage/common";
 import { config } from "@triage/config";
 import axios from "axios";
 import { ObservabilityPlatform } from "./observability.interface";
-import { IntegrationType, Log, LogsWithPagination, PaginationStatus, Span } from "./types";
+import {
+  IntegrationType,
+  Log,
+  LogsWithPagination,
+  PaginationStatus,
+  SpansWithPagination,
+} from "./types";
 
 export const GRAFANA_LOG_SEARCH_INSTRUCTIONS = `
 ## LogQL Syntax
@@ -130,7 +136,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursorOrIndicator?: string;
-  }): Promise<Span[]> {
+  }): Promise<SpansWithPagination> {
     throw new Error("fetchSpans is not implemented for Grafana platform");
   }
 

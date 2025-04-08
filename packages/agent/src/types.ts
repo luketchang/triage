@@ -131,7 +131,7 @@ export const logSearchInputSchema = z.object({
       "End time in ISO 8601 format with timezone (e.g., '2025-03-19T04:40:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
     ),
   query: z.string().describe("Log search query in the observability platform query language"),
-  limit: z.number().describe("Maximum number of log lines to return, default to 500"),
+  limit: z.number().describe("Maximum number of logs to return, default to 500"),
   pageCursor: z
     .string()
     .optional()
@@ -155,10 +155,22 @@ export const logSearchInputToolSchema = {
 export const spanSearchInputSchema = z.object({
   start: z
     .string()
-    .describe("Start time in ISO format or human-readable format (will be converted)"),
-  end: z.string().describe("End time in ISO format or human-readable format (will be converted)"),
+    .describe(
+      "Start time in ISO 8601 format with timezone (e.g., '2025-03-19T04:10:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
+    ),
+  end: z
+    .string()
+    .describe(
+      "End time in ISO 8601 format with timezone (e.g., '2025-03-19T04:40:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
+    ),
   query: z.string().describe("Span search query in the observability platform query language"),
-  pageLimit: z.number().describe("Maximum number of spans in the response."),
+  pageLimit: z.number().describe("Maximum number of spans to return, default to 500"),
+  pageCursor: z
+    .string()
+    .optional()
+    .describe(
+      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms."
+    ),
   reasoning: z
     .string()
     .describe(
