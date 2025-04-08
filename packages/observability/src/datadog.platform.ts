@@ -2,7 +2,7 @@ import { client, v2 } from "@datadog/datadog-api-client";
 import { logger, renderFacetValues } from "@triage/common";
 import { config } from "@triage/config";
 import { ObservabilityPlatform } from "./observability.interface";
-import { IntegrationType, Log, LogsWithPagination, Span } from "./types";
+import { IntegrationType, Log, LogsWithPagination, Span, SpansWithPagination } from "./types";
 
 const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
 - Use Datadog Span Search syntax to query spans within APM traces.
@@ -15,6 +15,11 @@ const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
 - Numeric range search example: @http.response_time:[100 TO 500]
 - Attribute keyword search (full-text wildcard match): @error.message:*timeout*
 - Special characters (?, >, <, :, =, ", ~, /, \, spaces) must be escaped, e.g.: @url:*user\\=JaneDoe*
+
+## Pagination
+- Page cursors are a feature in Datadog span search that allows you to paginate through results.
+- The presence of a page cursor in a response indicates that there are more results from that request that were not yet returned because of the limit.
+- If you need to fetch the additional results from the same query, include the page cursor from the previous response in your next request.
 `;
 
 const DATADOG_LOG_SEARCH_INSTRUCTIONS = `
@@ -43,7 +48,7 @@ Use Datadog Log Search Syntax to search for logs.
 ## Pagination
 - Page cursors are a feature in Datadog log and span search that allows you to paginate through results.
 - The presence of a page cursor in a response indicates that there are more results from that request that were not yet returned because of the limit.
-- If you need to fetch the additional results, include the page cursor from the previous response in your next request.
+- If you need to fetch the additional results from the same query, include the page cursor from the previous response in your next request.
 `;
 
 enum DatadogDefaultFacetsSpans {
@@ -213,7 +218,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursor?: string;
-  }): Promise<Span[]> {
+  }): Promise<SpansWithPagination> {
     try {
       logger.info(`Executing GET query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);
@@ -231,14 +236,24 @@ export class DatadogPlatform implements ObservabilityPlatform {
 
       if (response && response.data && response.data.length > 0) {
         logger.info(`Found ${response.data.length} spans`);
-        return this.formatSpans(response.data);
+        const spans = this.formatSpans(response.data);
+        return {
+          spans,
+          pageCursorOrIndicator: response.meta?.page?.after,
+        };
       } else {
         logger.info("No spans found with GET endpoint");
-        return [];
+        return {
+          spans: [],
+          pageCursorOrIndicator: undefined,
+        };
       }
     } catch (error) {
       logger.error(`Error executing span query with GET endpoint: ${error}`);
-      return [];
+      return {
+        spans: [],
+        pageCursorOrIndicator: undefined,
+      };
     }
   }
 

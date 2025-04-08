@@ -1,5 +1,5 @@
 import { getModelWrapper, logger, Model } from "@triage/common";
-import { ObservabilityPlatform, Span } from "@triage/observability";
+import { ObservabilityPlatform, SpansWithPagination } from "@triage/observability";
 import { generateText } from "ai";
 import {
   SpanSearchInput,
@@ -10,7 +10,7 @@ import {
 import { ensureSingleToolCall, formatChatHistory, formatSpanResults } from "../utils";
 
 export interface SpanSearchAgentResponse {
-  newSpanContext: Map<SpanSearchInput, Span[]>;
+  newSpanContext: Map<SpanSearchInput, SpansWithPagination | string>;
   summary: string;
 }
 
@@ -75,7 +75,7 @@ ${formatChatHistory(params.chatHistory)}
 
 function createSpanSearchSummaryPrompt(params: {
   query: string;
-  spanResults: Map<SpanSearchInput, Span[]>;
+  spanResults: Map<SpanSearchInput, SpansWithPagination | string>;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -181,7 +181,7 @@ export class SpanSearchAgent {
     maxIters?: number;
   }): Promise<SpanSearchAgentResponse> {
     let chatHistory: string[] = params.chatHistory;
-    let spanResults: Map<SpanSearchInput, Span[]> = new Map();
+    let spanResults: Map<SpanSearchInput, SpansWithPagination | string> = new Map();
     let response: SpanSearchResponse | null = null;
     const maxIters = params.maxIters || 10;
     let currentIter = 0;
@@ -203,7 +203,7 @@ export class SpanSearchAgent {
 
         try {
           logger.info("Fetching spans from observability platform...");
-          const spans = await this.observabilityPlatform.fetchSpans({
+          const spansWithPagination = await this.observabilityPlatform.fetchSpans({
             query: response.query,
             start: response.start,
             end: response.end,
@@ -211,20 +211,21 @@ export class SpanSearchAgent {
           });
 
           // Create a simplified version for logging (not the full formatSingleSpan output)
-          const formattedSpans = formatSpanResults(new Map([[response, spans]]));
+          const formattedSpans = formatSpanResults(new Map([[response, spansWithPagination]]));
 
           logger.info(`Span search results:\n${formattedSpans}`);
           logger.info(`Span search reasoning:\n${response.reasoning}`);
 
-          spanResults.set(response, spans);
+          spanResults.set(response, spansWithPagination);
 
           chatHistory = [
             ...chatHistory,
-            `Query: ${response.query}.\nStart: ${response.start}.\nEnd: ${response.end}.\nLimit: ${response.pageLimit}.\nSpan search results: ${spans.length} spans found.\nReasoning:\n${response.reasoning}`,
+            `Query: ${response.query}.\nStart: ${response.start}.\nEnd: ${response.end}.\nLimit: ${response.pageLimit}.\nSpan search results: ${spansWithPagination.spans.length} spans found.\nPage Cursor Or Indicator: ${spansWithPagination.pageCursorOrIndicator || "None"}.\nReasoning:\n${response.reasoning}`,
           ];
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error(`Error executing span search: ${errorMessage}`);
+          spanResults.set(response, errorMessage);
           chatHistory = [...chatHistory, `Error executing span search: ${errorMessage}`];
         }
       } else {

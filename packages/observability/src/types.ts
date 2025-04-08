@@ -25,6 +25,11 @@ export interface LogsWithPagination {
   pageCursorOrIndicator?: string; // NOTE: hacky but in case of platform that doesn't support pagination, we'll just use this to communicate whether or not there are more results
 }
 
+export interface SpansWithPagination {
+  spans: Span[];
+  pageCursorOrIndicator?: string; // Similar to LogsWithPagination, to support pagination for spans
+}
+
 export interface Span {
   spanId: string;
   traceId: string;

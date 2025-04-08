@@ -9,9 +9,9 @@ import {
 import {
   getObservabilityPlatform,
   IntegrationType,
-  ObservabilityPlatform,
-  Span,
   LogsWithPagination,
+  ObservabilityPlatform,
+  SpansWithPagination,
 } from "@triage/observability";
 import { Command as CommanderCommand } from "commander";
 import fs from "fs/promises";
@@ -78,7 +78,7 @@ export interface OncallAgentState {
   chatHistory: string[];
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInput, LogsWithPagination | string>;
-  spanContext: Map<SpanSearchInput, Span[]>;
+  spanContext: Map<SpanSearchInput, SpansWithPagination | string>;
   logPostprocessingResult: LogPostprocessing | null;
   codePostprocessingResult: CodePostprocessing | null;
   rootCauseAnalysis: string | null;

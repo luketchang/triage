@@ -1,4 +1,4 @@
-import { IntegrationType, LogsWithPagination, Span } from "./types";
+import { IntegrationType, LogsWithPagination, SpansWithPagination } from "./types";
 
 /**
  * Interface for observability platforms like Datadog and Grafana
@@ -42,7 +42,7 @@ export interface ObservabilityPlatform {
    * @param end - End time in ISO format
    * @param limit - Maximum number of results to return
    * @param pageCursor - Cursor for pagination
-   * @returns Array of Span objects
+   * @returns SpansWithPagination object containing spans and pagination info
    */
   fetchSpans(params: {
     query: string;
@@ -50,7 +50,7 @@ export interface ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursor?: string;
-  }): Promise<Span[]>;
+  }): Promise<SpansWithPagination>;
 
   /**
    * Fetch logs from the observability platform
