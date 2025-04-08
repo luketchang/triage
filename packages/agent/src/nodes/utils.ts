@@ -1,4 +1,4 @@
-import { Log, Span } from "@triage/observability";
+import { Log, LogsWithPagination, Span } from "@triage/observability";
 import { ToolCallUnion, ToolSet } from "ai";
 import { LogSearchInput, SpanSearchInput } from "../types";
 
@@ -59,23 +59,28 @@ export function formatSingleSpan(span: Span, index?: number): string {
     Environment: ${span.environment || "N/A"}`;
 }
 
-export function formatLogResults(logResults: Map<LogSearchInput, Log[] | string>): string {
+export function formatLogResults(
+  logResults: Map<LogSearchInput, LogsWithPagination | string>
+): string {
   return Array.from(logResults.entries())
     .map(([input, logsOrError]) => {
       let formattedContent: string;
+      let pageCursor: string | undefined;
 
       if (typeof logsOrError === "string") {
         // It's an error message
         formattedContent = `Error: ${logsOrError}`;
+        pageCursor = undefined;
       } else {
         // It's a log array
-        formattedContent = logsOrError.map((log) => formatSingleLog(log)).join("\n");
+        formattedContent = logsOrError.logs.map((log) => formatSingleLog(log)).join("\n");
         if (!formattedContent) {
           formattedContent = "No logs found";
         }
+        pageCursor = logsOrError.pageCursorOrIndicator;
       }
 
-      return `${formatLogQuery(input)}\nResults:\n${formattedContent}`;
+      return `${formatLogQuery(input)}\nPage Cursor: ${pageCursor}\nResults:\n${formattedContent}`;
     })
     .join("\n\n");
 }

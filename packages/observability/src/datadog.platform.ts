@@ -2,7 +2,7 @@ import { client, v2 } from "@datadog/datadog-api-client";
 import { logger, renderFacetValues } from "@triage/common";
 import { config } from "@triage/config";
 import { ObservabilityPlatform } from "./observability.interface";
-import { IntegrationType, Log, Span } from "./types";
+import { IntegrationType, Log, LogsWithPagination, Span } from "./types";
 
 const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
 - Use Datadog Span Search syntax to query spans within APM traces.
@@ -39,6 +39,11 @@ Use Datadog Log Search Syntax to search for logs.
 - BAD (wrong tag for log severity, should be "status" not "level"): service:orders AND level:error
 - BAD (missing quotes around keyword terms): service:orders *:No matching document *:duplicate key
 - BAD (uses specific attribute tag instead of using *): service:orders item:"<keyword>"
+
+## Pagination
+- Page cursors are a feature in Datadog log and span search that allows you to paginate through results.
+- The presence of a page cursor in a response indicates that there are more results from that request that were not yet returned because of the limit.
+- If you need to fetch the additional results, include the page cursor from the previous response in your next request.
 `;
 
 enum DatadogDefaultFacetsSpans {
@@ -317,7 +322,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
     end: string;
     limit: number;
     pageCursor?: string;
-  }): Promise<Log[]> {
+  }): Promise<LogsWithPagination> {
     try {
       logger.info(`Executing GET query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);
@@ -335,14 +340,24 @@ export class DatadogPlatform implements ObservabilityPlatform {
 
       if (response && response.data && response.data.length > 0) {
         logger.info(`Found ${response.data.length} logs`);
-        return this.formatLogs(response.data);
+        const logs = this.formatLogs(response.data);
+        return {
+          logs,
+          pageCursorOrIndicator: response.meta?.page?.after,
+        };
       } else {
         logger.info("No logs found with GET endpoint");
-        return [];
+        return {
+          logs: [],
+          pageCursorOrIndicator: undefined,
+        };
       }
     } catch (error) {
       logger.error(`Error executing log query with GET endpoint: ${error}`);
-      return [];
+      return {
+        logs: [],
+        pageCursorOrIndicator: undefined,
+      };
     }
   }
 

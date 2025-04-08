@@ -2,15 +2,20 @@ import { logger, renderFacetValues, toUnixNano } from "@triage/common";
 import { config } from "@triage/config";
 import axios from "axios";
 import { ObservabilityPlatform } from "./observability.interface";
-import { IntegrationType, Log, Span } from "./types";
+import { IntegrationType, Log, LogsWithPagination, PaginationStatus, Span } from "./types";
 
 export const GRAFANA_LOG_SEARCH_INSTRUCTIONS = `
+## LogQL Syntax
 - Use Grafana LogQL queries to search for logs.
 - All log queries must be formulated as valid LogQL Loki queries (i.e. selectors wrapped in curly braces {} followed by keyword searches denoted by "|=" or regex searches denoted by "|~")
 - Example LogQL query: {service_name="<service_name>"} |= <keyword> |~ <regex>
 - You can inspect multiple services' logs in same query as in this example: {service_name=~"<service1>|<service2>"}
 - Every query must include at least one label/selector in the curly braces, empty selectors (e.g., curly braces with no content such as {}) are not allowed
 - If you query for log level, use keyword or regex search (e.g. |~ "(?i)error" for searching error logs), DO NOT use "level" tag in the query braces only use keywords
+
+## Pagination
+- Grafana does not support page cursors. You can infer if there are more results if the number of results returned is equal to the limit.
+- If the number of logs returned equals the limit, more logs may be available — continue fetching by updating the next query's \`start\` time to just after the last returned log's timestamp.
 `;
 
 enum GrafanaDefaultFacetsLogs {
@@ -124,7 +129,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     start: string;
     end: string;
     limit: number;
-    pageCursor?: string;
+    pageCursorOrIndicator?: string;
   }): Promise<Span[]> {
     throw new Error("fetchSpans is not implemented for Grafana platform");
   }
@@ -134,8 +139,8 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     start: string;
     end: string;
     limit: number;
-    pageCursor?: string;
-  }): Promise<Log[]> {
+    pageCursorOrIndicator?: string;
+  }): Promise<LogsWithPagination> {
     try {
       const url = `${this.baseUrl}/loki/api/v1/query_range`;
 
@@ -159,10 +164,20 @@ export class GrafanaPlatform implements ObservabilityPlatform {
       });
 
       if (response.status === 200 && response.data && response.data.status === "success") {
-        return this.formatLogs(response.data);
+        const logs = this.formatLogs(response.data);
+        return {
+          logs,
+          pageCursorOrIndicator:
+            logs.length === params.limit
+              ? PaginationStatus.PAGINATION
+              : PaginationStatus.NO_PAGINATION,
+        };
       } else {
         logger.info("No logs found or query returned an error");
-        return [];
+        return {
+          logs: [],
+          pageCursorOrIndicator: undefined,
+        };
       }
     } catch (error) {
       let errorMessage = "Unknown error";
@@ -179,7 +194,10 @@ export class GrafanaPlatform implements ObservabilityPlatform {
       }
 
       logger.error(`Error executing Loki query: ${String(errorMessage)}`);
-      return [];
+      return {
+        logs: [],
+        pageCursorOrIndicator: undefined,
+      };
     }
   }
 
