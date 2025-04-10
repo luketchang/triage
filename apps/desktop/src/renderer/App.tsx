@@ -1,23 +1,102 @@
-import type { Log } from "@triage/observability/src/types";
-import { useState } from "react";
-import ReactMarkdown from "react-markdown";
+import { useEffect, useState } from "react";
 import "./styles.css";
+import { Artifact, ChatMessage, TabType } from "./types";
+import { generateId } from "./utils/formatters";
+
+// Components
+import ChatSidebar from "./components/ChatSidebar";
+
+// Feature Views
+import CodeView from "./features/CodeView";
+import DashboardsView from "./features/DashboardsView";
+import LogsView from "./features/LogsView";
+import TracesView from "./features/TracesView";
+
+// Icons
+import { ChatIcon, CodeIcon, DashboardsIcon, LogsIcon, TracesIcon } from "./icons";
 
 // Make TypeScript aware of our electron API
 // No need to import, but TS will pick up the global augmentation
 import "./electron.d";
+import { FacetData, LogQueryParams } from "./electron.d";
 
-// Add interfaces for log and code postprocessing results
-interface LogPostprocessingResult {
-  type: string;
-  relevantQueries: any[];
-  summary: string;
+// Import mock API for testing
+import mockElectronAPI from "./electronApiMock";
+import api from "./services/api";
+
+// TESTING ONLY: Set to true to use mock API instead of real Electron API
+// Set to false in production or when testing with the real API
+const USE_MOCK_API = true; // Changed to true to load mock data
+
+// Define the AgentConfig interface
+interface AgentConfig {
+  repoPath: string;
+  codebaseOverviewPath: string;
+  observabilityPlatform: string;
+  observabilityFeatures: string[];
+  startDate: Date;
+  endDate: Date;
 }
 
-interface CodePostprocessingResult {
-  type: string;
-  relevantCode?: Record<string, string>;
-  summary?: string;
+// Create a wrapper API that will use either the real or mock API
+const apiWrapper = {
+  invokeAgent: async (query: string) => {
+    if (USE_MOCK_API) {
+      console.info("Using mock invokeAgent");
+      return mockElectronAPI.invokeAgent(query);
+    } else {
+      return window.electronAPI.invokeAgent(query);
+    }
+  },
+  getAgentConfig: async () => {
+    if (USE_MOCK_API) {
+      console.info("Using mock getAgentConfig");
+      return mockElectronAPI.getAgentConfig();
+    } else {
+      return window.electronAPI.getAgentConfig();
+    }
+  },
+  updateAgentConfig: async (newConfig: Partial<AgentConfig>) => {
+    if (USE_MOCK_API) {
+      console.info("Using mock updateAgentConfig");
+      return mockElectronAPI.updateAgentConfig(newConfig);
+    } else {
+      return window.electronAPI.updateAgentConfig(newConfig);
+    }
+  },
+  fetchLogs: async (params: LogQueryParams) => {
+    // In a real implementation, this would call the actual observability API
+    if (USE_MOCK_API) {
+      console.info("Using mock fetchLogs");
+      return mockElectronAPI.fetchLogs(params);
+    } else {
+      // This would be implemented in the actual electron API
+      // For now, we'll return mock data
+      return mockElectronAPI.fetchLogs(params);
+    }
+  },
+  getLogsFacetValues: async (start: string, end: string) => {
+    if (USE_MOCK_API) {
+      console.info("Using mock getLogsFacetValues");
+      return mockElectronAPI.getLogsFacetValues(start, end);
+    } else {
+      // This would be implemented in the actual electron API
+      // For now, we'll return mock data
+      return mockElectronAPI.getLogsFacetValues(start, end);
+    }
+  },
+};
+
+// Define the Log interface for the UI
+interface Log {
+  timestamp: string;
+  message: string;
+  service: string;
+  level: string;
+  attributes?: {
+    [key: string]: any;
+  };
+  metadata?: Record<string, string>;
 }
 
 // Type for code artifacts
@@ -26,24 +105,54 @@ type CodeMap = Map<string, string>;
 // Type for artifact types
 type ArtifactType = "code" | "image" | "document" | "log";
 
-interface Artifact {
-  id: string;
-  type: ArtifactType;
-  title: string;
-  description: string;
-  data: Log[] | CodeMap | string;
-}
-
-// Interface for chat messages
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  artifacts?: Artifact[];
-}
-
 function App(): JSX.Element {
-  // Sample artifacts for development
+  const [activeTab, setActiveTab] = useState<TabType>("logs");
+  const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
+  const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Log view state
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [logQuery, setLogQuery] = useState<string>("");
+  const [timeRange, setTimeRange] = useState<{ start: string; end: string }>({
+    start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 24 hours ago
+    end: new Date().toISOString(), // now
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [facets, setFacets] = useState<FacetData[]>([]);
+  const [selectedFacets, setSelectedFacets] = useState<string[]>([]);
+  const [selectedLog, setSelectedLog] = useState<Log | null>(null);
+  const [pageCursor, setPageCursor] = useState<string | undefined>(undefined);
+  const [queryLimit] = useState<number>(100); // Default limit for number of logs
+
+  // Time range presets
+  const timeRangePresets = [
+    { label: "Last 15 minutes", value: 15 * 60 * 1000 },
+    { label: "Last hour", value: 60 * 60 * 1000 },
+    { label: "Last 6 hours", value: 6 * 60 * 60 * 1000 },
+    { label: "Last 24 hours", value: 24 * 60 * 60 * 1000 },
+    { label: "Last 7 days", value: 7 * 24 * 60 * 60 * 1000 },
+  ];
+
+  // Handle keyboard shortcuts for toggling the chat sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Command+I (Mac) to toggle chat sidebar
+      if (e.metaKey && e.key === "i") {
+        e.preventDefault();
+        setIsChatSidebarOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  // Sample artifacts for development (would normally be dynamically generated)
   const sampleArtifacts: Artifact[] = [
     {
       id: "1",
@@ -89,7 +198,7 @@ if __name__ == "__main__":
       type: "image",
       title: "Simple Bar Chart",
       description: "Image",
-      data: "sample_chart.svg", // In a real app, this could be a URL or Base64 data
+      data: "sample_chart.svg",
     },
     {
       id: "3",
@@ -102,572 +211,227 @@ if __name__ == "__main__":
           message: "Failed to connect to database",
           service: "api",
           level: "error",
-          metadata: { requestId: "req-123", dbHost: "db.example.com" },
+          attributes: {
+            error: "Connection refused",
+            attempts: 3,
+          },
         },
         {
-          timestamp: "2023-04-06T08:29:50Z",
-          message: "Connection timeout",
-          service: "api",
-          level: "warn",
-          metadata: { requestId: "req-123", timeout: "5000ms" },
-        },
-        {
-          timestamp: "2023-04-06T08:29:40Z",
-          message: "Attempting database connection",
+          timestamp: "2023-04-06T08:31:00Z",
+          message: "Retrying database connection",
           service: "api",
           level: "info",
-          metadata: { requestId: "req-123" },
         },
         {
-          timestamp: "2023-04-06T08:29:30Z",
-          message: "API request received",
-          service: "gateway",
+          timestamp: "2023-04-06T08:32:00Z",
+          message: "Successfully connected to database",
+          service: "api",
           level: "info",
-          metadata: { requestId: "req-123", endpoint: "/users", method: "GET" },
         },
       ],
     },
   ];
 
-  // Mock chat messages for development
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "msg1",
-      role: "assistant",
-      content: "Hello! How can I help you with your application?",
-    },
-    {
-      id: "msg2",
-      role: "user",
-      content: "Can you show me an example of some artifacts?",
-    },
-    {
-      id: "msg3",
-      role: "assistant",
-      content:
-        "I'd be happy to demonstrate how artifacts work! Artifacts are a way to create and reference structured content within our conversation. Let me create an example artifact with some Python code.",
-      artifacts: [sampleArtifacts[0]],
-    },
-    {
-      id: "msg4",
-      role: "assistant",
-      content:
-        "I can create other types of artifacts as well. Here's an example of a simple SVG graphic:",
-      artifacts: [sampleArtifacts[1]],
-    },
-    {
-      id: "msg5",
-      role: "assistant",
-      content:
-        "Another useful artifact type is logs. Here's an example of error logs that you might see when debugging an issue:",
-      artifacts: [sampleArtifacts[2]],
-    },
-    {
-      id: "msg6",
-      role: "assistant",
-      content:
-        "These artifacts are useful when you need:\n\n1. Code that you can easily copy and reference\n2. Visual elements like charts, diagrams, or images\n3. Error logs and debugging information\n4. Structured documents that benefit from dedicated formatting\n5. Content that you might want to download or reuse outside our conversation",
-    },
-  ]);
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
 
-  // New message being composed
-  const [newMessage, setNewMessage] = useState("");
-
-  // Currently selected artifact
-  const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
-
-  // Track expanded log entries
-  const [expandedLogs, setExpandedLogs] = useState<Record<number, boolean>>({});
-
-  const toggleLogExpansion = (index: number) => {
-    setExpandedLogs((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
-  };
-
-  const sendMessage = async (): Promise<void> => {
-    if (newMessage.trim() === "") return;
-
-    // Store message content for API call
-    const messageContent = newMessage.trim();
-
-    // Clear input field FIRST before any async operations
-    setNewMessage("");
-
-    // THEN add user message to chat
-    const userMessage: ChatMessage = {
-      id: `msg${Date.now()}-user`,
-      role: "user",
-      content: messageContent,
-    };
-
-    // Update messages state with user message
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-
-    // Create and add loading message immediately, with unique timestamp ID
-    const loadingMessageId = `msg${Date.now()}-loading`;
-    const loadingMessage: ChatMessage = {
-      id: loadingMessageId,
-      role: "assistant",
-      content: "Thinking...",
-    };
-
-    // Separate state update for loading message to ensure it appears quickly
-    setMessages((prevMessages) => [...prevMessages, loadingMessage]);
-
-    // Use setTimeout to push the API call to the next event loop cycle
-    // This allows the UI updates to render first
-    setTimeout(async () => {
-      try {
-        // Call the agent API in the next event loop cycle
-        const response = await window.electronAPI.invokeAgent(messageContent);
-
-        if (response.success && response.data) {
-          // Remove the loading message
-          setMessages((prev) => prev.filter((message) => message.id !== loadingMessageId));
-
-          // Add the agent response to the chat
-          const assistantMessage: ChatMessage = {
-            id: `msg${Date.now()}-assistant`,
-            role: "assistant",
-            content: response.data.chatHistory.join("\n\n") || "No response from agent",
-          };
-
-          // Add root cause analysis if available
-          if (response.data.rca) {
-            assistantMessage.content += `\n\n**Root Cause Analysis:**\n${response.data.rca}`;
-          }
-
-          // Add artifacts if available
-          const artifacts: Artifact[] = [];
-
-          if (response.data.logPostprocessing) {
-            // Log postprocessing should be stored as an array for the Log[] data type
-            const logPostprocessing = response.data.logPostprocessing as LogPostprocessingResult;
-            let logData: Log[] = [];
-
-            // Create an array from the relevant queries only - skipping summary
-            const relevantQueries = logPostprocessing.relevantQueries || [];
-            logData = relevantQueries.map((query, index) => {
-              // Check if the query result already has a timestamp
-              return {
-                // Use the existing timestamp if available, or create a new one
-                timestamp: query.timestamp || new Date().toISOString(),
-                level: "info",
-                service: "agent",
-                message: `Query ${index + 1}: ${JSON.stringify(query)}`,
-                metadata: { query },
-              };
-            });
-
-            // Don't add summary as a log entry - as requested
-
-            artifacts.push({
-              id: `artifact-log-${Date.now()}`,
-              type: "log",
-              title: "Log Analysis",
-              description: "Log postprocessing results",
-              data: logData,
-            });
-          }
-
-          if (response.data.codePostprocessing) {
-            // Create a code map from the code postprocessing
-            const codeMap = new Map<string, string>();
-            const codePostprocessing = response.data.codePostprocessing as CodePostprocessingResult;
-
-            // Handle different possible structures of codePostprocessing
-            if (codePostprocessing.relevantCode) {
-              for (const [filePath, content] of Object.entries(codePostprocessing.relevantCode)) {
-                codeMap.set(filePath, content);
-              }
-            }
-            // If the object itself is a map of file paths to code content
-            else {
-              // Only process if it's an object and not null
-              if (codePostprocessing && typeof codePostprocessing === "object") {
-                for (const [key, value] of Object.entries(codePostprocessing)) {
-                  if (typeof value === "string" && key !== "type" && key !== "summary") {
-                    codeMap.set(key, value);
-                  }
-                }
-              }
-            }
-
-            // Only add the artifact if we have at least one code entry
-            if (codeMap.size > 0) {
-              artifacts.push({
-                id: `artifact-code-${Date.now()}`,
-                type: "code",
-                title: "Code Analysis",
-                description: "Code postprocessing results",
-                data: codeMap,
-              });
-            }
-          }
-
-          if (artifacts.length > 0) {
-            assistantMessage.artifacts = artifacts;
-          }
-
-          setMessages((prev) => [...prev, assistantMessage]);
-        } else {
-          // Remove the loading message
-          setMessages((prev) => prev.filter((message) => message.id !== loadingMessageId));
-
-          // Add error message
-          const errorMessage: ChatMessage = {
-            id: `msg${Date.now()}-error`,
-            role: "assistant",
-            content: `Error: ${response.error || "Unknown error"}`,
-          };
-
-          setMessages((prev) => [...prev, errorMessage]);
-        }
-      } catch (error) {
-        // Handle any errors
-        const errorMessage: ChatMessage = {
-          id: `msg${Date.now()}-error`,
-          role: "assistant",
-          content: `Error: ${error instanceof Error ? error.message : String(error)}`,
-        };
-
-        // Remove any loading message
-        setMessages((prev) => [
-          ...prev.filter((message) => message.id !== loadingMessageId),
-          errorMessage,
-        ]);
+    // If an artifact was clicked and is related to the tab type, populate the view
+    if (selectedArtifact) {
+      if (tab === "logs" && selectedArtifact.type === "log") {
+        // Show logs in the logs view
+        console.info("Populating logs view with artifact data");
+      } else if (tab === "code" && selectedArtifact.type === "code") {
+        // Show code in the code view
+        console.info("Populating code view with artifact data");
       }
-    }, 0);
+    }
   };
 
-  const renderArtifactContent = (artifact: Artifact): JSX.Element | null => {
-    switch (artifact.type) {
-      case "code":
-        const codeMap = artifact.data as CodeMap;
-        return (
-          <div className="artifact-detail-content">
-            {Array.from(codeMap.entries()).map(([filePath, content], index) => (
-              <div key={index} className="code-file">
-                <div className="code-file-header">{filePath}</div>
-                <pre className="code-block">{content}</pre>
-              </div>
-            ))}
-          </div>
-        );
-      case "log":
-        let logs: Log[] = [];
-        try {
-          // Handle the case where data might be a string (JSON stringified)
-          if (typeof artifact.data === "string") {
-            logs = JSON.parse(artifact.data) as Log[];
-          } else {
-            logs = artifact.data as Log[];
-          }
-
-          // If logs isn't an array or is empty, show a message
-          if (!Array.isArray(logs) || logs.length === 0) {
-            return (
-              <div className="artifact-detail-content">
-                <div className="empty-artifact-message">
-                  <p>No log data available or invalid format.</p>
-                  <button className="back-button" onClick={() => setSelectedArtifact(null)}>
-                    Back to Chat
-                  </button>
-                </div>
-              </div>
-            );
-          }
-
-          // Sort logs by timestamp (newest first)
-          logs = [...logs].sort((a, b) => {
-            const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-            const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-            return timeB - timeA;
-          });
-        } catch (error) {
-          // Show error message if JSON parsing fails
-          return (
-            <div className="artifact-detail-content">
-              <div className="empty-artifact-message">
-                <p>
-                  Error parsing log data: {error instanceof Error ? error.message : String(error)}
-                </p>
-                <button className="back-button" onClick={() => setSelectedArtifact(null)}>
-                  Back to Chat
-                </button>
-              </div>
-            </div>
-          );
-        }
-
-        // Helper function to format JSON objects nicely
-        const formatMetadata = (value: any): string => {
-          try {
-            if (typeof value === "object" && value !== null) {
-              return JSON.stringify(value, null, 2);
-            }
-            return String(value);
-          } catch (e) {
-            return String(value);
-          }
-        };
-
-        return (
-          <div className="artifact-detail-content">
-            <div className="artifact-summary">
-              <div className="summary-header">
-                <span className="log-count">{logs.length} log entries</span>
-                <button
-                  className="back-button compact-button"
-                  onClick={() => setSelectedArtifact(null)}
-                >
-                  Back to Chat
-                </button>
-              </div>
-              {logs.length > 0 && (
-                <span className="log-timespan">
-                  From {new Date(logs[logs.length - 1].timestamp).toLocaleString()} to{" "}
-                  {new Date(logs[0].timestamp).toLocaleString()}
-                </span>
-              )}
-            </div>
-
-            <div className="logs-container">
-              {logs.map((log, index) => (
-                <div key={index} className={`log-entry log-level-${log.level || "info"}`}>
-                  <div className="log-entry-header" onClick={() => toggleLogExpansion(index)}>
-                    <span className="log-timestamp">
-                      {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "—"}
-                    </span>
-                    <span className="log-service">[{log.service || "unknown"}]</span>
-                    <span className="log-level">{(log.level || "info").toUpperCase()}</span>
-                    <span className="log-message-compact">{log.message || "No message"}</span>
-                    <span className="log-expand-icon">{expandedLogs[index] ? "▼" : "▶"}</span>
-                  </div>
-
-                  {expandedLogs[index] && (
-                    <div className="log-details">
-                      <div className="log-message-full">{log.message || "No message"}</div>
-                      {log.metadata && (
-                        <div className="log-metadata">
-                          {Object.entries(log.metadata).map(([key, value]) => (
-                            <div key={key} className="metadata-item">
-                              <span className="metadata-key">{key}:</span>
-                              <pre className="metadata-value">{formatMetadata(value)}</pre>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      case "image":
-        return (
-          <div className="artifact-detail-content">
-            <div className="image-placeholder">
-              <svg
-                width="100%"
-                height="100%"
-                viewBox="0 0 200 120"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect x="20" y="20" width="30" height="80" fill="#e67e22" />
-                <rect x="60" y="40" width="30" height="60" fill="#3498db" />
-                <rect x="100" y="30" width="30" height="70" fill="#2ecc71" />
-                <rect x="140" y="50" width="30" height="50" fill="#9b59b6" />
-              </svg>
-            </div>
-
-            <div className="artifact-navigation">
-              <button className="back-button" onClick={() => setSelectedArtifact(null)}>
-                Back to Chat
-              </button>
-            </div>
-          </div>
-        );
-      default:
-        return (
-          <div className="artifact-detail-content">
-            <div className="empty-artifact-message">
-              <p>Unsupported artifact type</p>
-              <button className="back-button" onClick={() => setSelectedArtifact(null)}>
-                Back to Chat
-              </button>
-            </div>
-          </div>
-        );
-    }
+  const toggleChatSidebar = () => {
+    setIsChatSidebarOpen(!isChatSidebarOpen);
   };
 
   const handleArtifactClick = (artifact: Artifact): void => {
-    if (selectedArtifact?.id !== artifact.id) {
-      // If selecting a different artifact, reset expanded logs
-      setExpandedLogs({});
+    setSelectedArtifact(artifact);
+
+    // Automatically switch to the appropriate tab based on artifact type
+    if (artifact.type === "log") {
+      setActiveTab("logs");
+    } else if (artifact.type === "code") {
+      setActiveTab("code");
     }
-    setSelectedArtifact(selectedArtifact?.id === artifact.id ? null : artifact);
   };
 
-  const renderArtifactCard = (artifact: Artifact): JSX.Element => {
-    return (
-      <div
-        key={artifact.id}
-        className="artifact-card"
-        onClick={() => handleArtifactClick(artifact)}
-      >
-        <div className="artifact-card-header">
-          <span className="artifact-card-title">{artifact.title}</span>
-          <span className="artifact-card-type">{artifact.description}</span>
-        </div>
-        <div className="artifact-card-preview">
-          {artifact.type === "code" && (
-            <div className="code-preview">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="preview-icon"
-              >
-                <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
-              </svg>
-            </div>
-          )}
-          {artifact.type === "image" && (
-            <div className="image-preview">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="preview-icon"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
-              </svg>
-            </div>
-          )}
-          {artifact.type === "log" && (
-            <div className="log-preview">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="preview-icon"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10 9 9 9 8 9" />
-              </svg>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+  const closeArtifactViewer = () => {
+    setSelectedArtifact(null);
+  };
+
+  const sendMessage = async (): Promise<void> => {
+    if (!newMessage.trim()) return;
+
+    // Create a new user message
+    const userMessage: ChatMessage = {
+      id: generateId(),
+      role: "user",
+      content: newMessage,
+    };
+
+    // Update the messages state
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
+
+    // Clear the input field
+    setNewMessage("");
+
+    try {
+      // Invoke the agent with the user's query
+      const agentResponse = await api.invokeAgent(newMessage);
+
+      // Create a response message with artifacts
+      const assistantMessage: ChatMessage = {
+        id: generateId(),
+        role: "assistant",
+        content: agentResponse.data?.chatHistory?.join("\n\n") || "I processed your request.",
+        artifacts: sampleArtifacts, // Use sample artifacts for testing or extract from response
+      };
+
+      // Update messages with the assistant's response
+      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+    } catch (error) {
+      console.error("Error sending message to agent:", error);
+
+      // Add an error message if the agent invocation fails
+      const errorMessage: ChatMessage = {
+        id: generateId(),
+        role: "assistant",
+        content: "Sorry, I encountered an error processing your request.",
+      };
+
+      setMessages((prevMessages) => [...prevMessages, errorMessage]);
+    }
+  };
+
+  const renderMainContent = () => {
+    switch (activeTab) {
+      case "logs":
+        return (
+          <LogsView
+            selectedArtifact={
+              selectedArtifact && selectedArtifact.type === "log" ? selectedArtifact : null
+            }
+          />
+        );
+      case "traces":
+        return (
+          <TracesView
+            selectedArtifact={
+              selectedArtifact && selectedArtifact.type === "trace" ? selectedArtifact : null
+            }
+          />
+        );
+      case "dashboards":
+        return (
+          <DashboardsView
+            selectedArtifact={
+              selectedArtifact &&
+              (selectedArtifact.type === "dashboard" || selectedArtifact.type === "image")
+                ? selectedArtifact
+                : null
+            }
+          />
+        );
+      case "code":
+        return (
+          <CodeView
+            selectedArtifact={
+              selectedArtifact && selectedArtifact.type === "code" ? selectedArtifact : null
+            }
+          />
+        );
+      default:
+        return <LogsView selectedArtifact={null} />;
+    }
   };
 
   return (
-    <div className="app-container">
-      <div className={`chat-container ${selectedArtifact ? "with-sidebar" : ""}`}>
-        <div className="chat-messages">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`chat-message ${message.role === "user" ? "user-message" : "assistant-message"}`}
-            >
-              <div className="message-header">
-                <div className="avatar">{message.role === "user" ? "LT" : "AI"}</div>
-                <div className="message-sender">{message.role === "user" ? "You" : "Claude"}</div>
-              </div>
-              <div className="message-content">
-                {message.content === "Thinking..." ? (
-                  <div className="thinking-indicator">
-                    <span className="thinking-text">Thinking</span>
-                  </div>
-                ) : (
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
-                )}
-
-                {message.artifacts && message.artifacts.length > 0 && (
-                  <div className="artifacts-container">
-                    {message.artifacts.map((artifact) => renderArtifactCard(artifact))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+    <div
+      className={`app-container observability-layout ${isChatSidebarOpen ? "with-chat-sidebar" : ""}`}
+    >
+      {/* Vertical Navigation Sidebar */}
+      <div className="navigation-sidebar">
+        <div className="sidebar-header">
+          <div className="logo">TRI</div>
         </div>
-
-        <div className="message-input-container">
-          <textarea
-            className="message-input"
-            placeholder="Message Claude..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-          />
-          <button className="send-button" onClick={sendMessage}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
+        <div className="sidebar-nav">
+          <div
+            className={`nav-item ${activeTab === "logs" ? "active" : ""}`}
+            onClick={() => handleTabChange("logs")}
+            title="Logs"
+          >
+            <LogsIcon />
+            <span className="nav-label">Logs</span>
+          </div>
+          <div
+            className={`nav-item ${activeTab === "traces" ? "active" : ""}`}
+            onClick={() => handleTabChange("traces")}
+            title="Traces"
+          >
+            <TracesIcon />
+            <span className="nav-label">Traces</span>
+          </div>
+          <div
+            className={`nav-item ${activeTab === "dashboards" ? "active" : ""}`}
+            onClick={() => handleTabChange("dashboards")}
+            title="Dashboards"
+          >
+            <DashboardsIcon />
+            <span className="nav-label">Dashboards</span>
+          </div>
+          <div
+            className={`nav-item ${activeTab === "code" ? "active" : ""}`}
+            onClick={() => handleTabChange("code")}
+            title="Code"
+          >
+            <CodeIcon />
+            <span className="nav-label">Code</span>
+          </div>
+        </div>
+        <div className="sidebar-footer">
+          <div className="chat-toggle" onClick={toggleChatSidebar} title="Toggle Chat (⌘ + I)">
+            <ChatIcon />
+          </div>
         </div>
       </div>
 
-      {selectedArtifact && (
-        <div className="artifact-sidebar">
-          <div className="artifact-sidebar-header">
-            <div className="artifact-sidebar-title">{selectedArtifact.title}</div>
-            <button className="close-sidebar-button" onClick={() => setSelectedArtifact(null)}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+      {/* Main Content Area */}
+      <div className="main-content-wrapper">{renderMainContent()}</div>
+
+      {/* Chat Sidebar */}
+      {isChatSidebarOpen && (
+        <div className="chat-sidebar">
+          <div className="chat-sidebar-header">
+            <h3>AI Assistant</h3>
+            <button
+              className="close-chat-button"
+              onClick={toggleChatSidebar}
+              title="Close Chat (⌘ + I)"
+            >
+              ×
             </button>
           </div>
-          <div className="artifact-sidebar-content">{renderArtifactContent(selectedArtifact)}</div>
+          <ChatSidebar
+            messages={messages}
+            newMessage={newMessage}
+            setNewMessage={setNewMessage}
+            sendMessage={sendMessage}
+            onArtifactClick={handleArtifactClick}
+          />
         </div>
       )}
+
+      {/* Artifact Viewer - No longer needed as artifacts will be shown in respective tabs */}
+      {/* {selectedArtifact && (
+        <ArtifactViewer artifact={selectedArtifact} onClose={closeArtifactViewer} />
+      )} */}
     </div>
   );
 }

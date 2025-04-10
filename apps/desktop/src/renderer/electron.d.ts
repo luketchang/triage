@@ -3,8 +3,36 @@
  * This file ensures proper type checking when using window.electronAPI.
  */
 
+// TODO: Can we not just import types from packages?
 // Import the AgentConfig type from our configuration
-import type { AgentConfig } from "../config";
+
+// Define AgentConfig interface
+export interface AgentConfig {
+  repoPath: string;
+  codebaseOverviewPath: string;
+  observabilityPlatform: string;
+  observabilityFeatures: string[];
+  startDate: Date;
+  endDate: Date;
+}
+
+// Define the interfaces for log and code objects
+export interface Log {
+  timestamp: string;
+  message: string;
+  service: string;
+  level: string;
+  attributes?: {
+    [key: string]: any;
+  };
+  metadata?: Record<string, string>;
+}
+
+export interface Artifact {
+  id: string;
+  name: string;
+  content: string;
+}
 
 // Define the interfaces for log and code postprocessing
 interface LogPostprocessingResult {
@@ -19,6 +47,45 @@ interface CodePostprocessingResult {
   summary?: string;
 }
 
+// Define log search input type for type safety
+export interface LogSearchInput {
+  type: string;
+  query: string;
+  start: string;
+  end: string;
+  limit: number;
+  reasoning: string;
+  pageCursor?: string;
+}
+
+// Define logs with pagination type
+export interface LogsWithPagination {
+  logs: Log[];
+  pageCursorOrIndicator?: string;
+}
+
+// Define log query params type
+export interface LogQueryParams {
+  query: string;
+  start: string;
+  end: string;
+  limit: number;
+  pageCursor?: string;
+}
+
+// Define facet data type
+export interface FacetData {
+  name: string;
+  values: string[];
+}
+
+// Define API response types with consistent error property
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
 // Augment the Window interface to include our Electron API
 declare global {
   interface Window {
@@ -28,16 +95,16 @@ declare global {
        * @param query The query to send to the agent
        * @returns Promise with the agent response
        */
-      invokeAgent: (query: string) => Promise<{
-        success: boolean;
-        data?: {
+      invokeAgent: (query: string) => Promise<
+        ApiResponse<{
           chatHistory: string[];
-          rca: string | null;
-          logPostprocessing: LogPostprocessingResult | null;
-          codePostprocessing: CodePostprocessingResult | null;
-        };
-        error?: string;
-      }>;
+          rca: string;
+          logPostprocessing: Map<LogSearchInput, string | LogsWithPagination>;
+          codePostprocessing: Map<string, string>;
+          logContext: Map<LogSearchInput, string | LogsWithPagination>;
+          codeContext: Map<string, string>;
+        }>
+      >;
 
       /**
        * Get the current agent configuration
@@ -47,10 +114,30 @@ declare global {
 
       /**
        * Update the agent configuration
-       * @param newConfig Partial configuration to merge with existing config
+       * @param config Partial configuration to merge with existing config
        * @returns Promise with the updated agent configuration
        */
-      updateAgentConfig: (newConfig: Partial<AgentConfig>) => Promise<AgentConfig>;
+      updateAgentConfig: (config: Partial<AgentConfig>) => Promise<AgentConfig>;
+
+      /**
+       * Fetch logs based on query parameters
+       * @param params Query parameters for fetching logs
+       * @returns Promise with the fetched logs
+       */
+      fetchLogs: (params: LogQueryParams) => Promise<
+        ApiResponse<{
+          logs: Log[];
+          pageCursorOrIndicator?: string;
+        }>
+      >;
+
+      /**
+       * Get log facet values for a given time range
+       * @param start Start date of the time range
+       * @param end End date of the time range
+       * @returns Promise with the fetched facet values
+       */
+      getLogsFacetValues: (start: string, end: string) => Promise<ApiResponse<FacetData[]>>;
     };
   }
 }

@@ -1,9 +1,6 @@
 import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
 import { generateText } from "ai";
-import {
-  CodePostprocessing as CodePostprocessingResponse,
-  codePostprocessingToolSchema,
-} from "../../types";
+import { codePostprocessingToolSchema } from "../../types";
 import { ensureSingleToolCall } from "../utils";
 
 function createPrompt(params: {
@@ -47,7 +44,7 @@ export class CodePostprocessor {
     codebaseOverview: string;
     codeContext: Map<string, string>;
     answer: string;
-  }): Promise<CodePostprocessingResponse> {
+  }): Promise<Map<string, string>> {
     logger.info(`Code postprocessing for query: ${params.query}`);
 
     const prompt = createPrompt(params);
@@ -63,12 +60,15 @@ export class CodePostprocessor {
 
     const toolCall = ensureSingleToolCall(toolCalls);
 
-    const outputObj: CodePostprocessingResponse = {
-      type: "codePostprocessing",
-      relevantFilepaths: toolCall.args.relevantFilepaths,
-      summary: toolCall.args.summary,
-    };
+    const relevantCodeMap = new Map<string, string>();
+    const relevantFilepaths = toolCall.args.relevantFilepaths || [];
 
-    return outputObj;
+    for (const filepath of relevantFilepaths) {
+      if (params.codeContext.has(filepath)) {
+        relevantCodeMap.set(filepath, params.codeContext.get(filepath)!);
+      }
+    }
+
+    return relevantCodeMap;
   }
 }

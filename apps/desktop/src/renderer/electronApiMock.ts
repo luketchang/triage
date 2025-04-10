@@ -1,0 +1,364 @@
+import {
+  AgentConfig,
+  ApiResponse,
+  FacetData,
+  Log,
+  LogQueryParams,
+  LogSearchInput,
+  LogsWithPagination,
+} from "./electron.d";
+
+/**
+ * Mock implementation of the Electron API for local development and testing
+ * This can be easily imported in your App.tsx to override the window.electronAPI
+ * during development, and removed when you're done testing.
+ */
+
+// Create a sample log entry
+const createLogEntry = (
+  timestamp: string,
+  message: string,
+  service: string,
+  level: string,
+  metadata: Record<string, string> = {}
+) => ({
+  timestamp,
+  message,
+  service,
+  level,
+  metadata,
+});
+
+// Create sample logs with varying timestamps
+const createSampleLogs = (count: number, baseService: string): any[] => {
+  const now = new Date("2025-04-09T20:22:25");
+  const logs = [];
+
+  for (let i = 0; i < count; i++) {
+    // Create timestamps going back from now
+    const logTime = new Date(now.getTime() - i * (i % 2 === 0 ? 60000 : 120000)); // Vary times
+
+    // Alternate log levels
+    const level = i < 5 ? "error" : "info";
+
+    // Create different messages based on service
+    let message = "";
+    if (level === "error") {
+      message = `Sample error message #${i + 1} for ${baseService}`;
+    } else {
+      message = `Sample info message #${i + 2} for ${baseService}`;
+    }
+
+    logs.push(
+      createLogEntry(logTime.toISOString(), message, baseService, level, {
+        requestId: `req-${1000 + i}`,
+        userId: `user-${2000 + i}`,
+        environment: "development",
+        duration: `${100 + i * 10}ms`,
+      })
+    );
+  }
+
+  return logs;
+};
+
+// Create mock facet data for logs
+const createMockFacets = () => {
+  return [
+    {
+      name: "service",
+      values: ["orders", "payments", "auth", "api-gateway", "user-service"],
+      counts: [5, 5, 5, 5, 5],
+    },
+    {
+      name: "level",
+      values: ["info", "warn", "error", "debug"],
+      counts: [10, 0, 10, 0],
+    },
+    {
+      name: "host",
+      values: ["host-1", "host-2", "host-3", "host-4"],
+      counts: [5, 5, 5, 5],
+    },
+    {
+      name: "environment",
+      values: ["production", "staging", "development"],
+      counts: [5, 5, 10],
+    },
+  ];
+};
+
+// Create mock data
+const createMockData = () => {
+  // Create sample log context
+  const logContext = new Map<LogSearchInput, LogsWithPagination | string>();
+
+  // Sample error query
+  const errorQuery: LogSearchInput = {
+    type: "error",
+    query: "error in login flow",
+    start: "2023-10-01T00:00:00Z",
+    end: new Date().toISOString(),
+    limit: 10,
+    reasoning: "Looking for authentication errors",
+  };
+
+  logContext.set(errorQuery, {
+    logs: createSampleLogs(5, "auth-service") as any[],
+  });
+
+  // Sample performance query
+  const perfQuery: LogSearchInput = {
+    type: "performance",
+    query: "slow database queries",
+    start: "2023-10-01T00:00:00Z",
+    end: new Date().toISOString(),
+    limit: 10,
+    reasoning: "Investigating performance issues",
+  };
+
+  logContext.set(perfQuery, {
+    logs: createSampleLogs(8, "db-service") as any[],
+  });
+
+  // Create sample code context
+  const codeContext = new Map<string, string>();
+
+  // Sample code snippet
+  codeContext.set(
+    "src/services/auth.js",
+    `// Authentication Service
+const jwt = require('jsonwebtoken');
+const { User } = require('../models');
+
+/**
+ * Authenticates a user and returns a JWT token
+ * @param {string} email - User email
+ * @param {string} password - User password
+ * @returns {Promise<string>} JWT token
+ */
+async function login(email, password) {
+  try {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      throw new Error('User not found');
+    }
+    const isValid = await user.validatePassword(password);
+    if (!isValid) {
+      throw new Error('Invalid password');
+    }
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: '1d',
+    });
+    return token;
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
+}`
+  );
+
+  return { logContext, codeContext };
+};
+
+// Initialize mock data
+const { logContext, codeContext } = createMockData();
+
+/**
+ * Mock implementation of the Electron API
+ */
+const mockElectronAPI = {
+  /**
+   * Invoke the agent with a query and return a mock response
+   */
+  invokeAgent: async (
+    query: string
+  ): Promise<
+    ApiResponse<{
+      chatHistory: string[];
+      rca: string;
+      logPostprocessing: Map<LogSearchInput, string | LogsWithPagination>;
+      codePostprocessing: Map<string, string>;
+      logContext: Map<LogSearchInput, string | LogsWithPagination>;
+      codeContext: Map<string, string>;
+    }>
+  > => {
+    console.info("Mock invokeAgent called with query:", query);
+
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    return {
+      success: true,
+      data: {
+        chatHistory: [
+          `I've analyzed your query: "${query}"`,
+          "Here's what I found based on logs and code analysis:",
+          "There appears to be authentication issues in the system. Several users are experiencing login failures due to invalid credentials or session timeouts.",
+          "The errors are concentrated in the auth-service, which is having trouble validating tokens.",
+        ],
+        rca: "The root cause appears to be a misconfiguration in the JWT_SECRET environment variable after the last deployment. This is causing previously issued tokens to be invalidated.",
+        logContext,
+        codeContext,
+        logPostprocessing: logContext,
+        codePostprocessing: codeContext,
+      },
+    };
+  },
+
+  /**
+   * Get the current agent configuration
+   */
+  getAgentConfig: async (): Promise<AgentConfig> => {
+    console.info("Mock getAgentConfig called");
+
+    return {
+      repoPath: "/path/to/repo",
+      codebaseOverviewPath: "/path/to/overview.md",
+      observabilityPlatform: "datadog",
+      observabilityFeatures: ["logs", "traces"],
+      startDate: new Date("2023-10-01T00:00:00Z"),
+      endDate: new Date(),
+    };
+  },
+
+  /**
+   * Update the agent configuration
+   */
+  updateAgentConfig: async (newConfig: Partial<AgentConfig>): Promise<AgentConfig> => {
+    console.info("Mock updateAgentConfig called with:", newConfig);
+
+    const currentConfig = await mockElectronAPI.getAgentConfig();
+    return {
+      ...currentConfig,
+      ...newConfig,
+    };
+  },
+
+  /**
+   * Fetch logs based on query parameters
+   */
+  fetchLogs: async (
+    params: LogQueryParams
+  ): Promise<
+    ApiResponse<{
+      logs: Log[];
+      pageCursorOrIndicator?: string;
+    }>
+  > => {
+    console.info("Mock fetchLogs called with:", params);
+
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Generate specific logs that match the second image
+    const allLogs = [
+      createLogEntry(
+        new Date("2025-04-09T20:22:25").toISOString(),
+        "Sample error message #1 for orders",
+        "orders",
+        "error"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:22:25").toISOString(),
+        "Sample error message #1 for payments",
+        "payments",
+        "error"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:22:25").toISOString(),
+        "Sample error message #1 for auth",
+        "auth",
+        "error"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:22:25").toISOString(),
+        "Sample error message #1 for api-gateway",
+        "api-gateway",
+        "error"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:22:25").toISOString(),
+        "Sample error message #1 for user-service",
+        "user-service",
+        "error"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:21:25").toISOString(),
+        "Sample info message #2 for orders",
+        "orders",
+        "info"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:21:25").toISOString(),
+        "Sample info message #2 for payments",
+        "payments",
+        "info"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:21:25").toISOString(),
+        "Sample info message #2 for auth",
+        "auth",
+        "info"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:21:25").toISOString(),
+        "Sample info message #2 for api-gateway",
+        "api-gateway",
+        "info"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:21:25").toISOString(),
+        "Sample info message #2 for user-service",
+        "user-service",
+        "info"
+      ),
+    ];
+
+    // Apply search filter if present
+    let filteredLogs = [...allLogs];
+    if (params.query && params.query.length > 0) {
+      const searchTerms = params.query.toLowerCase().split(" ");
+      filteredLogs = allLogs.filter((log) => {
+        return searchTerms.some(
+          (term) =>
+            log.message.toLowerCase().includes(term) ||
+            log.service.toLowerCase().includes(term) ||
+            log.level.toLowerCase().includes(term)
+        );
+      });
+    }
+
+    // Sort by timestamp (newest first)
+    filteredLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    // Apply limit
+    const paginatedLogs = filteredLogs.slice(0, params.limit);
+
+    return {
+      success: true,
+      data: {
+        logs: paginatedLogs,
+        pageCursorOrIndicator:
+          filteredLogs.length > params.limit ? `cursor-${Date.now()}` : undefined,
+      },
+    };
+  },
+
+  /**
+   * Get facet values for logs
+   */
+  getLogsFacetValues: async (start: string, end: string): Promise<ApiResponse<FacetData[]>> => {
+    console.info("Mock getLogsFacetValues called with:", { start, end });
+
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    return {
+      success: true,
+      data: createMockFacets(),
+    };
+  },
+};
+
+export default mockElectronAPI;

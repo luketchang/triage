@@ -22,18 +22,15 @@ import { Reasoner } from "./nodes/reasoner";
 import { Reviewer } from "./nodes/reviewer";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { SpanSearchAgent } from "./nodes/search/span-search";
-import { formatLogQuery } from "./nodes/utils";
 import {
-  CodePostprocessing,
   CodePostprocessingRequest,
-  LogPostprocessing,
   LogPostprocessingRequest,
   LogRequest,
-  LogSearchInput,
+  LogSearchInputCore,
   ReasoningRequest,
   ReviewRequest,
   SpanRequest,
-  SpanSearchInput,
+  SpanSearchInputCore,
 } from "./types";
 
 const INITIAL_LOG_REQUEST: LogRequest = {
@@ -77,10 +74,10 @@ export interface OncallAgentState {
   spanLabelsMap: string;
   chatHistory: string[];
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, LogsWithPagination | string>;
-  spanContext: Map<SpanSearchInput, SpansWithPagination | string>;
-  logPostprocessingResult: LogPostprocessing | null;
-  codePostprocessingResult: CodePostprocessing | null;
+  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
+  spanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
+  logPostprocessingResult: Map<LogSearchInputCore, LogsWithPagination | string> | null;
+  codePostprocessingResult: Map<string, string> | null;
   rootCauseAnalysis: string | null;
 }
 
@@ -277,12 +274,7 @@ export class OnCallAgent {
       answer: state.rootCauseAnalysis ?? "",
     });
 
-    logger.info(`Log postprocessing summary: ${response.summary}`);
-    logger.info(
-      `Log postprocessing relevant queries: ${response.relevantQueries
-        .map(formatLogQuery)
-        .join("\n\n")}`
-    );
+    logger.info(`Log postprocessing complete with ${response.size} relevant log entries`);
 
     return {
       logPostprocessingResult: response,
@@ -301,8 +293,7 @@ export class OnCallAgent {
       answer: state.rootCauseAnalysis ?? "",
     });
 
-    logger.info(`Code postprocessing summary: ${response.summary}`);
-    logger.info(`Code postprocessing relevant filepaths: ${response.relevantFilepaths}`);
+    logger.info(`Code postprocessing complete with ${response.size} relevant file entries`);
 
     return {
       codePostprocessingResult: response,
@@ -312,8 +303,10 @@ export class OnCallAgent {
   async invoke(state: OncallAgentState): Promise<{
     chatHistory: string[];
     rca: string | null;
-    logPostprocessing: LogPostprocessing | null;
-    codePostprocessing: CodePostprocessing | null;
+    logPostprocessing: Map<LogSearchInputCore, LogsWithPagination | string> | null;
+    codePostprocessing: Map<string, string> | null;
+    logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
+    codeContext: Map<string, string>;
   }> {
     let currentState = state;
     let iterationCount = 0;
@@ -364,6 +357,8 @@ export class OnCallAgent {
       rca: currentState.rootCauseAnalysis,
       logPostprocessing: currentState.logPostprocessingResult,
       codePostprocessing: currentState.codePostprocessingResult,
+      logContext: currentState.logContext,
+      codeContext: currentState.codeContext,
     };
   }
 }
@@ -390,8 +385,10 @@ export async function invokeAgent({
 }): Promise<{
   chatHistory: string[];
   rca: string | null;
-  logPostprocessing: LogPostprocessing | null;
-  codePostprocessing: CodePostprocessing | null;
+  logPostprocessing: Map<LogSearchInputCore, LogsWithPagination | string> | null;
+  codePostprocessing: Map<string, string> | null;
+  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
+  codeContext: Map<string, string>;
 }> {
   const integrationType =
     platformType === "datadog" ? IntegrationType.DATADOG : IntegrationType.GRAFANA;

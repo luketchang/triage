@@ -1,11 +1,17 @@
 import { getModelWrapper, logger, Model } from "@triage/common";
 import { LogsWithPagination, ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
-import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../../types";
+import {
+  LogSearchInput,
+  LogSearchInputCore,
+  logSearchInputToolSchema,
+  stripReasoning,
+  TaskComplete,
+} from "../../types";
 import { ensureSingleToolCall, formatLogResults } from "../utils";
 
 export interface LogSearchAgentResponse {
-  newLogContext: Map<LogSearchInput, LogsWithPagination | string>;
+  newLogContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   summary: string;
 }
 
@@ -20,11 +26,11 @@ You are an expert AI assistant that helps engineers debug production issues by s
 function createLogSearchPrompt(params: {
   query: string;
   logRequest: string;
-  logResultHistory: Map<LogSearchInput, LogsWithPagination | string>;
+  logResultHistory: Map<LogSearchInputCore, LogsWithPagination | string>;
   logLabelsMap: string;
   platformSpecificInstructions: string;
   previousLogQueryResult?: {
-    input: LogSearchInput;
+    input: LogSearchInputCore;
     logs: LogsWithPagination | string;
   };
   remainingQueries: number;
@@ -97,7 +103,7 @@ ${formatLogResults(params.logResultHistory)}
 
 function createLogSearchSummaryPrompt(params: {
   query: string;
-  logResults: Map<LogSearchInput, LogsWithPagination | string>;
+  logResults: Map<LogSearchInputCore, LogsWithPagination | string>;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -146,10 +152,10 @@ class LogSearch {
   async invoke(params: {
     query: string;
     logRequest: string;
-    logResultHistory: Map<LogSearchInput, LogsWithPagination | string>;
+    logResultHistory: Map<LogSearchInputCore, LogsWithPagination | string>;
     logLabelsMap: string;
     previousLogQueryResult?: {
-      input: LogSearchInput;
+      input: LogSearchInputCore;
       logs: LogsWithPagination | string;
     };
     remainingQueries: number;
@@ -179,9 +185,11 @@ class LogSearch {
           ...toolCall.args,
         };
       } else {
+        // TODO: revisit once TaskComplete is turned back on
         return {
           type: "taskComplete",
-          ...toolCall.args,
+          reasoning: "Task complete based on current results",
+          summary: "Log search task complete",
         };
       }
     } catch (error) {
@@ -193,6 +201,7 @@ class LogSearch {
         end: new Date().toISOString(),
         query: "service:orders OR service:payments OR service:tickets OR service:expiration",
         limit: 500,
+        pageCursor: null,
         reasoning:
           "Failed to generate query with LLM. Using fallback query to get a broad view of microservices.",
       };
@@ -221,11 +230,11 @@ export class LogSearchAgent {
     query: string;
     logRequest: string;
     logLabelsMap: string;
-    logResultHistory?: Map<LogSearchInput, LogsWithPagination | string>;
+    logResultHistory?: Map<LogSearchInputCore, LogsWithPagination | string>;
     maxIters?: number;
   }): Promise<LogSearchAgentResponse> {
     // Convert string[] logResultHistory to Map if needed, or create empty map if not provided
-    let logResultHistory: Map<LogSearchInput, LogsWithPagination | string>;
+    let logResultHistory: Map<LogSearchInputCore, LogsWithPagination | string>;
     if (!params.logResultHistory) {
       logResultHistory = new Map();
     } else {
@@ -234,7 +243,7 @@ export class LogSearchAgent {
 
     // Variable to store the previous query result (initially undefined)
     let previousLogResult:
-      | { query: LogSearchInput; logs: LogsWithPagination | string }
+      | { query: LogSearchInputCore; logs: LogsWithPagination | string }
       | undefined = undefined;
 
     let response: LogSearchResponse | null = null;
@@ -272,32 +281,31 @@ export class LogSearchAgent {
             limit: response.limit,
           });
 
+          const strippedResponse = stripReasoning(response);
+          const currentQueryFormatted = formatLogResults(new Map([[strippedResponse, logContext]]));
+
+          logger.info(`Log search results:\n${currentQueryFormatted}`);
+          logger.info(`Log search reasoning:\n${response.reasoning}`);
+
           // Add previous result to log history if it exists
           if (previousLogResult) {
             logResultHistory.set(previousLogResult.query, previousLogResult.logs);
           }
 
-          // Add current query to history
-          logResultHistory.set(response, logContext);
-
-          // Set current result as previous for next iteration
+          // Set current result as previous for next iteration (without reasoning)
           previousLogResult = {
-            query: response,
+            query: strippedResponse,
             logs: logContext,
           };
-
-          // Log the current query results
-          const currentQueryFormatted = formatLogResults(new Map([[response, logContext]]));
-          logger.info(`Log search results:\n${currentQueryFormatted}`);
-          logger.info(`Log search reasoning:\n${response.reasoning}`);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error(`Error executing log search: ${errorMessage}`);
 
-          // Store error message in log history
+          // Store error message in log history (without reasoning)
           if (response) {
+            const strippedResponse = stripReasoning(response);
             previousLogResult = {
-              query: response,
+              query: strippedResponse,
               logs: errorMessage,
             };
           }
@@ -323,10 +331,10 @@ export class LogSearchAgent {
       }
     }
 
-    const summaryPrompt = createLogSearchSummaryPrompt({
-      query: params.query,
-      logResults: logResultHistory,
-    });
+    // const summaryPrompt = createLogSearchSummaryPrompt({
+    //   query: params.query,
+    //   logResults: logResultHistory,
+    // });
 
     // logger.info("Generating log search summary...");
     // const { text } = await generateText({

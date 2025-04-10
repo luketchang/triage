@@ -1,18 +1,15 @@
-import { getModelWrapper, Model } from "@triage/common";
+import { getModelWrapper, logger, Model } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
 import { generateText } from "ai";
-import {
-  LogPostprocessing as LogPostprocessingResponse,
-  logPostprocessingToolSchema,
-  LogSearchInput,
-} from "../../types";
+import stableStringify from "json-stable-stringify";
+import { logPostprocessingToolSchema, LogSearchInputCore, stripReasoning } from "../../types";
 import { ensureSingleToolCall, formatLogResults } from "../utils";
 
 function createPrompt(params: {
   query: string;
   codebaseOverview: string;
   logLabelsMap: string;
-  logContext: Map<LogSearchInput, LogsWithPagination | string>;
+  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   answer: string;
 }) {
   return `
@@ -29,6 +26,9 @@ function createPrompt(params: {
   - The summary should be a sequence of events presented as a numbered list.
   - Each list element should be a concise description of an event.
 
+  Rules:
+  - You must output a single log postprocessing tool call.
+  
   <query>
   ${params.query}
   </query>
@@ -62,12 +62,17 @@ export class LogPostprocessor {
     query: string;
     codebaseOverview: string;
     logLabelsMap: string;
-    logContext: Map<LogSearchInput, LogsWithPagination | string>;
+    logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     answer: string;
-  }): Promise<LogPostprocessingResponse> {
-    // logger.info(`Log postprocessing for query: ${params.query}`);
-
+  }): Promise<Map<LogSearchInputCore, LogsWithPagination | string>> {
     const prompt = createPrompt(params);
+
+    logger.info(`Log context map has ${params.logContext.size} entries`);
+
+    // Debug: Log all queries in logContext using stable stringify
+    for (const key of params.logContext.keys()) {
+      logger.info(`Log context has key: ${stableStringify(key)}`);
+    }
 
     const { toolCalls } = await generateText({
       model: getModelWrapper(this.llm),
@@ -79,13 +84,40 @@ export class LogPostprocessor {
     });
 
     const toolCall = ensureSingleToolCall(toolCalls);
+    const relevantQueries = toolCall.args.relevantQueries || [];
+    const typedRelevantQueries = relevantQueries.map((query) => ({
+      ...query,
+      type: "logSearchInput",
+    })); // TODO: this is a bit hacky, has to be some better type system way to do it
 
-    const outputObj: LogPostprocessingResponse = {
-      type: "logPostprocessing",
-      relevantQueries: toolCall.args.relevantQueries,
-      summary: toolCall.args.summary,
-    };
+    logger.info(`Found ${relevantQueries.length} relevant queries in postprocessing response`);
 
-    return outputObj;
+    const lookup = new Map(
+      Array.from(params.logContext.entries()).map(([query, result]) => [
+        stableStringify(query),
+        { query, result },
+      ])
+    );
+
+    // Create the final map by looking up each relevant query
+    const relevantResultsMap = new Map<LogSearchInputCore, LogsWithPagination | string>();
+
+    for (const relevantQuery of typedRelevantQueries) {
+      const strippedQuery = stripReasoning(relevantQuery);
+      const stableKey = stableStringify(strippedQuery);
+
+      logger.info(`Looking for query with stable key: ${stableKey}`);
+      const match = lookup.get(stableKey);
+
+      if (match) {
+        logger.info(`Found matching log query: ${stableKey}`);
+        relevantResultsMap.set(match.query, match.result);
+      } else {
+        logger.warn(`No match found for query: ${stableKey}`);
+      }
+    }
+
+    logger.info(`Log postprocessing complete with ${relevantResultsMap.size} relevant log entries`);
+    return relevantResultsMap;
   }
 }
