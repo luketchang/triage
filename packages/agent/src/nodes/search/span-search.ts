@@ -3,33 +3,34 @@ import { ObservabilityPlatform, SpansWithPagination } from "@triage/observabilit
 import { generateText } from "ai";
 import {
   SpanSearchInput,
+  SpanSearchInputCore,
   spanSearchInputToolSchema,
+  stripReasoning,
   TaskComplete,
-  taskCompleteToolSchema,
 } from "../../types";
 import { ensureSingleToolCall, formatSpanResults } from "../utils";
 
 export interface SpanSearchAgentResponse {
-  newSpanContext: Map<SpanSearchInput, SpansWithPagination | string>;
+  newSpanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
   summary: string;
 }
 
 export type SpanSearchResponse = SpanSearchInput | TaskComplete;
 
-const MAX_ITERS = 10;
+const MAX_ITERS = 5;
 
 const SYSTEM_PROMPT = `
-You are an expert AI assistant that helps engineers debug production issues by searching through distributed traces. Your task is to find spans relevant to the issue/event.
+You are an expert AI assistant that helps engineers debug production issues by searching through distributed traces/spans. Your task is to find spans relevant to the issue/event.
 `;
 
 function createSpanSearchPrompt(params: {
   query: string;
   spanRequest: string;
-  spanResultHistory: Map<SpanSearchInput, SpansWithPagination | string>;
+  spanResultHistory: Map<SpanSearchInputCore, SpansWithPagination | string>;
   spanLabelsMap: string;
   platformSpecificInstructions: string;
   previousSpanQueryResult?: {
-    input: SpanSearchInput;
+    input: SpanSearchInputCore;
     spans: SpansWithPagination | string;
   };
   remainingQueries: number;
@@ -43,25 +44,33 @@ function createSpanSearchPrompt(params: {
       )
     : "";
 
+  // TODO: consider removing this
   return `
-You are an expert AI assistant that assists engineers debugging production issues. You specifically help by finding spans relevant to the user's query and a description of what types of spans are needed.
+Given all available span labels and a user query about the issue/event, your task is to fetch spans (distributed traces) for the following objective: ${params.spanRequest}. You will do so by outputting \`SpanSearchInput\` outputs to read spans from the observability API.
 
-Given a request for the type of spans needed for the investigation, your task is to fetch spans relevant to the request. You will do so by outputting your intermediate reasoning for explaining what action you will take and then outputting a \`SpanSearchInput\` to read spans from observability API.
+## Tips
+- DO NOT query spans from non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, cluster-agent, desktop-vpnkit-controller, metrics-server, etcd, redis, etc (think anything collector or infrastructure related).
+- In early exploration, tag multiple services in your queries instead of doing multiple searches each with one service tagged.
+- As you make queries, pay attention to the results in <previous_span_query_result> to see the results of your last query and <span_results_history> to see all previous queries. You should make decisions on future queries based on previous results.
+- Look for important identifiers such as user or object IDs in spans to use in future queries.
+- If you find spans indicative of an issue/event, try to find preceding spans that explain how/why it occurred.
+- For at least one query, zoom out and remove most filters to get a broader view of the system (but don't overdo it - if there are too many spans it will time out).
+- Your goal is to eventually find spans across related services with important surrounding context and events.
+- All span results fetched at the end of your span search iterations will be merged together to form a complete picture of the issue/event.
+- The span format includes:
+  - The name field is usually "service_name/span_name" or just "span_name"
+  - Span Name: the operation name (e.g., "process_booking", "create_payment")
+  - Service name: the name of the service that generated the span
+  - Parent span ID: if present, indicates this is a child span
+  - Trace ID: used to identify related spans in a trace
+  - Duration: how long the operation took
+  - Status: success/error/other outcome
+  - Attributes: key-value pairs with span metadata like HTTP codes, payload sizes, etc.
 
-Guidelines:
-- Spans are distributed traces that show the flow of requests through microservices
-- Every span query must include at least one service name or other identifier
-- The timezone for start and end dates should be Universal Coordinated Time (UTC)
-- If span search is not returning results (as may show in previous results), adjust/widen query as needed
-- Be generous on the time ranges and give +/- 15 minutes to ensure you capture the issue
-- If there is source code in your previously gathered context, use it to inform your span search
-- DO NOT output \`TaskComplete\` until you have a broad view of spans captured at least once
-- Use the labels provided to inform your span search using the query language required by the platform
-- Refer to the <platform_specific_instructions> for more information on how to formulate your query
-
-Rules:
-- Output just 1 single \`SpanSearchInput\` at a time. DO NOT output multiple \`SpanSearchInput\`s.
-- Look at the span result history to see what spans you have already fetched and what queries you've tried, DO NOT repeat past queries.
+## Rules
+- Output one \`SpanSearchInput\` at a time. DO NOT output multiple \`SpanSearchInput\` tool calls.
+- Look at the context previously gathered to see what spans you already have, DO NOT repeat past queries.
+- DO NOT query the same services multiple times with slightly different configurations - this wastes iterations.
 
 <remaining_queries>
 ${params.remainingQueries}
@@ -75,17 +84,13 @@ ${currentTime}
 ${params.query}
 </query>
 
-<labels>
+<span_labels>
 ${params.spanLabelsMap}
-</labels>
+</span_labels>
 
 <platform_specific_instructions>
 ${params.platformSpecificInstructions}
 </platform_specific_instructions>
-
-<span_request>
-${params.spanRequest}
-</span_request>
 
 <previous_span_query_result>
 ${formattedPreviousResult}
@@ -99,13 +104,27 @@ ${formatSpanResults(params.spanResultHistory)}
 
 function createSpanSearchSummaryPrompt(params: {
   query: string;
-  spanResults: Map<SpanSearchInput, SpansWithPagination | string>;
+  spanResults: Map<SpanSearchInputCore, SpansWithPagination | string>;
 }): string {
   const currentTime = new Date().toISOString();
 
   return `
-Given a set span queries and the fetched span results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event. Your response just be a short sequence of events you've observed through the spans that are relevant to the user query. The response should not be speculative about any root causes or further issues—it should objectively summarize what the spans show.
+Given a set of span queries and the fetched span results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event.
 
+Focus on:
+1. Identifying the call flow across services
+2. Request paths and data flow patterns
+3. Error patterns and failure modes
+4. Performance bottlenecks (high latency)
+5. Key transaction IDs or correlation IDs
+
+Provide a detailed analysis that:
+- Traces the full execution flow through the system
+- Identifies where errors or latency issues occurred
+- Connects related events across different services
+- Shows the complete lifecycle of important transactions
+
+Your response should be a chronological sequence of significant events observed through the spans that are relevant to the user query, including service interactions, timing, and error conditions.
 
 <current_time>
 ${currentTime}
@@ -133,10 +152,10 @@ class SpanSearch {
   async invoke(params: {
     query: string;
     spanRequest: string;
-    spanResultHistory: Map<SpanSearchInput, SpansWithPagination | string>;
+    spanResultHistory: Map<SpanSearchInputCore, SpansWithPagination | string>;
     spanLabelsMap: string;
     previousSpanQueryResult?: {
-      input: SpanSearchInput;
+      input: SpanSearchInputCore;
       spans: SpansWithPagination | string;
     };
     remainingQueries: number;
@@ -153,7 +172,7 @@ class SpanSearch {
         prompt: prompt,
         tools: {
           spanSearchInput: spanSearchInputToolSchema,
-          taskComplete: taskCompleteToolSchema,
+          // taskComplete: taskCompleteToolSchema,
         },
         toolChoice: "required",
       });
@@ -162,13 +181,15 @@ class SpanSearch {
 
       if (toolCall.toolName === "spanSearchInput") {
         return {
-          type: "spanSearchInput",
           ...toolCall.args,
+          type: "spanSearchInput",
         };
       } else {
+        // TODO: revisit once TaskComplete is turned back on
         return {
           type: "taskComplete",
-          ...toolCall.args,
+          reasoning: "Task complete based on current results",
+          summary: "Span search task complete",
         };
       }
     } catch (error) {
@@ -180,6 +201,7 @@ class SpanSearch {
         end: new Date().toISOString(),
         query: "status:error",
         pageLimit: 100,
+        pageCursor: null,
         reasoning: "Failed to generate query with LLM. Using fallback query.",
       };
     }
@@ -207,11 +229,11 @@ export class SpanSearchAgent {
     query: string;
     spanRequest: string;
     spanLabelsMap: string;
-    spanResultHistory?: Map<SpanSearchInput, SpansWithPagination | string>;
+    spanResultHistory?: Map<SpanSearchInputCore, SpansWithPagination | string>;
     maxIters?: number;
   }): Promise<SpanSearchAgentResponse> {
     // Convert spanResultHistory to Map if provided or create empty map
-    let spanResultHistory: Map<SpanSearchInput, SpansWithPagination | string>;
+    let spanResultHistory: Map<SpanSearchInputCore, SpansWithPagination | string>;
     if (!params.spanResultHistory) {
       spanResultHistory = new Map();
     } else {
@@ -220,7 +242,7 @@ export class SpanSearchAgent {
 
     // Variable to store the previous query result (initially undefined)
     let previousSpanResult:
-      | { input: SpanSearchInput; spans: SpansWithPagination | string }
+      | { input: SpanSearchInputCore; spans: SpansWithPagination | string }
       | undefined = undefined;
 
     let response: SpanSearchResponse | null = null;
@@ -258,8 +280,10 @@ export class SpanSearchAgent {
             limit: response.pageLimit,
           });
 
-          // Create a simplified version for logging (not the full formatSingleSpan output)
-          const formattedSpans = formatSpanResults(new Map([[response, spansWithPagination]]));
+          const strippedResponse = stripReasoning(response);
+          const formattedSpans = formatSpanResults(
+            new Map([[strippedResponse, spansWithPagination]])
+          );
 
           logger.info(`Span search results:\n${formattedSpans}`);
           logger.info(`Span search reasoning:\n${response.reasoning}`);
@@ -269,19 +293,20 @@ export class SpanSearchAgent {
             spanResultHistory.set(previousSpanResult.input, previousSpanResult.spans);
           }
 
-          // Set current result as previous for next iteration
+          // Set current result as previous for next iteration (without reasoning)
           previousSpanResult = {
-            input: response,
+            input: strippedResponse,
             spans: spansWithPagination,
           };
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error(`Error executing span search: ${errorMessage}`);
 
-          // Store error message in span history
+          // Store error message in span history (without reasoning)
           if (response) {
+            const strippedResponse = stripReasoning(response);
             previousSpanResult = {
-              input: response,
+              input: strippedResponse,
               spans: errorMessage,
             };
           }

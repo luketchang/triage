@@ -1,13 +1,12 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
-import { ToolCallUnion, ToolSet } from "ai";
 import { LogSearchInput, SpanSearchInput } from "../types";
 
-export function ensureSingleToolCall<TOOLS extends ToolSet>(
-  toolCalls: Array<ToolCallUnion<TOOLS>>
-): ToolCallUnion<TOOLS> {
+export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {
     throw new Error(
-      `Expected exactly one tool call, got ${toolCalls?.length}. Calls: ${toolCalls?.map((call) => call.toolName).join(", ")}`
+      `Expected exactly one tool call, got ${toolCalls?.length}. Calls: ${
+        toolCalls?.map((call: any) => call.toolName).join(", ") || ""
+      }`
     );
   }
 
@@ -26,11 +25,15 @@ export function formatChatHistory(chatHistory: string[]): string {
 }
 
 export function formatLogQuery(logQuery: Partial<LogSearchInput>): string {
-  return `Query: ${logQuery.query}\nStart: ${logQuery.start}\nEnd: ${logQuery.end}\nLimit: ${logQuery.limit}`;
+  return `Query: ${logQuery.query}\nStart: ${logQuery.start}\nEnd: ${logQuery.end}\nLimit: ${logQuery.limit}${
+    logQuery.pageCursor ? `\nPage Cursor: ${logQuery.pageCursor}` : ""
+  }`;
 }
 
 export function formatSpanQuery(spanQuery: Partial<SpanSearchInput>): string {
-  return `Query: ${spanQuery.query}\nStart: ${spanQuery.start}\nEnd: ${spanQuery.end}\nLimit: ${spanQuery.pageLimit}`;
+  return `Query: ${spanQuery.query}\nStart: ${spanQuery.start}\nEnd: ${spanQuery.end}\nPage Limit: ${spanQuery.pageLimit}${
+    spanQuery.pageCursor ? `\nPage Cursor: ${spanQuery.pageCursor}` : ""
+  }`;
 }
 
 export function formatSingleLog(log: Log): string {
@@ -60,7 +63,7 @@ export function formatSingleSpan(span: Span, index?: number): string {
 }
 
 export function formatLogResults(
-  logResults: Map<LogSearchInput, LogsWithPagination | string>
+  logResults: Map<Partial<LogSearchInput>, LogsWithPagination | string>
 ): string {
   return Array.from(logResults.entries())
     .map(([input, logsOrError]) => {
@@ -86,7 +89,7 @@ export function formatLogResults(
 }
 
 export function formatSpanResults(
-  spanResults: Map<SpanSearchInput, SpansWithPagination | string>
+  spanResults: Map<Partial<SpanSearchInput>, SpansWithPagination | string>
 ): string {
   return Array.from(spanResults.entries())
     .map(([input, spansOrError]) => {

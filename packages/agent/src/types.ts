@@ -134,18 +134,36 @@ export const logSearchInputSchema = z.object({
   limit: z.number().describe("Maximum number of logs to return, default to 500"),
   pageCursor: z
     .string()
-    .optional()
+    .nullable()
     .describe(
-      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms."
+      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
     ),
   reasoning: z
     .string()
     .describe(
-      "Objectively outline what you observe in the spans as sequence of events formatted as a numbered list. For example: 1. user clicked X.\n 2. recommendations service provided Y.\n 3. User saw Z. Only after the first step, then enumerate what other services or areas of the spans you may want to explore next if you are missing context."
+      "Objectively outline what you observe in the logs as sequence of events formatted as a numbered list. For example: 1. user clicked X.\n 2. recommendations service provided Y.\n 3. User saw Z. Only after the first step, then enumerate what other services or areas of the logs you may want to explore next if you are missing context."
     ),
 });
 
+// Full LogSearchInput type with reasoning - used when interfacing with LLMs
 export type LogSearchInput = zInfer<typeof logSearchInputSchema> & { type: "logSearchInput" };
+
+// LogSearchInputCore type without reasoning - used for storage in context maps
+export type LogSearchInputCore = Omit<LogSearchInput, "reasoning">;
+
+// Generic function to strip reasoning from input objects for storage
+export function stripReasoning<T extends { reasoning: string; type?: string }>(
+  input: T
+): Omit<T, "reasoning"> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { reasoning, ...core } = input;
+  return core;
+}
+
+export function normalizeForKey<T extends { type: string }>(input: T): Omit<T, "type"> {
+  const { type, ...core } = input;
+  return core;
+}
 
 export const logSearchInputToolSchema = {
   description: "Input parameters for searching logs.",
@@ -167,9 +185,9 @@ export const spanSearchInputSchema = z.object({
   pageLimit: z.number().describe("Maximum number of spans to return, default to 500"),
   pageCursor: z
     .string()
-    .optional()
+    .nullable()
     .describe(
-      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms."
+      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
     ),
   reasoning: z
     .string()
@@ -179,6 +197,9 @@ export const spanSearchInputSchema = z.object({
 });
 
 export type SpanSearchInput = zInfer<typeof spanSearchInputSchema> & { type: "spanSearchInput" };
+
+// SpanSearchInputCore type without reasoning - used for storage in context maps
+export type SpanSearchInputCore = Omit<SpanSearchInput, "reasoning">;
 
 export const spanSearchInputToolSchema = {
   description: "Input parameters for searching spans.",

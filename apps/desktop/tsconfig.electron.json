@@ -1,15 +1,25 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Node",
     "outDir": "dist-electron",
     "noEmit": false,
+    "declaration": false,
     "allowImportingTsExtensions": false,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "baseUrl": ".",
+    "resolveJsonModule": true,
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "lib": ["ESNext"],
+    "skipLibCheck": true
   },
-  "include": ["electron/**/*.ts"]
+  "include": ["electron/**/*.ts"],
+  "exclude": ["src/renderer/**/*", "node_modules", "dist", "dist-electron"]
 }

@@ -3,7 +3,7 @@ import { LogsWithPagination } from "@triage/observability";
 import { generateText } from "ai";
 import {
   logRequestToolSchema,
-  LogSearchInput,
+  LogSearchInputCore,
   RequestToolCalls,
   RootCauseAnalysis,
   spanRequestToolSchema,
@@ -20,7 +20,7 @@ function createPrompt(params: {
   spanLabelsMap: string;
   chatHistory: string[];
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, LogsWithPagination | string>;
+  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   rootCauseAnalysis: string;
 }) {
   return `
@@ -111,7 +111,7 @@ export class Reviewer {
     spanLabelsMap: string;
     chatHistory: string[];
     codeContext: Map<string, string>;
-    logContext: Map<LogSearchInput, LogsWithPagination | string>;
+    logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     rootCauseAnalysis: string;
   }): Promise<ReviewerResponse> {
     logger.info(`Reviewing root cause analysis for query: ${params.query}`);

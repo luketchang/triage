@@ -3,10 +3,10 @@ import { LogsWithPagination, SpansWithPagination } from "@triage/observability";
 import { generateText } from "ai";
 import {
   logRequestToolSchema,
-  LogSearchInput,
+  LogSearchInputCore,
   RequestToolCalls,
   RootCauseAnalysis,
-  SpanSearchInput,
+  SpanSearchInputCore,
 } from "../types";
 import { formatLogResults, formatSpanResults } from "./utils";
 
@@ -18,8 +18,8 @@ function createPrompt(params: {
   codebaseOverview: string;
   fileTree: string;
   codeContext: Map<string, string>;
-  logContext: Map<LogSearchInput, LogsWithPagination | string>;
-  spanContext: Map<SpanSearchInput, SpansWithPagination | string>;
+  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
+  spanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
   logLabelsMap: string;
   spanLabelsMap: string;
   chatHistory: string[]; // TODO: add back in if needed
@@ -55,19 +55,17 @@ ${params.logLabelsMap}
 ${params.spanLabelsMap}
 </span_labels>
 
-<previous_log_context>
-${formatLogResults(params.logContext)}
-</previous_log_context>
-
-<previous_span_context>
-${formatSpanResults(params.spanContext)}
-</previous_span_context>
-
-<codebase_context>
+<code_context>
 ${formatCodeMap(params.codeContext)}
-</codebase_context>
+</code_context>
 
-If you feel like you received sufficient context or that some of the code, logs, or spans you retrieved are not relevant to the issue, you should attempt to choose a root cause analysis.
+<log_context>
+${formatLogResults(params.logContext)}
+</log_context>
+
+<span_context>
+${formatSpanResults(params.spanContext)}
+</span_context>
 `;
 }
 
@@ -84,8 +82,8 @@ export class Reasoner {
     codebaseOverview: string;
     fileTree: string;
     codeContext: Map<string, string>;
-    logContext: Map<LogSearchInput, LogsWithPagination | string>;
-    spanContext: Map<SpanSearchInput, SpansWithPagination | string>;
+    logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
+    spanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
     logLabelsMap: string;
     spanLabelsMap: string;
     chatHistory: string[];

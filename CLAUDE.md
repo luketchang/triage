@@ -17,3 +17,4 @@
 - **Components**: Use functional components with proper prop typing
 - **Logging**: For print statements to test code, use console.info. For actual logging, use logger.info, logger.warn, logger.error (`import logger from 'utils/logger.ts'`)
 - **Scripts**: Parse any command line arguments with commander
+- **Making Code Changes**: Do not perform "drive-by" changes of things you notice that are unrelated to the task/question you were asked.
