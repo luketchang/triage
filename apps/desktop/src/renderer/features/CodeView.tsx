@@ -56,7 +56,8 @@ const CodeView: React.FC<CodeViewProps> = ({ selectedArtifact }) => {
           // If it's a plain object, convert to Map
           const newCodeMap = new Map();
           Object.entries(selectedArtifact.data).forEach(([key, value]) => {
-            newCodeMap.set(key, value as string);
+            // Cast value to unknown first, then to string, or stringify if it's an object
+            newCodeMap.set(key, typeof value === "string" ? value : JSON.stringify(value));
           });
 
           setCodeFiles(newCodeMap);

@@ -22,6 +22,7 @@ import { Reasoner } from "./nodes/reasoner";
 import { Reviewer } from "./nodes/reviewer";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { SpanSearchAgent } from "./nodes/search/span-search";
+import { formatFacetValues } from "./nodes/utils";
 import {
   CodePostprocessingRequest,
   LogPostprocessingRequest,
@@ -70,8 +71,8 @@ export interface OncallAgentState {
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
-  logLabelsMap: string;
-  spanLabelsMap: string;
+  logLabelsMap: Map<string, string[]>;
+  spanLabelsMap: Map<string, string[]>;
   chatHistory: string[];
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
@@ -400,7 +401,14 @@ export async function invokeAgent({
     startDate.toISOString(),
     endDate.toISOString()
   );
-  logger.info(logLabelsMap);
+  logger.info(formatFacetValues(logLabelsMap));
+
+  // TODO: add back in once spans ready
+  // const spanLabelsMap = await observabilityPlatform.getSpansFacetValues(
+  //   startDate.toISOString(),
+  //   endDate.toISOString()
+  // );
+  // logger.info(formatFacetValues(spanLabelsMap));
 
   const codeContext = collectSourceCode(repoPath);
 
@@ -438,7 +446,7 @@ export async function invokeAgent({
     codebaseOverview: overview,
     fileTree,
     logLabelsMap,
-    spanLabelsMap: "",
+    spanLabelsMap: new Map<string, string[]>(),
     chatHistory: [],
     codeContext,
     logContext: new Map(),
@@ -486,10 +494,6 @@ const parseArgs = () => {
 
 async function main() {
   const { integration, features: observabilityFeatures } = parseArgs();
-  const integrationType =
-    integration === "datadog" ? IntegrationType.DATADOG : IntegrationType.GRAFANA;
-
-  const observabilityPlatform = getObservabilityPlatform(integrationType);
 
   // Get formatted labels map for time range
   const startDate = new Date("2025-04-01T21:00:00Z");

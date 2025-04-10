@@ -8,11 +8,45 @@ import {
   RootCauseAnalysis,
   SpanSearchInputCore,
 } from "../types";
-import { formatLogResults, formatSpanResults } from "./utils";
+import { formatFacetValues, formatLogResults, formatSpanResults } from "./utils";
 
 type ReasoningResponse = RootCauseAnalysis | RequestToolCalls;
 
-function createPrompt(params: {
+export interface ReasoningParams {
+  query: string;
+  codebaseOverview: string;
+  fileTree: string;
+  logLabelsMap: Map<string, string[]>;
+  spanLabelsMap: Map<string, string[]>;
+  chatHistory: string[];
+  codeContext: Map<string, string>;
+  logContext: Map<string, string>;
+  spanContext: Map<string, string>;
+}
+
+export interface ReasoningOutput {
+  chatResponse: string;
+  rootCauseAnalysis: string;
+  logLabelsMap: Map<string, string[]>;
+  spanLabelsMap: Map<string, string[]>;
+  chatHistory: string[];
+  codeContext: Map<string, string>;
+  logContext: Map<string, string | LogsWithPagination>;
+  spanContext: Map<string, string | SpansWithPagination>;
+}
+
+export const createPrompt = ({
+  query,
+  repoPath,
+  codebaseOverview,
+  fileTree,
+  codeContext,
+  logContext,
+  spanContext,
+  logLabelsMap,
+  spanLabelsMap,
+  chatHistory,
+}: {
   query: string;
   repoPath: string;
   codebaseOverview: string;
@@ -20,11 +54,14 @@ function createPrompt(params: {
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   spanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
-  logLabelsMap: string;
-  spanLabelsMap: string;
-  chatHistory: string[]; // TODO: add back in if needed
-}) {
-  return `
+  logLabelsMap: Map<string, string[]>;
+  spanLabelsMap: Map<string, string[]>;
+  chatHistory: string[];
+}) => {
+  const formattedLogLabels = formatFacetValues(logLabelsMap);
+  const formattedSpanLabels = formatFacetValues(spanLabelsMap);
+
+  const prompt = `
 Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, log labels, span labels, and previously gathered log and code context, your task is to come up with a hypothesis about the root cause of the issue/event and propose an concrete and unambiguous code fix if possible. Your response should clearly explain the answer and propose a fix if needed.
 
 
@@ -40,34 +77,36 @@ Tips:
   - Should take into account overall best practices for using various libraries, tooling, etc and not miss the forest for the trees. Zoom out and make sure you're fix is not just a hotfix for a narrow issue but fully address the broader problem.
 
 <query>
-${params.query}
+${query}
 </query>
 
 <codebase_overview>
-${params.codebaseOverview}
+${codebaseOverview}
 </codebase_overview>
 
 <log_labels>
-${params.logLabelsMap}
+${formattedLogLabels}
 </log_labels>
 
 <span_labels>
-${params.spanLabelsMap}
+${formattedSpanLabels}
 </span_labels>
 
 <code_context>
-${formatCodeMap(params.codeContext)}
+${formatCodeMap(codeContext)}
 </code_context>
 
 <log_context>
-${formatLogResults(params.logContext)}
+${formatLogResults(logContext)}
 </log_context>
 
 <span_context>
-${formatSpanResults(params.spanContext)}
+${formatSpanResults(spanContext)}
 </span_context>
 `;
-}
+
+  return prompt;
+};
 
 export class Reasoner {
   private llm: Model;
@@ -84,8 +123,8 @@ export class Reasoner {
     codeContext: Map<string, string>;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     spanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
-    logLabelsMap: string;
-    spanLabelsMap: string;
+    logLabelsMap: Map<string, string[]>;
+    spanLabelsMap: Map<string, string[]>;
     chatHistory: string[];
   }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${params.query}`);

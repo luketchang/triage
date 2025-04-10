@@ -8,7 +8,7 @@ import {
   stripReasoning,
   TaskComplete,
 } from "../../types";
-import { ensureSingleToolCall, formatSpanResults } from "../utils";
+import { ensureSingleToolCall, formatFacetValues, formatSpanResults } from "../utils";
 
 export interface SpanSearchAgentResponse {
   newSpanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
@@ -27,7 +27,7 @@ function createSpanSearchPrompt(params: {
   query: string;
   spanRequest: string;
   spanResultHistory: Map<SpanSearchInputCore, SpansWithPagination | string>;
-  spanLabelsMap: string;
+  spanLabelsMap: Map<string, string[]>;
   platformSpecificInstructions: string;
   previousSpanQueryResult?: {
     input: SpanSearchInputCore;
@@ -85,7 +85,7 @@ ${params.query}
 </query>
 
 <span_labels>
-${params.spanLabelsMap}
+${formatFacetValues(params.spanLabelsMap)}
 </span_labels>
 
 <platform_specific_instructions>
@@ -153,7 +153,7 @@ class SpanSearch {
     query: string;
     spanRequest: string;
     spanResultHistory: Map<SpanSearchInputCore, SpansWithPagination | string>;
-    spanLabelsMap: string;
+    spanLabelsMap: Map<string, string[]>;
     previousSpanQueryResult?: {
       input: SpanSearchInputCore;
       spans: SpansWithPagination | string;
@@ -228,7 +228,7 @@ export class SpanSearchAgent {
   async invoke(params: {
     query: string;
     spanRequest: string;
-    spanLabelsMap: string;
+    spanLabelsMap: Map<string, string[]>;
     spanResultHistory?: Map<SpanSearchInputCore, SpansWithPagination | string>;
     maxIters?: number;
   }): Promise<SpanSearchAgentResponse> {

@@ -1,5 +1,5 @@
 import { client, v2 } from "@datadog/datadog-api-client";
-import { logger, renderFacetValues } from "@triage/common";
+import { logger } from "@triage/common";
 import { config } from "@triage/config";
 import { ObservabilityPlatform } from "./observability.interface";
 import { IntegrationType, Log, LogsWithPagination, Span, SpansWithPagination } from "./types";
@@ -51,19 +51,8 @@ Use Datadog Log Search Syntax to search for logs.
 - If you need to fetch the additional results from the same query, include the page cursor from the previous response in your next request.
 `;
 
-enum DatadogDefaultFacetsSpans {
-  SERVICE = "service",
-  RESOURCE = "resource",
-  OPERATION_NAME = "operation_name",
-  // HOST = "host",
-  STATUS = "status",
-  // ENV = "env",
-}
-enum DatadogDefaultFacetsLogs {
-  SERVICE = "service",
-}
-const DATADOG_DEFAULT_FACET_LIST_SPANS = Object.values(DatadogDefaultFacetsSpans);
-const DATADOG_DEFAULT_FACET_LIST_LOGS = Object.values(DatadogDefaultFacetsLogs);
+const DATADOG_DEFAULT_FACET_LIST_LOGS = ["service", "status"];
+const DATADOG_DEFAULT_FACET_LIST_SPANS = ["service", "resource", "operation_name", "status"];
 
 export class DatadogPlatform implements ObservabilityPlatform {
   integrationType: IntegrationType = IntegrationType.DATADOG;
@@ -107,17 +96,12 @@ export class DatadogPlatform implements ObservabilityPlatform {
     return DATADOG_LOG_SEARCH_INSTRUCTIONS;
   }
 
-  async getSpansFacetValues(from: string, end: string): Promise<string> {
-    const facetMap = await this.getFacetToFacetValueMapSpans(from, end);
-    return renderFacetValues(facetMap);
-  }
-
-  async getFacetToFacetValueMapSpans(
+  async getSpansFacetValues(
     start: string,
     end: string,
-    facetList: DatadogDefaultFacetsSpans[] = DATADOG_DEFAULT_FACET_LIST_SPANS
-  ): Promise<Map<DatadogDefaultFacetsSpans, string[]>> {
-    const spansMap = new Map<DatadogDefaultFacetsSpans, string[]>();
+    facetList: string[] = DATADOG_DEFAULT_FACET_LIST_SPANS
+  ): Promise<Map<string, string[]>> {
+    const spansMap = new Map<string, string[]>();
     for (const facet of facetList) {
       logger.info(`Fetching facet values for ${facet}`);
       const spanValues = await this.fetchFacetValuesSpans(start, end, facet);
@@ -162,17 +146,12 @@ export class DatadogPlatform implements ObservabilityPlatform {
     return Array.from(uniqueValues);
   }
 
-  async getLogsFacetValues(from: string, end: string): Promise<string> {
-    const facetMap = await this.getFacetToFacetValueMapLogs(from, end);
-    return renderFacetValues(facetMap);
-  }
-
-  async getFacetToFacetValueMapLogs(
+  async getLogsFacetValues(
     start: string,
     end: string,
-    facetList: DatadogDefaultFacetsLogs[] = DATADOG_DEFAULT_FACET_LIST_LOGS
-  ): Promise<Map<DatadogDefaultFacetsLogs, string[]>> {
-    const logsMap = new Map<DatadogDefaultFacetsLogs, string[]>();
+    facetList: string[] = DATADOG_DEFAULT_FACET_LIST_LOGS
+  ): Promise<Map<string, string[]>> {
+    const logsMap = new Map<string, string[]>();
     for (const facet of facetList) {
       const logValues = await this.fetchFacetValuesLogs(start, end, facet);
       logsMap.set(facet, logValues);
