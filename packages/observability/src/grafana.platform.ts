@@ -1,4 +1,4 @@
-import { logger, renderFacetValues, toUnixNano } from "@triage/common";
+import { logger, toUnixNano } from "@triage/common";
 import { config } from "@triage/config";
 import axios from "axios";
 import { ObservabilityPlatform } from "./observability.interface";
@@ -82,16 +82,11 @@ export class GrafanaPlatform implements ObservabilityPlatform {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getSpansFacetValues(start: string, end: string): Promise<string> {
+  async getSpansFacetValues(start: string, end: string): Promise<Map<string, string[]>> {
     throw new Error("getFacetToFacetValuesMapSpans is not implemented for Grafana platform");
   }
 
-  async getLogsFacetValues(start: string, end: string): Promise<string> {
-    const facetMap = await this.getLabelToLabelValuesMapLogs(start, end);
-    return renderFacetValues(facetMap);
-  }
-
-  private async getLabelToLabelValuesMapLogs(
+  async getLogsFacetValues(
     start: string,
     end: string,
     facetList: string[] = GRAFANA_DEFAULT_FACET_LIST

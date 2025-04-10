@@ -282,54 +282,142 @@ body {
 }
 
 .chat-message .message-content {
+  padding: 8px 12px;
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.thinking-message {
+  font-size: 14px;
+  color: #aaa;
+  font-style: italic;
+  padding: 4px 0;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
 }
 
 .artifacts-container {
+  margin-top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 12px;
+}
+
+.artifacts-container h4 {
+  font-size: 13px;
+  margin: 0 0 8px 0;
+  color: #aaa;
+  font-weight: 500;
+  border-bottom: 1px solid #333;
+  padding-bottom: 6px;
 }
 
 .artifact-card {
-  background-color: #2a2a2a;
-  padding: 12px;
-  border-radius: 6px;
+  background-color: #252525;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid #333;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .artifact-card:hover {
-  background-color: #333;
-  border-color: #444;
+  background-color: #2a2a2a;
+  border-color: #7c47ff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
 }
 
 .artifact-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 8px;
 }
 
 .artifact-type {
-  font-size: 12px;
-  color: #777;
+  background-color: #7c47ff33;
+  color: #7c47ff;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .artifact-title {
   font-weight: 600;
   font-size: 14px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  color: #fff;
 }
 
 .artifact-description {
   font-size: 12px;
   color: #aaa;
-  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artifact-card::after {
+  content: "→";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: #7c47ff;
+}
+
+.artifact-card:hover::after {
+  opacity: 1;
+}
+
+/* Special styling for specific artifact types */
+.artifact-card .artifact-type.log {
+  background-color: #3498db33;
+  color: #3498db;
+}
+
+.artifact-card .artifact-type.code {
+  background-color: #f39c1233;
+  color: #f39c12;
+}
+
+.artifact-card .artifact-type.image {
+  background-color: #2ecc7133;
+  color: #2ecc71;
+}
+
+.artifact-card .artifact-type.dashboard {
+  background-color: #9b59b633;
+  color: #9b59b6;
 }
 
 .chat-input-container {
@@ -424,12 +512,36 @@ body {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
+  width: 100%;
+}
+
+.time-range-control {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 .time-range-presets {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.date-pickers-container {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.date-pickers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #252525;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 6px 12px;
 }
 
 .time-preset-button {
@@ -454,16 +566,6 @@ body {
   color: #fff;
 }
 
-.time-range-picker {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: #252525;
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 6px 12px;
-}
-
 .date-input {
   background: transparent;
   border: none;
@@ -472,6 +574,12 @@ body {
   padding: 4px;
   outline: none;
   cursor: pointer;
+}
+
+.date-display {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
 }
 
 .date-separator {
@@ -665,32 +773,7 @@ body {
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
-  background-color: #333;
-  color: #ccc;
-}
-
-.service-tag.orders {
-  background-color: #2c3e50;
-  color: #ecf0f1;
-}
-
-.service-tag.payments {
-  background-color: #27ae60;
-  color: #ecf0f1;
-}
-
-.service-tag.auth {
-  background-color: #3498db;
-  color: #ecf0f1;
-}
-
-.service-tag.api-gateway {
-  background-color: #8e44ad;
-  color: #ecf0f1;
-}
-
-.service-tag.user-service {
-  background-color: #d35400;
+  background-color: #444;
   color: #ecf0f1;
 }
 

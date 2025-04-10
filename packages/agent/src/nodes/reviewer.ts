@@ -8,79 +8,50 @@ import {
   RootCauseAnalysis,
   spanRequestToolSchema,
 } from "../types";
-import { formatChatHistory, formatLogResults } from "./utils";
+import { formatFacetValues, formatLogResults } from "./utils";
 
 export type ReviewerResponse = RequestToolCalls | RootCauseAnalysis;
+
+export interface ReviewerParams {
+  query: string;
+  codebaseOverview: string;
+  fileTree: string;
+  logLabelsMap: Map<string, string[]>;
+  spanLabelsMap: Map<string, string[]>;
+  chatHistory: string[];
+  codeContext: Map<string, string>;
+  logContext: Map<string, string>;
+}
 
 function createPrompt(params: {
   query: string;
   repoPath: string;
   codebaseOverview: string;
-  logLabelsMap: string;
-  spanLabelsMap: string;
+  logLabelsMap: Map<string, string[]>;
+  spanLabelsMap: Map<string, string[]>;
   chatHistory: string[];
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   rootCauseAnalysis: string;
-}) {
+}): string {
+  // Format facet maps
+  const formattedLogLabels = formatFacetValues(params.logLabelsMap);
+  const formattedSpanLabels = formatFacetValues(params.spanLabelsMap);
+
   return `
-You are an expert AI assistant that assists engineers debugging production issues. You specifically review root cause analyses produced by another engineer and reason about its validity and whether or the engineer is missing key context from the codebase, logs or spans. You are not able to make any modifications to the system—you can only reason about the system by looking at the context and walking through sequences of events.
-
-Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, the files you've previously read, potential log labels, previously gathered log and code context, and a proposed root cause analysis, your task is to question the validity of the analysis.
-
-Go through the checklist below to determine if the analysis is too imprecise or if it has not considered enough thorough context. 
-
-Question Checklist:
-- Is the analysis too vague or speculative without providing a real root cause?
-- Does the analysis use speculative words like "might" without providing a real root cause?
-- Has the engineer focused on a narrow aspect of the problem/codebase without considering the full picture?
-- Could the source of the issue/event be in other parts of the logs or code not discussed in the analysis?
-- Are there other services/sources of the issue/event that have not been considered (e.g. we've only considered logs from the failing service, but what about logs from other services?)?
-- Do the logs retrieved fail to actually reveal a sequence of events that leads to the issue/event?
-- Do the logs reveal any additional issues/events or context that might have been overlooked?
-- Does the code match the issues/events revealed in the logs?
-
-If the answer to any of the above questions is "yes", output a \`LogRequest\` or \`SpanRequest\` for additional information. If you believe the root cause analysis is correct and complete, provide no tool calls and instead critique the analysis directly.
-
-Guidelines:
-- Exact Sequence Requirement: Ensure that the root cause analysis includes an explicit, exact sequence of events that directly correlates with the provided context, logs, or code.
-- Consider if the proposed analysis only examines a small part of the system. If you suspect the root cause lies upstream or downstream, specify which other services should be investigated.
-- When reviewing logs, verify that you have a comprehensive view rather than just logs from the error occurrence. The logs should encompass the activities of other services leading up to the issue/event.
-- Recognize that in microservices architectures, the failing service might not be the source of the issue/event; it could be caused by another interacting service. Outline any additional hypotheses regarding missing context.
-- The analysis must not rely on vague root causes like "Synchronization Issues" or "Performance Issues." It must be concrete, actionable, and provide an exact fix. Otherwise, it is a sign that further context is needed.
-- Refer to the content in the <files_read> to verify implementation details of the codebase.
-
-- DO NOT use XML tags
-- A request for more logs should output a \`LogRequest\` for additional logs, and a request for more spans should output a \`SpanRequest\` for additional spans.
-- You may output multiple tool calls if needed.
-
-<current_time>
-${new Date().toUTCString()}
-</current_time>
-
-<codebase_path>
-${params.repoPath}
-</codebase_path>
-
-<codebase_overview>
-${params.codebaseOverview}
-</codebase_overview>
-
-<log_labels>
-${params.logLabelsMap}
-</log_labels>
-
-<span_labels>
-${params.spanLabelsMap}
-</span_labels>
-
-<chat_history>
-${formatChatHistory(params.chatHistory)}
-</chat_history>
+Given the user query about the potential issue/event, and the initial 'root cause analysis', your job is to review the analysis for completeness and accuracy.
 
 <query>
 ${params.query}
 </query>
+
+<log_labels>
+${formattedLogLabels}
+</log_labels>
+
+<span_labels>
+${formattedSpanLabels}
+</span_labels>
 
 <code_context>
 ${formatCodeMap(params.codeContext)}
@@ -93,6 +64,17 @@ ${formatLogResults(params.logContext)}
 <root_cause_analysis>
 ${params.rootCauseAnalysis}
 </root_cause_analysis>
+
+Analyze the root cause analysis for:
+1. Completeness - are there gaps in the explanation? 
+2. Accuracy - does this explanation align with the logs/code context? 
+3. Actionability - is the proposed fix clear and specific enough?
+
+If you believe additional information is needed to provide a complete root cause analysis, use the following tools:
+- logRequest - Get logs, using a query with service names and filters 
+- spanRequest - Get spans/traces, using a query with service names
+
+If you believe the root cause analysis is correct and complete, do not call any tools and just return the original analysis.
 `;
 }
 
@@ -107,8 +89,8 @@ export class Reviewer {
     query: string;
     repoPath: string;
     codebaseOverview: string;
-    logLabelsMap: string;
-    spanLabelsMap: string;
+    logLabelsMap: Map<string, string[]>;
+    spanLabelsMap: Map<string, string[]>;
     chatHistory: string[];
     codeContext: Map<string, string>;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;

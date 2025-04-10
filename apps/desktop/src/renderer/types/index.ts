@@ -1,4 +1,5 @@
 // Types and interfaces for the application
+// TODO: lots of duplication between common/observability packages and this file
 
 // Define the AgentConfig interface
 export interface AgentConfig {
@@ -22,6 +23,14 @@ export interface Log {
   metadata?: Record<string, string>;
 }
 
+// Interface for log search parameters
+export interface LogSearchParams {
+  query: string;
+  start: string;
+  end: string;
+  searchParams: any;
+}
+
 // Type for code artifacts
 export type CodeMap = Map<string, string>;
 
@@ -33,7 +42,7 @@ export interface Artifact {
   type: ArtifactType;
   title: string;
   description: string;
-  data: Log[] | CodeMap | string;
+  data: Log[] | CodeMap | string | LogSearchParams;
 }
 
 // Interface for chat messages
@@ -54,7 +63,7 @@ export interface TimeRange {
 
 export interface TimeRangePreset {
   label: string;
-  value: number;
+  value: number | string;
 }
 
 export type { FacetData, LogQueryParams } from "../electron.d";

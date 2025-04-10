@@ -3,12 +3,12 @@ import { LogsWithPagination } from "@triage/observability";
 import { generateText } from "ai";
 import stableStringify from "json-stable-stringify";
 import { logPostprocessingToolSchema, LogSearchInputCore, stripReasoning } from "../../types";
-import { ensureSingleToolCall, formatLogResults } from "../utils";
+import { ensureSingleToolCall, formatFacetValues, formatLogResults } from "../utils";
 
 function createPrompt(params: {
   query: string;
   codebaseOverview: string;
-  logLabelsMap: string;
+  logLabelsMap: Map<string, string[]>;
   logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   answer: string;
 }) {
@@ -42,7 +42,7 @@ function createPrompt(params: {
   </codebase_overview>
 
   <log_labels>
-  ${params.logLabelsMap}
+  ${formatFacetValues(params.logLabelsMap)}
   </log_labels>
   
   <previous_log_context>
@@ -61,7 +61,7 @@ export class LogPostprocessor {
   async invoke(params: {
     query: string;
     codebaseOverview: string;
-    logLabelsMap: string;
+    logLabelsMap: Map<string, string[]>;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     answer: string;
   }): Promise<Map<LogSearchInputCore, LogsWithPagination | string>> {

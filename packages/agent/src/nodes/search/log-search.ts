@@ -8,7 +8,7 @@ import {
   stripReasoning,
   TaskComplete,
 } from "../../types";
-import { ensureSingleToolCall, formatLogResults } from "../utils";
+import { ensureSingleToolCall, formatFacetValues, formatLogResults } from "../utils";
 
 export interface LogSearchAgentResponse {
   newLogContext: Map<LogSearchInputCore, LogsWithPagination | string>;
@@ -27,7 +27,7 @@ function createLogSearchPrompt(params: {
   query: string;
   logRequest: string;
   logResultHistory: Map<LogSearchInputCore, LogsWithPagination | string>;
-  logLabelsMap: string;
+  logLabelsMap: Map<string, string[]>;
   platformSpecificInstructions: string;
   previousLogQueryResult?: {
     input: LogSearchInputCore;
@@ -84,7 +84,7 @@ ${params.query}
 </query>
 
 <log_labels>
-${params.logLabelsMap}
+${formatFacetValues(params.logLabelsMap)}
 </log_labels>
 
 <platform_specific_instructions>
@@ -153,7 +153,7 @@ class LogSearch {
     query: string;
     logRequest: string;
     logResultHistory: Map<LogSearchInputCore, LogsWithPagination | string>;
-    logLabelsMap: string;
+    logLabelsMap: Map<string, string[]>;
     previousLogQueryResult?: {
       input: LogSearchInputCore;
       logs: LogsWithPagination | string;
@@ -229,7 +229,7 @@ export class LogSearchAgent {
   async invoke(params: {
     query: string;
     logRequest: string;
-    logLabelsMap: string;
+    logLabelsMap: Map<string, string[]>;
     logResultHistory?: Map<LogSearchInputCore, LogsWithPagination | string>;
     maxIters?: number;
   }): Promise<LogSearchAgentResponse> {

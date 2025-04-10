@@ -21,6 +21,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param newConfig The new configuration to set
    */
   updateAgentConfig: (newConfig: unknown) => ipcRenderer.invoke("update-agent-config", newConfig),
+
+  /**
+   * Fetch logs based on query parameters
+   * @param params Query parameters for fetching logs
+   */
+  fetchLogs: (params: unknown) => ipcRenderer.invoke("fetch-logs", params),
+
+  /**
+   * Get log facet values for a given time range
+   * @param start Start date of the time range
+   * @param end End date of the time range
+   */
+  getLogsFacetValues: (start: string, end: string) =>
+    ipcRenderer.invoke("get-logs-facet-values", start, end),
 });
 
 /**

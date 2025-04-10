@@ -23,17 +23,25 @@ export interface ObservabilityPlatform {
    * Get a map of labels to their corresponding values for the given time range
    * @param start - Start time in ISO format
    * @param end - End time in ISO format
-   * @returns JSON string representation of the map
+   * @returns Map of facet names to their possible values
    */
-  getSpansFacetValues(start: string, end: string): Promise<string>;
+  getSpansFacetValues(
+    start: string,
+    end: string,
+    facetList?: string[]
+  ): Promise<Map<string, string[]>>;
 
   /**
    * Get a map of labels to their corresponding values for the given time range
    * @param start - Start time in ISO format
    * @param end - End time in ISO format
-   * @returns JSON string representation of the map
+   * @returns Map of facet names to their possible values
    */
-  getLogsFacetValues(start: string, end: string): Promise<string>;
+  getLogsFacetValues(
+    start: string,
+    end: string,
+    facetList?: string[]
+  ): Promise<Map<string, string[]>>;
 
   /**
    * Fetch spans from the observability platform

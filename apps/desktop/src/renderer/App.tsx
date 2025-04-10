@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import "./electron.d";
 import "./styles.css";
-import { Artifact, ChatMessage, TabType } from "./types";
+
+import { Artifact, ChatMessage, LogSearchParams, TabType } from "./types";
 import { generateId } from "./utils/formatters";
 
 // Components
@@ -15,95 +17,8 @@ import TracesView from "./features/TracesView";
 // Icons
 import { ChatIcon, CodeIcon, DashboardsIcon, LogsIcon, TracesIcon } from "./icons";
 
-// Make TypeScript aware of our electron API
-// No need to import, but TS will pick up the global augmentation
-import "./electron.d";
-import { FacetData, LogQueryParams } from "./electron.d";
-
 // Import mock API for testing
-import mockElectronAPI from "./electronApiMock";
 import api from "./services/api";
-
-// TESTING ONLY: Set to true to use mock API instead of real Electron API
-// Set to false in production or when testing with the real API
-const USE_MOCK_API = true; // Changed to true to load mock data
-
-// Define the AgentConfig interface
-interface AgentConfig {
-  repoPath: string;
-  codebaseOverviewPath: string;
-  observabilityPlatform: string;
-  observabilityFeatures: string[];
-  startDate: Date;
-  endDate: Date;
-}
-
-// Create a wrapper API that will use either the real or mock API
-const apiWrapper = {
-  invokeAgent: async (query: string) => {
-    if (USE_MOCK_API) {
-      console.info("Using mock invokeAgent");
-      return mockElectronAPI.invokeAgent(query);
-    } else {
-      return window.electronAPI.invokeAgent(query);
-    }
-  },
-  getAgentConfig: async () => {
-    if (USE_MOCK_API) {
-      console.info("Using mock getAgentConfig");
-      return mockElectronAPI.getAgentConfig();
-    } else {
-      return window.electronAPI.getAgentConfig();
-    }
-  },
-  updateAgentConfig: async (newConfig: Partial<AgentConfig>) => {
-    if (USE_MOCK_API) {
-      console.info("Using mock updateAgentConfig");
-      return mockElectronAPI.updateAgentConfig(newConfig);
-    } else {
-      return window.electronAPI.updateAgentConfig(newConfig);
-    }
-  },
-  fetchLogs: async (params: LogQueryParams) => {
-    // In a real implementation, this would call the actual observability API
-    if (USE_MOCK_API) {
-      console.info("Using mock fetchLogs");
-      return mockElectronAPI.fetchLogs(params);
-    } else {
-      // This would be implemented in the actual electron API
-      // For now, we'll return mock data
-      return mockElectronAPI.fetchLogs(params);
-    }
-  },
-  getLogsFacetValues: async (start: string, end: string) => {
-    if (USE_MOCK_API) {
-      console.info("Using mock getLogsFacetValues");
-      return mockElectronAPI.getLogsFacetValues(start, end);
-    } else {
-      // This would be implemented in the actual electron API
-      // For now, we'll return mock data
-      return mockElectronAPI.getLogsFacetValues(start, end);
-    }
-  },
-};
-
-// Define the Log interface for the UI
-interface Log {
-  timestamp: string;
-  message: string;
-  service: string;
-  level: string;
-  attributes?: {
-    [key: string]: any;
-  };
-  metadata?: Record<string, string>;
-}
-
-// Type for code artifacts
-type CodeMap = Map<string, string>;
-
-// Type for artifact types
-type ArtifactType = "code" | "image" | "document" | "log";
 
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>("logs");
@@ -111,29 +26,7 @@ function App(): JSX.Element {
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-
-  // Log view state
-  const [logs, setLogs] = useState<Log[]>([]);
-  const [logQuery, setLogQuery] = useState<string>("");
-  const [timeRange, setTimeRange] = useState<{ start: string; end: string }>({
-    start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 24 hours ago
-    end: new Date().toISOString(), // now
-  });
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [facets, setFacets] = useState<FacetData[]>([]);
-  const [selectedFacets, setSelectedFacets] = useState<string[]>([]);
-  const [selectedLog, setSelectedLog] = useState<Log | null>(null);
-  const [pageCursor, setPageCursor] = useState<string | undefined>(undefined);
-  const [queryLimit] = useState<number>(100); // Default limit for number of logs
-
-  // Time range presets
-  const timeRangePresets = [
-    { label: "Last 15 minutes", value: 15 * 60 * 1000 },
-    { label: "Last hour", value: 60 * 60 * 1000 },
-    { label: "Last 6 hours", value: 6 * 60 * 60 * 1000 },
-    { label: "Last 24 hours", value: 24 * 60 * 60 * 1000 },
-    { label: "Last 7 days", value: 7 * 24 * 60 * 60 * 1000 },
-  ];
+  const [isThinking, setIsThinking] = useState(false);
 
   // Handle keyboard shortcuts for toggling the chat sidebar
   useEffect(() => {
@@ -262,8 +155,106 @@ if __name__ == "__main__":
     }
   };
 
-  const closeArtifactViewer = () => {
-    setSelectedArtifact(null);
+  // Helper function to convert log context to Artifact array
+  const createLogArtifacts = (logPostprocessing: any): Artifact[] => {
+    if (!logPostprocessing) {
+      return [];
+    }
+
+    const artifacts: Artifact[] = [];
+
+    // Check if we're dealing with a Map
+    if (logPostprocessing instanceof Map) {
+      logPostprocessing.forEach((value, key) => {
+        if (value && key) {
+          // Create a log search artifact with just the query and time range info
+          const logParams: LogSearchParams = {
+            query: key.query,
+            start: key.start,
+            end: key.end,
+            searchParams: key,
+          };
+
+          artifacts.push({
+            id: generateId(),
+            type: "log",
+            title: key.query || "Log Analysis",
+            description: key.reasoning || "Log data",
+            data: logParams,
+          });
+        }
+      });
+    }
+    // Check if it's a plain object (JSON)
+    else if (typeof logPostprocessing === "object" && logPostprocessing !== null) {
+      // Try to convert the object to a Map-like structure
+      Object.entries(logPostprocessing).forEach(([keyStr, value]) => {
+        try {
+          // Try to parse the key from string
+          const key = JSON.parse(keyStr);
+
+          if (value && key) {
+            const logParams: LogSearchParams = {
+              query: key.query,
+              start: key.start,
+              end: key.end,
+              searchParams: key,
+            };
+
+            artifacts.push({
+              id: generateId(),
+              type: "log",
+              title: key.query || "Log Analysis",
+              description: key.reasoning || "Log data",
+              data: logParams,
+            });
+          }
+        } catch (error) {
+          console.error("Error parsing log artifact key:", error);
+        }
+      });
+    }
+
+    return artifacts;
+  };
+
+  // Helper function to convert code context to Artifact array
+  const createCodeArtifacts = (codePostprocessing: any): Artifact[] => {
+    if (!codePostprocessing) {
+      return [];
+    }
+
+    const artifacts: Artifact[] = [];
+    const codeMap = new Map<string, string>();
+
+    // Check if we're dealing with a Map
+    if (codePostprocessing instanceof Map) {
+      codePostprocessing.forEach((value: string, key: string) => {
+        codeMap.set(key, value);
+      });
+    }
+    // Check if it's a plain object (JSON)
+    else if (typeof codePostprocessing === "object" && codePostprocessing !== null) {
+      Object.entries(codePostprocessing).forEach(([key, value]) => {
+        if (typeof value === "string") {
+          codeMap.set(key, value);
+        } else if (value !== null && typeof value === "object") {
+          codeMap.set(key, JSON.stringify(value, null, 2));
+        }
+      });
+    }
+
+    if (codeMap.size > 0) {
+      artifacts.push({
+        id: generateId(),
+        type: "code",
+        title: "Code Analysis",
+        description: "Code snippets",
+        data: codeMap,
+      });
+    }
+
+    return artifacts;
   };
 
   const sendMessage = async (): Promise<void> => {
@@ -282,22 +273,56 @@ if __name__ == "__main__":
     // Clear the input field
     setNewMessage("");
 
+    // Show thinking message
+    setIsThinking(true);
+    const thinkingMessageId = generateId();
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        id: thinkingMessageId,
+        role: "assistant",
+        content: "Thinking...",
+      },
+    ]);
+
     try {
       // Invoke the agent with the user's query
       const agentResponse = await api.invokeAgent(newMessage);
+      console.info("Agent response:", agentResponse);
+
+      // Remove the thinking message
+      setIsThinking(false);
+      setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== thinkingMessageId));
+
+      // Extract artifacts from response
+      let logArtifacts: Artifact[] = [];
+      let codeArtifacts: Artifact[] = [];
+
+      if (agentResponse.data) {
+        logArtifacts = createLogArtifacts(agentResponse.data.logPostprocessing);
+        codeArtifacts = createCodeArtifacts(agentResponse.data.codePostprocessing);
+        console.info("Created log artifacts:", logArtifacts);
+        console.info("Created code artifacts:", codeArtifacts);
+      }
+
+      const artifacts = [...logArtifacts, ...codeArtifacts];
 
       // Create a response message with artifacts
       const assistantMessage: ChatMessage = {
         id: generateId(),
         role: "assistant",
         content: agentResponse.data?.chatHistory?.join("\n\n") || "I processed your request.",
-        artifacts: sampleArtifacts, // Use sample artifacts for testing or extract from response
+        artifacts: artifacts.length > 0 ? artifacts : undefined,
       };
 
       // Update messages with the assistant's response
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
     } catch (error) {
       console.error("Error sending message to agent:", error);
+
+      // Remove the thinking message
+      setIsThinking(false);
+      setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== thinkingMessageId));
 
       // Add an error message if the agent invocation fails
       const errorMessage: ChatMessage = {
@@ -424,14 +449,10 @@ if __name__ == "__main__":
             setNewMessage={setNewMessage}
             sendMessage={sendMessage}
             onArtifactClick={handleArtifactClick}
+            isThinking={isThinking}
           />
         </div>
       )}
-
-      {/* Artifact Viewer - No longer needed as artifacts will be shown in respective tabs */}
-      {/* {selectedArtifact && (
-        <ArtifactViewer artifact={selectedArtifact} onClose={closeArtifactViewer} />
-      )} */}
     </div>
   );
 }

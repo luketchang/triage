@@ -73,7 +73,7 @@ const createMockFacets = () => {
     {
       name: "level",
       values: ["info", "warn", "error", "debug"],
-      counts: [10, 0, 10, 0],
+      counts: [10, 5, 10, 5],
     },
     {
       name: "host",
@@ -84,6 +84,16 @@ const createMockFacets = () => {
       name: "environment",
       values: ["production", "staging", "development"],
       counts: [5, 5, 10],
+    },
+    {
+      name: "region",
+      values: ["us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1"],
+      counts: [8, 7, 6, 5],
+    },
+    {
+      name: "container",
+      values: ["api-container", "worker-container", "db-container"],
+      counts: [12, 8, 6],
     },
   ];
 };
@@ -347,6 +357,8 @@ const mockElectronAPI = {
 
   /**
    * Get facet values for logs
+   * Note: This already returns FacetData[] format which matches the expected
+   * format after Map<string, string[]> is converted in the main process
    */
   getLogsFacetValues: async (start: string, end: string): Promise<ApiResponse<FacetData[]>> => {
     console.info("Mock getLogsFacetValues called with:", { start, end });
@@ -354,6 +366,7 @@ const mockElectronAPI = {
     // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 300));
 
+    // Always return mock facet data with success: true
     return {
       success: true,
       data: createMockFacets(),

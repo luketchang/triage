@@ -12,6 +12,8 @@ const { autoUpdater } = pkg;
 import { config } from "@triage/config";
 // Import AgentConfig type from local config interface
 import { AgentConfig } from "../src/config.js";
+// Import observability platform functions
+import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 
 // Get directory name for preload script path
 const __filename = fileURLToPath(import.meta.url);
@@ -174,6 +176,77 @@ function setupIpcHandlers(): void {
       };
     }
   );
+
+  // Fetch logs based on query parameters
+  ipcMain.handle("fetch-logs", async (_event: any, params: any) => {
+    try {
+      console.log("Fetching logs with params:", params);
+
+      // Get the configured observability platform
+      const platformType =
+        (process.env.OBSERVABILITY_PLATFORM as IntegrationType) || IntegrationType.DATADOG;
+      console.log(`Using observability platform: ${platformType}`);
+
+      // Get the observability platform implementation
+      const platform = getObservabilityPlatform(platformType);
+
+      // Call the real platform API
+      const result = await platform.fetchLogs({
+        query: params.query || "",
+        start: params.start,
+        end: params.end,
+        limit: params.limit || 100,
+        pageCursor: params.pageCursor,
+      });
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      console.error("Error fetching logs:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
+  // Get log facet values for a given time range
+  ipcMain.handle("get-logs-facet-values", async (_event: any, start: string, end: string) => {
+    try {
+      console.log("Getting log facet values for time range:", { start, end });
+
+      // Get the configured observability platform
+      const platformType =
+        (process.env.OBSERVABILITY_PLATFORM as IntegrationType) || IntegrationType.DATADOG;
+      console.log(`Using observability platform: ${platformType}`);
+
+      // Get the observability platform implementation
+      const platform = getObservabilityPlatform(platformType);
+
+      // Call the real platform API
+      const logFacetsMap = await platform.getLogsFacetValues(start, end);
+
+      // Convert the Map<string, string[]> to FacetData[] format
+      const facetsArray = Array.from(logFacetsMap.entries()).map(([name, values]) => {
+        // Create counts array with same length as values (with placeholder values of 1)
+        const counts = new Array(values.length).fill(1);
+        return { name, values, counts };
+      });
+
+      return {
+        success: true,
+        data: facetsArray,
+      };
+    } catch (error) {
+      console.error("Error getting log facet values:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
 }
 
 /**

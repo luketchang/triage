@@ -77,6 +77,7 @@ export interface LogQueryParams {
 export interface FacetData {
   name: string;
   values: string[];
+  counts?: number[];
 }
 
 // Define API response types with consistent error property
