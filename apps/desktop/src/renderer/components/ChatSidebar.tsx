@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Artifact, ChatMessage } from "../types";
+import { Artifact, ChatMessage, ContextItem } from "../types";
 
 interface ChatSidebarProps {
   messages: ChatMessage[];
@@ -9,6 +9,8 @@ interface ChatSidebarProps {
   sendMessage: () => Promise<void>;
   onArtifactClick: (artifact: Artifact) => void;
   isThinking: boolean;
+  contextItems?: ContextItem[];
+  removeContextItem?: (id: string) => void;
 }
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
@@ -18,9 +20,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   sendMessage,
   onArtifactClick,
   isThinking,
+  contextItems = [],
+  removeContextItem,
 }) => {
   const [ellipsis, setEllipsis] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [hoveredContextId, setHoveredContextId] = useState<string | null>(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -52,51 +57,79 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
-  // Format long titles to be more readable
-  const formatTitle = (title: string, type: string): string => {
-    if (type !== "log") {
-      return title.length > 25 ? title.substring(0, 22) + "..." : title;
-    }
+  // Format timestamp range in a compact way
+  const formatTimeRange = (start: string, end: string): string => {
+    try {
+      const startDate = new Date(start);
+      const endDate = new Date(end);
 
-    // Format log query titles
-    if (title.includes("(") && (title.includes(" OR ") || title.includes(" AND "))) {
-      return "Log Query";
-    }
+      // Same day formatting
+      if (startDate.toDateString() === endDate.toDateString()) {
+        return `${startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      }
 
-    // If it's a service filter query
-    if (title.startsWith("service:")) {
-      return "Service Logs";
+      // Different days
+      return `${startDate.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} - ${endDate.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`;
+    } catch (e) {
+      return "Invalid time range";
     }
-
-    // If it contains error or status
-    if (title.includes("error") || title.includes("status:")) {
-      return "Error Logs";
-    }
-
-    // If title is too long, truncate it
-    if (title.length > 25) {
-      return title.substring(0, 22) + "...";
-    }
-
-    return title;
   };
 
-  // Generate a simplified description for log query
-  const getLogDescription = (title: string): string => {
-    // For complex queries, try to extract the most important part
-    if (title.includes("OR") || title.includes("AND")) {
-      const services = [...title.matchAll(/service:([a-z-_]+)/g)].map((match) => match[1]);
-      if (services.length > 0) {
-        return `Services: ${services.join(", ")}`;
+  // Render a context item card
+  const renderContextCard = (contextItem: ContextItem): JSX.Element => {
+    let queryDisplay = contextItem.title;
+    let timeRangeDisplay = "";
+    let pageCursorInfo = "";
+
+    // Extract specific details for log context items
+    if (
+      contextItem.type === "log" &&
+      typeof contextItem.data === "object" &&
+      contextItem.data !== null
+    ) {
+      const logParams = contextItem.data as any;
+      if (logParams.query) {
+        queryDisplay = logParams.query;
       }
 
-      if (title.includes("status:error")) {
-        return "Error logs from services";
+      if (logParams.start && logParams.end) {
+        timeRangeDisplay = formatTimeRange(logParams.start, logParams.end);
+      }
+
+      if (logParams.pageCursor) {
+        pageCursorInfo = `Page: ${logParams.pageCursor.substring(0, 6)}...`;
       }
     }
 
-    // Default
-    return "Click to view matching logs";
+    return (
+      <div
+        key={contextItem.id}
+        className="context-card"
+        onMouseEnter={() => setHoveredContextId(contextItem.id)}
+        onMouseLeave={() => setHoveredContextId(null)}
+      >
+        <div className="context-card-content">
+          <div className={`context-type ${contextItem.type}`}>{contextItem.type}</div>
+          <div className="context-title" title={queryDisplay}>
+            {queryDisplay}
+          </div>
+          {timeRangeDisplay && <div className="context-time-range">{timeRangeDisplay}</div>}
+          {pageCursorInfo && <div className="context-page-cursor">{pageCursorInfo}</div>}
+        </div>
+        {hoveredContextId === contextItem.id && removeContextItem && (
+          <button
+            className="remove-context-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeContextItem(contextItem.id);
+            }}
+            title="Remove this context"
+          >
+            ×
+          </button>
+        )}
+      </div>
+    );
   };
 
   const renderArtifactCard = (artifact: Artifact): JSX.Element => {
@@ -104,17 +137,63 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       onArtifactClick(artifact);
     };
 
-    const title = formatTitle(artifact.title, artifact.type);
-    const description =
-      artifact.type === "log" ? getLogDescription(artifact.title) : artifact.description;
+    let displayInfo = "";
+
+    // For log artifacts
+    if (artifact.type === "log" && typeof artifact.data === "object" && artifact.data !== null) {
+      const logParams = artifact.data as any;
+
+      // Display time range if available
+      if (logParams.start && logParams.end) {
+        displayInfo = formatTimeRange(logParams.start, logParams.end);
+      }
+
+      // Add page cursor info if available
+      if (logParams.pageCursor) {
+        displayInfo += displayInfo
+          ? ` • Page ${logParams.pageCursor.substring(0, 6)}...`
+          : `Page: ${logParams.pageCursor.substring(0, 6)}...`;
+      }
+    }
+
+    // For code artifacts
+    else if (artifact.type === "code" && artifact.data) {
+      // If data is a Map or object with entries, show info about the files
+      if (artifact.data instanceof Map) {
+        const fileCount = artifact.data.size;
+        const files = Array.from(artifact.data.keys());
+        if (fileCount === 1) {
+          displayInfo = files[0];
+        } else {
+          displayInfo = `${fileCount} files: ${files[0]}${fileCount > 1 ? `, ...` : ""}`;
+        }
+      } else if (typeof artifact.data === "object") {
+        const keys = Object.keys(artifact.data);
+        if (keys.length === 1) {
+          displayInfo = keys[0];
+        } else if (keys.length > 1) {
+          displayInfo = `${keys.length} files: ${keys[0]}${keys.length > 1 ? `, ...` : ""}`;
+        }
+      }
+    }
 
     return (
       <div key={artifact.id} className="artifact-card" onClick={handleClick}>
         <div className="artifact-header">
-          <div className="artifact-title">{title}</div>
+          <div className="artifact-title" title={artifact.title}>
+            {artifact.title}
+          </div>
           <div className={`artifact-type ${artifact.type}`}>{artifact.type}</div>
         </div>
-        <div className="artifact-description">{description}</div>
+        <div className="artifact-query">
+          {artifact.type === "log" &&
+            typeof artifact.data === "object" &&
+            artifact.data !== null &&
+            (artifact.data as any).query && (
+              <div title={(artifact.data as any).query}>{(artifact.data as any).query}</div>
+            )}
+        </div>
+        {displayInfo && <div className="artifact-details">{displayInfo}</div>}
       </div>
     );
   };
@@ -163,6 +242,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       </div>
 
       <div className="chat-input-container">
+        {contextItems.length > 0 && (
+          <div className="context-items-container">
+            <div className="context-items-header">
+              <span>Current Context</span>
+              <span className="context-keyboard-shortcut">Add more with ⌘+U</span>
+            </div>
+            <div className="context-items-list">
+              {contextItems.map((item) => renderContextCard(item))}
+            </div>
+          </div>
+        )}
         <textarea
           className="chat-input"
           placeholder="Message Claude..."

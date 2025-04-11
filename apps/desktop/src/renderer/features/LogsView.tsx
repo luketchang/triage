@@ -10,9 +10,17 @@ import { formatDate } from "../utils/formatters";
 
 interface LogsViewProps {
   selectedArtifact?: Artifact | null;
+  setLogQuery?: (query: string) => void;
+  setTimeRange?: (timeRange: TimeRange) => void;
+  setPageCursor?: (cursor: string | undefined) => void;
 }
 
-const LogsView: React.FC<LogsViewProps> = ({ selectedArtifact }) => {
+const LogsView: React.FC<LogsViewProps> = ({
+  selectedArtifact,
+  setLogQuery: setGlobalLogQuery,
+  setTimeRange: setGlobalTimeRange,
+  setPageCursor: setGlobalPageCursor,
+}) => {
   const [logs, setLogs] = useState<Log[]>([]);
   const [logQuery, setLogQuery] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -31,6 +39,25 @@ const LogsView: React.FC<LogsViewProps> = ({ selectedArtifact }) => {
     end: DEFAULT_END_DATE.toISOString(),
   });
 
+  // Sync local state with parent component state
+  useEffect(() => {
+    if (setGlobalLogQuery) {
+      setGlobalLogQuery(logQuery);
+    }
+  }, [logQuery, setGlobalLogQuery]);
+
+  useEffect(() => {
+    if (setGlobalTimeRange) {
+      setGlobalTimeRange(timeRange);
+    }
+  }, [timeRange, setGlobalTimeRange]);
+
+  useEffect(() => {
+    if (setGlobalPageCursor) {
+      setGlobalPageCursor(pageCursor);
+    }
+  }, [pageCursor, setGlobalPageCursor]);
+
   // Load facets when the component mounts or time range changes
   useEffect(() => {
     const loadFacets = async () => {
@@ -48,7 +75,7 @@ const LogsView: React.FC<LogsViewProps> = ({ selectedArtifact }) => {
         } else if (Array.isArray(response) && response.length > 0) {
           setFacets(response);
         } else {
-          console.log("No valid facet data received, using empty array");
+          console.info("No valid facet data received, using empty array");
           // If API returns empty data, use an empty array
           setFacets([]);
         }
@@ -139,12 +166,12 @@ const LogsView: React.FC<LogsViewProps> = ({ selectedArtifact }) => {
         params.pageCursor = pageCursor;
       }
 
-      console.log("Fetching logs with params:", params);
+      console.info("Fetching logs with params:", params);
       const response = await api.fetchLogs(params);
 
       if (response && response.success && response.data) {
         let filteredLogs = response.data.logs || [];
-        console.log(`API returned ${filteredLogs.length} logs`);
+        console.info(`API returned ${filteredLogs.length} logs`);
 
         // We'll let the server handle the filtering based on the query string
         // instead of trying to replicate the filtering logic client-side
@@ -231,7 +258,7 @@ const LogsView: React.FC<LogsViewProps> = ({ selectedArtifact }) => {
         limit: queryLimit,
       };
 
-      console.log("Fetching logs with params:", params);
+      console.info("Fetching logs with params:", params);
 
       // Execute the API call
       api
@@ -239,7 +266,7 @@ const LogsView: React.FC<LogsViewProps> = ({ selectedArtifact }) => {
         .then((response) => {
           if (response && response.success && response.data) {
             let filteredLogs = response.data.logs || [];
-            console.log(`API returned ${filteredLogs.length} logs`);
+            console.info(`API returned ${filteredLogs.length} logs`);
 
             setLogs(filteredLogs);
 

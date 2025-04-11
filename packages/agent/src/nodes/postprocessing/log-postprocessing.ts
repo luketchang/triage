@@ -2,7 +2,11 @@ import { getModelWrapper, logger, Model } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
 import { generateText } from "ai";
 import stableStringify from "json-stable-stringify";
-import { logPostprocessingToolSchema, LogSearchInputCore, stripReasoning } from "../../types";
+import {
+  logPostprocessingToolSchema,
+  LogSearchInputCore,
+  PostprocessedLogSearchInput,
+} from "../../types";
 import { ensureSingleToolCall, formatFacetValues, formatLogResults } from "../utils";
 
 function createPrompt(params: {
@@ -64,15 +68,8 @@ export class LogPostprocessor {
     logLabelsMap: Map<string, string[]>;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     answer: string;
-  }): Promise<Map<LogSearchInputCore, LogsWithPagination | string>> {
+  }): Promise<Map<PostprocessedLogSearchInput, LogsWithPagination | string>> {
     const prompt = createPrompt(params);
-
-    logger.info(`Log context map has ${params.logContext.size} entries`);
-
-    // Debug: Log all queries in logContext using stable stringify
-    for (const key of params.logContext.keys()) {
-      logger.info(`Log context has key: ${stableStringify(key)}`);
-    }
 
     const { toolCalls } = await generateText({
       model: getModelWrapper(this.llm),
@@ -88,7 +85,7 @@ export class LogPostprocessor {
     const typedRelevantQueries = relevantQueries.map((query) => ({
       ...query,
       type: "logSearchInput",
-    })); // TODO: this is a bit hacky, has to be some better type system way to do it
+    })); // TODO: this is a bit hacky to tag type and strip title, has to be some better type system way to do it
 
     logger.info(`Found ${relevantQueries.length} relevant queries in postprocessing response`);
 
@@ -100,18 +97,18 @@ export class LogPostprocessor {
     );
 
     // Create the final map by looking up each relevant query
-    const relevantResultsMap = new Map<LogSearchInputCore, LogsWithPagination | string>();
+    const relevantResultsMap = new Map<PostprocessedLogSearchInput, LogsWithPagination | string>();
 
     for (const relevantQuery of typedRelevantQueries) {
-      const strippedQuery = stripReasoning(relevantQuery);
-      const stableKey = stableStringify(strippedQuery);
+      const { title, summary, ...query } = relevantQuery; // TODO: also hacky to strip title here
+      const stableKey = stableStringify(query);
 
       logger.info(`Looking for query with stable key: ${stableKey}`);
       const match = lookup.get(stableKey);
 
       if (match) {
         logger.info(`Found matching log query: ${stableKey}`);
-        relevantResultsMap.set(match.query, match.result);
+        relevantResultsMap.set(relevantQuery, match.result);
       } else {
         logger.warn(`No match found for query: ${stableKey}`);
       }

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./electron.d";
 import "./styles.css";
 
-import { Artifact, ChatMessage, LogSearchParams, TabType } from "./types";
+import { Artifact, ChatMessage, ContextItem, LogSearchParams, TabType } from "./types";
 import { generateId } from "./utils/formatters";
 
 // Components
@@ -18,6 +18,8 @@ import TracesView from "./features/TracesView";
 import { ChatIcon, CodeIcon, DashboardsIcon, LogsIcon, TracesIcon } from "./icons";
 
 // Import mock API for testing
+import { PostprocessedLogSearchInput } from "@triage/agent";
+import { LogsWithPagination } from "@triage/observability";
 import api from "./services/api";
 
 function App(): JSX.Element {
@@ -27,6 +29,13 @@ function App(): JSX.Element {
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [contextItems, setContextItems] = useState<ContextItem[]>([]);
+  const [logQuery, setLogQuery] = useState<string>("");
+  const [timeRange, setTimeRange] = useState<{ start: string; end: string }>({
+    start: "",
+    end: "",
+  });
+  const [pageCursor, setPageCursor] = useState<string | undefined>(undefined);
 
   // Handle keyboard shortcuts for toggling the chat sidebar
   useEffect(() => {
@@ -36,6 +45,12 @@ function App(): JSX.Element {
         e.preventDefault();
         setIsChatSidebarOpen((prev) => !prev);
       }
+
+      // Check for Command+U (Mac) to add current view context to chat
+      if (e.metaKey && e.key === "u") {
+        e.preventDefault();
+        addCurrentContextToChat();
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -43,87 +58,57 @@ function App(): JSX.Element {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [activeTab, logQuery, timeRange, pageCursor]);
 
-  // Sample artifacts for development (would normally be dynamically generated)
-  const sampleArtifacts: Artifact[] = [
-    {
-      id: "1",
-      type: "code",
-      title: "Fibonacci Sequence Generator",
-      description: "Code",
-      data: new Map([
-        [
-          "fibonacci.py",
-          `def fibonacci(n):
-    """
-    Generate the first n numbers in the Fibonacci sequence.
-    
-    Args:
-        n (int): The number of Fibonacci numbers to generate
-        
-    Returns:
-        list: The first n Fibonacci numbers
-    """
-    if n <= 0:
-        return []
-    elif n == 1:
-        return [0]
-    elif n == 2:
-        return [0, 1]
-        
-    fib_sequence = [0, 1]
-    for i in range(2, n):
-        fib_sequence.append(fib_sequence[i-1] + fib_sequence[i-2])
-        
-    return fib_sequence
+  // Add current view context to chat sidebar
+  const addCurrentContextToChat = (): void => {
+    let newContextItem: ContextItem | null = null;
 
-# Example usage
-if __name__ == "__main__":
-    n = 10
-    result = fibonacci(n)
-    print(f"The first {n} Fibonacci numbers are: {result}")`,
-        ],
-      ]),
-    },
-    {
-      id: "2",
-      type: "image",
-      title: "Simple Bar Chart",
-      description: "Image",
-      data: "sample_chart.svg",
-    },
-    {
-      id: "3",
-      type: "log",
-      title: "Error Logs",
-      description: "Logs",
-      data: [
-        {
-          timestamp: "2023-04-06T08:30:00Z",
-          message: "Failed to connect to database",
-          service: "api",
-          level: "error",
-          attributes: {
-            error: "Connection refused",
-            attempts: 3,
-          },
-        },
-        {
-          timestamp: "2023-04-06T08:31:00Z",
-          message: "Retrying database connection",
-          service: "api",
-          level: "info",
-        },
-        {
-          timestamp: "2023-04-06T08:32:00Z",
-          message: "Successfully connected to database",
-          service: "api",
-          level: "info",
-        },
-      ],
-    },
-  ];
+    switch (activeTab) {
+      case "logs":
+        // Create context from logs view
+        if (logQuery) {
+          newContextItem = {
+            id: generateId(),
+            type: "log",
+            title: logQuery || "Log Query",
+            description: `Time: ${new Date(timeRange.start).toLocaleString()} - ${new Date(timeRange.end).toLocaleString()}`,
+            data: {
+              query: logQuery,
+              start: timeRange.start,
+              end: timeRange.end,
+              pageCursor: pageCursor,
+              searchParams: { query: logQuery, start: timeRange.start, end: timeRange.end },
+            },
+            sourceTab: "logs",
+          };
+        }
+        break;
+      case "traces":
+        // Create context from traces view (will be implemented later)
+        break;
+      case "code":
+        // Create context from code view (will be implemented later)
+        break;
+      case "dashboards":
+        // Create context from dashboards view (will be implemented later)
+        break;
+    }
+
+    if (newContextItem) {
+      setContextItems((prev) => [...prev, newContextItem!]);
+
+      // Open chat sidebar if it's closed
+      if (!isChatSidebarOpen) {
+        setIsChatSidebarOpen(true);
+      }
+    }
+  };
+
+  // Remove context item from chat
+  const removeContextItem = (id: string): void => {
+    setContextItems((prev) => prev.filter((item) => item.id !== id));
+  };
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
@@ -156,7 +141,9 @@ if __name__ == "__main__":
   };
 
   // Helper function to convert log context to Artifact array
-  const createLogArtifacts = (logPostprocessing: any): Artifact[] => {
+  const createLogArtifacts = (
+    logPostprocessing: Map<PostprocessedLogSearchInput, LogsWithPagination | string>
+  ): Artifact[] => {
     if (!logPostprocessing) {
       return [];
     }
@@ -164,56 +151,28 @@ if __name__ == "__main__":
     const artifacts: Artifact[] = [];
 
     // Check if we're dealing with a Map
-    if (logPostprocessing instanceof Map) {
-      logPostprocessing.forEach((value, key) => {
-        if (value && key) {
-          // Create a log search artifact with just the query and time range info
-          const logParams: LogSearchParams = {
-            query: key.query,
-            start: key.start,
-            end: key.end,
-            searchParams: key,
-          };
+    logPostprocessing.forEach((value, key) => {
+      if (value && key) {
+        // Create a log search artifact with just the query and time range info
+        const logParams: LogSearchParams = {
+          query: key.query,
+          start: key.start,
+          end: key.end,
+          searchParams: key,
+        };
 
-          artifacts.push({
-            id: generateId(),
-            type: "log",
-            title: key.query || "Log Analysis",
-            description: key.reasoning || "Log data",
-            data: logParams,
-          });
-        }
-      });
-    }
-    // Check if it's a plain object (JSON)
-    else if (typeof logPostprocessing === "object" && logPostprocessing !== null) {
-      // Try to convert the object to a Map-like structure
-      Object.entries(logPostprocessing).forEach(([keyStr, value]) => {
-        try {
-          // Try to parse the key from string
-          const key = JSON.parse(keyStr);
+        // Use key.title if available (for future implementation) or fallback to query
+        const artifactTitle = key.title || "Log Analysis";
 
-          if (value && key) {
-            const logParams: LogSearchParams = {
-              query: key.query,
-              start: key.start,
-              end: key.end,
-              searchParams: key,
-            };
-
-            artifacts.push({
-              id: generateId(),
-              type: "log",
-              title: key.query || "Log Analysis",
-              description: key.reasoning || "Log data",
-              data: logParams,
-            });
-          }
-        } catch (error) {
-          console.error("Error parsing log artifact key:", error);
-        }
-      });
-    }
+        artifacts.push({
+          id: generateId(),
+          type: "log",
+          title: artifactTitle,
+          description: key.summary || "Log data summary",
+          data: logParams,
+        });
+      }
+    });
 
     return artifacts;
   };
@@ -286,6 +245,9 @@ if __name__ == "__main__":
     ]);
 
     try {
+      // TODO: Add contextItems to the API call when sending the message
+      // For now, we're just clearing the context items after sending
+
       // Invoke the agent with the user's query
       const agentResponse = await api.invokeAgent(newMessage);
       console.info("Agent response:", agentResponse);
@@ -293,6 +255,9 @@ if __name__ == "__main__":
       // Remove the thinking message
       setIsThinking(false);
       setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== thinkingMessageId));
+
+      // Clear context items after sending
+      setContextItems([]);
 
       // Extract artifacts from response
       let logArtifacts: Artifact[] = [];
@@ -343,6 +308,9 @@ if __name__ == "__main__":
             selectedArtifact={
               selectedArtifact && selectedArtifact.type === "log" ? selectedArtifact : null
             }
+            setLogQuery={setLogQuery}
+            setTimeRange={setTimeRange}
+            setPageCursor={setPageCursor}
           />
         );
       case "traces":
@@ -373,7 +341,14 @@ if __name__ == "__main__":
           />
         );
       default:
-        return <LogsView selectedArtifact={null} />;
+        return (
+          <LogsView
+            selectedArtifact={null}
+            setLogQuery={setLogQuery}
+            setTimeRange={setTimeRange}
+            setPageCursor={setPageCursor}
+          />
+        );
     }
   };
 
@@ -423,6 +398,7 @@ if __name__ == "__main__":
         <div className="sidebar-footer">
           <div className="chat-toggle" onClick={toggleChatSidebar} title="Toggle Chat (⌘ + I)">
             <ChatIcon />
+            {contextItems.length > 0 && <div className="context-count">{contextItems.length}</div>}
           </div>
         </div>
       </div>
@@ -450,6 +426,8 @@ if __name__ == "__main__":
             sendMessage={sendMessage}
             onArtifactClick={handleArtifactClick}
             isThinking={isThinking}
+            contextItems={contextItems}
+            removeContextItem={removeContextItem}
           />
         </div>
       )}
