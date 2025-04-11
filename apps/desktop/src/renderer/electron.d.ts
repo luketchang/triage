@@ -3,83 +3,15 @@
  * This file ensures proper type checking when using window.electronAPI.
  */
 
-// TODO: Can we not just import types from packages?
-// Import the AgentConfig type from our configuration
-import { PostprocessedLogSearchInput } from "@triage/agent";
-
-// Define AgentConfig interface
-export interface AgentConfig {
-  repoPath: string;
-  codebaseOverviewPath: string;
-  observabilityPlatform: string;
-  observabilityFeatures: string[];
-  startDate: Date;
-  endDate: Date;
-}
-
-// Define the interfaces for log and code objects
-export interface Log {
-  timestamp: string;
-  message: string;
-  service: string;
-  level: string;
-  attributes?: {
-    [key: string]: any;
-  };
-  metadata: Record<string, string>;
-}
-
-export interface Artifact {
-  id: string;
-  name: string;
-  content: string;
-}
-
-// Define the interfaces for log and code postprocessing
-interface LogPostprocessingResult {
-  type: string;
-  relevantQueries: any[];
-  summary: string;
-}
-
-interface CodePostprocessingResult {
-  type: string;
-  relevantCode?: Record<string, string>;
-  summary?: string;
-}
-
-// Define log search input type for type safety
-export interface LogSearchInput {
-  type: string;
-  query: string;
-  start: string;
-  end: string;
-  limit: number;
-  reasoning: string;
-  pageCursor?: string;
-}
-
-// Define logs with pagination type
-export interface LogsWithPagination {
-  logs: Log[];
-  pageCursorOrIndicator?: string;
-}
-
-// Define log query params type
-export interface LogQueryParams {
-  query: string;
-  start: string;
-  end: string;
-  limit: number;
-  pageCursor?: string;
-}
-
-// Define facet data type
-export interface FacetData {
-  name: string;
-  values: string[];
-  counts?: number[];
-}
+// Import types from types.ts - this is the single source of truth for types
+import {
+  AgentConfig,
+  FacetData,
+  Log,
+  LogQueryParams,
+  LogsWithPagination,
+  PostprocessedLogSearchInput,
+} from "./types";
 
 // Define API response types with consistent error property
 export interface ApiResponse<T> {

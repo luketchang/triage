@@ -1,7 +1,32 @@
 // Types and interfaces for the application
-// TODO: lots of duplication between common/observability packages and this file
 
-// Define the AgentConfig interface
+// Import types from packages instead of redefining them
+import { LogSearchInput, LogSearchInputCore, PostprocessedLogSearchInput } from "@triage/agent";
+
+import {
+  IntegrationType,
+  Log,
+  LogsWithPagination,
+  Span,
+  SpansWithPagination,
+} from "@triage/observability";
+
+// Re-export imported types
+export type {
+  IntegrationType,
+  Log,
+  LogSearchInput,
+  LogSearchInputCore,
+  LogsWithPagination,
+  PostprocessedLogSearchInput,
+  Span,
+  SpansWithPagination,
+};
+
+// Define code map type alias
+export type CodeMap = Map<string, string>;
+
+// Define the AgentConfig interface - specific to desktop app
 export interface AgentConfig {
   repoPath: string;
   codebaseOverviewPath: string;
@@ -11,19 +36,23 @@ export interface AgentConfig {
   endDate: Date;
 }
 
-// Define the Log interface for the UI
-export interface Log {
-  timestamp: string;
-  message: string;
-  service: string;
-  level: string;
-  attributes?: {
-    [key: string]: any;
-  };
-  metadata?: Record<string, string>;
+// Define facet data type
+export interface FacetData {
+  name: string;
+  values: string[];
+  counts?: number[];
 }
 
-// Interface for log search parameters
+// Define log query params type
+export interface LogQueryParams {
+  query: string;
+  start: string;
+  end: string;
+  limit: number;
+  pageCursor?: string;
+}
+
+// Interface for log search parameters - simplified version of LogSearchInput for UI
 export interface LogSearchParams {
   query: string;
   start: string;
@@ -31,9 +60,6 @@ export interface LogSearchParams {
   searchParams: any;
   pageCursor?: string;
 }
-
-// Type for code artifacts
-export type CodeMap = Map<string, string>;
 
 // Type for artifact types
 export type ArtifactType = "code" | "image" | "document" | "log" | "trace" | "dashboard";
@@ -76,5 +102,3 @@ export interface TimeRangePreset {
   label: string;
   value: number | string;
 }
-
-export type { FacetData, LogQueryParams } from "../electron.d";

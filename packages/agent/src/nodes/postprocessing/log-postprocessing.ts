@@ -1,4 +1,4 @@
-import { getModelWrapper, logger, Model } from "@triage/common";
+import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
 import { generateText } from "ai";
 import stableStringify from "json-stable-stringify";
@@ -62,6 +62,7 @@ export class LogPostprocessor {
     this.llm = llm;
   }
 
+  @timer
   async invoke(params: {
     query: string;
     codebaseOverview: string;

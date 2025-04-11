@@ -3,9 +3,8 @@ import TimeRangePicker, {
   DEFAULT_END_DATE,
   DEFAULT_START_DATE,
 } from "../components/TimeRangePicker";
-import { FacetData, LogQueryParams } from "../electron.d";
 import api from "../services/api";
-import { Artifact, Log, LogSearchParams, TimeRange } from "../types";
+import { Artifact, FacetData, Log, LogQueryParams, LogSearchParams, TimeRange } from "../types";
 import { formatDate } from "../utils/formatters";
 
 interface LogsViewProps {

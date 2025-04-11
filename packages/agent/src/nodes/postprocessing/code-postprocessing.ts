@@ -1,4 +1,4 @@
-import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
+import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { generateText } from "ai";
 import { codePostprocessingToolSchema } from "../../types";
 import { ensureSingleToolCall } from "../utils";
@@ -42,6 +42,7 @@ export class CodePostprocessor {
     this.llm = llm;
   }
 
+  @timer
   async invoke(params: {
     query: string;
     codebaseOverview: string;
