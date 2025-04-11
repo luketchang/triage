@@ -1,4 +1,4 @@
-import { getModelWrapper, logger, Model } from "@triage/common";
+import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { ObservabilityPlatform, SpansWithPagination } from "@triage/observability";
 import { generateText } from "ai";
 import {
@@ -225,6 +225,7 @@ export class SpanSearchAgent {
     this.spanSearch = new SpanSearch(fastModel, observabilityPlatform);
   }
 
+  @timer
   async invoke(params: {
     query: string;
     spanRequest: string;

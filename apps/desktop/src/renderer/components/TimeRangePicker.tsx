@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { TimeRange, TimeRangePreset } from "../types";
 import { formatDate } from "../utils/formatters";
 
@@ -31,6 +31,13 @@ const TimeRangePicker: React.FC<TimeRangePickerProps> = ({
       end: DEFAULT_END_DATE.toISOString(),
     }
   );
+
+  // Update timeRange when initialTimeRange prop changes
+  useEffect(() => {
+    if (initialTimeRange) {
+      setTimeRange(initialTimeRange);
+    }
+  }, [initialTimeRange]);
 
   // Convert ISO string to local datetime-local input format
   const formatForDateTimeInput = (isoString: string): string => {

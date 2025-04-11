@@ -5,6 +5,7 @@ import {
   logger,
   Model,
   OpenAIModel,
+  timer,
 } from "@triage/common";
 import {
   getObservabilityPlatform,
@@ -23,15 +24,14 @@ import { Reviewer } from "./nodes/reviewer";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { SpanSearchAgent } from "./nodes/search/span-search";
 import { formatFacetValues } from "./nodes/utils";
+import type { LogRequest, SpanRequest } from "./types";
 import {
   CodePostprocessingRequest,
   LogPostprocessingRequest,
-  LogRequest,
   LogSearchInputCore,
   PostprocessedLogSearchInput,
   ReasoningRequest,
   ReviewRequest,
-  SpanRequest,
   SpanSearchInputCore,
 } from "./types";
 
@@ -101,6 +101,7 @@ export class OnCallAgent {
     this.observabilityFeatures = observabilityFeatures;
   }
 
+  @timer
   async processLogRequest(
     state: OncallAgentState,
     request: LogRequest
@@ -138,6 +139,7 @@ export class OnCallAgent {
     };
   }
 
+  @timer
   async processSpanRequest(
     state: OncallAgentState,
     request: SpanRequest
@@ -174,6 +176,7 @@ export class OnCallAgent {
     };
   }
 
+  @timer
   async processReasoningRequest(state: OncallAgentState): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
     const reasoner = new Reasoner(this.reasoningModel);
@@ -219,6 +222,7 @@ export class OnCallAgent {
     return updates;
   }
 
+  @timer
   async processReviewRequest(state: OncallAgentState): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
     const reviewer = new Reviewer(this.reasoningModel);
@@ -263,6 +267,7 @@ export class OnCallAgent {
     return updates;
   }
 
+  @timer
   async processLogPostprocessingRequest(
     state: OncallAgentState
   ): Promise<Partial<OncallAgentState>> {
@@ -283,6 +288,7 @@ export class OnCallAgent {
     };
   }
 
+  @timer
   async processCodePostprocessingRequest(
     state: OncallAgentState
   ): Promise<Partial<OncallAgentState>> {

@@ -1,10 +1,10 @@
-import { ApiResponse, FacetData, LogQueryParams } from "../electron.d";
+import { ApiResponse } from "../electron.d";
 import mockElectronAPI from "../electronApiMock";
-import { AgentConfig } from "../types";
+import { AgentConfig, FacetData, LogQueryParams } from "../types";
 
 // TESTING ONLY: Set to true to use mock API instead of real Electron API
 // Set to false in production or when testing with the real API
-const USE_MOCK_API = false;
+const USE_MOCK_API = true;
 
 // Helper function to check if electron API exists and has specific methods
 const isElectronAPIAvailable = () => {

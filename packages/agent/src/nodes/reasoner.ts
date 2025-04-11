@@ -1,4 +1,4 @@
-import { formatCodeMap, getModelWrapper, logger, Model } from "@triage/common";
+import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination, SpansWithPagination } from "@triage/observability";
 import { generateText } from "ai";
 import {
@@ -115,6 +115,7 @@ export class Reasoner {
     this.llm = llm;
   }
 
+  @timer
   async invoke(params: {
     query: string;
     repoPath: string;

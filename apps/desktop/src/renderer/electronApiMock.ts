@@ -1,11 +1,5 @@
-import {
-  AgentConfig,
-  ApiResponse,
-  FacetData,
-  Log,
-  LogQueryParams,
-  LogsWithPagination,
-} from "./electron.d";
+import { ApiResponse } from "./electron.d";
+import { AgentConfig, FacetData, Log, LogQueryParams, LogsWithPagination } from "./types";
 
 import { PostprocessedLogSearchInput } from "@triage/agent";
 

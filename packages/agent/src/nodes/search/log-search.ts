@@ -1,4 +1,4 @@
-import { getModelWrapper, logger, Model } from "@triage/common";
+import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination, ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
 import {
@@ -226,6 +226,7 @@ export class LogSearchAgent {
     this.logSearch = new LogSearch(fastModel, observabilityPlatform);
   }
 
+  @timer
   async invoke(params: {
     query: string;
     logRequest: string;
