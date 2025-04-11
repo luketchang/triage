@@ -5,6 +5,7 @@
 
 // TODO: Can we not just import types from packages?
 // Import the AgentConfig type from our configuration
+import { PostprocessedLogSearchInput } from "@triage/agent";
 
 // Define AgentConfig interface
 export interface AgentConfig {
@@ -25,7 +26,7 @@ export interface Log {
   attributes?: {
     [key: string]: any;
   };
-  metadata?: Record<string, string>;
+  metadata: Record<string, string>;
 }
 
 export interface Artifact {
@@ -100,10 +101,8 @@ declare global {
         ApiResponse<{
           chatHistory: string[];
           rca: string;
-          logPostprocessing: Map<LogSearchInput, string | LogsWithPagination>;
+          logPostprocessing: Map<PostprocessedLogSearchInput, string | LogsWithPagination>;
           codePostprocessing: Map<string, string>;
-          logContext: Map<LogSearchInput, string | LogsWithPagination>;
-          codeContext: Map<string, string>;
         }>
       >;
 

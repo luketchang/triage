@@ -28,6 +28,7 @@ import {
   LogPostprocessingRequest,
   LogRequest,
   LogSearchInputCore,
+  PostprocessedLogSearchInput,
   ReasoningRequest,
   ReviewRequest,
   SpanRequest,
@@ -77,7 +78,7 @@ export interface OncallAgentState {
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   spanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
-  logPostprocessingResult: Map<LogSearchInputCore, LogsWithPagination | string> | null;
+  logPostprocessingResult: Map<PostprocessedLogSearchInput, LogsWithPagination | string> | null;
   codePostprocessingResult: Map<string, string> | null;
   rootCauseAnalysis: string | null;
 }
@@ -304,7 +305,7 @@ export class OnCallAgent {
   async invoke(state: OncallAgentState): Promise<{
     chatHistory: string[];
     rca: string | null;
-    logPostprocessing: Map<LogSearchInputCore, LogsWithPagination | string> | null;
+    logPostprocessing: Map<PostprocessedLogSearchInput, LogsWithPagination | string> | null;
     codePostprocessing: Map<string, string> | null;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     codeContext: Map<string, string>;
@@ -386,10 +387,8 @@ export async function invokeAgent({
 }): Promise<{
   chatHistory: string[];
   rca: string | null;
-  logPostprocessing: Map<LogSearchInputCore, LogsWithPagination | string> | null;
+  logPostprocessing: Map<PostprocessedLogSearchInput, LogsWithPagination | string> | null;
   codePostprocessing: Map<string, string> | null;
-  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
-  codeContext: Map<string, string>;
 }> {
   const integrationType =
     platformType === "datadog" ? IntegrationType.DATADOG : IntegrationType.GRAFANA;

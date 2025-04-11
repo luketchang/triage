@@ -29,6 +29,7 @@ export interface LogSearchParams {
   start: string;
   end: string;
   searchParams: any;
+  pageCursor?: string;
 }
 
 // Type for code artifacts
@@ -43,6 +44,16 @@ export interface Artifact {
   title: string;
   description: string;
   data: Log[] | CodeMap | string | LogSearchParams;
+}
+
+// Interface for context items that will be added to chat
+export interface ContextItem {
+  id: string;
+  type: ArtifactType;
+  title: string;
+  description: string;
+  data: Log[] | CodeMap | string | LogSearchParams;
+  sourceTab: TabType;
 }
 
 // Interface for chat messages

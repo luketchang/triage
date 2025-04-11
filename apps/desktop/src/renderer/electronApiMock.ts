@@ -4,9 +4,10 @@ import {
   FacetData,
   Log,
   LogQueryParams,
-  LogSearchInput,
   LogsWithPagination,
 } from "./electron.d";
+
+import { PostprocessedLogSearchInput } from "@triage/agent";
 
 /**
  * Mock implementation of the Electron API for local development and testing
@@ -67,33 +68,13 @@ const createMockFacets = () => {
   return [
     {
       name: "service",
-      values: ["orders", "payments", "auth", "api-gateway", "user-service"],
-      counts: [5, 5, 5, 5, 5],
+      values: ["orders", "payments", "auth", "tickets", "expiration"],
+      counts: [1, 1, 1, 1, 1],
     },
     {
-      name: "level",
-      values: ["info", "warn", "error", "debug"],
-      counts: [10, 5, 10, 5],
-    },
-    {
-      name: "host",
-      values: ["host-1", "host-2", "host-3", "host-4"],
-      counts: [5, 5, 5, 5],
-    },
-    {
-      name: "environment",
-      values: ["production", "staging", "development"],
-      counts: [5, 5, 10],
-    },
-    {
-      name: "region",
-      values: ["us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1"],
-      counts: [8, 7, 6, 5],
-    },
-    {
-      name: "container",
-      values: ["api-container", "worker-container", "db-container"],
-      counts: [12, 8, 6],
+      name: "status",
+      values: ["info", "warn", "error"],
+      counts: [1, 1, 1],
     },
   ];
 };
@@ -101,16 +82,17 @@ const createMockFacets = () => {
 // Create mock data
 const createMockData = () => {
   // Create sample log context
-  const logContext = new Map<LogSearchInput, LogsWithPagination | string>();
+  const logContext = new Map<PostprocessedLogSearchInput, LogsWithPagination | string>();
 
   // Sample error query
-  const errorQuery: LogSearchInput = {
-    type: "error",
-    query: "error in login flow",
+  const errorQuery: PostprocessedLogSearchInput = {
+    query: "service:(tickets OR orders OR expiration)",
     start: "2023-10-01T00:00:00Z",
     end: new Date().toISOString(),
     limit: 10,
-    reasoning: "Looking for authentication errors",
+    title: "Duplicate ticket errors",
+    summary: "Looking for duplicate ticket errors",
+    pageCursor: null,
   };
 
   logContext.set(errorQuery, {
@@ -118,13 +100,14 @@ const createMockData = () => {
   });
 
   // Sample performance query
-  const perfQuery: LogSearchInput = {
-    type: "performance",
-    query: "slow database queries",
+  const perfQuery: PostprocessedLogSearchInput = {
+    query: "service:mongo",
     start: "2023-10-01T00:00:00Z",
     end: new Date().toISOString(),
     limit: 10,
-    reasoning: "Investigating performance issues",
+    title: "Mongo performance issues",
+    summary: "Slow MongoDB queries",
+    pageCursor: null,
   };
 
   logContext.set(perfQuery, {
@@ -187,10 +170,8 @@ const mockElectronAPI = {
     ApiResponse<{
       chatHistory: string[];
       rca: string;
-      logPostprocessing: Map<LogSearchInput, string | LogsWithPagination>;
+      logPostprocessing: Map<PostprocessedLogSearchInput, string | LogsWithPagination>;
       codePostprocessing: Map<string, string>;
-      logContext: Map<LogSearchInput, string | LogsWithPagination>;
-      codeContext: Map<string, string>;
     }>
   > => {
     console.info("Mock invokeAgent called with query:", query);
@@ -208,8 +189,6 @@ const mockElectronAPI = {
           "The errors are concentrated in the auth-service, which is having trouble validating tokens.",
         ],
         rca: "The root cause appears to be a misconfiguration in the JWT_SECRET environment variable after the last deployment. This is causing previously issued tokens to be invalidated.",
-        logContext,
-        codeContext,
         logPostprocessing: logContext,
         codePostprocessing: codeContext,
       },

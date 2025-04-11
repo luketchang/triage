@@ -151,20 +151,6 @@ export type LogSearchInput = zInfer<typeof logSearchInputSchema> & { type: "logS
 // LogSearchInputCore type without reasoning - used for storage in context maps
 export type LogSearchInputCore = Omit<LogSearchInput, "reasoning">;
 
-// Generic function to strip reasoning from input objects for storage
-export function stripReasoning<T extends { reasoning: string; type?: string }>(
-  input: T
-): Omit<T, "reasoning"> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { reasoning, ...core } = input;
-  return core;
-}
-
-export function normalizeForKey<T extends { type: string }>(input: T): Omit<T, "type"> {
-  const { type, ...core } = input;
-  return core;
-}
-
 export const logSearchInputToolSchema = {
   description: "Input parameters for searching logs.",
   parameters: logSearchInputSchema,
@@ -222,20 +208,33 @@ export const codeSearchInputToolSchema = {
   parameters: codeSearchInputSchema,
 };
 
+export const postprocessedLogSearchInputSchema = logSearchInputSchema
+  .omit({
+    reasoning: true,
+  })
+  .extend({
+    title: z.string().describe("A concise title summarizing the log search results"),
+    summary: z
+      .string()
+      .describe(
+        "A short summary of the log search results in the form of a sequence of events (numbered list). Be precise and sequential."
+      ),
+  });
+
 export const logPostprocessingSchema = z.object({
   relevantQueries: z
-    .array(logSearchInputSchema)
-    .describe("List of query strings who's results support the answer."),
+    .array(postprocessedLogSearchInputSchema)
+    .describe("List of queries with titles who's results support the answer."),
   summary: z
     .string()
     .describe(
-      "Summary of the log results in the form of a sequence of events (numbered list). Be precise and sequential."
+      "Summary of all the log results collectively in the form of a sequence of events (numbered list). Be precise and sequential."
     ),
 });
 
-export type LogPostprocessing = zInfer<typeof logPostprocessingSchema> & {
-  type: "logPostprocessing";
-};
+export type LogPostprocessing = zInfer<typeof logPostprocessingSchema>;
+
+export type PostprocessedLogSearchInput = zInfer<typeof postprocessedLogSearchInputSchema>;
 
 export const logPostprocessingToolSchema = {
   description: "Postprocess log results.",
@@ -261,3 +260,17 @@ export const codePostprocessingToolSchema = {
   description: "Postprocess code results.",
   parameters: codePostprocessingSchema,
 };
+
+// Generic function to strip reasoning from input objects for storage
+export function stripReasoning<T extends { reasoning: string; type?: string }>(
+  input: T
+): Omit<T, "reasoning"> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { reasoning, ...core } = input;
+  return core;
+}
+
+export function normalizeForKey<T extends { type: string }>(input: T): Omit<T, "type"> {
+  const { type, ...core } = input;
+  return core;
+}
