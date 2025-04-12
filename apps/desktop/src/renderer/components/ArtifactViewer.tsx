@@ -31,22 +31,6 @@ const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifact, onClose }) =>
     );
   };
 
-  const renderImageArtifact = (imagePath: string) => {
-    return (
-      <div className="image-container">
-        <img src={imagePath} alt={artifact.title} className="artifact-image" />
-      </div>
-    );
-  };
-
-  const renderDocumentArtifact = (content: string) => {
-    return (
-      <div className="document-container">
-        <div className="document-content">{content}</div>
-      </div>
-    );
-  };
-
   const renderLogArtifact = (logs: Log[]) => {
     return (
       <div className="log-artifact-container">
@@ -79,14 +63,18 @@ const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifact, onClose }) =>
   const renderArtifactContent = () => {
     switch (artifact.type) {
       case "code":
-        return renderCodeArtifact(artifact.data as CodeMap);
-      case "image":
-        return renderImageArtifact(artifact.data as string);
-      case "document":
-        return renderDocumentArtifact(artifact.data as string);
+        return renderCodeArtifact(artifact.data);
       case "log":
-        return renderLogArtifact(artifact.data as Log[]);
+        if (
+          artifact.data.results &&
+          typeof artifact.data.results === "object" &&
+          "logs" in artifact.data.results
+        ) {
+          return renderLogArtifact(artifact.data.results.logs);
+        }
+        return <div>No log results available</div>;
       default:
+        // We should never reach this due to the discriminated union
         return <div>Unknown artifact type</div>;
     }
   };

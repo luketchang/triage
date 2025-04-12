@@ -1,10 +1,16 @@
 import { ApiResponse } from "../electron.d";
 import mockElectronAPI from "../electronApiMock";
-import { AgentConfig, FacetData, LogQueryParams } from "../types";
+import {
+  AgentConfig,
+  FacetData,
+  LogQueryParams,
+  LogSearchInputCore,
+  LogsWithPagination,
+} from "../types";
 
 // TESTING ONLY: Set to true to use mock API instead of real Electron API
 // Set to false in production or when testing with the real API
-const USE_MOCK_API = true;
+const USE_MOCK_API = false;
 
 // Helper function to check if electron API exists and has specific methods
 const isElectronAPIAvailable = () => {
@@ -31,13 +37,26 @@ const isMethodAvailable = (methodName: string) => {
 
 // Create a wrapper API that will use either the real or mock API
 const api = {
-  invokeAgent: async (query: string) => {
+  invokeAgent: async (
+    query: string,
+    logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null = null,
+    options?: { reasonOnly?: boolean }
+  ) => {
     if (USE_MOCK_API || !isMethodAvailable("invokeAgent")) {
-      console.info("Using mock invokeAgent");
-      return mockElectronAPI.invokeAgent(query);
+      console.info(
+        "Using mock invokeAgent",
+        logContext ? "with logContext" : "without logContext",
+        options
+      );
+      return mockElectronAPI.invokeAgent(query, logContext, options);
     } else {
-      console.info("Using real electronAPI.invokeAgent");
-      return window.electronAPI.invokeAgent(query);
+      console.info(
+        "Using real electronAPI.invokeAgent",
+        logContext ? "with logContext" : "without logContext",
+        options
+      );
+
+      return window.electronAPI.invokeAgent(query, logContext, options);
     }
   },
 

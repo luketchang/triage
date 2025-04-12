@@ -9,6 +9,7 @@ import {
   FacetData,
   Log,
   LogQueryParams,
+  LogSearchInputCore,
   LogsWithPagination,
   PostprocessedLogSearchInput,
 } from "./types";
@@ -27,9 +28,15 @@ declare global {
       /**
        * Invoke the agent with a query and return the result
        * @param query The query to send to the agent
+       * @param logContext Optional map of log search inputs to their results
+       * @param options Optional configuration options for the agent
        * @returns Promise with the agent response
        */
-      invokeAgent: (query: string) => Promise<
+      invokeAgent: (
+        query: string,
+        logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null,
+        options?: { reasonOnly?: boolean }
+      ) => Promise<
         ApiResponse<{
           chatHistory: string[];
           rca: string;

@@ -1,12 +1,4 @@
-import {
-  collectSourceCode,
-  GeminiModel,
-  loadFileTree,
-  logger,
-  Model,
-  OpenAIModel,
-  timer,
-} from "@triage/common";
+import { collectSourceCode, GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -225,6 +217,7 @@ export class OnCallAgent {
   @timer
   async processReviewRequest(state: OncallAgentState): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
+
     const reviewer = new Reviewer(this.reasoningModel);
     const response = await reviewer.invoke({
       query: state.query,
@@ -372,6 +365,34 @@ export class OnCallAgent {
 }
 
 /**
+ * Arguments for invoking the agent
+ */
+export interface AgentArgs {
+  query: string;
+  repoPath: string;
+  codebaseOverviewPath: string;
+  observabilityPlatform?: string;
+  observabilityFeatures?: string[];
+  startDate?: Date;
+  endDate?: Date;
+  reasonOnly?: boolean;
+  logContext?: Map<LogSearchInputCore, LogsWithPagination | string>;
+  spanContext?: Map<SpanSearchInputCore, SpansWithPagination | string>;
+}
+
+/**
+ * Result of agent invocation
+ */
+export interface AgentResult {
+  chatHistory: string[];
+  rca: string | null;
+  logPostprocessing: Map<PostprocessedLogSearchInput, LogsWithPagination | string> | null;
+  codePostprocessing: Map<string, string> | null;
+  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
+  codeContext: Map<string, string>;
+}
+
+/**
  * Invokes the agent with the given parameters
  */
 export async function invokeAgent({
@@ -382,20 +403,15 @@ export async function invokeAgent({
   observabilityFeatures = ["logs"],
   startDate = new Date("2025-04-01T21:00:00Z"),
   endDate = new Date("2025-04-01T22:00:00Z"),
-}: {
-  query: string;
-  repoPath: string;
-  codebaseOverviewPath: string;
-  observabilityPlatform?: string;
-  observabilityFeatures?: string[];
-  startDate?: Date;
-  endDate?: Date;
-}): Promise<{
-  chatHistory: string[];
-  rca: string | null;
-  logPostprocessing: Map<PostprocessedLogSearchInput, LogsWithPagination | string> | null;
-  codePostprocessing: Map<string, string> | null;
-}> {
+  reasonOnly = false,
+  logContext,
+  spanContext,
+}: AgentArgs): Promise<AgentResult> {
+  // If reasonOnly is true, override observabilityFeatures to be empty
+  if (reasonOnly) {
+    observabilityFeatures = [];
+  }
+
   const integrationType =
     platformType === "datadog" ? IntegrationType.DATADOG : IntegrationType.GRAFANA;
 
@@ -454,15 +470,15 @@ export async function invokeAgent({
     spanLabelsMap: new Map<string, string[]>(),
     chatHistory: [],
     codeContext,
-    logContext: new Map(),
-    spanContext: new Map(),
+    logContext: logContext || new Map(),
+    spanContext: spanContext || new Map(),
     rootCauseAnalysis: null,
     logPostprocessingResult: null,
     codePostprocessingResult: null,
   };
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
-  const fastModel = OpenAIModel.GPT_4O;
+  const fastModel = GeminiModel.GEMINI_2_0_FLASH;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 

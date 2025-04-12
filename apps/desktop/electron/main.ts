@@ -80,46 +80,65 @@ function createWindow(): void {
  */
 function setupIpcHandlers(): void {
   // Handle agent invocation
-  ipcMain.handle("invoke-agent", async (_event: any, query: string) => {
-    try {
-      console.log("Invoking agent with query:", query);
+  ipcMain.handle(
+    "invoke-agent",
+    async (
+      _event: any,
+      query: string,
+      serializedLogContext: any = null,
+      options?: { reasonOnly?: boolean }
+    ) => {
+      try {
+        console.log("Invoking agent with query:", query);
 
-      // Define the agent config
-      const agentConfig: AgentConfig = {
-        repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
-        codebaseOverviewPath:
-          process.env.CODEBASE_OVERVIEW_PATH ||
-          "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-        observabilityPlatform: process.env.OBSERVABILITY_PLATFORM || "datadog",
-        observabilityFeatures: process.env.OBSERVABILITY_FEATURES
-          ? process.env.OBSERVABILITY_FEATURES.split(",")
-          : ["logs"],
-        startDate: new Date(process.env.START_DATE || "2025-04-01T21:00:00Z"),
-        endDate: new Date(process.env.END_DATE || "2025-04-01T22:00:00Z"),
-      };
+        // Define the agent config
+        const agentConfig: AgentConfig = {
+          repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
+          codebaseOverviewPath:
+            process.env.CODEBASE_OVERVIEW_PATH ||
+            "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
+          observabilityPlatform: process.env.OBSERVABILITY_PLATFORM || "datadog",
+          observabilityFeatures: process.env.OBSERVABILITY_FEATURES
+            ? process.env.OBSERVABILITY_FEATURES.split(",")
+            : ["logs"],
+          startDate: new Date(process.env.START_DATE || "2025-04-01T21:00:00Z"),
+          endDate: new Date(process.env.END_DATE || "2025-04-01T22:00:00Z"),
+        };
 
-      const result = await invokeAgent({
-        query,
-        repoPath: agentConfig.repoPath,
-        codebaseOverviewPath: agentConfig.codebaseOverviewPath,
-        observabilityPlatform: agentConfig.observabilityPlatform,
-        observabilityFeatures: agentConfig.observabilityFeatures,
-        startDate: agentConfig.startDate,
-        endDate: agentConfig.endDate,
-      });
+        // Get reasonOnly flag from options
+        const finalReasonOnly = options?.reasonOnly === true;
 
-      return {
-        success: true,
-        data: result,
-      };
-    } catch (error) {
-      console.error("Error invoking agent:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
+        // Convert serialized format back to Map if needed
+        let logContext: Map<any, any> | undefined = undefined;
+        if (serializedLogContext && Array.isArray(serializedLogContext)) {
+          logContext = new Map(serializedLogContext);
+        }
+
+        const result = await invokeAgent({
+          query,
+          repoPath: agentConfig.repoPath,
+          codebaseOverviewPath: agentConfig.codebaseOverviewPath,
+          observabilityPlatform: agentConfig.observabilityPlatform,
+          observabilityFeatures: agentConfig.observabilityFeatures,
+          startDate: agentConfig.startDate,
+          endDate: agentConfig.endDate,
+          reasonOnly: finalReasonOnly,
+          logContext: logContext,
+        });
+
+        return {
+          success: true,
+          data: result,
+        };
+      } catch (error) {
+        console.error("Error invoking agent:", error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
     }
-  });
+  );
 
   // Get the current agent configuration
   ipcMain.handle("get-agent-config", async (): Promise<AgentConfig> => {
@@ -195,7 +214,7 @@ function setupIpcHandlers(): void {
         query: params.query || "",
         start: params.start,
         end: params.end,
-        limit: params.limit || 100,
+        limit: params.limit || 500,
         pageCursor: params.pageCursor,
       });
 
