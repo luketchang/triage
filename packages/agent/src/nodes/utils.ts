@@ -83,7 +83,7 @@ export function formatLogResults(
         pageCursor = logsOrError.pageCursorOrIndicator;
       }
 
-      return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
+      return `${formatLogQuery(input)}\nResults:\n${formattedContent}`;
     })
     .join("\n\n");
 }

@@ -3,11 +3,11 @@ import { TimeRange, TimeRangePreset } from "../types";
 import { formatDate } from "../utils/formatters";
 
 // Default date range constants (April 3 to April 5)
-export const DEFAULT_START_DATE = new Date("2025-04-03T00:00:00Z");
-export const DEFAULT_END_DATE = new Date("2025-04-05T23:59:59Z");
+export const DEFAULT_START_DATE = new Date("2025-04-01T21:00:00Z");
+export const DEFAULT_END_DATE = new Date("2025-04-01T21:30:00Z");
 
 export const timeRangePresets: TimeRangePreset[] = [
-  { label: "April 3-5 (Default)", value: "default" as unknown as number },
+  { label: "April 1 (Default)", value: "default" as unknown as number },
   { label: "Last 15 minutes", value: 15 * 60 * 1000 },
   { label: "Last hour", value: 60 * 60 * 1000 },
   { label: "Last 6 hours", value: 6 * 60 * 60 * 1000 },

@@ -11,6 +11,8 @@ interface ChatSidebarProps {
   isThinking: boolean;
   contextItems?: ContextItem[];
   removeContextItem?: (id: string) => void;
+  chatMode?: "agent" | "manual";
+  toggleChatMode?: () => void;
 }
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
@@ -22,10 +24,35 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isThinking,
   contextItems = [],
   removeContextItem,
+  chatMode = "agent",
+  toggleChatMode,
 }) => {
   const [ellipsis, setEllipsis] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hoveredContextId, setHoveredContextId] = useState<string | null>(null);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [localMode, setLocalMode] = useState<"agent" | "manual">(chatMode);
+
+  useEffect(() => {
+    setLocalMode(chatMode);
+  }, [chatMode]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Reset height to match design (28px)
+    textarea.style.height = "28px";
+
+    // Set to scrollHeight if content exceeds single line
+    const scrollHeight = textarea.scrollHeight;
+    if (scrollHeight > 28) {
+      const newHeight = Math.min(150, scrollHeight);
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, [newMessage]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -57,6 +84,25 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
+  // Toggle mode selection dropdown
+  const toggleModeMenu = () => {
+    setModeMenuOpen((prev) => !prev);
+  };
+
+  // Set mode and close menu
+  const setMode = (mode: "agent" | "manual") => {
+    // Update local state immediately for UI
+    setLocalMode(mode);
+
+    // Only trigger change if needed and handler exists
+    if (chatMode !== mode && toggleChatMode) {
+      // Call the actual toggle function to update parent state
+      toggleChatMode();
+    }
+
+    setModeMenuOpen(false);
+  };
+
   // Format timestamp range in a compact way
   const formatTimeRange = (start: string, end: string): string => {
     try {
@@ -77,57 +123,64 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   // Render a context item card
   const renderContextCard = (contextItem: ContextItem): JSX.Element => {
-    let queryDisplay = contextItem.title;
-    let timeRangeDisplay = "";
-    let pageCursorInfo = "";
+    // Only handling LogSearchContextItem for now, since it's the only type in our union
+    if (contextItem.type === "logSearch") {
+      let queryDisplay = contextItem.title;
+      let timeRangeDisplay = "";
+      let pageCursorInfo = "";
 
-    // Extract specific details for log context items
-    if (
-      contextItem.type === "log" &&
-      typeof contextItem.data === "object" &&
-      contextItem.data !== null
-    ) {
-      const logParams = contextItem.data as any;
-      if (logParams.query) {
-        queryDisplay = logParams.query;
+      // Extract details from LogSearchPair
+      const logSearchInput = contextItem.data.input;
+
+      if (logSearchInput.query) {
+        queryDisplay = logSearchInput.query;
       }
 
-      if (logParams.start && logParams.end) {
-        timeRangeDisplay = formatTimeRange(logParams.start, logParams.end);
+      if (logSearchInput.start && logSearchInput.end) {
+        timeRangeDisplay = formatTimeRange(logSearchInput.start, logSearchInput.end);
       }
 
-      if (logParams.pageCursor) {
-        pageCursorInfo = `Page: ${logParams.pageCursor.substring(0, 6)}...`;
+      if (logSearchInput.pageCursor) {
+        pageCursorInfo = `Page: ${logSearchInput.pageCursor.substring(0, 6)}...`;
       }
+
+      return (
+        <div
+          key={contextItem.id}
+          className="context-card"
+          onMouseEnter={() => setHoveredContextId(contextItem.id)}
+          onMouseLeave={() => setHoveredContextId(null)}
+        >
+          <div className="context-card-content">
+            <div className="context-type">logs</div>
+            <div className="context-title" title={queryDisplay}>
+              {queryDisplay}
+            </div>
+            {timeRangeDisplay && <div className="context-time-range">{timeRangeDisplay}</div>}
+            {pageCursorInfo && <div className="context-page-cursor">{pageCursorInfo}</div>}
+          </div>
+          {hoveredContextId === contextItem.id && removeContextItem && (
+            <button
+              className="remove-context-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeContextItem(contextItem.id);
+              }}
+              title="Remove this context"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      );
     }
 
+    // Default fallback - should never reach here due to discriminated union
     return (
-      <div
-        key={contextItem.id}
-        className="context-card"
-        onMouseEnter={() => setHoveredContextId(contextItem.id)}
-        onMouseLeave={() => setHoveredContextId(null)}
-      >
+      <div className="context-card">
         <div className="context-card-content">
-          <div className={`context-type ${contextItem.type}`}>{contextItem.type}</div>
-          <div className="context-title" title={queryDisplay}>
-            {queryDisplay}
-          </div>
-          {timeRangeDisplay && <div className="context-time-range">{timeRangeDisplay}</div>}
-          {pageCursorInfo && <div className="context-page-cursor">{pageCursorInfo}</div>}
+          <div className="context-title">Unknown context type</div>
         </div>
-        {hoveredContextId === contextItem.id && removeContextItem && (
-          <button
-            className="remove-context-button"
-            onClick={(e) => {
-              e.stopPropagation();
-              removeContextItem(contextItem.id);
-            }}
-            title="Remove this context"
-          >
-            ×
-          </button>
-        )}
       </div>
     );
   };
@@ -139,41 +192,33 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
     let displayInfo = "";
 
-    // For log artifacts
-    if (artifact.type === "log" && typeof artifact.data === "object" && artifact.data !== null) {
-      const logParams = artifact.data as any;
+    // Use discriminated union pattern for type-safe handling
+    if (artifact.type === "log") {
+      const input = artifact.data.input;
 
       // Display time range if available
-      if (logParams.start && logParams.end) {
-        displayInfo = formatTimeRange(logParams.start, logParams.end);
+      if (input.start && input.end) {
+        displayInfo = formatTimeRange(input.start, input.end);
       }
 
       // Add page cursor info if available
-      if (logParams.pageCursor) {
+      if (input.pageCursor) {
         displayInfo += displayInfo
-          ? ` • Page ${logParams.pageCursor.substring(0, 6)}...`
-          : `Page: ${logParams.pageCursor.substring(0, 6)}...`;
+          ? ` • Page ${input.pageCursor.substring(0, 6)}...`
+          : `Page: ${input.pageCursor.substring(0, 6)}...`;
       }
-    }
+    } else if (artifact.type === "code") {
+      // For code artifacts
+      const codeMap = artifact.data;
 
-    // For code artifacts
-    else if (artifact.type === "code" && artifact.data) {
-      // If data is a Map or object with entries, show info about the files
-      if (artifact.data instanceof Map) {
-        const fileCount = artifact.data.size;
-        const files = Array.from(artifact.data.keys());
-        if (fileCount === 1) {
-          displayInfo = files[0];
-        } else {
-          displayInfo = `${fileCount} files: ${files[0]}${fileCount > 1 ? `, ...` : ""}`;
-        }
-      } else if (typeof artifact.data === "object") {
-        const keys = Object.keys(artifact.data);
-        if (keys.length === 1) {
-          displayInfo = keys[0];
-        } else if (keys.length > 1) {
-          displayInfo = `${keys.length} files: ${keys[0]}${keys.length > 1 ? `, ...` : ""}`;
-        }
+      // If data is a Map with entries, show info about the files
+      const fileCount = codeMap.size;
+      const files = Array.from(codeMap.keys());
+
+      if (fileCount === 1) {
+        displayInfo = files[0];
+      } else {
+        displayInfo = `${fileCount} files: ${files[0]}${fileCount > 1 ? `, ...` : ""}`;
       }
     }
 
@@ -186,12 +231,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <div className={`artifact-type ${artifact.type}`}>{artifact.type}</div>
         </div>
         <div className="artifact-query">
-          {artifact.type === "log" &&
-            typeof artifact.data === "object" &&
-            artifact.data !== null &&
-            (artifact.data as any).query && (
-              <div title={(artifact.data as any).query}>{(artifact.data as any).query}</div>
-            )}
+          {artifact.type === "log" && (
+            <div title={artifact.data.input.query}>{artifact.data.input.query}</div>
+          )}
         </div>
         {displayInfo && <div className="artifact-details">{displayInfo}</div>}
       </div>
@@ -253,21 +295,53 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             </div>
           </div>
         )}
-        <textarea
-          className="chat-input"
-          placeholder="Message Claude..."
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isThinking}
-        />
-        <button
-          className="send-button"
-          onClick={sendMessage}
-          disabled={!newMessage.trim() || isThinking}
-        >
-          →
-        </button>
+
+        <div className="input-wrapper">
+          <textarea
+            ref={textareaRef}
+            className="message-input"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask a question..."
+            disabled={isThinking}
+            rows={1}
+          />
+        </div>
+
+        <div className="message-controls">
+          <div className="mode-dropdown">
+            <button className="mode-selector-button" onClick={toggleModeMenu}>
+              <span className="current-mode">{localMode === "agent" ? "Agent" : "Manual"}</span>
+              <span className="dropdown-arrow">▼</span>
+            </button>
+
+            {modeMenuOpen && (
+              <div className="mode-menu">
+                <div
+                  className={`mode-option ${localMode === "agent" ? "active" : ""}`}
+                  onClick={() => setMode("agent")}
+                >
+                  Agent
+                </div>
+                <div
+                  className={`mode-option ${localMode === "manual" ? "active" : ""}`}
+                  onClick={() => setMode("manual")}
+                >
+                  Manual
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            className="send-button"
+            onClick={sendMessage}
+            disabled={isThinking || !newMessage.trim()}
+          >
+            Send
+          </button>
+        </div>
       </div>
     </>
   );

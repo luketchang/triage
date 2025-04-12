@@ -6,18 +6,18 @@ interface CodeViewProps {
 }
 
 const CodeView: React.FC<CodeViewProps> = ({ selectedArtifact }) => {
-  const [codeFiles, setCodeFiles] = useState<Map<string, string>>(new Map());
+  const [codeFiles, setCodeFiles] = useState<CodeMap>(new Map());
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>("");
 
   useEffect(() => {
     if (selectedArtifact && selectedArtifact.type === "code") {
       try {
+        // Check if it's a Map (CodeMap)
         if (selectedArtifact.data instanceof Map) {
-          // It's already a Map
-          setCodeFiles(selectedArtifact.data as CodeMap);
+          setCodeFiles(selectedArtifact.data);
 
-          // Select the first file by default
+          // Select the first file
           if (selectedArtifact.data.size > 0) {
             const firstFile = Array.from(selectedArtifact.data.keys())[0];
             setSelectedFile(firstFile);
@@ -53,24 +53,31 @@ const CodeView: React.FC<CodeViewProps> = ({ selectedArtifact }) => {
             setFileContent(selectedArtifact.data as string);
           }
         } else if (typeof selectedArtifact.data === "object" && selectedArtifact.data !== null) {
-          // If it's a plain object, convert to Map
+          // For object-based CodeMap (but not LogSearchPair which would be a log type)
           const newCodeMap = new Map();
-          Object.entries(selectedArtifact.data).forEach(([key, value]) => {
-            // Cast value to unknown first, then to string, or stringify if it's an object
-            newCodeMap.set(key, typeof value === "string" ? value : JSON.stringify(value));
-          });
 
-          setCodeFiles(newCodeMap);
+          // Safely convert to Map
+          try {
+            // Handle object entries
+            Object.entries(selectedArtifact.data).forEach(([key, value]) => {
+              // Cast value to string or stringify
+              newCodeMap.set(key, typeof value === "string" ? value : JSON.stringify(value));
+            });
 
-          // Select the first file
-          if (newCodeMap.size > 0) {
-            const firstFile = Array.from(newCodeMap.keys())[0];
-            setSelectedFile(firstFile);
-            setFileContent(newCodeMap.get(firstFile) || "");
+            setCodeFiles(newCodeMap);
+
+            // Select the first file
+            if (newCodeMap.size > 0) {
+              const firstFile = Array.from(newCodeMap.keys())[0];
+              setSelectedFile(firstFile);
+              setFileContent(newCodeMap.get(firstFile) || "");
+            }
+          } catch (error) {
+            console.error("Error handling code data:", error);
           }
         }
       } catch (error) {
-        console.error("Error processing code artifact:", error);
+        console.error("Error loading code artifact:", error);
       }
     }
   }, [selectedArtifact]);
@@ -107,17 +114,16 @@ const CodeView: React.FC<CodeViewProps> = ({ selectedArtifact }) => {
                 <pre className="code-display">{fileContent}</pre>
               </>
             ) : (
-              <div className="no-file-selected">Select a file to view its content</div>
+              <div className="no-file-selected">
+                <p>No file selected. Please select a file from the list.</p>
+              </div>
             )}
           </div>
         </div>
       ) : (
         <div className="code-placeholder">
           <h2>Code View</h2>
-          <p>
-            No code artifacts selected. Code artifacts will be displayed here when you select them
-            from the chat assistant.
-          </p>
+          <p>Select a code artifact to view its contents.</p>
         </div>
       )}
     </div>

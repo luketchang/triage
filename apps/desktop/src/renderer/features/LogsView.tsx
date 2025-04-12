@@ -1,28 +1,41 @@
 import React, { useEffect, useState } from "react";
-import TimeRangePicker, {
-  DEFAULT_END_DATE,
-  DEFAULT_START_DATE,
-} from "../components/TimeRangePicker";
+import TimeRangePicker from "../components/TimeRangePicker";
 import api from "../services/api";
-import { Artifact, FacetData, Log, LogQueryParams, LogSearchParams, TimeRange } from "../types";
+import { Artifact, FacetData, Log, TimeRange } from "../types";
 import { formatDate } from "../utils/formatters";
 
 interface LogsViewProps {
+  logs: Log[];
+  logQuery: string;
+  setLogQuery: (query: string) => void;
+  timeRange: TimeRange;
+  onTimeRangeChange: (timeRange: TimeRange) => void;
+  isLoading: boolean;
+  onQuerySubmit: (query: string) => void;
+  onLoadMore: () => void;
   selectedArtifact?: Artifact | null;
-  setLogQuery?: (query: string) => void;
-  setTimeRange?: (timeRange: TimeRange) => void;
+  setLogs?: (logs: Log[]) => void;
+  setIsLoading?: (isLoading: boolean) => void;
   setPageCursor?: (cursor: string | undefined) => void;
+  setTimeRange?: (timeRange: TimeRange) => void;
 }
 
 const LogsView: React.FC<LogsViewProps> = ({
+  logs,
+  logQuery,
+  timeRange,
+  isLoading,
+  setLogQuery,
+  onTimeRangeChange,
+  onQuerySubmit,
+  onLoadMore,
   selectedArtifact,
-  setLogQuery: setGlobalLogQuery,
-  setTimeRange: setGlobalTimeRange,
-  setPageCursor: setGlobalPageCursor,
+  setLogs,
+  setIsLoading,
+  setPageCursor,
+  setTimeRange,
 }) => {
-  const [logs, setLogs] = useState<Log[]>([]);
-  const [logQuery, setLogQuery] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  // Component-specific state
   const [facets, setFacets] = useState<FacetData[]>([]);
   const [selectedFacets, setSelectedFacets] = useState<string[]>([
     "service",
@@ -31,31 +44,82 @@ const LogsView: React.FC<LogsViewProps> = ({
     "environment",
   ]);
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
-  const [pageCursor, setPageCursor] = useState<string | undefined>(undefined);
-  const [queryLimit] = useState<number>(100); // Default limit for number of logs
-  const [timeRange, setTimeRange] = useState<TimeRange>({
-    start: DEFAULT_START_DATE.toISOString(),
-    end: DEFAULT_END_DATE.toISOString(),
-  });
 
-  // Sync local state with parent component state
+  // Effect to handle the selectedArtifact changes
   useEffect(() => {
-    if (setGlobalLogQuery) {
-      setGlobalLogQuery(logQuery);
-    }
-  }, [logQuery, setGlobalLogQuery]);
+    if (
+      selectedArtifact &&
+      selectedArtifact.type === "log" &&
+      selectedArtifact.data &&
+      selectedArtifact.data.input
+    ) {
+      const searchInput = selectedArtifact.data.input;
 
-  useEffect(() => {
-    if (setGlobalTimeRange) {
-      setGlobalTimeRange(timeRange);
-    }
-  }, [timeRange, setGlobalTimeRange]);
+      // Update query through props
+      setLogQuery(searchInput.query);
 
-  useEffect(() => {
-    if (setGlobalPageCursor) {
-      setGlobalPageCursor(pageCursor);
+      // Handle the results if they exist - we want to do this FIRST
+      if (selectedArtifact.data.results) {
+        // For results that are objects (LogsWithPagination)
+        if (
+          typeof selectedArtifact.data.results === "object" &&
+          selectedArtifact.data.results !== null
+        ) {
+          // Update logs directly from the artifact data
+          if (
+            "logs" in selectedArtifact.data.results &&
+            Array.isArray(selectedArtifact.data.results.logs) &&
+            setLogs
+          ) {
+            // Mark as loading while we update everything
+            if (setIsLoading) {
+              setIsLoading(true);
+            }
+
+            // Update logs from the artifact data
+            setLogs(selectedArtifact.data.results.logs);
+
+            // Update cursor for pagination if available
+            if ("pageCursorOrIndicator" in selectedArtifact.data.results && setPageCursor) {
+              setPageCursor(selectedArtifact.data.results.pageCursorOrIndicator);
+            }
+
+            // Now update the time range WITHOUT triggering a new fetch
+            if (searchInput.start && searchInput.end) {
+              // Just update the state directly without triggering a fetch
+              setTimeRange &&
+                setTimeRange({
+                  start: searchInput.start,
+                  end: searchInput.end,
+                });
+            }
+
+            // Mark as loaded when done
+            if (setIsLoading) {
+              setIsLoading(false);
+            }
+
+            // We've handled everything from the artifact data, so return early
+            // to prevent the time range change from triggering a fetch
+            return;
+          }
+        }
+      }
+
+      // Only reach here if we don't have results in the artifact
+      // In this case, we DO want to trigger a fetch with the time range
+      if (searchInput.start && searchInput.end) {
+        const newTimeRange = {
+          start: searchInput.start,
+          end: searchInput.end,
+        };
+        onTimeRangeChange(newTimeRange);
+      } else if (searchInput.pageCursor && setPageCursor) {
+        // Fallback to cursor in the input if results don't have it
+        setPageCursor(searchInput.pageCursor);
+      }
     }
-  }, [pageCursor, setGlobalPageCursor]);
+  }, [selectedArtifact, setLogQuery, onTimeRangeChange, setLogs, setIsLoading, setPageCursor]);
 
   // Load facets when the component mounts or time range changes
   useEffect(() => {
@@ -88,122 +152,9 @@ const LogsView: React.FC<LogsViewProps> = ({
     loadFacets();
   }, [timeRange.start, timeRange.end]);
 
-  // Effect to handle displaying artifact data if available
-  useEffect(() => {
-    if (selectedArtifact && selectedArtifact.type === "log") {
-      try {
-        const artifactData = selectedArtifact.data;
-
-        // Check if artifact data is a LogSearchParams object
-        if (artifactData && typeof artifactData === "object" && "query" in artifactData) {
-          const searchParams = artifactData as LogSearchParams;
-
-          // Update the query field
-          setLogQuery(searchParams.query);
-
-          // Update the time range if available
-          if (searchParams.start && searchParams.end) {
-            const newTimeRange = {
-              start: searchParams.start,
-              end: searchParams.end,
-            };
-
-            setTimeRange(newTimeRange);
-
-            // Execute the search with the new parameters and time range
-            fetchLogsWithQuery(searchParams.query, newTimeRange);
-          } else {
-            // If no time range in the search params, just use the query
-            fetchLogsWithQuery(searchParams.query);
-          }
-        }
-        // If artifact data is a log array, use it directly (backward compatibility)
-        else if (Array.isArray(artifactData)) {
-          setLogs(artifactData as Log[]);
-          // Update query to reflect we're viewing an artifact
-          setLogQuery(`Artifact: ${selectedArtifact.title}`);
-        }
-        // If it's a string, try to parse it as JSON
-        else if (typeof artifactData === "string") {
-          try {
-            const parsedData = JSON.parse(artifactData);
-            if (Array.isArray(parsedData)) {
-              setLogs(parsedData);
-              setLogQuery(`Artifact: ${selectedArtifact.title}`);
-            }
-          } catch (parseError) {
-            console.error("Error parsing log artifact data:", parseError);
-          }
-        }
-      } catch (error) {
-        console.error("Error displaying log artifact:", error);
-      }
-    }
-  }, [selectedArtifact]);
-
-  // Fetch logs based on query, time range, and facets
-  const fetchLogs = async (resetCursor = true) => {
-    setIsLoading(true);
-
-    try {
-      // Skip API call if we're displaying artifact logs
-      if (selectedArtifact && selectedArtifact.type === "log") {
-        setIsLoading(false);
-        return;
-      }
-
-      // Prepare query parameters
-      const params: LogQueryParams = {
-        query: logQuery,
-        start: timeRange.start,
-        end: timeRange.end,
-        limit: queryLimit,
-      };
-
-      // Add cursor for pagination if not resetting
-      if (!resetCursor && pageCursor) {
-        params.pageCursor = pageCursor;
-      }
-
-      console.info("Fetching logs with params:", params);
-      const response = await api.fetchLogs(params);
-
-      if (response && response.success && response.data) {
-        let filteredLogs = response.data.logs || [];
-        console.info(`API returned ${filteredLogs.length} logs`);
-
-        // We'll let the server handle the filtering based on the query string
-        // instead of trying to replicate the filtering logic client-side
-
-        if (resetCursor) {
-          setLogs(filteredLogs);
-        } else {
-          setLogs((prev) => [...prev, ...filteredLogs]);
-        }
-
-        // Update the cursor for next page
-        setPageCursor(response.data.pageCursorOrIndicator);
-      } else {
-        console.warn("Invalid response format from fetchLogs:", response);
-        if (resetCursor) {
-          setLogs([]);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching logs:", error);
-      if (resetCursor) {
-        setLogs([]);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleQuerySubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Fetch logs with the current query
-    fetchLogsWithQuery(logQuery);
+    onQuerySubmit(logQuery);
   };
 
   const handleAddFacet = (facet: string, value: string) => {
@@ -239,56 +190,8 @@ const LogsView: React.FC<LogsViewProps> = ({
     // Update the query and then fetch logs
     setLogQuery(newQuery);
 
-    // Force a sync log fetch
-    console.log(`Updating query to: ${newQuery}`);
-    fetchLogsWithQuery(newQuery);
-  };
-
-  // Helper function to fetch logs with a specific query
-  const fetchLogsWithQuery = (query: string, customTimeRange?: TimeRange) => {
-    setIsLoading(true);
-
-    try {
-      // Prepare query parameters
-      const params: LogQueryParams = {
-        query: query, // Use the provided query instead of state
-        start: customTimeRange ? customTimeRange.start : timeRange.start,
-        end: customTimeRange ? customTimeRange.end : timeRange.end,
-        limit: queryLimit,
-      };
-
-      console.info("Fetching logs with params:", params);
-
-      // Execute the API call
-      api
-        .fetchLogs(params)
-        .then((response) => {
-          if (response && response.success && response.data) {
-            let filteredLogs = response.data.logs || [];
-            console.info(`API returned ${filteredLogs.length} logs`);
-
-            setLogs(filteredLogs);
-
-            // Update the cursor for next page
-            setPageCursor(response.data.pageCursorOrIndicator);
-          } else {
-            console.warn("Invalid response format from fetchLogs:", response);
-            setLogs([]);
-          }
-
-          // Set loading to false once done
-          setIsLoading(false);
-        })
-        .catch((error) => {
-          console.error("Error fetching logs:", error);
-          setLogs([]);
-          setIsLoading(false);
-        });
-    } catch (error) {
-      console.error("Error in fetchLogsWithQuery:", error);
-      setLogs([]);
-      setIsLoading(false);
-    }
+    // Trigger search with the new query
+    onQuerySubmit(newQuery);
   };
 
   // Parse a query string into a structured object
@@ -384,12 +287,6 @@ const LogsView: React.FC<LogsViewProps> = ({
     setSelectedLog(log);
   };
 
-  const handleLoadMore = () => {
-    if (pageCursor) {
-      fetchLogs(false);
-    }
-  };
-
   const handleToggleFacet = (facet: string) => {
     setSelectedFacets((prev) => {
       if (prev.includes(facet)) {
@@ -402,14 +299,8 @@ const LogsView: React.FC<LogsViewProps> = ({
 
   // Handle time range changes from the TimeRangePicker
   const handleTimeRangeChange = (newTimeRange: TimeRange) => {
-    setTimeRange(newTimeRange);
-    fetchLogs(true);
+    onTimeRangeChange(newTimeRange);
   };
-
-  // Initial log fetch when component mounts
-  useEffect(() => {
-    fetchLogs(true);
-  }, []);
 
   return (
     <div className="logs-tab">
@@ -432,7 +323,7 @@ const LogsView: React.FC<LogsViewProps> = ({
               // Add key up event handler to perform search on enter key
               onKeyUp={(e) => {
                 if (e.key === "Enter") {
-                  fetchLogsWithQuery(logQuery);
+                  onQuerySubmit(logQuery);
                 }
               }}
             />
@@ -513,9 +404,9 @@ const LogsView: React.FC<LogsViewProps> = ({
                     <div className="log-message">{log.message}</div>
                   </div>
                 ))}
-                {pageCursor && (
+                {logs.length > 0 && (
                   <div className="load-more-container">
-                    <button className="load-more-button" onClick={handleLoadMore}>
+                    <button className="load-more-button" onClick={onLoadMore}>
                       Load More
                     </button>
                   </div>

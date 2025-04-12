@@ -52,35 +52,44 @@ export interface LogQueryParams {
   pageCursor?: string;
 }
 
-// Interface for log search parameters - simplified version of LogSearchInput for UI
-export interface LogSearchParams {
-  query: string;
-  start: string;
-  end: string;
-  searchParams: any;
-  pageCursor?: string;
+// Define LogSearchPair type for storing pairs of search inputs and results
+export interface LogSearchPair {
+  input: LogSearchInputCore;
+  results: LogsWithPagination | string;
 }
 
-// Type for artifact types
-export type ArtifactType = "code" | "image" | "document" | "log" | "trace" | "dashboard";
-
-export interface Artifact {
+// Define specific artifact types with discriminated union
+export interface LogArtifact {
   id: string;
-  type: ArtifactType;
+  type: "log";
   title: string;
   description: string;
-  data: Log[] | CodeMap | string | LogSearchParams;
+  data: LogSearchPair;
 }
 
-// Interface for context items that will be added to chat
-export interface ContextItem {
+export interface CodeArtifact {
   id: string;
-  type: ArtifactType;
+  type: "code";
   title: string;
   description: string;
-  data: Log[] | CodeMap | string | LogSearchParams;
+  data: CodeMap;
+}
+
+// Artifact type as a discriminated union
+export type Artifact = LogArtifact | CodeArtifact;
+
+// Define specific context item types with discriminated union
+export interface LogSearchContextItem {
+  id: string;
+  type: "logSearch";
+  title: string;
+  description: string;
+  data: LogSearchPair;
   sourceTab: TabType;
 }
+
+// Context item type as a discriminated union (currently only has LogSearchContextItem)
+export type ContextItem = LogSearchContextItem;
 
 // Interface for chat messages
 export interface ChatMessage {

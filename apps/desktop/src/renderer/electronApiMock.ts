@@ -1,7 +1,7 @@
 import { ApiResponse } from "./electron.d";
 import { AgentConfig, FacetData, Log, LogQueryParams, LogsWithPagination } from "./types";
 
-import { PostprocessedLogSearchInput } from "@triage/agent";
+import { LogSearchInputCore, PostprocessedLogSearchInput } from "@triage/agent";
 
 /**
  * Mock implementation of the Electron API for local development and testing
@@ -148,9 +148,6 @@ async function login(email, password) {
   return { logContext, codeContext };
 };
 
-// Initialize mock data
-const { logContext, codeContext } = createMockData();
-
 /**
  * Mock implementation of the Electron API
  */
@@ -159,32 +156,41 @@ const mockElectronAPI = {
    * Invoke the agent with a query and return a mock response
    */
   invokeAgent: async (
-    query: string
-  ): Promise<
-    ApiResponse<{
-      chatHistory: string[];
-      rca: string;
-      logPostprocessing: Map<PostprocessedLogSearchInput, string | LogsWithPagination>;
-      codePostprocessing: Map<string, string>;
-    }>
-  > => {
-    console.info("Mock invokeAgent called with query:", query);
+    query: string,
+    logContext: Map<
+      PostprocessedLogSearchInput | LogSearchInputCore,
+      LogsWithPagination | string
+    > | null,
+    options?: { reasonOnly?: boolean }
+  ) => {
+    console.info(
+      "MOCK API: invokeAgent called with:",
+      query,
+      logContext ? "with logContext" : "without logContext",
+      options
+    );
 
-    // Simulate processing time
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Simulate delay
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Create sample log context for artifacts if not using reasonOnly mode
+    // If logContext is provided, use it, otherwise create mock data
+    const mockData = logContext ? { logContext, codeContext: new Map() } : createMockData();
 
     return {
       success: true,
+      message: "Agent invoked successfully",
       data: {
         chatHistory: [
-          `I've analyzed your query: "${query}"`,
-          "Here's what I found based on logs and code analysis:",
-          "There appears to be authentication issues in the system. Several users are experiencing login failures due to invalid credentials or session timeouts.",
-          "The errors are concentrated in the auth-service, which is having trouble validating tokens.",
+          `You asked: "${query}"`,
+          options?.reasonOnly
+            ? "I analyzed this using Manual mode (reasoning only)"
+            : "I searched logs and analyzed this in Search mode",
+          "Here's what I found: This is a simulated response from the agent.",
         ],
-        rca: "The root cause appears to be a misconfiguration in the JWT_SECRET environment variable after the last deployment. This is causing previously issued tokens to be invalidated.",
-        logPostprocessing: logContext,
-        codePostprocessing: codeContext,
+        rca: "Root cause identified: This is a mock response.",
+        logPostprocessing: mockData.logContext,
+        codePostprocessing: mockData.codeContext,
       },
     };
   },

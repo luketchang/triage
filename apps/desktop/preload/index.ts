@@ -1,3 +1,5 @@
+import { LogSearchInputCore } from "@triage/agent";
+import { LogsWithPagination } from "@triage/observability";
 import { contextBridge, ipcRenderer } from "electron";
 
 /**
@@ -8,8 +10,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /**
    * Invoke the agent with a query and return the result
    * @param query The query to send to the agent
+   * @param logContext Optional map of log search inputs to their results
+   * @param options Optional configuration options for the agent
    */
-  invokeAgent: (query: string) => ipcRenderer.invoke("invoke-agent", query),
+  invokeAgent: (
+    query: string,
+    logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null = null,
+    options?: { reasonOnly?: boolean }
+  ) => {
+    // Convert Map to a serializable object for IPC
+    // Maps aren't directly serializable in Electron IPC
+    const serializedLogContext = logContext ? Array.from(logContext.entries()) : null;
+
+    return ipcRenderer.invoke("invoke-agent", query, serializedLogContext, options);
+  },
 
   /**
    * Get the current agent configuration
