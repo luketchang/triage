@@ -7,11 +7,9 @@ export const LogsIcon = (): JSX.Element => (
     stroke="currentColor"
     className="icon"
   >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-    />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h12M4 10h10M4 14h8" />
+    <circle cx="15" cy="17" r="3" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17.5 19.5L21 23" />
   </svg>
 );
 
@@ -24,11 +22,11 @@ export const TracesIcon = (): JSX.Element => (
     stroke="currentColor"
     className="icon"
   >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M9.348 14.652a3.75 3.75 0 010-5.304m5.304 0a3.75 3.75 0 010 5.304m-5.304 0C10.407 15.642 11.14 16 12 16c.86 0 1.593-.358 2.152-.988m-5.304 0c-.763-.79-1.099-1.813-.976-2.837m6.257-2.837a3.99 3.99 0 00-1.353-1.672 4.19 4.19 0 00-1.777-.588"
-    />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v16h16" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h10" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 11h12" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 15h8" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M7 19h6" />
   </svg>
 );
 
@@ -41,11 +39,7 @@ export const DashboardsIcon = (): JSX.Element => (
     stroke="currentColor"
     className="icon"
   >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5m9.75-4.25h-9.5"
-    />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 20h16M4 4v16M4 16l3-5 4 2 5-8" />
   </svg>
 );
 

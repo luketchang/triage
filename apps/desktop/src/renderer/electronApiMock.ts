@@ -33,15 +33,24 @@ const createSampleLogs = (count: number, baseService: string): any[] => {
     // Create timestamps going back from now
     const logTime = new Date(now.getTime() - i * (i % 2 === 0 ? 60000 : 120000)); // Vary times
 
-    // Alternate log levels
-    const level = i < 5 ? "error" : "info";
+    // Determine log level - include warn logs too
+    let level;
+    if (i < 3) {
+      level = "error";
+    } else if (i < 6) {
+      level = "warn";
+    } else {
+      level = "info";
+    }
 
-    // Create different messages based on service
+    // Create different messages based on service and level
     let message = "";
     if (level === "error") {
       message = `Sample error message #${i + 1} for ${baseService}`;
+    } else if (level === "warn") {
+      message = `Sample warning message #${i + 1} for ${baseService}`;
     } else {
-      message = `Sample info message #${i + 2} for ${baseService}`;
+      message = `Sample info message #${i + 1} for ${baseService}`;
     }
 
     logs.push(
@@ -301,6 +310,36 @@ const mockElectronAPI = {
         "Sample info message #2 for user-service",
         "user-service",
         "info"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:20:25").toISOString(),
+        "Sample warning message #3 for orders",
+        "orders",
+        "warn"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:20:25").toISOString(),
+        "Sample warning message #3 for payments",
+        "payments",
+        "warn"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:20:25").toISOString(),
+        "Sample warning message #3 for auth",
+        "auth",
+        "warn"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:20:25").toISOString(),
+        "Sample warning message #3 for api-gateway",
+        "api-gateway",
+        "warn"
+      ),
+      createLogEntry(
+        new Date("2025-04-09T20:20:25").toISOString(),
+        "Sample warning message #3 for user-service",
+        "user-service",
+        "warn"
       ),
     ];
 

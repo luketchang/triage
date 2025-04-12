@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FacetData, Log } from "../types";
 import { formatDate } from "../utils/formatters";
 
@@ -26,6 +26,23 @@ const LogViewer: React.FC<LogViewerProps> = ({
   handleAddFacet,
 }) => {
   const [expandedLogs, setExpandedLogs] = useState<Record<number, boolean>>({});
+
+  // Add an event listener for the Escape key to collapse expanded logs
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && Object.values(expandedLogs).some((value) => value)) {
+        setExpandedLogs({});
+      }
+    };
+
+    // Add the event listener
+    window.addEventListener("keydown", handleKeyDown);
+
+    // Clean up the event listener when component unmounts
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [expandedLogs]);
 
   const toggleLogExpansion = (index: number) => {
     setExpandedLogs((prev) => ({
@@ -101,22 +118,28 @@ const LogViewer: React.FC<LogViewerProps> = ({
       ) : (
         <>
           <div className="logs-list">
+            <div className="logs-list-header">
+              <div className="log-column timestamp-column">Timestamp</div>
+              <div className="log-column service-column">Service</div>
+              <div className="log-column message-column">Message</div>
+            </div>
             {logs.map((log, index) => (
               <div
                 key={`${log.timestamp}-${index}`}
-                className={`log-entry ${expandedLogs[index] ? "expanded" : ""}`}
-                onClick={() => handleLogSelect(log)}
+                className={`compact-log-entry ${expandedLogs[index] ? "expanded" : ""}`}
+                onClick={() => {
+                  handleLogSelect(log);
+                  toggleLogExpansion(index);
+                }}
               >
-                <div className="log-entry-header">
+                <div className={`log-level-indicator ${log.level}`}></div>
+                <div className="log-entry-content">
                   <span className="log-timestamp">{formatDate(log.timestamp)}</span>
-                  <div className="log-tags">
-                    <span className={`service-tag ${log.service}`}>{log.service}</span>
-                    <span className={`level-tag ${log.level}`}>{log.level}</span>
-                  </div>
+                  <span className="log-service">{log.service}</span>
+                  <span className="log-message">{log.message}</span>
                 </div>
-                <div className="log-message">{log.message}</div>
                 {expandedLogs[index] && (
-                  <div className="log-details">
+                  <div className="log-details-expanded">
                     <div className="log-attributes">
                       {log.attributes &&
                         Object.entries(log.attributes).map(([key, value], attrIndex) => (

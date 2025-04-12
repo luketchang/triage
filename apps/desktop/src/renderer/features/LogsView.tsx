@@ -45,6 +45,23 @@ const LogsView: React.FC<LogsViewProps> = ({
   ]);
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
 
+  // Add an event listener for the Escape key to close log details
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && selectedLog) {
+        setSelectedLog(null);
+      }
+    };
+
+    // Add the event listener
+    window.addEventListener("keydown", handleKeyDown);
+
+    // Clean up the event listener when component unmounts
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedLog]);
+
   // Effect to handle the selectedArtifact changes
   useEffect(() => {
     if (
@@ -388,20 +405,23 @@ const LogsView: React.FC<LogsViewProps> = ({
           ) : (
             <>
               <div className="logs-list">
+                <div className="logs-list-header">
+                  <div className="log-column timestamp-column">Timestamp</div>
+                  <div className="log-column service-column">Service</div>
+                  <div className="log-column message-column">Message</div>
+                </div>
                 {logs.map((log, index) => (
                   <div
                     key={`${log.timestamp}-${index}`}
-                    className={`log-entry ${selectedLog && selectedLog.timestamp === log.timestamp && selectedLog.message === log.message ? "selected" : ""}`}
+                    className={`compact-log-entry ${selectedLog && selectedLog.timestamp === log.timestamp && selectedLog.message === log.message ? "selected" : ""}`}
                     onClick={() => handleLogSelect(log)}
                   >
-                    <div className="log-entry-header">
+                    <div className={`log-level-indicator ${log.level}`}></div>
+                    <div className="log-entry-content">
                       <span className="log-timestamp">{formatDate(log.timestamp)}</span>
-                      <div className="log-tags">
-                        <span className={`service-tag ${log.service}`}>{log.service}</span>
-                        <span className={`level-tag ${log.level}`}>{log.level}</span>
-                      </div>
+                      <span className="log-service">{log.service}</span>
+                      <span className="log-message">{log.message}</span>
                     </div>
-                    <div className="log-message">{log.message}</div>
                   </div>
                 ))}
                 {logs.length > 0 && (
