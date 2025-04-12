@@ -23,6 +23,12 @@ export function useChat() {
 
   const toggleChatSidebar = () => {
     setIsChatSidebarOpen(!isChatSidebarOpen);
+
+    // When opening the sidebar, clear any previous thinking state
+    // to ensure the focus effect works properly
+    if (!isChatSidebarOpen && isThinking) {
+      setIsThinking(false);
+    }
   };
 
   const toggleChatMode = () => {

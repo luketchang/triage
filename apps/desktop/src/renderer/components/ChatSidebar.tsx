@@ -38,21 +38,87 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     setLocalMode(chatMode);
   }, [chatMode]);
 
-  // Auto-resize textarea
-  useEffect(() => {
+  // Function to resize textarea based on content
+  const resizeTextarea = () => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Reset height to match design (28px)
+    // Reset height to default
     textarea.style.height = "28px";
 
-    // Set to scrollHeight if content exceeds single line
+    // Adjust height based on content
     const scrollHeight = textarea.scrollHeight;
     if (scrollHeight > 28) {
       const newHeight = Math.min(150, scrollHeight);
       textarea.style.height = `${newHeight}px`;
     }
+  };
+
+  // Auto-resize textarea when message changes
+  useEffect(() => {
+    resizeTextarea();
   }, [newMessage]);
+
+  // Auto-focus the textarea when the chat sidebar opens or when thinking state changes
+  useEffect(() => {
+    // Small delay to ensure the DOM is fully rendered
+    const focusTimeout = setTimeout(() => {
+      if (textareaRef.current && !isThinking) {
+        textareaRef.current.focus();
+      }
+    }, 10);
+
+    return () => clearTimeout(focusTimeout);
+  }, [isThinking]);
+
+  // Auto-focus on component mount specifically (when sidebar first opens)
+  useEffect(() => {
+    if (textareaRef.current && !isThinking) {
+      textareaRef.current.focus();
+    }
+  }, []);
+
+  // Add event listeners for textarea
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Handle paste events specifically
+    const handlePaste = () => {
+      // Use setTimeout to ensure we resize after paste content is added
+      setTimeout(resizeTextarea, 0);
+    };
+
+    // Handle input events (typing, deleting)
+    const handleInput = () => {
+      resizeTextarea();
+    };
+
+    // Add event listeners
+    textarea.addEventListener("paste", handlePaste);
+    textarea.addEventListener("input", handleInput);
+
+    // Cleanup
+    return () => {
+      textarea.removeEventListener("paste", handlePaste);
+      textarea.removeEventListener("input", handleInput);
+    };
+  }, []);
+
+  // Force reset textarea height when empty
+  useEffect(() => {
+    if (newMessage === "" && textareaRef.current) {
+      textareaRef.current.style.height = "28px";
+    }
+  }, [newMessage]);
+
+  // Force reset textarea height after sending a message
+  useEffect(() => {
+    if (isThinking && textareaRef.current) {
+      // If we're now thinking, a message was just sent
+      textareaRef.current.style.height = "28px";
+    }
+  }, [isThinking]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -79,6 +145,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (newMessage.trim()) {
+        // Clear all context items before sending the message
+        if (contextItems.length > 0 && removeContextItem) {
+          // Make a copy of the array to avoid modification during iteration
+          const itemsToRemove = [...contextItems];
+          itemsToRemove.forEach((item) => {
+            removeContextItem(item.id);
+          });
+        }
+
         sendMessage();
       }
     }
@@ -101,6 +176,29 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
 
     setModeMenuOpen(false);
+  };
+
+  // Wrapper for sendMessage to ensure textarea is reset
+  const handleSendMessage = async () => {
+    // Clear all context items before sending the message
+    if (contextItems.length > 0 && removeContextItem) {
+      // Make a copy of the array to avoid modification during iteration
+      const itemsToRemove = [...contextItems];
+      itemsToRemove.forEach((item) => {
+        removeContextItem(item.id);
+      });
+    }
+
+    await sendMessage();
+
+    // Force reset textarea height after sending
+    if (textareaRef.current) {
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "28px";
+        }
+      }, 50);
+    }
   };
 
   // Format timestamp range in a compact way
@@ -263,18 +361,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     <>
       <div className="chat-messages">
         {messages.length === 0 ? (
-          <div className="welcome-message">
-            <h3>AI Assistant</h3>
-            <p>Hello! How can I help you with your application?</p>
-          </div>
+          <div className="empty-chat"></div>
         ) : (
           <>
             {messages.map((message) => (
               <div key={message.id} className={`chat-message ${message.role}`}>
-                <div className="message-header">
-                  <div className="message-avatar">{message.role === "user" ? "You" : "AI"}</div>
-                  <div className="message-role">{message.role === "user" ? "You" : "Claude"}</div>
-                </div>
                 <div className="message-content">{renderMessageContent(message)}</div>
               </div>
             ))}
@@ -306,6 +397,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             placeholder="Ask a question..."
             disabled={isThinking}
             rows={1}
+            autoFocus={!isThinking}
           />
         </div>
 
@@ -336,7 +428,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
           <button
             className="send-button"
-            onClick={sendMessage}
+            onClick={handleSendMessage}
             disabled={isThinking || !newMessage.trim()}
           >
             Send
