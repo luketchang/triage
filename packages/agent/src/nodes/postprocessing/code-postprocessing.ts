@@ -14,8 +14,8 @@ function createPrompt(params: {
   
   Given the user query, the proposed answer/analysis, an overview of the codebase, and previously gathered code context, your task is cite relevant code file paths within the <previous_code_context> tags that support the answer. Then you will output a summary of the code files and how they contribute to the answer. This context will be presented to the user in the form of a summary and a list of code files and their results.
 
-   Rules:
-  - You must output a single code postprocessing tool call.
+  Rules:
+  - You must output a single code postprocessing tool call. DO NOT output multiple tool calls.
 
   <query>
   ${params.query}

@@ -1,4 +1,12 @@
-import { collectSourceCode, GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common";
+import {
+  collectSourceCode,
+  GeminiModel,
+  loadFileTree,
+  logger,
+  Model,
+  OpenAIModel,
+  timer,
+} from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -265,20 +273,29 @@ export class OnCallAgent {
     state: OncallAgentState
   ): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
-    const postprocessor = new LogPostprocessor(this.reasoningModel);
-    const response = await postprocessor.invoke({
-      query: state.query,
-      codebaseOverview: state.codebaseOverview,
-      logLabelsMap: state.logLabelsMap,
-      logContext: state.logContext,
-      answer: state.rootCauseAnalysis ?? "",
-    });
+    try {
+      const postprocessor = new LogPostprocessor(this.reasoningModel);
+      const response = await postprocessor.invoke({
+        query: state.query,
+        codebaseOverview: state.codebaseOverview,
+        logLabelsMap: state.logLabelsMap,
+        logContext: state.logContext,
+        answer: state.rootCauseAnalysis ?? "",
+      });
 
-    logger.info(`Log postprocessing complete with ${response.size} relevant log entries`);
+      logger.info(`Log postprocessing complete with ${response.size} relevant log entries`);
 
-    return {
-      logPostprocessingResult: response,
-    };
+      return {
+        logPostprocessingResult: response,
+      };
+    } catch (error) {
+      logger.error(
+        `Error during log postprocessing: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return {
+        logPostprocessingResult: new Map(),
+      };
+    }
   }
 
   @timer
@@ -286,19 +303,28 @@ export class OnCallAgent {
     state: OncallAgentState
   ): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
-    const postprocessor = new CodePostprocessor(this.reasoningModel);
-    const response = await postprocessor.invoke({
-      query: state.query,
-      codebaseOverview: state.codebaseOverview,
-      codeContext: state.codeContext,
-      answer: state.rootCauseAnalysis ?? "",
-    });
+    try {
+      const postprocessor = new CodePostprocessor(this.reasoningModel);
+      const response = await postprocessor.invoke({
+        query: state.query,
+        codebaseOverview: state.codebaseOverview,
+        codeContext: state.codeContext,
+        answer: state.rootCauseAnalysis ?? "",
+      });
 
-    logger.info(`Code postprocessing complete with ${response.size} relevant file entries`);
+      logger.info(`Code postprocessing complete with ${response.size} relevant file entries`);
 
-    return {
-      codePostprocessingResult: response,
-    };
+      return {
+        codePostprocessingResult: response,
+      };
+    } catch (error) {
+      logger.error(
+        `Error during code postprocessing: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return {
+        codePostprocessingResult: new Map(),
+      };
+    }
   }
 
   async invoke(state: OncallAgentState): Promise<{
@@ -478,7 +504,7 @@ export async function invokeAgent({
   };
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
-  const fastModel = GeminiModel.GEMINI_2_0_FLASH;
+  const fastModel = OpenAIModel.GPT_4O;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 

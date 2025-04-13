@@ -42,11 +42,12 @@ export function useChat() {
   const sendMessage = async (): Promise<void> => {
     if (!newMessage.trim()) return;
 
-    // Create a new user message
+    // Create a new user message with attached context items
     const userMessage: ChatMessage = {
       id: generateId(),
       role: "user",
       content: newMessage,
+      contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
     };
 
     // Update the messages state
@@ -84,6 +85,9 @@ export function useChat() {
         }
       });
 
+      // Clear context items after creating the message with them attached
+      setContextItems([]);
+
       // Invoke the agent with the user's query, logContext, and reasonOnly flag
       const agentResponse = await api.invokeAgent(
         newMessage,
@@ -94,9 +98,6 @@ export function useChat() {
       // Remove the thinking message
       setIsThinking(false);
       setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== thinkingMessageId));
-
-      // Clear context items after sending
-      setContextItems([]);
 
       // Extract artifacts from response
       let logArtifacts: Artifact[] = [];

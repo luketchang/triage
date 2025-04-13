@@ -1,5 +1,7 @@
 import { useState } from "react";
 import "./electron.d";
+import "./styles-chat-sidebar.css";
+import "./styles-chat.css";
 import "./styles.css";
 
 import api from "./services/api";

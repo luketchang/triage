@@ -97,6 +97,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   artifacts?: Artifact[];
+  contextItems?: ContextItem[];
 }
 
 // Interface for main content tabs

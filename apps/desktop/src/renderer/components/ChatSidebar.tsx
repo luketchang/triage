@@ -145,15 +145,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (newMessage.trim()) {
-        // Clear all context items before sending the message
-        if (contextItems.length > 0 && removeContextItem) {
-          // Make a copy of the array to avoid modification during iteration
-          const itemsToRemove = [...contextItems];
-          itemsToRemove.forEach((item) => {
-            removeContextItem(item.id);
-          });
-        }
-
         sendMessage();
       }
     }
@@ -180,15 +171,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   // Wrapper for sendMessage to ensure textarea is reset
   const handleSendMessage = async () => {
-    // Clear all context items before sending the message
-    if (contextItems.length > 0 && removeContextItem) {
-      // Make a copy of the array to avoid modification during iteration
-      const itemsToRemove = [...contextItems];
-      itemsToRemove.forEach((item) => {
-        removeContextItem(item.id);
-      });
-    }
-
     await sendMessage();
 
     // Force reset textarea height after sending
@@ -219,8 +201,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
-  // Render a context item card
-  const renderContextCard = (contextItem: ContextItem): JSX.Element => {
+  // Render a context item card, with optional removal button
+  const renderContextCard = (
+    contextItem: ContextItem,
+    showRemoveButton: boolean = true
+  ): JSX.Element => {
     // Only handling LogSearchContextItem for now, since it's the only type in our union
     if (contextItem.type === "logSearch") {
       let queryDisplay = contextItem.title;
@@ -257,7 +242,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             {timeRangeDisplay && <div className="context-time-range">{timeRangeDisplay}</div>}
             {pageCursorInfo && <div className="context-page-cursor">{pageCursorInfo}</div>}
           </div>
-          {hoveredContextId === contextItem.id && removeContextItem && (
+          {showRemoveButton && hoveredContextId === contextItem.id && removeContextItem && (
             <button
               className="remove-context-button"
               onClick={(e) => {
@@ -340,13 +325,30 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   // Function to render message content with animated ellipsis for "Thinking..."
   const renderMessageContent = (message: ChatMessage) => {
-    if (message.content === "Thinking...") {
-      return <div className="thinking-message">Thinking{ellipsis}</div>;
-    }
+    // First check if there are context items
+    const hasContextItems = message.contextItems && message.contextItems.length > 0;
 
     return (
       <>
-        <ReactMarkdown>{message.content}</ReactMarkdown>
+        {hasContextItems && message.contextItems && (
+          <div className="message-context-items">
+            <div className="context-items-header">
+              <span>Attached Context</span>
+            </div>
+            <div className="context-items-attached">
+              {message.contextItems.map((item) => renderContextCard(item, false))}
+            </div>
+          </div>
+        )}
+
+        {message.content === "Thinking..." ? (
+          <div className="thinking-message">Thinking{ellipsis}</div>
+        ) : (
+          <div className={hasContextItems ? "message-text-with-context" : ""}>
+            <ReactMarkdown>{message.content}</ReactMarkdown>
+          </div>
+        )}
+
         {message.artifacts && message.artifacts.length > 0 && (
           <div className="artifacts-container">
             <h4>Generated Artifacts</h4>
@@ -382,7 +384,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               <span className="context-keyboard-shortcut">Add more with ⌘+U</span>
             </div>
             <div className="context-items-list">
-              {contextItems.map((item) => renderContextCard(item))}
+              {contextItems.map((item) => renderContextCard(item, true))}
             </div>
           </div>
         )}
