@@ -1,7 +1,6 @@
 import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
 import { generateText } from "ai";
-import stableStringify from "json-stable-stringify";
 import {
   logPostprocessingToolSchema,
   LogSearchInputCore,
@@ -31,7 +30,7 @@ function createPrompt(params: {
   - Each list element should be a concise description of an event.
 
   Rules:
-  - You must output a single log postprocessing tool call.
+  - You must output a single log postprocessing tool call. DO NOT output multiple tool calls.
   
   <query>
   ${params.query}
@@ -90,28 +89,36 @@ export class LogPostprocessor {
 
     logger.info(`Found ${relevantQueries.length} relevant queries in postprocessing response`);
 
-    const lookup = new Map(
-      Array.from(params.logContext.entries()).map(([query, result]) => [
-        stableStringify(query),
-        { query, result },
-      ])
-    );
-
     // Create the final map by looking up each relevant query
     const relevantResultsMap = new Map<PostprocessedLogSearchInput, LogsWithPagination | string>();
+    const contextEntries = Array.from(params.logContext.entries());
 
     for (const relevantQuery of typedRelevantQueries) {
       const { title, summary, ...query } = relevantQuery; // TODO: also hacky to strip title here
-      const stableKey = stableStringify(query);
 
-      logger.info(`Looking for query with stable key: ${stableKey}`);
-      const match = lookup.get(stableKey);
+      logger.info(`Looking for matching query: ${query.query}`);
 
-      if (match) {
-        logger.info(`Found matching log query: ${stableKey}`);
-        relevantResultsMap.set(relevantQuery, match.result);
-      } else {
-        logger.warn(`No match found for query: ${stableKey}`);
+      // Find matching entry by direct field comparison
+      // TODO: we should be using a map but stableStringify is error prone due to fields not quite matching
+      let found = false;
+      for (const [contextQuery, result] of contextEntries) {
+        // Compare all relevant fields directly
+        if (
+          query.query === contextQuery.query &&
+          query.start === contextQuery.start &&
+          query.end === contextQuery.end &&
+          ((query.pageCursor == null && contextQuery.pageCursor == null) ||
+            query.pageCursor === contextQuery.pageCursor)
+        ) {
+          logger.info(`Found match with matching query parameters`);
+          relevantResultsMap.set(relevantQuery, result);
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        logger.warn(`No match found for query: ${query.query}`);
       }
     }
 
