@@ -504,7 +504,7 @@ export async function invokeAgent({
   };
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
-  const fastModel = OpenAIModel.GPT_4O;
+  const fastModel = OpenAIModel.GPT_4_1_MINI;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 
