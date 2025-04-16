@@ -1,15 +1,17 @@
 import { client, v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
 import { config } from "@triage/config";
-import { ObservabilityPlatform } from "./observability.interface";
+import { ObservabilityPlatform } from "../../observability.interface";
 import {
   IntegrationType,
   Log,
   LogsWithPagination,
   Span,
   SpansWithPagination,
+  Trace,
   TracesWithPagination,
-} from "./types";
+} from "../../types";
+import { convertSpansToTrace, extractTraceIds } from "./utils";
 
 const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
 - Use Datadog Span Search syntax to query spans within APM traces.
@@ -74,6 +76,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
   private configuration: client.Configuration;
   private logsApiInstance: v2.LogsApi;
   private spansApiInstance: v2.SpansApi;
+  private traceCache: Map<string, Trace> = new Map();
 
   constructor() {
     // Get credentials from environment config
@@ -248,6 +251,54 @@ export class DatadogPlatform implements ObservabilityPlatform {
     }
   }
 
+  /**
+   * Execute a spans search API call and return the response.
+   */
+  private async searchSpans(
+    query: string,
+    fromTime: string,
+    toTime: string,
+    limit: number = 1000,
+    cursor?: string
+  ): Promise<v2.SpansListResponse> {
+    try {
+      const response = await this.spansApiInstance.listSpansGet({
+        filterQuery: query,
+        filterFrom: fromTime,
+        filterTo: toTime,
+        sort: "timestamp",
+        pageLimit: limit,
+        pageCursor: cursor,
+      });
+      return response;
+    } catch (error) {
+      logger.error(`Error searching spans: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch all spans for a set of trace IDs in a single query
+   */
+  private async getAllSpansForTraces(
+    traceIds: string[],
+    fromTime: string,
+    toTime: string,
+    limit: number = 1000
+  ): Promise<v2.Span[]> {
+    if (traceIds.length === 0) {
+      return [];
+    }
+
+    // Build query of the form: trace_id:(id1 OR id2 OR id3 ...)
+    const query = `trace_id:(${traceIds.join(" OR ")})`;
+    const results = await this.searchSpans(query, fromTime, toTime, limit);
+    return results.data || [];
+  }
+
+  /**
+   * Fetch traces based on a span query
+   */
   async fetchTraces(params: {
     query: string;
     start: string;
@@ -255,7 +306,130 @@ export class DatadogPlatform implements ObservabilityPlatform {
     limit: number;
     pageCursor?: string;
   }): Promise<TracesWithPagination> {
-    throw new Error("fetchTraces is not implemented for Datadog platform");
+    try {
+      logger.info(`Fetching traces with query: ${params.query}`);
+      logger.info(`Time range: ${params.start} to ${params.end}`);
+
+      // Step 1: Search for spans matching the query
+      const searchResult = await this.searchSpans(
+        params.query,
+        params.start,
+        params.end,
+        params.limit,
+        params.pageCursor
+      );
+
+      // Extract trace IDs from the search results
+      const traceIds = extractTraceIds(searchResult.data || []);
+
+      if (traceIds.length === 0) {
+        logger.info("No trace IDs found for query");
+        return {
+          traces: [],
+          pageCursorOrIndicator: undefined,
+        };
+      }
+
+      logger.info(`Found ${traceIds.length} unique trace IDs`);
+
+      // Step 2: Get all spans for these trace IDs in a single query
+      const spans = await this.getAllSpansForTraces(traceIds, params.start, params.end);
+
+      if (spans.length === 0) {
+        logger.info("No spans found for the trace IDs");
+        return {
+          traces: [],
+          pageCursorOrIndicator: undefined,
+        };
+      }
+
+      // Group spans by trace ID
+      const traceMap: Record<string, v2.Span[]> = {};
+      for (const span of spans) {
+        const tid = span.attributes?.traceId;
+        if (!tid) continue;
+
+        if (!traceMap[tid]) {
+          traceMap[tid] = [];
+        }
+
+        traceMap[tid].push(span);
+      }
+
+      // Convert each set of spans into a Trace object
+      const traces: Trace[] = [];
+      for (const [tid, spanList] of Object.entries(traceMap)) {
+        const trace = convertSpansToTrace(spanList, tid);
+        if (trace) {
+          traces.push(trace);
+          // Cache the trace for later retrieval
+          this.traceCache.set(tid, trace);
+        }
+      }
+
+      // Sort traces by start time (newest first)
+      traces.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+
+      return {
+        traces,
+        pageCursorOrIndicator: searchResult.meta?.page?.after,
+      };
+    } catch (error) {
+      logger.error(`Error fetching traces: ${error}`);
+      return {
+        traces: [],
+        pageCursorOrIndicator: undefined,
+      };
+    }
+  }
+
+  /**
+   * Fetch a single trace by its ID
+   */
+  async fetchTraceById(params: {
+    traceId: string;
+    start?: string;
+    end?: string;
+  }): Promise<Trace | null> {
+    const { traceId, start, end } = params;
+
+    // Check if the trace is in the cache
+    if (this.traceCache.has(traceId)) {
+      logger.info(`Trace ${traceId} found in cache`);
+      return this.traceCache.get(traceId) || null;
+    }
+
+    logger.info(`Trace ${traceId} not found in cache, fetching from API`);
+
+    // If not in cache, we need time range parameters
+    if (!start || !end) {
+      logger.warn(`Cannot fetch trace ${traceId} without time range parameters`);
+      return null;
+    }
+
+    try {
+      // Query for all spans in this trace
+      const query = `trace_id:${traceId}`;
+      const searchResult = await this.searchSpans(query, start, end, 1000);
+
+      if (!searchResult.data || searchResult.data.length === 0) {
+        logger.info(`No spans found for trace ID: ${traceId}`);
+        return null;
+      }
+
+      // Convert spans to a trace object
+      const trace = convertSpansToTrace(searchResult.data, traceId);
+
+      // If successful, cache the result
+      if (trace) {
+        this.traceCache.set(traceId, trace);
+      }
+
+      return trace;
+    } catch (error) {
+      logger.error(`Error fetching trace by ID: ${error}`);
+      return null;
+    }
   }
 
   private formatSpans(spans: v2.Span[]): Span[] {
