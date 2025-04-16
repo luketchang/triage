@@ -7,6 +7,7 @@
 import {
   AgentConfig,
   FacetData,
+  FileTreeNode,
   Log,
   LogQueryParams,
   LogSearchInputCore,
@@ -99,6 +100,21 @@ declare global {
        * @returns Promise with the fetched facet values
        */
       getSpansFacetValues: (start: string, end: string) => Promise<ApiResponse<FacetData[]>>;
+
+      /**
+       * Get the file tree structure for a repository path
+       * @param repoPath Path to the repository
+       * @returns Promise with the file tree structure
+       */
+      getFileTree: (repoPath: string) => Promise<ApiResponse<FileTreeNode[]>>;
+
+      /**
+       * Get the content of a file
+       * @param repoPath Base repository path
+       * @param filePath Relative file path within repository
+       * @returns Promise with the file content
+       */
+      getFileContent: (repoPath: string, filePath: string) => Promise<ApiResponse<string>>;
     };
   }
 }

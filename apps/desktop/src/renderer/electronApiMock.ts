@@ -2,6 +2,7 @@ import { ApiResponse } from "./electron.d";
 import {
   AgentConfig,
   FacetData,
+  FileTreeNode,
   Log,
   LogQueryParams,
   LogsWithPagination,
@@ -71,6 +72,324 @@ const createSampleLogs = (count: number, baseService: string): any[] => {
   }
 
   return logs;
+};
+
+// Mock file system structure for development
+const mockFileSystem: Record<string, any> = {
+  src: {
+    components: {
+      "Button.tsx": `import React from 'react';
+
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: 'primary' | 'secondary';
+  disabled?: boolean;
+}
+
+export const Button = ({ 
+  children, 
+  onClick, 
+  variant = 'primary',
+  disabled = false 
+}: ButtonProps) => {
+  return (
+    <button 
+      className={\`button \${variant}\`} 
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {children}
+    </button>
+  );
+};`,
+      "Input.tsx": `import React from 'react';
+
+interface InputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: 'text' | 'password' | 'email';
+}
+
+export const Input = ({
+  value,
+  onChange,
+  placeholder,
+  type = 'text'
+}: InputProps) => {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="input"
+    />
+  );
+};`,
+    },
+    services: {
+      "api.ts": `// API service for making network requests
+
+/**
+ * Fetch data from the API
+ * @param url The URL to fetch from
+ * @param options Optional fetch options
+ * @returns The response data
+ */
+export async function fetchData<T>(url: string, options?: RequestInit): Promise<T> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      ...options,
+    });
+    
+    if (!response.ok) {
+      throw new Error(\`HTTP error: \${response.status}\`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('API request failed:', error);
+    throw error;
+  }
+}`,
+      "auth.ts": `// Authentication service
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+}
+
+/**
+ * Login the user
+ * @param username The username
+ * @param password The password
+ * @returns The user object
+ */
+export async function login(username: string, password: string): Promise<User> {
+  // This would normally make a network request
+  return {
+    id: '123',
+    username,
+    email: \`\${username}@example.com\`,
+  };
+}
+
+/**
+ * Check if the user is authenticated
+ * @returns Whether the user is authenticated
+ */
+export function isAuthenticated(): boolean {
+  return localStorage.getItem('auth_token') !== null;
+}`,
+    },
+    utils: {
+      "logger.ts": `// Logging utility
+
+type LogLevel = 'info' | 'warn' | 'error';
+
+class Logger {
+  private prefix: string;
+  
+  constructor(prefix: string = '') {
+    this.prefix = prefix ? \`[\${prefix}] \` : '';
+  }
+  
+  info(message: string, ...args: any[]): void {
+    console.info(\`\${this.prefix}\${message}\`, ...args);
+  }
+  
+  warn(message: string, ...args: any[]): void {
+    console.warn(\`\${this.prefix}\${message}\`, ...args);
+  }
+  
+  error(message: string, ...args: any[]): void {
+    console.error(\`\${this.prefix}\${message}\`, ...args);
+  }
+}
+
+export default new Logger('App');`,
+      "formatters.ts": `// Formatting utilities
+
+/**
+ * Format a date
+ * @param date The date to format
+ * @param format The format to use
+ * @returns The formatted date
+ */
+export function formatDate(date: Date, format: string = 'yyyy-MM-dd'): string {
+  // Simple implementation
+  const year = date.getFullYear().toString();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  
+  return format
+    .replace('yyyy', year)
+    .replace('MM', month)
+    .replace('dd', day);
+}
+
+/**
+ * Format a number as currency
+ * @param amount The amount to format
+ * @param currency The currency code
+ * @returns The formatted currency
+ */
+export function formatCurrency(amount: number, currency: string = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+  }).format(amount);
+}`,
+    },
+    "App.tsx": `import React from 'react';
+import { Button } from './components/Button';
+import { Input } from './components/Input';
+import logger from './utils/logger';
+
+export const App = () => {
+  const [value, setValue] = React.useState('');
+  
+  const handleClick = () => {
+    logger.info('Button clicked with value:', value);
+  };
+  
+  return (
+    <div className="app">
+      <h1>Sample App</h1>
+      <Input
+        value={value}
+        onChange={setValue}
+        placeholder="Type something..."
+      />
+      <Button onClick={handleClick}>
+        Submit
+      </Button>
+    </div>
+  );
+};`,
+    "index.tsx": `import React from 'react';
+import ReactDOM from 'react-dom';
+import { App } from './App';
+import './styles.css';
+
+ReactDOM.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+  document.getElementById('root')
+);`,
+  },
+  "package.json": `{
+  "name": "sample-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^4.9.5"
+  }
+}`,
+  "tsconfig.json": `{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "include": ["src"]
+}`,
+  "README.md": `# Sample App
+
+This is a mock repository for testing the file explorer functionality.
+
+## Features
+
+- TypeScript React application
+- Component library
+- Utility functions
+- API services
+
+## Getting Started
+
+\`\`\`bash
+# Install dependencies
+npm install
+
+# Start the development server
+npm start
+\`\`\``,
+};
+
+// Helper function to convert the mock file system to tree nodes
+const convertMockToTreeNodes = (
+  obj: Record<string, any>,
+  basePath: string = ""
+): FileTreeNode[] => {
+  return Object.entries(obj).map(([name, value]) => {
+    const path = basePath ? `${basePath}/${name}` : name;
+    const isDirectory = typeof value === "object";
+
+    if (isDirectory) {
+      return {
+        name,
+        path,
+        isDirectory: true,
+        children: convertMockToTreeNodes(value, path),
+      };
+    } else {
+      return {
+        name,
+        path,
+        isDirectory: false,
+      };
+    }
+  });
+};
+
+// Get content of a mock file
+const getMockFileContent = (filePath: string): string | null => {
+  const parts = filePath.split("/");
+  let current: any = mockFileSystem;
+
+  for (const part of parts) {
+    if (!current || typeof current !== "object") {
+      return null;
+    }
+    current = current[part];
+  }
+
+  if (typeof current !== "string") {
+    return null;
+  }
+
+  return current;
 };
 
 // Create mock facet data for logs
@@ -275,35 +594,36 @@ const createMockData = () => {
 
   // Sample code snippet
   codeContext.set(
-    "src/services/auth.js",
-    `// Authentication Service
-const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+    "src/services/auth.ts",
+    `// Authentication service
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+}
 
 /**
- * Authenticates a user and returns a JWT token
- * @param {string} email - User email
- * @param {string} password - User password
- * @returns {Promise<string>} JWT token
+ * Login the user
+ * @param username The username
+ * @param password The password
+ * @returns The user object
  */
-async function login(email, password) {
-  try {
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      throw new Error('User not found');
-    }
-    const isValid = await user.validatePassword(password);
-    if (!isValid) {
-      throw new Error('Invalid password');
-    }
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: '1d',
-    });
-    return token;
-  } catch (error) {
-    console.error('Login error:', error);
-    throw error;
-  }
+export async function login(username: string, password: string): Promise<User> {
+  // This would normally make a network request
+  return {
+    id: '123',
+    username,
+    email: \`\${username}@example.com\`,
+  };
+}
+
+/**
+ * Check if the user is authenticated
+ * @returns Whether the user is authenticated
+ */
+export function isAuthenticated(): boolean {
+  return localStorage.getItem('auth_token') !== null;
 }`
   );
 
@@ -364,12 +684,12 @@ const mockElectronAPI = {
     console.info("Mock getAgentConfig called");
 
     return {
-      repoPath: "/path/to/repo",
-      codebaseOverviewPath: "/path/to/overview.md",
+      repoPath: "/Users/luketchang/code/ticketing",
+      codebaseOverviewPath: "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
       observabilityPlatform: "datadog",
-      observabilityFeatures: ["logs", "traces"],
-      startDate: new Date("2023-10-01T00:00:00Z"),
-      endDate: new Date(),
+      observabilityFeatures: ["logs"],
+      startDate: new Date("2025-04-01T21:00:00Z"),
+      endDate: new Date("2025-04-01T22:00:00Z"),
     };
   },
 
@@ -611,6 +931,49 @@ const mockElectronAPI = {
       success: true,
       data: createMockSpanFacets(),
     };
+  },
+
+  /**
+   * Get the file tree structure for a repository path
+   */
+  getFileTree: async (repoPath: string): Promise<ApiResponse<FileTreeNode[]>> => {
+    console.info("Mock getFileTree called with:", repoPath);
+
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Convert the mock file system to tree nodes
+    const fileTree = convertMockToTreeNodes(mockFileSystem);
+
+    return {
+      success: true,
+      data: fileTree,
+    };
+  },
+
+  /**
+   * Get the content of a file
+   */
+  getFileContent: async (repoPath: string, filePath: string): Promise<ApiResponse<string>> => {
+    console.info("Mock getFileContent called with:", { repoPath, filePath });
+
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Get the file content from the mock file system
+    const content = getMockFileContent(filePath);
+
+    if (content !== null) {
+      return {
+        success: true,
+        data: content,
+      };
+    } else {
+      return {
+        success: false,
+        error: `File not found: ${filePath}`,
+      };
+    }
   },
 };
 

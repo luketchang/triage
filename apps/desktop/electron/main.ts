@@ -5,6 +5,7 @@ import { invokeAgent } from "@triage/agent";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 // Fix CommonJS import for electron-updater
 import pkg from "electron-updater";
+import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 const { autoUpdater } = pkg;
@@ -337,6 +338,105 @@ function setupIpcHandlers(): void {
       };
     }
   });
+
+  // Get the file tree structure
+  ipcMain.handle("get-file-tree", async (_event: any, repoPath: string) => {
+    try {
+      console.log("Getting file tree for path:", repoPath);
+
+      // Check if path exists
+      if (!fs.existsSync(repoPath)) {
+        return {
+          success: false,
+          error: `Repository path does not exist: ${repoPath}`,
+        };
+      }
+
+      // Recursively get file tree
+      const fileTree = await getDirectoryTree(repoPath);
+
+      return {
+        success: true,
+        data: fileTree,
+      };
+    } catch (error) {
+      console.error("Error getting file tree:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
+  // Get file content
+  ipcMain.handle("get-file-content", async (_event: any, repoPath: string, filePath: string) => {
+    try {
+      console.log("Getting file content:", filePath);
+
+      // Full path to the file
+      const fullPath = path.join(repoPath, filePath);
+
+      // Check if file exists
+      if (!fs.existsSync(fullPath)) {
+        return {
+          success: false,
+          error: `File does not exist: ${fullPath}`,
+        };
+      }
+
+      // Read file content
+      const content = await fs.promises.readFile(fullPath, "utf8");
+
+      return {
+        success: true,
+        data: content,
+      };
+    } catch (error) {
+      console.error("Error getting file content:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+}
+
+/**
+ * Helper function to recursively get directory tree
+ */
+async function getDirectoryTree(dirPath: string, basePath: string = ""): Promise<any[]> {
+  const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+  const result: any[] = [];
+
+  for (const entry of entries) {
+    // Skip hidden files and node_modules
+    if (entry.name.startsWith(".") || entry.name === "node_modules") {
+      continue;
+    }
+
+    const relativePath = path.join(basePath, entry.name);
+    const fullPath = path.join(dirPath, entry.name);
+
+    if (entry.isDirectory()) {
+      // Process directory
+      const children = await getDirectoryTree(fullPath, relativePath);
+      result.push({
+        name: entry.name,
+        path: relativePath,
+        isDirectory: true,
+        children: children,
+      });
+    } else {
+      // Process file
+      result.push({
+        name: entry.name,
+        path: relativePath,
+        isDirectory: false,
+      });
+    }
+  }
+
+  return result;
 }
 
 /**
