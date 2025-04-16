@@ -109,19 +109,25 @@
 }
 
 .chat-message .context-card .context-time-range,
-.chat-message .context-card .context-page-cursor {
-  font-size: 10px;
-  color: #888;
+.chat-message .context-card .context-page-cursor,
+.chat-message .context-card .context-trace-id {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chat-message .context-card .context-time-range {
   margin-top: 2px;
 }
 
+.chat-message .context-card .context-time-range {
+  color: var(--accent-color);
+}
+
 .chat-message .context-card .context-page-cursor {
-  font-style: italic;
-  margin-top: 1px;
+  color: var(--text-tertiary);
+}
+
+.chat-message .context-card .context-trace-id {
+  color: var(--text-tertiary);
+  font-family: var(--mono-font);
 }

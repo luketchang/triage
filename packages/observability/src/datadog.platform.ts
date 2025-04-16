@@ -2,19 +2,31 @@ import { client, v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
 import { config } from "@triage/config";
 import { ObservabilityPlatform } from "./observability.interface";
-import { IntegrationType, Log, LogsWithPagination, Span, SpansWithPagination } from "./types";
+import {
+  IntegrationType,
+  Log,
+  LogsWithPagination,
+  Span,
+  SpansWithPagination,
+  TracesWithPagination,
+} from "./types";
 
 const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
 - Use Datadog Span Search syntax to query spans within APM traces.
-- Example query with reserved attributes: service:<service_name> env:prod operation_name:<operation>
-- Example query for span attributes (requires '@'): @http.url:/api/v1/users @http.status_code:>=500
-- You can inspect multiple services in the same query, e.g.: (service:<service1> OR service:<service2>)
-- Use wildcard (*) for partial matches, e.g.: service:auth* @resource_name:*/login
-- Use '-' to exclude terms, e.g.: service:web-service AND -@http.status_code:200
-- For non-standard tags use: tags:"non.standard/tag-name"
-- Numeric range search example: @http.response_time:[100 TO 500]
-- Attribute keyword search (full-text wildcard match): @error.message:*timeout*
-- Special characters (?, >, <, :, =, ", ~, /, \, spaces) must be escaped, e.g.: @url:*user\\=JaneDoe*
+
+## Reserved Attributes: 
+- env
+- service
+- operation_name
+- resource_name
+- status
+- trace_id
+
+## Standard Attributes: 
+- @duration
+- @http.status_code
+
+TODO: ...
 
 ## Pagination
 - Page cursors are a feature in Datadog span search that allows you to paginate through results.
@@ -234,6 +246,16 @@ export class DatadogPlatform implements ObservabilityPlatform {
         pageCursorOrIndicator: undefined,
       };
     }
+  }
+
+  async fetchTraces(params: {
+    query: string;
+    start: string;
+    end: string;
+    limit: number;
+    pageCursor?: string;
+  }): Promise<TracesWithPagination> {
+    throw new Error("fetchTraces is not implemented for Datadog platform");
   }
 
   private formatSpans(spans: v2.Span[]): Span[] {

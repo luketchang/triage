@@ -192,6 +192,42 @@ export const spanSearchInputToolSchema = {
   parameters: spanSearchInputSchema,
 };
 
+export const traceSearchInputSchema = z.object({
+  start: z
+    .string()
+    .describe(
+      "Start time in ISO 8601 format with timezone (e.g., '2025-03-19T04:10:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
+    ),
+  end: z
+    .string()
+    .describe(
+      "End time in ISO 8601 format with timezone (e.g., '2025-03-19T04:40:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
+    ),
+  query: z.string().describe("Trace search query in the observability platform query language"),
+  limit: z.number().describe("Maximum number of traces to return, default to 20"),
+  pageCursor: z
+    .string()
+    .nullable()
+    .describe(
+      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
+    ),
+  reasoning: z
+    .string()
+    .describe(
+      "Objectively outline what you observe in the traces as sequence of events formatted as a numbered list. For example: 1. user clicked X.\n 2. recommendations service provided Y.\n 3. User saw Z. Only after the first step, then enumerate what other services or areas of the traces you may want to explore next if you are missing context."
+    ),
+});
+
+export type TraceSearchInput = zInfer<typeof traceSearchInputSchema> & { type: "traceSearchInput" };
+
+// TraceSearchInputCore type without reasoning - used for storage in context maps
+export type TraceSearchInputCore = Omit<TraceSearchInput, "reasoning">;
+
+export const traceSearchInputToolSchema = {
+  description: "Input parameters for searching traces.",
+  parameters: traceSearchInputSchema,
+};
+
 export const codeSearchInputSchema = z.object({
   directoryPath: z.string().describe("The directory to search in"),
   reasoning: z

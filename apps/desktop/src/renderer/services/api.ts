@@ -6,11 +6,12 @@ import {
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
+  TraceQueryParams,
 } from "../types";
 
 // TESTING ONLY: Set to true to use mock API instead of real Electron API
 // Set to false in production or when testing with the real API
-const USE_MOCK_API = false;
+const USE_MOCK_API = true;
 
 // Helper function to check if electron API exists and has specific methods
 const isElectronAPIAvailable = () => {
@@ -120,6 +121,51 @@ const api = {
         return response;
       } catch (error) {
         console.error("Error in getLogsFacetValues:", error);
+        return []; // Return empty array on error
+      }
+    }
+  },
+
+  fetchTraces: async (params: TraceQueryParams) => {
+    console.log("[API DEBUG] fetchTraces called with params:", params);
+    const shouldUseMock = USE_MOCK_API || !isMethodAvailable("fetchTraces");
+    console.log("[API DEBUG] Using mock implementation:", shouldUseMock);
+
+    if (shouldUseMock) {
+      console.info("Using mock fetchTraces");
+      return mockElectronAPI.fetchTraces(params);
+    } else {
+      console.info("Using real electronAPI.fetchTraces");
+      return window.electronAPI.fetchTraces(params);
+    }
+  },
+
+  getSpansFacetValues: async (
+    start: string,
+    end: string
+  ): Promise<ApiResponse<FacetData[]> | FacetData[]> => {
+    console.log("[API DEBUG] getSpansFacetValues called with:", { start, end });
+    const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getSpansFacetValues");
+    console.log("[API DEBUG] Using mock implementation:", shouldUseMock);
+
+    if (shouldUseMock) {
+      console.info("Using mock getSpansFacetValues");
+      try {
+        const response = await mockElectronAPI.getSpansFacetValues(start, end);
+        console.log("[API DEBUG] Mock response:", response);
+        return response;
+      } catch (error) {
+        console.error("Error in getSpansFacetValues:", error);
+        return []; // Return empty array on error
+      }
+    } else {
+      try {
+        console.info("Using real electronAPI.getSpansFacetValues");
+        const response = await window.electronAPI.getSpansFacetValues(start, end);
+        console.log("[API DEBUG] Real API response:", response);
+        return response;
+      } catch (error) {
+        console.error("Error in getSpansFacetValues:", error);
         return []; // Return empty array on error
       }
     }

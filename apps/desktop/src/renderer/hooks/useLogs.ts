@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../components/TimeRangePicker";
 import api from "../services/api";
-import { Log, LogQueryParams, TimeRange } from "../types";
+import { Log, LogQueryParams, LogsWithPagination, TimeRange } from "../types";
 
 export function useLogs() {
   const [logs, setLogs] = useState<Log[]>([]);
+  const [logsWithPagination, setLogsWithPagination] = useState<LogsWithPagination | null>(null);
   const [logQuery, setLogQuery] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [timeRange, setTimeRange] = useState<TimeRange>({
@@ -25,10 +26,23 @@ export function useLogs() {
       if (response && response.success && response.data) {
         let filteredLogs = response.data.logs || [];
 
-        // Update logs state
+        // Store the complete response data with pagination
         if (params.pageCursor) {
+          // For pagination, merge with existing data since view is expanding
+          if (logsWithPagination) {
+            const updatedLogs = [...logsWithPagination.logs, ...filteredLogs];
+            setLogsWithPagination({
+              ...response.data,
+              logs: updatedLogs,
+            });
+          } else {
+            setLogsWithPagination(response.data);
+          }
+          // Update logs array for UI components
           setLogs((prev) => [...prev, ...filteredLogs]);
         } else {
+          // For new queries, replace existing data
+          setLogsWithPagination(response.data);
           setLogs(filteredLogs);
         }
 
@@ -38,12 +52,14 @@ export function useLogs() {
         console.warn("Invalid response format from fetchLogs:", response);
         if (!params.pageCursor) {
           setLogs([]);
+          setLogsWithPagination(null);
         }
       }
     } catch (error) {
       console.error("Error fetching logs:", error);
       if (!params.pageCursor) {
         setLogs([]);
+        setLogsWithPagination(null);
       }
     } finally {
       setIsLoading(false);
@@ -98,6 +114,7 @@ export function useLogs() {
 
   return {
     logs,
+    logsWithPagination,
     logQuery,
     setLogQuery,
     isLoading,
@@ -106,6 +123,7 @@ export function useLogs() {
     handleLoadMoreLogs,
     handleTimeRangeChange,
     setLogs,
+    setLogsWithPagination,
     setIsLoading,
     setPageCursor,
     pageCursor,

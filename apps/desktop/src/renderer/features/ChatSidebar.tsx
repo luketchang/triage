@@ -206,7 +206,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     contextItem: ContextItem,
     showRemoveButton: boolean = true
   ): JSX.Element => {
-    // Only handling LogSearchContextItem for now, since it's the only type in our union
+    // Handle different context item types
     if (contextItem.type === "logSearch") {
       let queryDisplay = contextItem.title;
       let timeRangeDisplay = "";
@@ -249,7 +249,53 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 e.stopPropagation();
                 removeContextItem(contextItem.id);
               }}
-              title="Remove this context"
+              title="Remove from context"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      );
+    } else if (contextItem.type === "singleTrace") {
+      // Handle single trace context item
+      const traceData = contextItem.data;
+
+      return (
+        <div
+          key={contextItem.id}
+          className="context-card"
+          onMouseEnter={() => setHoveredContextId(contextItem.id)}
+          onMouseLeave={() => setHoveredContextId(null)}
+        >
+          <div className="context-card-content">
+            <div className="context-type">trace</div>
+            <div className="context-title" title={contextItem.title}>
+              {contextItem.title}
+            </div>
+            <div className="context-trace-id" title={traceData.traceId}>
+              ID: {traceData.traceId.substring(0, 8)}...
+            </div>
+            {traceData.startTime && traceData.endTime && (
+              <div className="context-time-range">
+                {formatTimeRange(
+                  traceData.startTime instanceof Date
+                    ? traceData.startTime.toISOString()
+                    : String(traceData.startTime),
+                  traceData.endTime instanceof Date
+                    ? traceData.endTime.toISOString()
+                    : String(traceData.endTime)
+                )}
+              </div>
+            )}
+          </div>
+          {showRemoveButton && hoveredContextId === contextItem.id && removeContextItem && (
+            <button
+              className="remove-context-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeContextItem(contextItem.id);
+              }}
+              title="Remove from context"
             >
               ×
             </button>
@@ -258,12 +304,33 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       );
     }
 
-    // Default fallback - should never reach here due to discriminated union
+    // Fallback for unknown context item types
+    // This should never be reached in theory, but provides a fallback UI for future context types
+    const unknownContextItem = contextItem as ContextItem;
     return (
-      <div className="context-card">
+      <div
+        key={unknownContextItem.id}
+        className="context-card"
+        onMouseEnter={() => setHoveredContextId(unknownContextItem.id)}
+        onMouseLeave={() => setHoveredContextId(null)}
+      >
         <div className="context-card-content">
-          <div className="context-title">Unknown context type</div>
+          <div className="context-type">{unknownContextItem.type}</div>
+          <div className="context-title">{unknownContextItem.title}</div>
+          <div className="context-description">{unknownContextItem.description}</div>
         </div>
+        {showRemoveButton && hoveredContextId === unknownContextItem.id && removeContextItem && (
+          <button
+            className="remove-context-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeContextItem(unknownContextItem.id);
+            }}
+            title="Remove from context"
+          >
+            ×
+          </button>
+        )}
       </div>
     );
   };

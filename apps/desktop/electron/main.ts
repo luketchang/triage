@@ -266,6 +266,77 @@ function setupIpcHandlers(): void {
       };
     }
   });
+
+  // Fetch traces based on query parameters
+  ipcMain.handle("fetch-traces", async (_event: any, params: any) => {
+    try {
+      console.log("Fetching traces with params:", params);
+
+      // Get the configured observability platform
+      const platformType =
+        (process.env.OBSERVABILITY_PLATFORM as IntegrationType) || IntegrationType.DATADOG;
+      console.log(`Using observability platform: ${platformType}`);
+
+      // Get the observability platform implementation
+      const platform = getObservabilityPlatform(platformType);
+
+      // Call the real platform API (assuming the method exists)
+      const result = await platform.fetchTraces({
+        query: params.query || "",
+        start: params.start,
+        end: params.end,
+        limit: params.limit || 500,
+        pageCursor: params.pageCursor,
+      });
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      console.error("Error fetching traces:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
+  // Get span facet values for a given time range
+  ipcMain.handle("get-spans-facet-values", async (_event: any, start: string, end: string) => {
+    try {
+      console.log("Getting span facet values for time range:", { start, end });
+
+      // Get the configured observability platform
+      const platformType =
+        (process.env.OBSERVABILITY_PLATFORM as IntegrationType) || IntegrationType.DATADOG;
+      console.log(`Using observability platform: ${platformType}`);
+
+      // Get the observability platform implementation
+      const platform = getObservabilityPlatform(platformType);
+
+      // Call the real platform API (assuming the method exists)
+      const spanFacetsMap = await platform.getSpansFacetValues(start, end);
+
+      // Convert the Map<string, string[]> to FacetData[] format
+      const facetsArray = Array.from(spanFacetsMap.entries()).map(([name, values]) => {
+        // Create counts array with same length as values (with placeholder values of 1)
+        const counts = new Array(values.length).fill(1);
+        return { name, values, counts };
+      });
+
+      return {
+        success: true,
+        data: facetsArray,
+      };
+    } catch (error) {
+      console.error("Error getting span facet values:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
 }
 
 /**

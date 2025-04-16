@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
+import SearchBar from "../components/SearchBar";
 import TimeRangePicker from "../components/TimeRangePicker";
 import api from "../services/api";
-import { Artifact, FacetData, Log, TimeRange } from "../types";
+import { Artifact, FacetData, Log, LogsWithPagination, TimeRange } from "../types";
 import { formatDate } from "../utils/formatters";
 
 interface LogsViewProps {
   logs: Log[];
+  logsWithPagination?: LogsWithPagination | null;
   logQuery: string;
   setLogQuery: (query: string) => void;
   timeRange: TimeRange;
@@ -15,6 +17,7 @@ interface LogsViewProps {
   onLoadMore: () => void;
   selectedArtifact?: Artifact | null;
   setLogs?: (logs: Log[]) => void;
+  setLogsWithPagination?: (data: LogsWithPagination | null) => void;
   setIsLoading?: (isLoading: boolean) => void;
   setPageCursor?: (cursor: string | undefined) => void;
   setTimeRange?: (timeRange: TimeRange) => void;
@@ -22,6 +25,7 @@ interface LogsViewProps {
 
 const LogsView: React.FC<LogsViewProps> = ({
   logs,
+  logsWithPagination,
   logQuery,
   timeRange,
   isLoading,
@@ -31,6 +35,7 @@ const LogsView: React.FC<LogsViewProps> = ({
   onLoadMore,
   selectedArtifact,
   setLogs,
+  setLogsWithPagination,
   setIsLoading,
   setPageCursor,
   setTimeRange,
@@ -48,8 +53,10 @@ const LogsView: React.FC<LogsViewProps> = ({
   // Add an event listener for the Escape key to close log details
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && selectedLog) {
-        setSelectedLog(null);
+      if (event.key === "Escape") {
+        if (selectedLog) {
+          setSelectedLog(null);
+        }
       }
     };
 
@@ -314,10 +321,121 @@ const LogsView: React.FC<LogsViewProps> = ({
     });
   };
 
+  const getLogLevelClass = (level: string): string => {
+    level = level.toLowerCase();
+    switch (level) {
+      case "error":
+        return "log-level-error";
+      case "warn":
+      case "warning":
+        return "log-level-warn";
+      case "info":
+        return "log-level-info";
+      case "debug":
+        return "log-level-debug";
+      case "trace":
+        return "log-level-trace";
+      default:
+        return "";
+    }
+  };
+
   // Handle time range changes from the TimeRangePicker
   const handleTimeRangeChange = (newTimeRange: TimeRange) => {
     onTimeRangeChange(newTimeRange);
   };
+
+  // Render facet sidebar section
+  const renderFacetSection = () => (
+    <div className="facets-sidebar">
+      <h3>Facets</h3>
+      {Array.isArray(facets) && facets.length > 0 ? (
+        facets.map((facet, index) => (
+          <div key={index} className="facet-group">
+            <div
+              className={`facet-header ${selectedFacets.includes(facet.name) ? "expanded" : ""}`}
+              onClick={() => handleToggleFacet(facet.name)}
+            >
+              <span className="facet-name">{facet.name}</span>
+              <span className="facet-toggle">
+                {selectedFacets.includes(facet.name) ? "▼" : "▶"}
+              </span>
+            </div>
+            {selectedFacets.includes(facet.name) && (
+              <div className="facet-values">
+                {facet.values.map((value, vIndex) => {
+                  // Get the parsed query to check if this value is selected
+                  const queryTerms = parseQueryString(logQuery);
+                  const isSelected = queryTerms[facet.name]?.includes(value);
+
+                  return (
+                    <div
+                      key={vIndex}
+                      className={`facet-value ${isSelected ? "facet-value-selected" : ""}`}
+                      onClick={() => handleAddFacet(facet.name, value)}
+                    >
+                      {value}
+                      {facet.counts && (
+                        <span className="facet-count">({facet.counts[vIndex]})</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))
+      ) : (
+        <div className="facet-loading">Loading facets...</div>
+      )}
+    </div>
+  );
+
+  // Render logs list section
+  const renderLogsList = () => (
+    <div className="logs-display">
+      {isLoading ? (
+        <div className="loading-indicator">Loading logs...</div>
+      ) : logs.length === 0 ? (
+        <div className="empty-logs-message">
+          No logs found. Try adjusting your query or time range.
+        </div>
+      ) : (
+        <>
+          <div className="logs-list">
+            <div className="logs-list-header">
+              <div className="log-column timestamp-column">Timestamp</div>
+              <div className="log-column service-column">Service</div>
+              <div className="log-column message-column">Message</div>
+            </div>
+            {logs.map((log, index) => (
+              <div
+                key={`${log.timestamp}-${index}`}
+                className={`compact-log-entry ${selectedLog && selectedLog.timestamp === log.timestamp && selectedLog.message === log.message ? "selected" : ""}`}
+                onClick={() => {
+                  handleLogSelect(log);
+                }}
+              >
+                <div className={`log-level-indicator ${log.level}`}></div>
+                <div className="log-entry-content">
+                  <span className="log-timestamp">{formatDate(log.timestamp)}</span>
+                  <span className="log-service">{log.service}</span>
+                  <span className="log-message">{log.message}</span>
+                </div>
+              </div>
+            ))}
+            {logsWithPagination && logsWithPagination.pageCursorOrIndicator && (
+              <div className="load-more-container">
+                <button className="load-more-button" onClick={onLoadMore}>
+                  Load More
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   return (
     <div className="logs-tab">
@@ -327,114 +445,13 @@ const LogsView: React.FC<LogsViewProps> = ({
         </div>
 
         <div className="log-query-container">
-          <form className="log-query-form" onSubmit={handleQuerySubmit}>
-            <input
-              type="text"
-              className="log-query-input"
-              placeholder="Enter log query (e.g. service:orders level:error)"
-              value={logQuery}
-              onChange={(e) => {
-                const newQuery = e.target.value;
-                setLogQuery(newQuery);
-              }}
-              // Add key up event handler to perform search on enter key
-              onKeyUp={(e) => {
-                if (e.key === "Enter") {
-                  onQuerySubmit(logQuery);
-                }
-              }}
-            />
-            <button type="submit" className="query-submit-button">
-              Search
-            </button>
-          </form>
+          <SearchBar query={logQuery} setQuery={setLogQuery} onSubmit={handleQuerySubmit} />
         </div>
       </div>
 
       <div className="logs-content">
-        <div className="facets-sidebar">
-          <h3>Facets</h3>
-          {Array.isArray(facets) && facets.length > 0 ? (
-            facets.map((facet, index) => (
-              <div key={index} className="facet-group">
-                <div
-                  className={`facet-header ${selectedFacets.includes(facet.name) ? "expanded" : ""}`}
-                  onClick={() => handleToggleFacet(facet.name)}
-                >
-                  <span className="facet-name">{facet.name}</span>
-                  <span className="facet-toggle">
-                    {selectedFacets.includes(facet.name) ? "▼" : "▶"}
-                  </span>
-                </div>
-                {selectedFacets.includes(facet.name) && (
-                  <div className="facet-values">
-                    {facet.values.map((value, vIndex) => {
-                      // Get the parsed query to check if this value is selected
-                      const queryTerms = parseQueryString(logQuery);
-                      const isSelected = queryTerms[facet.name]?.includes(value);
-
-                      return (
-                        <div
-                          key={vIndex}
-                          className={`facet-value ${isSelected ? "facet-value-selected" : ""}`}
-                          onClick={() => handleAddFacet(facet.name, value)}
-                        >
-                          {value}
-                          {facet.counts && (
-                            <span className="facet-count">({facet.counts[vIndex]})</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <div className="facet-loading">Loading facets...</div>
-          )}
-        </div>
-
-        <div className="logs-display">
-          {isLoading ? (
-            <div className="loading-indicator">Loading logs...</div>
-          ) : logs.length === 0 ? (
-            <div className="empty-logs-message">
-              No logs found. Try adjusting your query or time range.
-            </div>
-          ) : (
-            <>
-              <div className="logs-list">
-                <div className="logs-list-header">
-                  <div className="log-column timestamp-column">Timestamp</div>
-                  <div className="log-column service-column">Service</div>
-                  <div className="log-column message-column">Message</div>
-                </div>
-                {logs.map((log, index) => (
-                  <div
-                    key={`${log.timestamp}-${index}`}
-                    className={`compact-log-entry ${selectedLog && selectedLog.timestamp === log.timestamp && selectedLog.message === log.message ? "selected" : ""}`}
-                    onClick={() => handleLogSelect(log)}
-                  >
-                    <div className={`log-level-indicator ${log.level}`}></div>
-                    <div className="log-entry-content">
-                      <span className="log-timestamp">{formatDate(log.timestamp)}</span>
-                      <span className="log-service">{log.service}</span>
-                      <span className="log-message">{log.message}</span>
-                    </div>
-                  </div>
-                ))}
-                {logs.length > 0 && (
-                  <div className="load-more-container">
-                    <button className="load-more-button" onClick={onLoadMore}>
-                      Load More
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        {renderFacetSection()}
+        {renderLogsList()}
 
         {selectedLog && (
           <div className="log-details-sidebar">
