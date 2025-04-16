@@ -1,5 +1,12 @@
 import { ApiResponse } from "./electron.d";
-import { AgentConfig, FacetData, Log, LogQueryParams, LogsWithPagination } from "./types";
+import {
+  AgentConfig,
+  FacetData,
+  Log,
+  LogQueryParams,
+  LogsWithPagination,
+  TraceQueryParams,
+} from "./types";
 
 import { LogSearchInputCore, PostprocessedLogSearchInput } from "@triage/agent";
 
@@ -80,6 +87,152 @@ const createMockFacets = () => {
       counts: [1, 1, 1],
     },
   ];
+};
+
+// Create mock facet data for spans
+const createMockSpanFacets = () => {
+  return [
+    {
+      name: "service",
+      values: ["orders", "payments", "auth", "tickets", "expiration"],
+      counts: [1, 1, 1, 1, 1],
+    },
+    {
+      name: "resource",
+      values: ["/api/checkout", "/api/payment", "/api/auth", "/api/orders"],
+      counts: [1, 1, 1, 1],
+    },
+    {
+      name: "http.status_code",
+      values: ["200", "201", "400", "404", "500"],
+      counts: [5, 3, 2, 1, 1],
+    },
+    {
+      name: "environment",
+      values: ["production", "staging", "development"],
+      counts: [3, 2, 1],
+    },
+  ];
+};
+
+// Create sample trace with spans
+const createSampleTrace = (
+  traceId: string,
+  rootService: string,
+  rootResource: string,
+  hasError: boolean = false
+) => {
+  const startTime = new Date();
+  const duration = 500 + Math.random() * 1000; // Random duration between 500-1500ms
+
+  // Create breakdown of service latencies
+  const services = ["orders", "payments", "auth", "database", "cache"];
+  const serviceBreakdown = services.map((service, index) => {
+    const serviceDuration = (duration / services.length) * (1 + Math.random() * 0.5);
+    return {
+      service,
+      duration: serviceDuration,
+      percentage: (serviceDuration / duration) * 100,
+    };
+  });
+
+  // Create a root span and some child spans
+  const rootSpan = {
+    id: `span-${traceId}-1`,
+    service: rootService,
+    operation: "http.request",
+    resource: rootResource,
+    start: startTime,
+    end: new Date(startTime.getTime() + duration),
+    duration: duration,
+    level: 0,
+    error: hasError
+      ? {
+          message: "Internal server error",
+          type: "Error",
+          stack:
+            "Error: Internal server error\n    at processRequest (/app/src/server.js:42:12)\n    at handleRequest (/app/src/routes.js:21:5)",
+        }
+      : undefined,
+    tags: {
+      "http.method": "POST",
+      "http.url": rootResource,
+      "http.status_code": hasError ? "500" : "200",
+    } as Record<string, string>,
+    children: [
+      {
+        id: `span-${traceId}-2`,
+        service: "auth",
+        operation: "validate.token",
+        resource: "/auth/validate",
+        start: new Date(startTime.getTime() + 10),
+        end: new Date(startTime.getTime() + 50),
+        duration: 40,
+        level: 1,
+        error: undefined,
+        tags: {
+          "user.id": "user-123",
+        } as Record<string, string>,
+        children: [],
+      },
+      {
+        id: `span-${traceId}-3`,
+        service: "database",
+        operation: "db.query",
+        resource: "SELECT * FROM orders",
+        start: new Date(startTime.getTime() + 60),
+        end: new Date(startTime.getTime() + 200),
+        duration: 140,
+        level: 1,
+        error: undefined,
+        tags: {
+          "db.type": "postgres",
+          "db.rows": "42",
+        } as Record<string, string>,
+        children: [],
+      },
+    ],
+  };
+
+  // Add the child spans connection to database for some traces
+  if (Math.random() > 0.5) {
+    rootSpan.children.push({
+      id: `span-${traceId}-4`,
+      service: "cache",
+      operation: "redis.get",
+      resource: "HGET user:profile",
+      start: new Date(startTime.getTime() + 210),
+      end: new Date(startTime.getTime() + 230),
+      duration: 20,
+      level: 1,
+      error: undefined,
+      tags: {
+        "cache.hit": "true",
+      } as Record<string, string>,
+      children: [],
+    });
+  }
+
+  return {
+    traceId: traceId,
+    rootService: rootService,
+    rootResource: rootResource,
+    rootOperation: "http.request",
+    startTime: startTime,
+    endTime: new Date(startTime.getTime() + duration),
+    duration: duration,
+    httpStatus: hasError ? "500" : "200",
+    hasError: hasError,
+    serviceBreakdown: serviceBreakdown,
+    displayTrace: {
+      traceId: traceId,
+      rootSpan: rootSpan,
+      spans: [rootSpan, ...rootSpan.children],
+      startTime: startTime,
+      endTime: new Date(startTime.getTime() + duration),
+      totalDuration: duration,
+    },
+  };
 };
 
 // Create mock data
@@ -388,6 +541,75 @@ const mockElectronAPI = {
     return {
       success: true,
       data: createMockFacets(),
+    };
+  },
+
+  /**
+   * Fetch traces based on query parameters
+   */
+  fetchTraces: async (params: TraceQueryParams) => {
+    console.info("Mock fetchTraces called with:", params);
+
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Create some sample traces
+    const allTraces = [
+      createSampleTrace("trace-1", "orders", "/api/orders", false),
+      createSampleTrace("trace-2", "payments", "/api/payment", true),
+      createSampleTrace("trace-3", "auth", "/api/login", false),
+      createSampleTrace("trace-4", "tickets", "/api/tickets", false),
+      createSampleTrace("trace-5", "expiration", "/api/expiration", true),
+      createSampleTrace("trace-6", "orders", "/api/checkout", false),
+      createSampleTrace("trace-7", "payments", "/api/refund", false),
+      createSampleTrace("trace-8", "auth", "/api/signup", true),
+    ];
+
+    // Apply search filter if present
+    let filteredTraces = [...allTraces];
+    if (params.query && params.query.length > 0) {
+      const searchTerms = params.query.toLowerCase().split(" ");
+      filteredTraces = allTraces.filter((trace) => {
+        return searchTerms.some(
+          (term) =>
+            trace.rootResource.toLowerCase().includes(term) ||
+            trace.rootService.toLowerCase().includes(term) ||
+            term.includes(`status:${trace.httpStatus}`)
+        );
+      });
+    }
+
+    // Sort by timestamp (newest first)
+    filteredTraces.sort(
+      (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+    );
+
+    // Apply limit
+    const paginatedTraces = filteredTraces.slice(0, params.limit);
+
+    return {
+      success: true,
+      data: {
+        traces: paginatedTraces,
+        pageCursorOrIndicator:
+          filteredTraces.length > params.limit ? `cursor-${Date.now()}` : undefined,
+      },
+    };
+  },
+
+  /**
+   * Get facet values for spans
+   */
+  getSpansFacetValues: async (start: string, end: string): Promise<ApiResponse<FacetData[]>> => {
+    console.info("Mock getSpansFacetValues called with:", { start, end });
+
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Always return mock facet data with success: true
+    return {
+      success: true,
+      data: createMockSpanFacets(),
     };
   },
 };

@@ -49,6 +49,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
    */
   getLogsFacetValues: (start: string, end: string) =>
     ipcRenderer.invoke("get-logs-facet-values", start, end),
+
+  /**
+   * Fetch traces based on query parameters
+   * @param params Query parameters for fetching traces
+   */
+  fetchTraces: (params: unknown) => ipcRenderer.invoke("fetch-traces", params),
+
+  /**
+   * Get span facet values for a given time range
+   * @param start Start date of the time range
+   * @param end End date of the time range
+   */
+  getSpansFacetValues: (start: string, end: string) =>
+    ipcRenderer.invoke("get-spans-facet-values", start, end),
 });
 
 /**

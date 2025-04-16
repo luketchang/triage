@@ -197,21 +197,27 @@
 }
 
 .context-items-list .context-card .context-time-range,
-.context-items-list .context-card .context-page-cursor {
-  font-size: 10px;
-  color: #888;
+.context-items-list .context-card .context-page-cursor,
+.context-items-list .context-card .context-trace-id {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.context-items-list .context-card .context-time-range {
   margin-top: 2px;
 }
 
+.context-items-list .context-card .context-time-range {
+  color: var(--accent-color);
+}
+
 .context-items-list .context-card .context-page-cursor {
-  font-style: italic;
-  margin-top: 1px;
+  color: var(--text-tertiary);
+}
+
+.context-items-list .context-card .context-trace-id {
+  color: var(--text-tertiary);
+  font-family: var(--mono-font);
 }
 
 .remove-context-button {

@@ -12,6 +12,8 @@ import {
   LogSearchInputCore,
   LogsWithPagination,
   PostprocessedLogSearchInput,
+  Trace,
+  TraceQueryParams,
 } from "./types";
 
 // Define API response types with consistent error property
@@ -77,6 +79,26 @@ declare global {
        * @returns Promise with the fetched facet values
        */
       getLogsFacetValues: (start: string, end: string) => Promise<ApiResponse<FacetData[]>>;
+
+      /**
+       * Fetch traces based on query parameters
+       * @param params Query parameters for fetching traces
+       * @returns Promise with the fetched traces
+       */
+      fetchTraces: (params: TraceQueryParams) => Promise<
+        ApiResponse<{
+          traces: Trace[];
+          pageCursorOrIndicator?: string;
+        }>
+      >;
+
+      /**
+       * Get span facet values for a given time range
+       * @param start Start date of the time range
+       * @param end End date of the time range
+       * @returns Promise with the fetched facet values
+       */
+      getSpansFacetValues: (start: string, end: string) => Promise<ApiResponse<FacetData[]>>;
     };
   }
 }

@@ -607,6 +607,10 @@ body {
   font-size: 12px;
   font-weight: 600;
   color: #aaa;
+  background-color: transparent;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .log-column {
@@ -636,6 +640,9 @@ body {
   position: relative;
   height: 24px;
   overflow: hidden;
+  transition: background-color 0.2s;
+  border-bottom: none;
+  padding: 0;
 }
 
 .compact-log-entry:hover {
@@ -645,6 +652,20 @@ body {
 .compact-log-entry.selected {
   background-color: #1e1e1e;
   border-color: var(--primary-color);
+}
+
+.compact-log-entry.has-error {
+  position: relative;
+}
+
+.compact-log-entry.has-error::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--color-error);
 }
 
 .log-level-indicator {
@@ -1100,6 +1121,536 @@ body {
   padding: 20px;
 }
 
+/* Traces view styles */
+.traces-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.traces-header {
+  padding: 12px 16px 16px 16px;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.trace-query-container {
+  width: 100%;
+}
+
+.trace-query-form {
+  display: flex;
+  gap: 8px;
+}
+
+.trace-query-input {
+  flex: 1;
+  background-color: #252525;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0 12px;
+  color: #eee;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  height: 30px;
+  box-sizing: border-box;
+}
+
+.trace-query-input:focus {
+  border-color: var(--primary-color);
+}
+
+.traces-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.traces-display {
+  flex: 1;
+  padding: 8px 0 0 0;
+  overflow-y: auto;
+  background-color: var(--color-bg-primary);
+}
+
+.traces-list {
+  width: 100%;
+}
+
+.traces-list-header {
+  display: flex;
+  padding: 0 0 8px 0;
+  margin-left: 5px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #333;
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaa;
+  background-color: transparent;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.trace-column {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 0 10px;
+}
+
+.timestamp-column {
+  width: 160px;
+}
+
+.service-column {
+  width: 120px;
+}
+
+.resource-column {
+  width: 180px;
+}
+
+.duration-column {
+  width: 90px;
+  text-align: right;
+}
+
+.status-column {
+  width: 80px;
+  text-align: center;
+}
+
+.breakdown-column {
+  flex: 1;
+}
+
+.compact-trace-entry {
+  display: flex;
+  margin-bottom: 2px;
+  cursor: pointer;
+  background-color: #1a1a1a;
+  border-radius: 2px;
+  position: relative;
+  height: 24px;
+  overflow: hidden;
+  transition: background-color 0.2s;
+  border-bottom: none;
+  padding: 0;
+}
+
+.compact-trace-entry:hover {
+  background-color: #252525;
+}
+
+.compact-trace-entry.selected {
+  background-color: #1e1e1e;
+  border-color: var(--primary-color);
+}
+
+.compact-trace-entry.has-error {
+  position: relative;
+}
+
+.compact-trace-entry.has-error::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--color-error);
+}
+
+.trace-entry-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding-left: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.trace-timestamp {
+  width: 160px;
+  font-size: 11px;
+  color: #888;
+  flex-shrink: 0;
+  padding: 0 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trace-service {
+  width: 120px;
+  font-size: 11px;
+  padding: 0 10px;
+  color: #bbb;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trace-resource {
+  width: 180px;
+  font-size: 11px;
+  padding: 0 10px;
+  color: #bbb;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trace-duration {
+  width: 90px;
+  font-size: 11px;
+  padding: 0 10px;
+  color: #bbb;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.trace-status {
+  width: 80px;
+  text-align: center;
+  font-size: 11px;
+  color: #bbb;
+  padding: 0 4px;
+  border-radius: 3px;
+  background-color: transparent;
+}
+
+.trace-status.http-2xx {
+  color: var(--color-success);
+}
+
+.trace-status.http-4xx,
+.trace-status.http-5xx {
+  color: var(--color-error);
+}
+
+.trace-breakdown {
+  flex: 1;
+  cursor: pointer;
+  position: relative;
+  padding: 0 10px;
+}
+
+.trace-breakdown:hover .service-breakdown-container {
+  box-shadow: 0 0 0 2px #ff7300;
+  border-radius: 4px;
+}
+
+.service-breakdown-container {
+  position: relative;
+  width: 100%;
+  height: 16px;
+  border-radius: 3px;
+  overflow: hidden;
+  background-color: var(--color-bg-secondary);
+}
+
+.service-breakdown-bar {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.service-breakdown-segment {
+  height: 100%;
+  transition: opacity 0.2s;
+}
+
+.service-breakdown-segment:hover {
+  opacity: 0.8;
+}
+
+.trace-details-sidebar {
+  width: 350px;
+  background-color: var(--color-bg-secondary);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.trace-details-header {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.trace-details-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.close-details-button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.close-details-button:hover {
+  color: var(--color-text);
+}
+
+.trace-details-content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.trace-detail {
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.detail-label {
+  font-weight: 600;
+  margin-right: 8px;
+  color: var(--color-text-muted);
+}
+
+.detail-value {
+  word-break: break-all;
+}
+
+.detail-value.trace-id {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.detail-value.http-status.http-2xx {
+  color: var(--color-success);
+}
+
+.detail-value.http-status.http-4xx,
+.detail-value.http-status.http-5xx {
+  color: var(--color-error);
+}
+
+.trace-service-legend {
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.color-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.service-name {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.trace-waterfall {
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+.waterfall-chart {
+  width: 100%;
+  min-width: 300px;
+}
+
+.waterfall-header {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.waterfall-header-left {
+  width: 50%;
+}
+
+.waterfall-header-right {
+  width: 50%;
+  text-align: right;
+}
+
+.waterfall-body {
+  margin-top: 8px;
+}
+
+.waterfall-span {
+  margin-bottom: 4px;
+  padding: 4px 0;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 0.1s;
+  position: relative;
+}
+
+.waterfall-span:hover {
+  background-color: var(--color-bg-hover);
+}
+
+.waterfall-span.selected {
+  background-color: var(--color-bg-selected);
+}
+
+.waterfall-span.has-error .waterfall-bar {
+  border: 1px solid var(--color-error);
+}
+
+.waterfall-bar-container {
+  position: relative;
+  height: 10px;
+  margin-bottom: 2px;
+}
+
+.waterfall-bar {
+  position: absolute;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.waterfall-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+.span-service {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.span-resource {
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40%;
+}
+
+.span-duration {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.span-details {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: var(--color-bg-tertiary);
+  border-radius: 4px;
+}
+
+.span-detail {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.span-error {
+  margin-top: 12px;
+  padding: 8px;
+  background-color: var(--color-error-bg);
+  border-radius: 4px;
+  border-left: 3px solid var(--color-error);
+}
+
+.error-message {
+  font-weight: 600;
+  color: var(--color-error);
+  margin-bottom: 4px;
+}
+
+.error-type {
+  font-family: monospace;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.error-stack {
+  font-family: monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  border-radius: 2px;
+  margin: 4px 0 0 0;
+}
+
+.span-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag-item {
+  font-size: 12px;
+  background-color: var(--color-bg-secondary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  display: inline-flex;
+}
+
+.tag-key {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.tag-value {
+  color: var(--color-text-muted);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-traces-message {
+  padding: 40px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.load-more-container {
+  padding: 16px;
+  text-align: center;
+}
+
+.load-more-button {
+  padding: 8px 16px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.load-more-button:hover {
+  background-color: var(--color-bg-hover);
+}
+
 /*****************************************
  * Dashboards View Styling
  *****************************************/
@@ -1236,50 +1787,6 @@ body {
 /* Chat Sidebar Mode Selector */
 /* Styles moved to above - see lines ~622-740 for current implementation */
 
-/* Add styles for expanded log entries */
-.compact-log-entry.expanded {
-  height: auto;
-  margin-bottom: 10px;
-  border: 1px solid #333;
-  border-left: 3px solid transparent;
-}
-
-.compact-log-entry.expanded .log-level-indicator {
-  height: 24px;
-  width: 3px;
-}
-
-.log-details-expanded {
-  padding: 5px 10px 10px 10px;
-  margin-top: 25px;
-  border-top: 1px dashed #444;
-  background-color: #202020;
-  font-size: 12px;
-}
-
-.log-attributes,
-.log-metadata {
-  margin-top: 8px;
-}
-
-.log-attribute,
-.log-metadata-item {
-  display: flex;
-  margin-bottom: 4px;
-}
-
-.log-attribute-key,
-.log-metadata-key {
-  color: #888;
-  margin-right: 8px;
-  font-weight: 600;
-}
-
-.log-attribute-value,
-.log-metadata-value {
-  word-break: break-word;
-}
-
 /* Add subtle animations for a more modern feel */
 .nav-item,
 .chat-toggle,
@@ -1310,4 +1817,131 @@ body {
 
 .facet-values::-webkit-scrollbar-thumb:hover {
   background: var(--primary-color-dark);
+}
+
+/* Traces content with selected trace */
+.traces-content.with-selected-trace {
+  position: relative;
+}
+
+/* Trace details panel (sliding partial overlay version) */
+.trace-details-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 65%;
+  background-color: #1a1a1a;
+  border-left: 1px solid #2a2a2a;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 100;
+  transform: translateX(100%);
+  animation: slideInPanel 0.3s ease-out forwards;
+}
+
+@keyframes slideInPanel {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.traces-content.with-selected-trace .facets-sidebar {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.traces-content.with-selected-trace .traces-display {
+  width: 35%;
+}
+
+.trace-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: #1f1f1f;
+  border-bottom: 1px solid #2a2a2a;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.trace-details-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.trace-details-content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* Increased waterfall view size */
+.trace-waterfall {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 12px;
+  margin-bottom: 24px;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #333;
+  border-radius: 6px;
+}
+
+/* Waterfall chart styling enhancements */
+.waterfall-chart {
+  padding: 12px;
+  background-color: #1a1a1a;
+  border-radius: 4px;
+}
+
+.waterfall-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-weight: 600;
+  border-bottom: 1px solid #333;
+  margin-bottom: 8px;
+}
+
+/* Service Breakdown Hover Card */
+.service-breakdown-hover-card {
+  position: absolute;
+  z-index: 1000;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 12px 16px;
+  min-width: 300px;
+  max-width: 400px;
+  transform-origin: top left;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.service-breakdown-hover-card h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #f1f1f1;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

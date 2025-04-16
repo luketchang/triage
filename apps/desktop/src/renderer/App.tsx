@@ -4,15 +4,14 @@ import "./styles-chat-sidebar.css";
 import "./styles-chat.css";
 import "./styles.css";
 
-import api from "./services/api";
-import { Artifact, ContextItem, LogSearchInputCore, TabType } from "./types";
+import { Artifact, ContextItem, LogSearchInputCore, TabType, TraceForAgent } from "./types";
 import { generateId } from "./utils/formatters";
 
 // Components
-import ChatSidebar from "./components/ChatSidebar";
 import NavigationSidebar from "./components/NavigationSidebar";
 
 // Feature Views
+import ChatSidebar from "./features/ChatSidebar";
 import CodeView from "./features/CodeView";
 import DashboardsView from "./features/DashboardsView";
 import LogsView from "./features/LogsView";
@@ -22,6 +21,7 @@ import TracesView from "./features/TracesView";
 import { useChat } from "./hooks/useChat";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useLogs } from "./hooks/useLogs";
+import { useTraces } from "./hooks/useTraces";
 
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>("logs");
@@ -30,6 +30,7 @@ function App(): JSX.Element {
   // Use custom hooks
   const logsState = useLogs();
   const chatState = useChat();
+  const tracesState = useTraces();
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts([
@@ -67,50 +68,57 @@ function App(): JSX.Element {
     switch (activeTab) {
       case "logs":
         // Create context from logs view
-        if (logsState.logQuery) {
-          // Fetch logs to create a proper pairing of input and results
-          const params = {
+        // Both logQuery and logsWithPagination should be populated or neither should be
+        if (logsState.logQuery && logsState.logsWithPagination) {
+          // Create a LogSearchInputCore object
+          const logSearchInput: LogSearchInputCore = {
             query: logsState.logQuery,
             start: logsState.timeRange.start,
             end: logsState.timeRange.end,
-            limit: 500, // Use a reasonable limit
-            pageCursor: logsState.pageCursor,
+            limit: 500,
+            pageCursor: logsState.pageCursor || null,
+            type: "logSearchInput",
           };
 
-          try {
-            // Fetch the logs with current parameters
-            const response = await api.fetchLogs(params);
-
-            if (response && response.success && response.data) {
-              // Create a LogSearchInputCore object
-              const logSearchInput: LogSearchInputCore = {
-                query: logsState.logQuery,
-                start: logsState.timeRange.start,
-                end: logsState.timeRange.end,
-                limit: 500,
-                pageCursor: logsState.pageCursor || null,
-                type: "logSearchInput",
-              };
-
-              // Create the context item with proper pairing
-              newContextItem = {
-                id: generateId(),
-                type: "logSearch",
-                title: logsState.logQuery || "Log Query",
-                description: `Time: ${new Date(logsState.timeRange.start).toLocaleString()} - ${new Date(logsState.timeRange.end).toLocaleString()}`,
-                data: {
-                  input: logSearchInput,
-                  results: response.data,
-                },
-                sourceTab: "logs",
-              };
-            }
-          } catch (error) {
-            console.error("Error fetching logs for context:", error);
-          }
+          // Use the logs data directly from state - no need to fetch again
+          newContextItem = {
+            id: generateId(),
+            type: "logSearch",
+            title: logsState.logQuery || "Log Query",
+            description: `Time: ${new Date(logsState.timeRange.start).toLocaleString()} - ${new Date(logsState.timeRange.end).toLocaleString()}`,
+            data: {
+              input: logSearchInput,
+              results: logsState.logsWithPagination,
+            },
+            sourceTab: "logs",
+          };
+        } else if (logsState.logQuery) {
+          console.warn("Unexpected state: logQuery exists but logsWithPagination is missing");
+        } else if (logsState.logsWithPagination) {
+          console.warn("Unexpected state: logsWithPagination exists but logQuery is missing");
         }
         break;
       case "traces":
+        // Create context from traces view - ONLY if a trace is explicitly selected
+        if (tracesState.selectedTrace) {
+          console.info("Adding selected trace to context:", tracesState.selectedTrace.traceId);
+
+          // Extract just the necessary properties without serviceBreakdown
+          const { serviceBreakdown, ...traceForAgent } = tracesState.selectedTrace;
+
+          // Create a SingleTraceContextItem with the selected trace
+          newContextItem = {
+            id: generateId(),
+            type: "singleTrace",
+            title: `Trace: ${tracesState.selectedTrace.rootService} - ${tracesState.selectedTrace.rootResource}`,
+            description: `Trace ID: ${tracesState.selectedTrace.traceId}`,
+            data: traceForAgent as TraceForAgent,
+            sourceTab: "traces",
+          };
+        } else {
+          console.info("No trace selected - cmd+u has no effect in traces view without selection");
+        }
+        break;
       case "code":
       case "dashboards":
         // Implement for other tabs as needed
@@ -133,6 +141,7 @@ function App(): JSX.Element {
         return (
           <LogsView
             logs={logsState.logs}
+            logsWithPagination={logsState.logsWithPagination}
             logQuery={logsState.logQuery}
             timeRange={logsState.timeRange}
             isLoading={logsState.isLoading}
@@ -144,13 +153,37 @@ function App(): JSX.Element {
               selectedArtifact && selectedArtifact.type === "log" ? selectedArtifact : null
             }
             setLogs={logsState.setLogs}
+            setLogsWithPagination={logsState.setLogsWithPagination}
             setIsLoading={logsState.setIsLoading}
             setPageCursor={logsState.setPageCursor}
             setTimeRange={logsState.setTimeRange}
           />
         );
       case "traces":
-        return <TracesView selectedArtifact={null} />;
+        return (
+          <TracesView
+            selectedArtifact={
+              selectedArtifact && selectedArtifact.type === "trace" ? selectedArtifact : null
+            }
+            selectedTrace={tracesState.selectedTrace}
+            handleTraceSelect={tracesState.handleTraceSelect}
+            traces={tracesState.traces}
+            traceQuery={tracesState.traceQuery}
+            setTraceQuery={tracesState.setTraceQuery}
+            isLoading={tracesState.isLoading}
+            timeRange={tracesState.timeRange}
+            fetchTracesWithQuery={tracesState.fetchTracesWithQuery}
+            handleLoadMoreTraces={tracesState.handleLoadMoreTraces}
+            handleTimeRangeChange={tracesState.handleTimeRangeChange}
+            facets={tracesState.facets}
+            selectedFacets={tracesState.selectedFacets}
+            setSelectedFacets={tracesState.setSelectedFacets}
+            selectedSpan={tracesState.selectedSpan}
+            handleSpanSelect={tracesState.handleSpanSelect}
+            pageCursor={tracesState.pageCursor}
+            setSelectedSpan={tracesState.setSelectedSpan}
+          />
+        );
       case "dashboards":
         return <DashboardsView selectedArtifact={null} />;
       case "code":
@@ -165,6 +198,7 @@ function App(): JSX.Element {
         return (
           <LogsView
             logs={logsState.logs}
+            logsWithPagination={logsState.logsWithPagination}
             logQuery={logsState.logQuery}
             timeRange={logsState.timeRange}
             isLoading={logsState.isLoading}
@@ -174,6 +208,7 @@ function App(): JSX.Element {
             onLoadMore={logsState.handleLoadMoreLogs}
             selectedArtifact={null}
             setLogs={logsState.setLogs}
+            setLogsWithPagination={logsState.setLogsWithPagination}
             setIsLoading={logsState.setIsLoading}
             setPageCursor={logsState.setPageCursor}
             setTimeRange={logsState.setTimeRange}

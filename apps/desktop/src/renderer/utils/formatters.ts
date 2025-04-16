@@ -1,8 +1,8 @@
 /**
  * Format a date string to a more readable format
  */
-export const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
+export const formatDate = (dateInput: string | Date): string => {
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
 
   // Note: The timestamp in the image shows formats like "4/9/2025, 20:22:25"
   // This is M/D/YYYY, HH:MM:SS format with 24-hour time

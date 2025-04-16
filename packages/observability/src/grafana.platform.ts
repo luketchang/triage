@@ -8,6 +8,7 @@ import {
   LogsWithPagination,
   PaginationStatus,
   SpansWithPagination,
+  TracesWithPagination,
 } from "./types";
 
 export const GRAFANA_LOG_SEARCH_INSTRUCTIONS = `
@@ -200,6 +201,16 @@ export class GrafanaPlatform implements ObservabilityPlatform {
         pageCursorOrIndicator: undefined,
       };
     }
+  }
+
+  fetchTraces(params: {
+    query: string;
+    start: string;
+    end: string;
+    limit: number;
+    pageCursorOrIndicator?: string;
+  }): Promise<TracesWithPagination> {
+    throw new Error("fetchTraces is not implemented for Grafana platform");
   }
 
   // TODO: check if you need to destructure attributes same as in DD
