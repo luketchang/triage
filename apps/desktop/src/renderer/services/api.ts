@@ -3,6 +3,7 @@ import mockElectronAPI from "../electronApiMock";
 import {
   AgentConfig,
   FacetData,
+  FileTreeNode,
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
@@ -11,7 +12,7 @@ import {
 
 // TESTING ONLY: Set to true to use mock API instead of real Electron API
 // Set to false in production or when testing with the real API
-const USE_MOCK_API = true;
+const USE_MOCK_API = false;
 
 // Helper function to check if electron API exists and has specific methods
 const isElectronAPIAvailable = () => {
@@ -168,6 +169,34 @@ const api = {
         console.error("Error in getSpansFacetValues:", error);
         return []; // Return empty array on error
       }
+    }
+  },
+
+  getFileTree: async (repoPath: string): Promise<ApiResponse<FileTreeNode[]>> => {
+    console.log("[API DEBUG] getFileTree called with repoPath:", repoPath);
+    const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getFileTree");
+    console.log("[API DEBUG] Using mock implementation:", shouldUseMock);
+
+    if (shouldUseMock) {
+      console.info("Using mock getFileTree");
+      return mockElectronAPI.getFileTree(repoPath);
+    } else {
+      console.info("Using real electronAPI.getFileTree");
+      return window.electronAPI.getFileTree(repoPath);
+    }
+  },
+
+  getFileContent: async (repoPath: string, filePath: string): Promise<ApiResponse<string>> => {
+    console.log("[API DEBUG] getFileContent called with:", { repoPath, filePath });
+    const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getFileContent");
+    console.log("[API DEBUG] Using mock implementation:", shouldUseMock);
+
+    if (shouldUseMock) {
+      console.info("Using mock getFileContent");
+      return mockElectronAPI.getFileContent(repoPath, filePath);
+    } else {
+      console.info("Using real electronAPI.getFileContent");
+      return window.electronAPI.getFileContent(repoPath, filePath);
     }
   },
 };

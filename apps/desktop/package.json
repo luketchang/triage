@@ -14,6 +14,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "@monaco-editor/react": "^4.7.0",
     "@triage/agent": "workspace:*",
     "@triage/common": "workspace:*",
     "@triage/config": "workspace:*",
@@ -22,6 +27,7 @@
     "electron-updater": "^6.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0",
     "react-markdown": "^9.0.1",
     "react-split-pane": "^0.1.92"
   },

@@ -37,6 +37,12 @@ export type {
 // Define code map type alias
 export type CodeMap = Map<string, string>;
 
+// Enhanced CodeMap with repository and file path information
+export interface EnhancedCodeMap extends CodeMap {
+  repoPath?: string;
+  filePath?: string;
+}
+
 // Define UI-enhanced versions of observability types with visual properties
 // These will supplement the data-only types from the observability package
 export interface UIServiceLatency extends ServiceLatency {
@@ -59,6 +65,25 @@ export interface AgentConfig {
   observabilityFeatures: string[];
   startDate: Date;
   endDate: Date;
+}
+
+// Define file tree node structure
+export interface FileTreeNode {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  children?: FileTreeNode[];
+}
+
+// Define flattened file node for TreeView component
+export interface FlattenedFileNode {
+  id: number;
+  name: string;
+  path: string;
+  parent: number | null;
+  children: number[];
+  isDirectory: boolean;
+  level: number;
 }
 
 // Define facet data type
@@ -112,7 +137,7 @@ export interface CodeArtifact {
   type: "code";
   title: string;
   description: string;
-  data: CodeMap;
+  data: EnhancedCodeMap;
 }
 
 export interface TraceArtifact {

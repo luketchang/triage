@@ -7,7 +7,7 @@ import {
   LogSearchInputCore,
   LogsWithPagination,
 } from "../types";
-import { createCodeArtifacts, createLogArtifacts } from "../utils/artifactUtils";
+import { createCodeArtifacts, createLogArtifacts } from "../utils/artifact-utils";
 import { generateId } from "../utils/formatters";
 
 // Define the chat mode type
