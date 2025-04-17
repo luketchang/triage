@@ -84,6 +84,7 @@ export interface DisplayTrace {
 export interface Trace {
   traceId: string;
   rootService: string;
+  rootLatencyPercentile?: string;
   rootOperation: string;
   rootResource: string;
   httpStatus?: string;

@@ -313,7 +313,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
       logger.info(`Limit: ${params.limit}`);
       logger.info(`Cursor: ${params.pageCursor}`);
 
-      // Step 1: Search for spans matching the query
+      // 1) search for spans → get trace IDs
       const searchResult = await this.searchSpans(
         params.query,
         params.start,
@@ -321,57 +321,100 @@ export class DatadogPlatform implements ObservabilityPlatform {
         params.limit,
         params.pageCursor
       );
-
-      // Extract trace IDs from the search results
       const traceIds = extractTraceIds(searchResult.data || []);
-
       if (traceIds.length === 0) {
-        logger.info("No trace IDs found for query");
-        return {
-          traces: [],
-          pageCursorOrIndicator: undefined,
-        };
+        return { traces: [], pageCursorOrIndicator: undefined };
       }
 
-      logger.info(`Found ${traceIds.length} unique trace IDs`);
+      // 2) fetch all spans for those trace IDs
+      const allSpans = await this.getAllSpansForTraces(traceIds, params.start, params.end);
 
-      // Step 2: Get all spans for these trace IDs in a single query
-      const spans = await this.getAllSpansForTraces(traceIds, params.start, params.end);
-
-      if (spans.length === 0) {
-        logger.info("No spans found for the trace IDs");
-        return {
-          traces: [],
-          pageCursorOrIndicator: undefined,
-        };
-      }
-
-      // Group spans by trace ID
+      // 3) group spans by trace, convert to Trace objects
       const traceMap: Record<string, v2.Span[]> = {};
-      for (const span of spans) {
-        const tid = span.attributes?.traceId;
-        if (!tid) continue;
-
-        if (!traceMap[tid]) {
-          traceMap[tid] = [];
-        }
-
+      allSpans.forEach((span) => {
+        const tid = span.attributes?.traceId!;
+        traceMap[tid] = traceMap[tid] || [];
         traceMap[tid].push(span);
-      }
-
-      // Convert each set of spans into a Trace object
-      const traces: Trace[] = [];
-      for (const [tid, spanList] of Object.entries(traceMap)) {
-        const trace = convertSpansToTrace(spanList, tid);
-        if (trace) {
-          traces.push(trace);
-          // Cache the trace for later retrieval
-          this.traceCache.set(tid, trace);
-        }
-      }
-
-      // Sort traces by start time (newest first)
+      });
+      const traces: Trace[] = Object.entries(traceMap).map(([tid, spanList]) => {
+        const t = convertSpansToTrace(spanList, tid);
+        if (t) this.traceCache.set(tid, t);
+        return t!;
+      });
+      // newest first
       traces.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+
+      // — — — — — — — — — — — — — — — — — —
+      // 👇 NEW BLOCK: one aggregate call to get pc75/90/95/99 per resource
+      // 4a) collect all root-span resources
+      const rootResources = Array.from(new Set(traces.map((t) => t.rootResource)));
+
+      if (rootResources.length > 0) {
+        const aggResp = await this.spansApiInstance.aggregateSpans({
+          body: {
+            data: {
+              type: "aggregate_request",
+              attributes: {
+                filter: {
+                  from: params.start,
+                  to: params.end,
+                  // restrict to only those resources, or leave '*' if you want global percentiles
+                  query: `resource_name:(${rootResources.map((r) => `"${r}"`).join(" OR ")})`,
+                },
+                groupBy: [{ facet: "resource_name", limit: rootResources.length }],
+                compute: [
+                  { aggregation: "pc75", metric: "@duration", type: "total" },
+                  { aggregation: "pc90", metric: "@duration", type: "total" },
+                  { aggregation: "pc95", metric: "@duration", type: "total" },
+                  { aggregation: "pc99", metric: "@duration", type: "total" },
+                ],
+              },
+            },
+          },
+        });
+
+        // build a map: resource → { p75, p90, p95, p99 }
+        const pctMap = new Map<
+          string,
+          {
+            p75: number;
+            p90: number;
+            p95: number;
+            p99: number;
+          }
+        >();
+        (aggResp.data || []).forEach((bucket) => {
+          const resName = bucket.attributes?.by?.resource_name as string;
+          const comps = bucket.attributes?.compute as Record<string, number>;
+          pctMap.set(resName, {
+            p75: comps["c0"] ?? comps["pc75"]!,
+            p90: comps["c1"] ?? comps["pc90"]!,
+            p95: comps["c2"] ?? comps["pc95"]!,
+            p99: comps["c3"] ?? comps["pc99"]!,
+          });
+        });
+
+        // 4b) annotate each trace’s root span with its percentile bucket
+        traces.forEach((t) => {
+          const rootResource = t.rootResource;
+          if (!rootResource) return;
+          const resource = rootResource;
+          const d = t.duration; // ms
+          const thresholds = pctMap.get(resource);
+          if (!thresholds) return;
+
+          let bucket: string;
+          if (d <= thresholds.p75) bucket = "<=p75";
+          else if (d <= thresholds.p90) bucket = "<=p90";
+          else if (d <= thresholds.p95) bucket = "<=p95";
+          else if (d <= thresholds.p99) bucket = "<=p99";
+          else bucket = ">p99";
+
+          // stash it in metadata
+          t.rootLatencyPercentile = bucket;
+        });
+      }
+      // — — — — — — — — — — — — — — —
 
       return {
         traces,
@@ -379,10 +422,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
       };
     } catch (error) {
       logger.error(`Error fetching traces: ${error}`);
-      return {
-        traces: [],
-        pageCursorOrIndicator: undefined,
-      };
+      return { traces: [], pageCursorOrIndicator: undefined };
     }
   }
 

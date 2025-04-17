@@ -324,7 +324,7 @@ export function formatServiceBreakdown(
 export function extractHttpStatus(spanList: v2.Span[]): string | undefined {
   for (const span of spanList) {
     if (span.attributes?.additionalProperties) {
-      const statusCode = span.attributes.additionalProperties["http.status_code"];
+      const statusCode = span.attributes?.custom?.http?.status_code;
       if (statusCode) {
         return String(statusCode);
       }

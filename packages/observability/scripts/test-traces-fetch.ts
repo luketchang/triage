@@ -63,6 +63,12 @@ function displayTraces(tracesWithPagination: TracesWithPagination, platform: str
     logger.info(`    Duration: ${formatDuration(trace.duration)}`);
     logger.info(`    HTTP Status: ${trace.httpStatus || "N/A"}`);
     logger.info(`    Has Error: ${trace.hasError}`);
+
+    // NEW: show the latency percentile on the root span
+    // (we annotated root.latencyPercentile in fetchTraces())
+    const latencyPct = trace.rootLatencyPercentile ?? "N/A";
+    logger.info(`    Latency Percentile: ${latencyPct}`);
+
     // Optionally display service breakdown
     // logger.info(`    Service Breakdown: ${JSON.stringify(trace.serviceBreakdown, null, 2)}`);
     logger.info("---");
@@ -87,7 +93,7 @@ async function testDatadogTraceFetch(): Promise<void> {
       query: options.query,
       start: options.start,
       end: options.end,
-      limit: parseInt(options.limit, 10),
+      limit: 30,
       // pageCursor can be added here if needed for testing pagination
     });
 
