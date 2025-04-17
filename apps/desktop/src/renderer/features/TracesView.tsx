@@ -172,7 +172,7 @@ const TracesView: React.FC<TracesViewProps> = ({
     setTraceQuery(newQuery);
 
     // Trigger search with the new query
-    fetchTracesWithQuery(newQuery);
+    // fetchTracesWithQuery(newQuery); // Removed: useEffect in useTraces handles this
   };
 
   // Close hover card when clicking outside
@@ -236,9 +236,13 @@ const TracesView: React.FC<TracesViewProps> = ({
     const leftPercent = (relativeStart / traceDuration) * 100;
     const widthPercent = (relativeDuration / traceDuration) * 100;
 
+    // Ensure minimum width of 0.5% for visibility
+    const minWidthPercent = 0.1;
+    const finalWidthPercent = Math.max(widthPercent, minWidthPercent);
+
     return {
       left: `${leftPercent}%`,
-      width: `${widthPercent}%`,
+      width: `${finalWidthPercent}%`,
     };
   };
 

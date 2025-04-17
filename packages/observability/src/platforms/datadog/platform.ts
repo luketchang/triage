@@ -66,7 +66,7 @@ Use Datadog Log Search Syntax to search for logs.
 `;
 
 const DATADOG_DEFAULT_FACET_LIST_LOGS = ["service", "status"];
-const DATADOG_DEFAULT_FACET_LIST_SPANS = ["service", "resource", "operation_name", "status"];
+const DATADOG_DEFAULT_FACET_LIST_SPANS = ["service"]; // TODO: add operation_name, resource, status
 
 export class DatadogPlatform implements ObservabilityPlatform {
   integrationType: IntegrationType = IntegrationType.DATADOG;
@@ -118,9 +118,10 @@ export class DatadogPlatform implements ObservabilityPlatform {
   ): Promise<Map<string, string[]>> {
     const spansMap = new Map<string, string[]>();
     for (const facet of facetList) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
       logger.info(`Fetching facet values for ${facet}`);
       const spanValues = await this.fetchFacetValuesSpans(start, end, facet);
-      logger.info(`Facet values for ${facet}: ${spanValues}`);
+      logger.info(`Span facet values for ${facet}: ${spanValues}`);
       spansMap.set(facet, spanValues);
     }
     return spansMap;
@@ -309,6 +310,8 @@ export class DatadogPlatform implements ObservabilityPlatform {
     try {
       logger.info(`Fetching traces with query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);
+      logger.info(`Limit: ${params.limit}`);
+      logger.info(`Cursor: ${params.pageCursor}`);
 
       // Step 1: Search for spans matching the query
       const searchResult = await this.searchSpans(

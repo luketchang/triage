@@ -688,7 +688,7 @@ const mockElectronAPI = {
       codebaseOverviewPath: "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
       observabilityPlatform: "datadog",
       observabilityFeatures: ["logs"],
-      startDate: new Date("2025-04-16T22:00:00Z"),
+      startDate: new Date("2025-04-16T21:00:00Z"),
       endDate: new Date("2025-04-16T23:59:59Z"),
     };
   },

@@ -44,6 +44,6 @@ export const defaultConfig: AgentConfig = {
   observabilityFeatures: process.env.OBSERVABILITY_FEATURES
     ? process.env.OBSERVABILITY_FEATURES.split(",")
     : ["logs"],
-  startDate: new Date(process.env.START_DATE || "2025-04-16T22:00:00Z"),
+  startDate: new Date(process.env.START_DATE || "2025-04-16T21:00:00Z"),
   endDate: new Date(process.env.END_DATE || "2025-04-16T23:59:59Z"),
 };

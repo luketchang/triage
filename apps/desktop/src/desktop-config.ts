@@ -31,7 +31,7 @@ export const desktopConfig = {
       "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
     observabilityPlatform: process.env.OBSERVABILITY_PLATFORM || "datadog",
     observabilityFeatures: (process.env.OBSERVABILITY_FEATURES || "logs").split(","),
-    startDate: new Date(process.env.START_DATE || "2025-04-16T22:00:00Z"),
+    startDate: new Date(process.env.START_DATE || "2025-04-16T21:00:00Z"),
     endDate: new Date(process.env.END_DATE || "2025-04-16T23:00:00Z"),
   },
 
