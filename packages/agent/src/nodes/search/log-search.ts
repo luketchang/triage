@@ -166,7 +166,7 @@ class LogSearch {
     });
 
     try {
-      const { toolCalls } = await generateText({
+      const { toolCalls, text } = await generateText({
         model: getModelWrapper(this.llm),
         system: SYSTEM_PROMPT,
         prompt: prompt,
@@ -176,6 +176,15 @@ class LogSearch {
         toolChoice: "auto",
       });
 
+      // End loop if no tool calls returned, similar to Reasoner
+      if (!toolCalls || toolCalls.length === 0) {
+        return {
+          type: "taskComplete",
+          reasoning: text,
+          summary: "Log search task complete",
+        };
+      }
+
       const toolCall = ensureSingleToolCall(toolCalls);
 
       if (toolCall.toolName === "logSearchInput") {
@@ -184,12 +193,7 @@ class LogSearch {
           ...toolCall.args,
         };
       } else {
-        // TODO: revisit once TaskComplete is turned back on
-        return {
-          type: "taskComplete",
-          reasoning: "Task complete based on current results",
-          summary: "Log search task complete",
-        };
+        throw new Error(`Unexpected tool name: ${toolCall.toolName}`);
       }
     } catch (error) {
       logger.error("Error generating log search query:", error);
@@ -205,6 +209,8 @@ class LogSearch {
           "Failed to generate query with LLM. Using fallback query to get a broad view of microservices.",
       };
     }
+    // Should never reach here
+    throw new Error("Unexpected exit from LogSearch.invoke");
   }
 }
 
@@ -330,19 +336,6 @@ export class LogSearchAgent {
         logResultHistory.set(previousLogResult.query, previousLogResult.logs);
       }
     }
-
-    // const summaryPrompt = createLogSearchSummaryPrompt({
-    //   query: params.query,
-    //   logResults: logResultHistory,
-    // });
-
-    // logger.info("Generating log search summary...");
-    // const { text } = await generateText({
-    //   model: getModelWrapper(this.reasoningModel),
-    //   prompt: summaryPrompt,
-    // });
-
-    // logger.info(`Log search summary:\n${text}`);
 
     return {
       newLogContext: logResultHistory,
