@@ -46,16 +46,16 @@ function createLogSearchPrompt(params: {
 
   // TODO: consider removing the line about removing all filters
   return `
-Given all available log labels and a user query about the issue/event, your task is to fetch logs for the following objective: ${params.logRequest}. You will do so by outputting \`LogSearchInput\` outputs to read logs from observability API.
+Given all available log labels, a user query about the issue/event, and previously gathered log context your task is to fetch logs for the following objective: ${params.logRequest}. You will do so by outputting a \`LogSearchInput\` output to read logs from observability API. If you feel you have enough logs for the objective, do not output a tool call (no tool calls indicate you are done). The objective you're helping with will usually be a subtask of answering the user query.
 
 ## Tips
 - DO NOT query logs from non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, cluster-agent, desktop-vpnkit-controller, metrics-server, etcd, redis, etc (think anything collector or infrastructure related).
 - Early on in exploration, tag multiple services in your queries instead of doing multiple searches each with one service tagged.
 - As you make queries, pay attention to the results in <previous_log_query_result> to see the results of your last query and <log_results_history> to see the results of all previous queries. You should make decisions on future queries based on the results of your previous queries.
-- Look for important identifiers such as user or object IDs and use those in future queries.
-- As you find log results indicative of the exact issue/event, you should try to find preceding logs that explain how/why that issue/event is related to the user query.
-- For at least one query, zoom out and remove all filters to get a broader view of the system.
-- Your goal is to eventually find a query that returns logs across the related services with as much important surrounding context and events as possible. All log results fetched at the end of your log search iterations will be merged together to form a complete picture of the issue/event.
+- Look for important identifiers such as users or IDs and use those in future queries to narrow the context temporarily.
+- As you find log results indicative of the exact issue/event, you should try to find additional logs that precede and reveal information about the issue/event.
+- For at least one of your queries you will make as you explore, zoom out and remove most filters to get a broader view of the system.
+- Your overall goal is to find queries that returns logs across the related services with as much important surrounding context and events as possible.
 - Do not filter on random keywords. You should only filter on: service name, part of an error message, or a unique identifier.
 - Do not filter on code snippets (e.g. file names, classes, methods, component tags, etc).
 - If you are getting empty log results, try the following:
@@ -172,9 +172,8 @@ class LogSearch {
         prompt: prompt,
         tools: {
           logSearchInput: logSearchInputToolSchema,
-          // taskComplete: taskCompleteToolSchema,
         },
-        toolChoice: "required",
+        toolChoice: "auto",
       });
 
       const toolCall = ensureSingleToolCall(toolCalls);
