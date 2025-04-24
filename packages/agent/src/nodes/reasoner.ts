@@ -1,6 +1,6 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination, SpansWithPagination } from "@triage/observability";
-import { generateText } from "ai";
+import { streamText } from "ai";
 import {
   logRequestToolSchema,
   LogSearchInputCore,
@@ -131,15 +131,33 @@ export class Reasoner {
 
     logger.info(`Reasoning prompt:\n${prompt}`);
 
-    const { toolCalls, text } = await generateText({
+    // Stream reasoning response and collect text and tool calls
+    const { fullStream } = streamText({
       model: getModelWrapper(this.llm),
-      prompt: prompt,
+      prompt,
       tools: {
         // spanRequest: spanRequestToolSchema,
         logRequest: logRequestToolSchema,
       },
       toolChoice: "auto",
+      toolCallStreaming: true,
     });
+
+    let text = "";
+    const toolCalls: Array<{ toolName: string; args: any }> = [];
+    for await (const part of fullStream) {
+      if (part.type === "text-delta") {
+        text += part.textDelta;
+      } else if (part.type === "reasoning") {
+        process.stdout.write(part.textDelta);
+      } else if (part.type === "redacted-reasoning") {
+        process.stdout.write(part.data);
+      } else if (part.type === "reasoning-signature") {
+        process.stdout.write(part.signature);
+      } else if (part.type === "tool-call") {
+        toolCalls.push({ toolName: part.toolName, args: part.args });
+      }
+    }
 
     logger.info(`Reasoning response:\n${text}`);
     logger.info(`Reasoning tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
