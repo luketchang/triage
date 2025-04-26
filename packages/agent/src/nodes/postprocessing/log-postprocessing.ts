@@ -118,7 +118,7 @@ export class LogPostprocessor {
       }
 
       if (!found) {
-        logger.warn(`No match found for query: ${query.query}`);
+        logger.warn(`No match found for query: ${JSON.stringify(query, null, 2)}`);
       }
     }
 

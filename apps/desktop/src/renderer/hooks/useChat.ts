@@ -14,22 +14,11 @@ import { generateId } from "../utils/formatters";
 export type ChatMode = "agent" | "manual";
 
 export function useChat() {
-  const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [contextItems, setContextItems] = useState<ContextItem[]>([]);
   const [chatMode, setChatMode] = useState<ChatMode>("agent");
-
-  const toggleChatSidebar = () => {
-    setIsChatSidebarOpen(!isChatSidebarOpen);
-
-    // When opening the sidebar, clear any previous thinking state
-    // to ensure the focus effect works properly
-    if (!isChatSidebarOpen && isThinking) {
-      setIsThinking(false);
-    }
-  };
 
   const toggleChatMode = () => {
     setChatMode((prevMode) => (prevMode === "agent" ? "manual" : "agent"));
@@ -139,8 +128,6 @@ export function useChat() {
   };
 
   return {
-    isChatSidebarOpen,
-    setIsChatSidebarOpen,
     newMessage,
     setNewMessage,
     messages,
@@ -148,7 +135,6 @@ export function useChat() {
     contextItems,
     setContextItems,
     chatMode,
-    toggleChatSidebar,
     toggleChatMode,
     removeContextItem,
     sendMessage,

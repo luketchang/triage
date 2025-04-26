@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Artifact, ChatMessage, ContextItem } from "../types";
 
-interface ChatSidebarProps {
+interface ChatViewProps {
   messages: ChatMessage[];
   newMessage: string;
   setNewMessage: (message: string) => void;
@@ -15,7 +15,7 @@ interface ChatSidebarProps {
   toggleChatMode?: () => void;
 }
 
-const ChatSidebar: React.FC<ChatSidebarProps> = ({
+const ChatView: React.FC<ChatViewProps> = ({
   messages,
   newMessage,
   setNewMessage,
@@ -59,7 +59,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     resizeTextarea();
   }, [newMessage]);
 
-  // Auto-focus the textarea when the chat sidebar opens or when thinking state changes
+  // Auto-focus the textarea when the chat view is selected or when thinking state changes
   useEffect(() => {
     // Small delay to ensure the DOM is fully rendered
     const focusTimeout = setTimeout(() => {
@@ -71,7 +71,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     return () => clearTimeout(focusTimeout);
   }, [isThinking]);
 
-  // Auto-focus on component mount specifically (when sidebar first opens)
+  // Auto-focus on component mount
   useEffect(() => {
     if (textareaRef.current && !isThinking) {
       textareaRef.current.focus();
@@ -305,7 +305,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
 
     // Fallback for unknown context item types
-    // This should never be reached in theory, but provides a fallback UI for future context types
     const unknownContextItem = contextItem as ContextItem;
     return (
       <div
@@ -427,85 +426,95 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   return (
-    <>
-      <div className="chat-messages">
-        {messages.length === 0 ? (
-          <div className="empty-chat"></div>
-        ) : (
-          <>
-            {messages.map((message) => (
-              <div key={message.id} className={`chat-message ${message.role}`}>
-                <div className="message-content">{renderMessageContent(message)}</div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </>
-        )}
-      </div>
-
-      <div className="chat-input-container">
-        {contextItems.length > 0 && (
-          <div className="context-items-container">
-            <div className="context-items-header">
-              <span>Current Context</span>
-              <span className="context-keyboard-shortcut">Add more with ⌘+U</span>
-            </div>
-            <div className="context-items-list">
-              {contextItems.map((item) => renderContextCard(item, true))}
-            </div>
-          </div>
-        )}
-
-        <div className="input-wrapper">
-          <textarea
-            ref={textareaRef}
-            className="message-input"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask a question..."
-            disabled={isThinking}
-            rows={1}
-            autoFocus={!isThinking}
-          />
-        </div>
-
-        <div className="message-controls">
-          <div className="mode-dropdown">
-            <button className="mode-selector-button" onClick={toggleModeMenu}>
-              <span className="current-mode">{localMode === "agent" ? "Agent" : "Manual"}</span>
-              <span className="dropdown-arrow">▼</span>
-            </button>
-
-            {modeMenuOpen && (
-              <div className="mode-menu">
-                <div
-                  className={`mode-option ${localMode === "agent" ? "active" : ""}`}
-                  onClick={() => setMode("agent")}
-                >
-                  Agent
-                </div>
-                <div
-                  className={`mode-option ${localMode === "manual" ? "active" : ""}`}
-                  onClick={() => setMode("manual")}
-                >
-                  Manual
+    <div className="chat-tab">
+      <div className="chat-container">
+        <div className="chat-messages-container">
+          <div className="chat-messages">
+            {messages.length === 0 ? (
+              <div className="empty-chat">
+                <div className="welcome-message">
+                  <h2>Chat with Triage Assistant</h2>
+                  <p>Ask questions about your logs, traces, or codebase.</p>
+                  <p>Use ⌘+U in other views to add context from those views.</p>
                 </div>
               </div>
+            ) : (
+              <>
+                {messages.map((message) => (
+                  <div key={message.id} className={`chat-message ${message.role}`}>
+                    <div className="message-content">{renderMessageContent(message)}</div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </>
             )}
           </div>
+        </div>
 
-          <button
-            className="send-button"
-            onClick={handleSendMessage}
-            disabled={isThinking || !newMessage.trim()}
-          >
-            Send
-          </button>
+        <div className="chat-input-container">
+          {contextItems.length > 0 && (
+            <div className="context-items-container">
+              <div className="context-items-header">
+                <span>Current Context</span>
+                <span className="context-keyboard-shortcut">Add more with ⌘+U in other views</span>
+              </div>
+              <div className="context-items-list">
+                {contextItems.map((item) => renderContextCard(item, true))}
+              </div>
+            </div>
+          )}
+
+          <div className="input-wrapper">
+            <textarea
+              ref={textareaRef}
+              className="message-input"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask a question..."
+              disabled={isThinking}
+              rows={1}
+              autoFocus={!isThinking}
+            />
+          </div>
+
+          <div className="message-controls">
+            <div className="mode-dropdown">
+              <button className="mode-selector-button" onClick={toggleModeMenu}>
+                <span className="current-mode">{localMode === "agent" ? "Agent" : "Manual"}</span>
+                <span className="dropdown-arrow">▼</span>
+              </button>
+
+              {modeMenuOpen && (
+                <div className="mode-menu">
+                  <div
+                    className={`mode-option ${localMode === "agent" ? "active" : ""}`}
+                    onClick={() => setMode("agent")}
+                  >
+                    Agent
+                  </div>
+                  <div
+                    className={`mode-option ${localMode === "manual" ? "active" : ""}`}
+                    onClick={() => setMode("manual")}
+                  >
+                    Manual
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              className="send-button"
+              onClick={handleSendMessage}
+              disabled={isThinking || !newMessage.trim()}
+            >
+              Send
+            </button>
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
-export default ChatSidebar;
+export default ChatView;
