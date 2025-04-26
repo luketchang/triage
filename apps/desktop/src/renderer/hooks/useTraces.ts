@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../components/TimeRangePicker";
 import api from "../services/api";
 import { TimeRange, Trace, TraceQueryParams, UITrace } from "../types";
@@ -33,7 +33,8 @@ export function useTraces() {
     "http.status_code",
     "environment",
   ]);
-  const [queryLimit] = useState<number>(20);
+  const [queryLimit] = useState<number>(500);
+  const loadedFacetsForRange = useRef<string>("");
 
   // Process traces to add UI properties like colors
   const processTracesForUI = (traces: Trace[]): UITrace[] => {
@@ -129,7 +130,6 @@ export function useTraces() {
   // Handle time range changes
   const handleTimeRangeChange = (newTimeRange: TimeRange): void => {
     setTimeRange(newTimeRange);
-    fetchTracesWithQuery(traceQuery, newTimeRange);
   };
 
   // Handle trace selection
@@ -147,40 +147,46 @@ export function useTraces() {
     setSelectedSpan(span);
   };
 
-  // Load facets when the time range changes
+  // Combined effect for initial load and time range changes
   useEffect(() => {
-    const loadFacets = async () => {
+    const loadData = async () => {
+      setIsLoading(true);
+      const rangeKey = `${timeRange.start}-${timeRange.end}`;
+
       try {
-        const response = await api.getSpansFacetValues(timeRange.start, timeRange.end);
-        if (Array.isArray(response)) {
-          setFacets(response);
-        } else if (response && response.success && response.data && response.data.length > 0) {
-          setFacets(response.data);
-        } else {
-          console.info("No valid facet data received, using empty array");
-          setFacets([]);
+        // Only fetch facets if we haven't loaded them for this time range
+        if (loadedFacetsForRange.current !== rangeKey) {
+          const response = await api.getSpansFacetValues(timeRange.start, timeRange.end);
+          if (Array.isArray(response)) {
+            setFacets(response);
+          } else if (response && response.success && response.data && response.data.length > 0) {
+            setFacets(response.data);
+          } else {
+            console.info("No valid facet data received, using empty array");
+            setFacets([]);
+          }
+          loadedFacetsForRange.current = rangeKey;
         }
+
+        // Always fetch traces for the current time range
+        const params: TraceQueryParams = {
+          query: traceQuery,
+          start: timeRange.start,
+          end: timeRange.end,
+          limit: queryLimit,
+        };
+        await fetchTraces(params);
       } catch (error) {
-        console.error("Error loading facets:", error);
+        console.error("Error loading data:", error);
         setFacets([]);
+        setTraces([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadFacets();
-  }, [timeRange.start, timeRange.end]);
-
-  // Initial fetch
-  useEffect(() => {
-    const params: TraceQueryParams = {
-      query: traceQuery,
-      start: timeRange.start,
-      end: timeRange.end,
-      limit: queryLimit,
-    };
-
-    fetchTraces(params);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    loadData();
+  }, [timeRange.start, timeRange.end, traceQuery]);
 
   return {
     traces,

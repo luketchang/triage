@@ -2,6 +2,7 @@ import {
   IntegrationType,
   LogsWithPagination,
   SpansWithPagination,
+  Trace,
   TracesWithPagination,
 } from "./types";
 
@@ -98,4 +99,13 @@ export interface ObservabilityPlatform {
     limit: number;
     pageCursor?: string;
   }): Promise<TracesWithPagination>;
+
+  /**
+   * Fetch a single trace by its ID
+   * @param traceId - The ID of the trace to fetch
+   * @param start - Start time in ISO format (optional, used if trace not in cache)
+   * @param end - End time in ISO format (optional, used if trace not in cache)
+   * @returns The trace if found, null otherwise
+   */
+  fetchTraceById(params: { traceId: string; start?: string; end?: string }): Promise<Trace | null>;
 }

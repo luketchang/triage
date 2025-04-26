@@ -2,8 +2,8 @@
 import { logger } from "@triage/common";
 import { config } from "@triage/config";
 import { Command } from "commander";
+import { SpansWithPagination } from "../dist";
 import { DatadogPlatform } from "../src";
-import { Span } from "../src/types";
 
 // Setup command line options
 const program = new Command();
@@ -34,7 +34,8 @@ if (!validPlatforms.includes(options.platform)) {
 }
 
 // Display spans results
-function displaySpans(spans: Span[], platform: string): void {
+function displaySpans(spansWithPagination: SpansWithPagination, platform: string): void {
+  const spans = spansWithPagination.spans;
   logger.info(`\n${platform.toUpperCase()} SPANS:`);
 
   if (spans.length === 0) {

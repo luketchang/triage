@@ -1,15 +1,16 @@
 import { logger, toUnixNano } from "@triage/common";
 import { config } from "@triage/config";
 import axios from "axios";
-import { ObservabilityPlatform } from "./observability.interface";
+import { ObservabilityPlatform } from "../../observability.interface";
 import {
   IntegrationType,
   Log,
   LogsWithPagination,
   PaginationStatus,
   SpansWithPagination,
+  Trace,
   TracesWithPagination,
-} from "./types";
+} from "../../types";
 
 export const GRAFANA_LOG_SEARCH_INSTRUCTIONS = `
 ## LogQL Syntax
@@ -211,6 +212,14 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     pageCursorOrIndicator?: string;
   }): Promise<TracesWithPagination> {
     throw new Error("fetchTraces is not implemented for Grafana platform");
+  }
+
+  async fetchTraceById(params: {
+    traceId: string;
+    start?: string;
+    end?: string;
+  }): Promise<Trace | null> {
+    throw new Error("fetchTraceById is not implemented for Grafana platform");
   }
 
   // TODO: check if you need to destructure attributes same as in DD

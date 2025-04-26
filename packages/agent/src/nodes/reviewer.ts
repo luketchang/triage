@@ -41,6 +41,17 @@ function createPrompt(params: {
   return `
 Given the user query about the potential issue/event, and the initial 'root cause analysis', your job is to review the analysis for completeness and accuracy.
 
+Analyze the root cause analysis for:
+1. Completeness - are there gaps in the explanation? 
+2. Accuracy - does this explanation align with the logs/code context? 
+3. Actionability - is the proposed fix clear and a true forward fix?
+
+If you believe additional information is needed to provide a complete root cause analysis, use the following tools:
+- logRequest - Get logs, using a query with service names and filters 
+- spanRequest - Get spans/traces, using a query with service names
+
+If you believe the root cause analysis is correct and complete, do not call any tools and just return the original analysis.
+
 <query>
 ${params.query}
 </query>
@@ -64,17 +75,6 @@ ${formatLogResults(params.logContext)}
 <root_cause_analysis>
 ${params.rootCauseAnalysis}
 </root_cause_analysis>
-
-Analyze the root cause analysis for:
-1. Completeness - are there gaps in the explanation? 
-2. Accuracy - does this explanation align with the logs/code context? 
-3. Actionability - is the proposed fix clear and specific enough?
-
-If you believe additional information is needed to provide a complete root cause analysis, use the following tools:
-- logRequest - Get logs, using a query with service names and filters 
-- spanRequest - Get spans/traces, using a query with service names
-
-If you believe the root cause analysis is correct and complete, do not call any tools and just return the original analysis.
 `;
 }
 

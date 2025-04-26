@@ -4,6 +4,9 @@ import "./styles-chat-sidebar.css";
 import "./styles-chat.css";
 import "./styles.css";
 
+// Feature flag for Traces view
+const TRACES_ENABLED = false;
+
 import { Artifact, ContextItem, LogSearchInputCore, TabType, TraceForAgent } from "./types";
 import { generateId } from "./utils/formatters";
 
@@ -30,7 +33,35 @@ function App(): JSX.Element {
   // Use custom hooks
   const logsState = useLogs();
   const chatState = useChat();
-  const tracesState = useTraces();
+
+  // Only use the traces hook if traces are enabled
+  const tracesState = TRACES_ENABLED
+    ? useTraces()
+    : {
+        // Dummy implementation when traces are disabled
+        traces: [],
+        traceQuery: "",
+        setTraceQuery: () => {},
+        isLoading: false,
+        timeRange: { start: "", end: "" },
+        fetchTracesWithQuery: () => {},
+        handleLoadMoreTraces: () => {},
+        handleTimeRangeChange: () => {},
+        facets: [],
+        selectedFacets: [],
+        setSelectedFacets: () => {},
+        selectedTrace: null,
+        selectedSpan: null,
+        handleTraceSelect: () => {},
+        handleSpanSelect: () => {},
+        pageCursor: undefined,
+        setTraces: () => {},
+        setIsLoading: () => {},
+        setPageCursor: () => {},
+        setSelectedSpan: () => {},
+        setTimeRange: () => {},
+        processTracesForUI: () => [],
+      };
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts([
@@ -99,6 +130,12 @@ function App(): JSX.Element {
         }
         break;
       case "traces":
+        // Skip adding trace context if traces are disabled
+        if (!TRACES_ENABLED) {
+          console.info("Traces view is disabled - no context will be added");
+          break;
+        }
+
         // Create context from traces view - ONLY if a trace is explicitly selected
         if (tracesState.selectedTrace) {
           console.info("Adding selected trace to context:", tracesState.selectedTrace.traceId);
@@ -160,7 +197,7 @@ function App(): JSX.Element {
           />
         );
       case "traces":
-        return (
+        return TRACES_ENABLED ? (
           <TracesView
             selectedArtifact={
               selectedArtifact && selectedArtifact.type === "trace" ? selectedArtifact : null
@@ -183,6 +220,13 @@ function App(): JSX.Element {
             pageCursor={tracesState.pageCursor}
             setSelectedSpan={tracesState.setSelectedSpan}
           />
+        ) : (
+          <div className="traces-view">
+            <div className="dashboards-placeholder">
+              <h2>Traces View</h2>
+              <p>Distributed tracing functionality will be implemented in a future update.</p>
+            </div>
+          </div>
         );
       case "dashboards":
         return <DashboardsView selectedArtifact={null} />;
