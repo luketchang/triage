@@ -1140,13 +1140,20 @@ body {
 .traces-placeholder {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   height: 100%;
-  width: 100%;
-  color: #888;
+  padding: 2rem;
   text-align: center;
-  padding: 20px;
+  color: #888;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  margin: 1rem;
+}
+
+.traces-placeholder h2 {
+  color: #ccc;
+  margin-bottom: 1rem;
 }
 
 /* Traces view styles */

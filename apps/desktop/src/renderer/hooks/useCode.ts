@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
 import { FileTreeNode } from "../types";
-import { buildFileTree, Directory, File } from "../utils/file-manager";
+import { buildFileTree, Directory, File, Type } from "../utils/file-manager";
 
 // Default directory structure while loading or if error occurs
 const defaultRootDir: Directory = {
   id: "root",
   name: "root",
   parentId: undefined,
-  type: 0, // Type.DIRECTORY - using numeric literal to avoid import issue if types file is changed
+  type: Type.DIRECTORY,
   depth: 0,
   dirs: [],
   files: [],

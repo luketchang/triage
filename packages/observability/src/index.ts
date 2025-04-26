@@ -1,6 +1,10 @@
-// Observability package exports
-export { DatadogPlatform } from "./datadog.platform";
-export * from "./getter";
-export { GrafanaPlatform } from "./grafana.platform";
+// Export interfaces
 export * from "./observability.interface";
 export * from "./types";
+
+// Export platforms
+export { DatadogPlatform } from "./platforms/datadog";
+export { GrafanaPlatform } from "./platforms/grafana";
+
+// Export getter
+export { getObservabilityPlatform } from "./getter";

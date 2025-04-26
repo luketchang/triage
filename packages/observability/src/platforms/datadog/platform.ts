@@ -1,15 +1,17 @@
 import { client, v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
 import { config } from "@triage/config";
-import { ObservabilityPlatform } from "./observability.interface";
+import { ObservabilityPlatform } from "../../observability.interface";
 import {
   IntegrationType,
   Log,
   LogsWithPagination,
   Span,
   SpansWithPagination,
+  Trace,
   TracesWithPagination,
-} from "./types";
+} from "../../types";
+import { convertSpansToTrace, extractTraceIds } from "./utils";
 
 const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
 - Use Datadog Span Search syntax to query spans within APM traces.
@@ -64,7 +66,7 @@ Use Datadog Log Search Syntax to search for logs.
 `;
 
 const DATADOG_DEFAULT_FACET_LIST_LOGS = ["service", "status"];
-const DATADOG_DEFAULT_FACET_LIST_SPANS = ["service", "resource", "operation_name", "status"];
+const DATADOG_DEFAULT_FACET_LIST_SPANS = ["service"]; // TODO: add operation_name, resource, status
 
 export class DatadogPlatform implements ObservabilityPlatform {
   integrationType: IntegrationType = IntegrationType.DATADOG;
@@ -74,6 +76,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
   private configuration: client.Configuration;
   private logsApiInstance: v2.LogsApi;
   private spansApiInstance: v2.SpansApi;
+  private traceCache: Map<string, Trace> = new Map();
 
   constructor() {
     // Get credentials from environment config
@@ -115,9 +118,10 @@ export class DatadogPlatform implements ObservabilityPlatform {
   ): Promise<Map<string, string[]>> {
     const spansMap = new Map<string, string[]>();
     for (const facet of facetList) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
       logger.info(`Fetching facet values for ${facet}`);
       const spanValues = await this.fetchFacetValuesSpans(start, end, facet);
-      logger.info(`Facet values for ${facet}: ${spanValues}`);
+      logger.info(`Span facet values for ${facet}: ${spanValues}`);
       spansMap.set(facet, spanValues);
     }
     return spansMap;
@@ -248,6 +252,54 @@ export class DatadogPlatform implements ObservabilityPlatform {
     }
   }
 
+  /**
+   * Execute a spans search API call and return the response.
+   */
+  private async searchSpans(
+    query: string,
+    fromTime: string,
+    toTime: string,
+    limit: number = 1000,
+    cursor?: string
+  ): Promise<v2.SpansListResponse> {
+    try {
+      const response = await this.spansApiInstance.listSpansGet({
+        filterQuery: query,
+        filterFrom: fromTime,
+        filterTo: toTime,
+        sort: "timestamp",
+        pageLimit: limit,
+        pageCursor: cursor,
+      });
+      return response;
+    } catch (error) {
+      logger.error(`Error searching spans: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch all spans for a set of trace IDs in a single query
+   */
+  private async getAllSpansForTraces(
+    traceIds: string[],
+    fromTime: string,
+    toTime: string,
+    limit: number = 1000
+  ): Promise<v2.Span[]> {
+    if (traceIds.length === 0) {
+      return [];
+    }
+
+    // Build query of the form: trace_id:(id1 OR id2 OR id3 ...)
+    const query = `trace_id:(${traceIds.join(" OR ")})`;
+    const results = await this.searchSpans(query, fromTime, toTime, limit);
+    return results.data || [];
+  }
+
+  /**
+   * Fetch traces based on a span query
+   */
   async fetchTraces(params: {
     query: string;
     start: string;
@@ -255,7 +307,172 @@ export class DatadogPlatform implements ObservabilityPlatform {
     limit: number;
     pageCursor?: string;
   }): Promise<TracesWithPagination> {
-    throw new Error("fetchTraces is not implemented for Datadog platform");
+    try {
+      logger.info(`Fetching traces with query: ${params.query}`);
+      logger.info(`Time range: ${params.start} to ${params.end}`);
+      logger.info(`Limit: ${params.limit}`);
+      logger.info(`Cursor: ${params.pageCursor}`);
+
+      // 1) search for spans → get trace IDs
+      const searchResult = await this.searchSpans(
+        params.query,
+        params.start,
+        params.end,
+        params.limit,
+        params.pageCursor
+      );
+      const traceIds = extractTraceIds(searchResult.data || []);
+      if (traceIds.length === 0) {
+        return { traces: [], pageCursorOrIndicator: undefined };
+      }
+
+      // 2) fetch all spans for those trace IDs
+      const allSpans = await this.getAllSpansForTraces(traceIds, params.start, params.end);
+
+      // 3) group spans by trace, convert to Trace objects
+      const traceMap: Record<string, v2.Span[]> = {};
+      allSpans.forEach((span) => {
+        const tid = span.attributes?.traceId!;
+        traceMap[tid] = traceMap[tid] || [];
+        traceMap[tid].push(span);
+      });
+      const traces: Trace[] = Object.entries(traceMap).map(([tid, spanList]) => {
+        const t = convertSpansToTrace(spanList, tid);
+        if (t) this.traceCache.set(tid, t);
+        return t!;
+      });
+      // newest first
+      traces.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+
+      // — — — — — — — — — — — — — — — — — —
+      // 👇 NEW BLOCK: one aggregate call to get pc75/90/95/99 per resource
+      // 4a) collect all root-span resources
+      const rootResources = Array.from(new Set(traces.map((t) => t.rootResource)));
+
+      if (rootResources.length > 0) {
+        const aggResp = await this.spansApiInstance.aggregateSpans({
+          body: {
+            data: {
+              type: "aggregate_request",
+              attributes: {
+                filter: {
+                  from: params.start,
+                  to: params.end,
+                  // restrict to only those resources, or leave '*' if you want global percentiles
+                  query: `resource_name:(${rootResources.map((r) => `"${r}"`).join(" OR ")})`,
+                },
+                groupBy: [{ facet: "resource_name", limit: rootResources.length }],
+                compute: [
+                  { aggregation: "pc75", metric: "@duration", type: "total" },
+                  { aggregation: "pc90", metric: "@duration", type: "total" },
+                  { aggregation: "pc95", metric: "@duration", type: "total" },
+                  { aggregation: "pc99", metric: "@duration", type: "total" },
+                ],
+              },
+            },
+          },
+        });
+
+        // build a map: resource → { p75, p90, p95, p99 }
+        const pctMap = new Map<
+          string,
+          {
+            p75: number;
+            p90: number;
+            p95: number;
+            p99: number;
+          }
+        >();
+        (aggResp.data || []).forEach((bucket) => {
+          const resName = bucket.attributes?.by?.resource_name as string;
+          const comps = bucket.attributes?.compute as Record<string, number>;
+          pctMap.set(resName, {
+            p75: comps["c0"] ?? comps["pc75"]!,
+            p90: comps["c1"] ?? comps["pc90"]!,
+            p95: comps["c2"] ?? comps["pc95"]!,
+            p99: comps["c3"] ?? comps["pc99"]!,
+          });
+        });
+
+        // 4b) annotate each trace’s root span with its percentile bucket
+        traces.forEach((t) => {
+          const rootResource = t.rootResource;
+          if (!rootResource) return;
+          const resource = rootResource;
+          const d = t.duration; // ms
+          const thresholds = pctMap.get(resource);
+          if (!thresholds) return;
+
+          let bucket: string;
+          if (d <= thresholds.p75) bucket = "<=p75";
+          else if (d <= thresholds.p90) bucket = "<=p90";
+          else if (d <= thresholds.p95) bucket = "<=p95";
+          else if (d <= thresholds.p99) bucket = "<=p99";
+          else bucket = ">p99";
+
+          // stash it in metadata
+          t.rootLatencyPercentile = bucket;
+        });
+      }
+      // — — — — — — — — — — — — — — —
+
+      return {
+        traces,
+        pageCursorOrIndicator: searchResult.meta?.page?.after,
+      };
+    } catch (error) {
+      logger.error(`Error fetching traces: ${error}`);
+      return { traces: [], pageCursorOrIndicator: undefined };
+    }
+  }
+
+  /**
+   * Fetch a single trace by its ID
+   */
+  async fetchTraceById(params: {
+    traceId: string;
+    start?: string;
+    end?: string;
+  }): Promise<Trace | null> {
+    const { traceId, start, end } = params;
+
+    // Check if the trace is in the cache
+    if (this.traceCache.has(traceId)) {
+      logger.info(`Trace ${traceId} found in cache`);
+      return this.traceCache.get(traceId) || null;
+    }
+
+    logger.info(`Trace ${traceId} not found in cache, fetching from API`);
+
+    // If not in cache, we need time range parameters
+    if (!start || !end) {
+      logger.warn(`Cannot fetch trace ${traceId} without time range parameters`);
+      return null;
+    }
+
+    try {
+      // Query for all spans in this trace
+      const query = `trace_id:${traceId}`;
+      const searchResult = await this.searchSpans(query, start, end, 1000);
+
+      if (!searchResult.data || searchResult.data.length === 0) {
+        logger.info(`No spans found for trace ID: ${traceId}`);
+        return null;
+      }
+
+      // Convert spans to a trace object
+      const trace = convertSpansToTrace(searchResult.data, traceId);
+
+      // If successful, cache the result
+      if (trace) {
+        this.traceCache.set(traceId, trace);
+      }
+
+      return trace;
+    } catch (error) {
+      logger.error(`Error fetching trace by ID: ${error}`);
+      return null;
+    }
   }
 
   private formatSpans(spans: v2.Span[]): Span[] {

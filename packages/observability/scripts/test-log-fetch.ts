@@ -2,7 +2,7 @@
 import { logger } from "@triage/common";
 import { config } from "@triage/config";
 import { Command } from "commander";
-import { DatadogPlatform, GrafanaPlatform, Log } from "../src";
+import { DatadogPlatform, GrafanaPlatform, LogsWithPagination } from "../src";
 
 // Setup command line options
 const program = new Command();
@@ -33,7 +33,8 @@ if (!validPlatforms.includes(options.platform)) {
 }
 
 // Display formatted logs
-function displayLogs(logs: Log[], platform: string): void {
+function displayLogs(logsWithPagination: LogsWithPagination, platform: string): void {
+  const logs = logsWithPagination.logs;
   logger.info(`\n${platform.toUpperCase()} LOGS (${logs.length} logs found):`);
 
   if (logs.length === 0) {

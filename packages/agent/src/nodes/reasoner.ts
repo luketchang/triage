@@ -1,6 +1,6 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination, SpansWithPagination } from "@triage/observability";
-import { generateText } from "ai";
+import { streamText } from "ai";
 import {
   logRequestToolSchema,
   LogSearchInputCore,
@@ -62,19 +62,16 @@ export const createPrompt = ({
   const formattedSpanLabels = formatFacetValues(spanLabelsMap);
 
   const prompt = `
-Given the user query about the potential issue/event, an overview of the codebase, the codebase file tree, log labels, span labels, and previously gathered log and code context, your task is to come up with a hypothesis about the root cause of the issue/event and propose an concrete and unambiguous code fix if possible. Your response should clearly explain the answer and propose a fix if needed.
-
+Given the user query about the potential issue/event, an overview of the codebase, log labels, span labels, and previously gathered log and code context, your task is to come up with a concrete answer to the user query. If the query asks you to diagnose a live issue/failure, your response should attempt to provide a root cause analysis and a concrete/unambiguous code fix if possible. If you do not have enough information to diagnose the issue, output a \`CodeRequest\` or \`SpanRequest\` to gather more context.
 
 Tips:
+- Reflect on 5-7 different possible sources of the issue/event before outputting any response.
 - Especially in microservices, the root cause may not be in the service that is failing, but in another service that is interacting with it. Consider other services when reasoning about what you may be missing and write down those hypotheses.
-- Reflect on 5-7 different possible sources of the issue/event and use that as a guide to your reasoning process before outputting a \`RootCauseAnalysis\`.
-- Your root cause analysis should explicitly cite the blocks of code and where the are issues, adding inline comments to code to denote where the problem is.
+- If you provide a root cause analysis, it should explicitly cite concrete evidence used to reach the conclusion: code blocks with comments, log results with captions, etc.
 - If you believe you are missing key context, output a \`CodeRequest\` or \`SpanRequest\` to gather more context.
-- If you propose code fixes, they must follow the these rules/steps:
+- If you propose code fixes, they must follow these rules:
   - They must be extremely concrete changes to the actual codebase, no examples or conceptual illustrations or how you "might" make changes.
-  - They must not introduce any new bugs or unintended behavior. They must lead to the correct overall behavior and not just be a fix in the narrow context of the issue/event. Think about this as you come up with the fixes.
-  - Rerun the issue/event in your head given your proposed fix and ensure the end behavior is correct.
-  - Should take into account overall best practices for using various libraries, tooling, etc and not miss the forest for the trees. Zoom out and make sure you're fix is not just a hotfix for a narrow issue but fully address the broader problem.
+  - Do not miss the forest for the trees and suggest a narrow bandaid fix. Think about how the system should ideally function if it were fully correct. Then rerun the sequence of events from the issue/event in your head given your proposed fix and ensure the end-to-end behavior is correct.
 
 <query>
 ${query}
@@ -134,15 +131,33 @@ export class Reasoner {
 
     logger.info(`Reasoning prompt:\n${prompt}`);
 
-    const { toolCalls, text } = await generateText({
+    // Stream reasoning response and collect text and tool calls
+    const { fullStream } = streamText({
       model: getModelWrapper(this.llm),
-      prompt: prompt,
+      prompt,
       tools: {
         // spanRequest: spanRequestToolSchema,
         logRequest: logRequestToolSchema,
       },
       toolChoice: "auto",
+      toolCallStreaming: true,
     });
+
+    let text = "";
+    const toolCalls: Array<{ toolName: string; args: any }> = [];
+    for await (const part of fullStream) {
+      if (part.type === "text-delta") {
+        text += part.textDelta;
+      } else if (part.type === "reasoning") {
+        process.stdout.write(part.textDelta);
+      } else if (part.type === "redacted-reasoning") {
+        process.stdout.write(part.data);
+      } else if (part.type === "reasoning-signature") {
+        process.stdout.write(part.signature);
+      } else if (part.type === "tool-call") {
+        toolCalls.push({ toolName: part.toolName, args: part.args });
+      }
+    }
 
     logger.info(`Reasoning response:\n${text}`);
     logger.info(`Reasoning tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
