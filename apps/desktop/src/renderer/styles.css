@@ -68,18 +68,17 @@ body {
   display: flex;
   flex-direction: column;
   padding: 12px;
-  border-radius: 8px;
   max-width: 100%;
   transition: background-color 0.15s;
 }
 
 .chat-message.user {
   background-color: #222;
+  border-radius: 8px;
   align-self: flex-end;
 }
 
-.chat-message.assistant {
-  background-color: #2a2a2a;
+.chat-message.assistant-message {
   align-self: flex-start;
 }
 
@@ -311,9 +310,37 @@ body {
   box-shadow: 0 0 0 2px rgba(255, 106, 61, 0.2);
 }
 
-.send-button {
-  background-color: #ff6a3d;
-  color: white;
+/* Override button styling with higher specificity */
+.orange-submit-button {
+  background-color: #ff6a3d !important; /* Force the orange color */
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 10px 20px !important;
+  cursor: pointer !important;
+  font-weight: 600 !important;
+  height: 44px !important;
+  transition: all 0.2s ease !important;
+  min-width: 90px !important;
+  font-size: 15px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+
+.orange-submit-button:disabled {
+  background-color: #444 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+.orange-submit-button:hover:not(:disabled) {
+  background-color: #cc5500 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.chat-input-wrapper .send-button {
+  background-color: #ff6a3d !important; /* Force the orange color */
+  color: white !important;
   border: none;
   border-radius: 8px;
   padding: 10px 20px;
@@ -326,14 +353,14 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-.send-button:disabled {
-  background-color: #444;
+.chat-input-wrapper .send-button:disabled {
+  background-color: #444 !important;
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-.send-button:hover:not(:disabled) {
-  background-color: #cc5500;
+.chat-input-wrapper .send-button:hover:not(:disabled) {
+  background-color: #cc5500 !important;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -492,4 +519,86 @@ body {
 .remove-context-button:hover {
   background-color: #e74c3c;
   opacity: 1;
+}
+
+/* Markdown styling for assistant messages */
+.assistant-message .message-content h1,
+.assistant-message .message-content h2,
+.assistant-message .message-content h3,
+.assistant-message .message-content h4,
+.assistant-message .message-content h5,
+.assistant-message .message-content h6 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: #eee;
+  font-weight: 600;
+}
+
+.assistant-message .message-content h1 {
+  font-size: 1.4em;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.3em;
+}
+
+.assistant-message .message-content h2 {
+  font-size: 1.3em;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.3em;
+}
+
+.assistant-message .message-content h3 {
+  font-size: 1.2em;
+}
+
+.assistant-message .message-content h4 {
+  font-size: 1.1em;
+}
+
+.assistant-message .message-content ul,
+.assistant-message .message-content ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.assistant-message .message-content li {
+  margin: 4px 0;
+}
+
+.assistant-message .message-content a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.assistant-message .message-content a:hover {
+  text-decoration: underline;
+}
+
+.assistant-message .message-content blockquote {
+  border-left: 3px solid #444;
+  padding-left: 12px;
+  margin: 8px 0 8px 4px;
+  color: #aaa;
+}
+
+.assistant-message .message-content code {
+  background-color: #2d2d2d;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: var(--mono-font);
+  font-size: 0.9em;
+}
+
+.assistant-message .message-content pre {
+  background-color: #1e1e1e;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.assistant-message .message-content pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  display: block;
 }

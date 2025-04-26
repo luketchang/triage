@@ -1,13 +1,6 @@
 import { useState } from "react";
 import api from "../services/api";
-import {
-  Artifact,
-  ChatMessage,
-  ContextItem,
-  LogSearchInputCore,
-  LogsWithPagination,
-} from "../types";
-import { createCodeArtifacts, createLogArtifacts } from "../utils/artifact-utils";
+import { ChatMessage, ContextItem, LogSearchInputCore, LogsWithPagination } from "../types";
 import { generateId } from "../utils/formatters";
 
 // Define the chat mode type
@@ -88,23 +81,11 @@ export function useChat() {
       setIsThinking(false);
       setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== thinkingMessageId));
 
-      // Extract artifacts from response
-      let logArtifacts: Artifact[] = [];
-      let codeArtifacts: Artifact[] = [];
-
-      if (agentResponse.data) {
-        logArtifacts = createLogArtifacts(agentResponse.data.logPostprocessing);
-        codeArtifacts = createCodeArtifacts(agentResponse.data.codePostprocessing);
-      }
-
-      const artifacts = [...logArtifacts, ...codeArtifacts];
-
-      // Create a response message with artifacts
+      // Create a response message
       const assistantMessage: ChatMessage = {
         id: generateId(),
         role: "assistant",
         content: agentResponse.data?.chatHistory?.join("\n\n") || "I processed your request.",
-        artifacts: artifacts.length > 0 ? artifacts : undefined,
       };
 
       // Update messages with the assistant's response

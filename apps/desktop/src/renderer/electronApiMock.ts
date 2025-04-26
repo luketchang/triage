@@ -822,7 +822,7 @@ const mockElectronAPI = {
       const searchTerms = params.query.toLowerCase().split(" ");
       filteredLogs = allLogs.filter((log) => {
         return searchTerms.some(
-          (term) =>
+          (term: string) =>
             log.message.toLowerCase().includes(term) ||
             log.service.toLowerCase().includes(term) ||
             log.level.toLowerCase().includes(term)
@@ -891,7 +891,7 @@ const mockElectronAPI = {
       const searchTerms = params.query.toLowerCase().split(" ");
       filteredTraces = allTraces.filter((trace) => {
         return searchTerms.some(
-          (term) =>
+          (term: string) =>
             trace.rootResource.toLowerCase().includes(term) ||
             trace.rootService.toLowerCase().includes(term) ||
             term.includes(`status:${trace.httpStatus}`)

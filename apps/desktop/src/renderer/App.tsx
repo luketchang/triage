@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import "./electron.d";
 import "./styles-chat-sidebar.css";
 import "./styles-chat.css";
@@ -39,7 +40,7 @@ function App(): JSX.Element {
             chatState.messages.map((message) => (
               <div
                 key={message.id}
-                className={`chat-message ${message.role === "user" ? "user" : "assistant"}`}
+                className={`chat-message ${message.role === "user" ? "user" : "assistant-message"}`}
               >
                 <div className="message-content">
                   {message.contextItems && message.contextItems.length > 0 && (
@@ -66,6 +67,8 @@ function App(): JSX.Element {
                     <div className="thinking-message">
                       Thinking{chatState.isThinking ? "..." : ""}
                     </div>
+                  ) : message.role === "assistant" ? (
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
                   ) : (
                     message.content.split("\n").map((line, i) => <p key={i}>{line}</p>)
                   )}
@@ -143,7 +146,7 @@ function App(): JSX.Element {
               }}
             />
             <button
-              className="send-button"
+              className="send-button orange-submit-button"
               onClick={() => chatState.sendMessage()}
               disabled={chatState.isThinking || !chatState.newMessage.trim()}
             >
