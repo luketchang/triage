@@ -1,6 +1,5 @@
 import { useState } from "react";
 import "./electron.d";
-import "./styles-chat.css";
 import "./styles.css";
 
 // Feature flag for Traces view
