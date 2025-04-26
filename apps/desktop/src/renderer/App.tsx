@@ -4,260 +4,154 @@ import "./styles-chat-sidebar.css";
 import "./styles-chat.css";
 import "./styles.css";
 
-import { Artifact, ContextItem, LogSearchInputCore, TabType, TraceForAgent } from "./types";
-import { generateId } from "./utils/formatters";
-
-// Components
-import NavigationSidebar from "./components/NavigationSidebar";
-
-// Feature Views
-import ChatSidebar from "./features/ChatSidebar";
-import CodeView from "./features/CodeView";
-import DashboardsView from "./features/DashboardsView";
-import LogsView from "./features/LogsView";
-import TracesView from "./features/TracesView";
+import { Artifact } from "./types";
 
 // Custom hooks
 import { useChat } from "./hooks/useChat";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
-import { useLogs } from "./hooks/useLogs";
-import { useTraces } from "./hooks/useTraces";
 
 function App(): JSX.Element {
-  const [activeTab, setActiveTab] = useState<TabType>("logs");
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
 
   // Use custom hooks
-  const logsState = useLogs();
   const chatState = useChat();
-  const tracesState = useTraces();
-
-  // Setup keyboard shortcuts
-  useKeyboardShortcuts([
-    {
-      key: "i",
-      metaKey: true,
-      action: () => chatState.toggleChatSidebar(),
-    },
-    {
-      key: "u",
-      metaKey: true,
-      action: () => addCurrentContextToChat(),
-    },
-  ]);
-
-  const handleTabChange = (tab: TabType) => {
-    setActiveTab(tab);
-  };
 
   const handleArtifactClick = (artifact: Artifact): void => {
     setSelectedArtifact(artifact);
-
-    // Automatically switch to the appropriate tab based on artifact type
-    if (artifact.type === "log") {
-      setActiveTab("logs");
-    } else if (artifact.type === "code") {
-      setActiveTab("code");
-    }
-  };
-
-  // Add current view context to chat sidebar
-  const addCurrentContextToChat = async (): Promise<void> => {
-    let newContextItem: ContextItem | null = null;
-
-    switch (activeTab) {
-      case "logs":
-        // Create context from logs view
-        // Both logQuery and logsWithPagination should be populated or neither should be
-        if (logsState.logQuery && logsState.logsWithPagination) {
-          // Create a LogSearchInputCore object
-          const logSearchInput: LogSearchInputCore = {
-            query: logsState.logQuery,
-            start: logsState.timeRange.start,
-            end: logsState.timeRange.end,
-            limit: 500,
-            pageCursor: logsState.pageCursor || null,
-            type: "logSearchInput",
-          };
-
-          // Use the logs data directly from state - no need to fetch again
-          newContextItem = {
-            id: generateId(),
-            type: "logSearch",
-            title: logsState.logQuery || "Log Query",
-            description: `Time: ${new Date(logsState.timeRange.start).toLocaleString()} - ${new Date(logsState.timeRange.end).toLocaleString()}`,
-            data: {
-              input: logSearchInput,
-              results: logsState.logsWithPagination,
-            },
-            sourceTab: "logs",
-          };
-        } else if (logsState.logQuery) {
-          console.warn("Unexpected state: logQuery exists but logsWithPagination is missing");
-        } else if (logsState.logsWithPagination) {
-          console.warn("Unexpected state: logsWithPagination exists but logQuery is missing");
-        }
-        break;
-      case "traces":
-        // Create context from traces view - ONLY if a trace is explicitly selected
-        if (tracesState.selectedTrace) {
-          console.info("Adding selected trace to context:", tracesState.selectedTrace.traceId);
-
-          // Extract just the necessary properties without serviceBreakdown
-          const { serviceBreakdown, ...traceForAgent } = tracesState.selectedTrace;
-
-          // Create a SingleTraceContextItem with the selected trace
-          newContextItem = {
-            id: generateId(),
-            type: "singleTrace",
-            title: `Trace: ${tracesState.selectedTrace.rootService} - ${tracesState.selectedTrace.rootResource}`,
-            description: `Trace ID: ${tracesState.selectedTrace.traceId}`,
-            data: traceForAgent as TraceForAgent,
-            sourceTab: "traces",
-          };
-        } else {
-          console.info("No trace selected - cmd+u has no effect in traces view without selection");
-        }
-        break;
-      case "code":
-      case "dashboards":
-        // Implement for other tabs as needed
-        break;
-    }
-
-    if (newContextItem) {
-      chatState.setContextItems((prev) => [...prev, newContextItem!]);
-
-      // Open chat sidebar if it's closed
-      if (!chatState.isChatSidebarOpen) {
-        chatState.setIsChatSidebarOpen(true);
-      }
-    }
-  };
-
-  const renderMainContent = () => {
-    switch (activeTab) {
-      case "logs":
-        return (
-          <LogsView
-            logs={logsState.logs}
-            logsWithPagination={logsState.logsWithPagination}
-            logQuery={logsState.logQuery}
-            timeRange={logsState.timeRange}
-            isLoading={logsState.isLoading}
-            setLogQuery={logsState.setLogQuery}
-            onTimeRangeChange={logsState.handleTimeRangeChange}
-            onQuerySubmit={logsState.fetchLogsWithQuery}
-            onLoadMore={logsState.handleLoadMoreLogs}
-            selectedArtifact={
-              selectedArtifact && selectedArtifact.type === "log" ? selectedArtifact : null
-            }
-            setLogs={logsState.setLogs}
-            setLogsWithPagination={logsState.setLogsWithPagination}
-            setIsLoading={logsState.setIsLoading}
-            setPageCursor={logsState.setPageCursor}
-            setTimeRange={logsState.setTimeRange}
-          />
-        );
-      case "traces":
-        return (
-          <TracesView
-            selectedArtifact={
-              selectedArtifact && selectedArtifact.type === "trace" ? selectedArtifact : null
-            }
-            selectedTrace={tracesState.selectedTrace}
-            handleTraceSelect={tracesState.handleTraceSelect}
-            traces={tracesState.traces}
-            traceQuery={tracesState.traceQuery}
-            setTraceQuery={tracesState.setTraceQuery}
-            isLoading={tracesState.isLoading}
-            timeRange={tracesState.timeRange}
-            fetchTracesWithQuery={tracesState.fetchTracesWithQuery}
-            handleLoadMoreTraces={tracesState.handleLoadMoreTraces}
-            handleTimeRangeChange={tracesState.handleTimeRangeChange}
-            facets={tracesState.facets}
-            selectedFacets={tracesState.selectedFacets}
-            setSelectedFacets={tracesState.setSelectedFacets}
-            selectedSpan={tracesState.selectedSpan}
-            handleSpanSelect={tracesState.handleSpanSelect}
-            pageCursor={tracesState.pageCursor}
-            setSelectedSpan={tracesState.setSelectedSpan}
-          />
-        );
-      case "dashboards":
-        return <DashboardsView selectedArtifact={null} />;
-      case "code":
-        return (
-          <CodeView
-            selectedArtifact={
-              selectedArtifact && selectedArtifact.type === "code" ? selectedArtifact : null
-            }
-          />
-        );
-      default:
-        return (
-          <LogsView
-            logs={logsState.logs}
-            logsWithPagination={logsState.logsWithPagination}
-            logQuery={logsState.logQuery}
-            timeRange={logsState.timeRange}
-            isLoading={logsState.isLoading}
-            setLogQuery={logsState.setLogQuery}
-            onTimeRangeChange={logsState.handleTimeRangeChange}
-            onQuerySubmit={logsState.fetchLogsWithQuery}
-            onLoadMore={logsState.handleLoadMoreLogs}
-            selectedArtifact={null}
-            setLogs={logsState.setLogs}
-            setLogsWithPagination={logsState.setLogsWithPagination}
-            setIsLoading={logsState.setIsLoading}
-            setPageCursor={logsState.setPageCursor}
-            setTimeRange={logsState.setTimeRange}
-          />
-        );
-    }
   };
 
   return (
-    <div
-      className={`app-container observability-layout ${chatState.isChatSidebarOpen ? "with-chat-sidebar" : ""}`}
-    >
-      {/* Vertical Navigation Sidebar */}
-      <NavigationSidebar
-        activeTab={activeTab}
-        handleTabChange={handleTabChange}
-        toggleChatSidebar={chatState.toggleChatSidebar}
-        contextItemsCount={chatState.contextItems.length}
-      />
+    <div className="app-container chat-only-layout">
+      <div className="chat-main-content">
+        <div className="chat-header">
+          <div className="logo-container">
+            <div className="logo">Triage</div>
+          </div>
+        </div>
 
-      {/* Main Content Area */}
-      <div className="main-content-wrapper">{renderMainContent()}</div>
+        <div className="chat-messages">
+          {chatState.messages.length === 0 ? (
+            <div className="empty-chat">
+              <div className="empty-chat-message">
+                Start a conversation to trigger an investigation
+              </div>
+            </div>
+          ) : (
+            chatState.messages.map((message) => (
+              <div
+                key={message.id}
+                className={`chat-message ${message.role === "user" ? "user" : "assistant"}`}
+              >
+                <div className="message-content">
+                  {message.contextItems && message.contextItems.length > 0 && (
+                    <div className="message-context-items">
+                      <div className="context-items-header">
+                        <span>Input Context</span>
+                      </div>
+                      <div className="context-items-attached">
+                        {message.contextItems.map((contextItem) => (
+                          <div key={contextItem.id} className="context-card">
+                            <div className="context-card-content">
+                              <div className="context-type">{contextItem.type}</div>
+                              <div className="context-title" title={contextItem.title}>
+                                {contextItem.title}
+                              </div>
+                              <div className="context-page-cursor">{contextItem.description}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {message.content === "Thinking..." ? (
+                    <div className="thinking-message">
+                      Thinking{chatState.isThinking ? "..." : ""}
+                    </div>
+                  ) : (
+                    message.content.split("\n").map((line, i) => <p key={i}>{line}</p>)
+                  )}
+                </div>
 
-      {/* Chat Sidebar */}
-      {chatState.isChatSidebarOpen && (
-        <div className="chat-sidebar">
-          <div className="chat-sidebar-header">
+                {message.artifacts && message.artifacts.length > 0 && (
+                  <div className="artifacts-container">
+                    <h4>Artifacts</h4>
+                    <div className="artifacts-list">
+                      {message.artifacts.map((artifact) => (
+                        <div
+                          key={artifact.id}
+                          className="artifact-card"
+                          onClick={() => handleArtifactClick(artifact)}
+                        >
+                          <div className="artifact-header">
+                            <div className={`artifact-type ${artifact.type}`}>{artifact.type}</div>
+                            <div className="artifact-title">{artifact.title}</div>
+                          </div>
+                          {artifact.description && (
+                            <div className="artifact-details">{artifact.description}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="chat-input-container">
+          {chatState.contextItems.length > 0 && (
+            <div className="context-items-container">
+              <div className="context-items-header">
+                <span>Input Context</span>
+              </div>
+              <div className="context-items-list">
+                {chatState.contextItems.map((contextItem) => (
+                  <div key={contextItem.id} className="context-card">
+                    <div className="context-card-content">
+                      <div className="context-type">{contextItem.type}</div>
+                      <div className="context-title" title={contextItem.title}>
+                        {contextItem.title}
+                      </div>
+                      <div className="context-time-range">{contextItem.description}</div>
+                    </div>
+                    <button
+                      className="remove-context-button"
+                      onClick={() => chatState.removeContextItem(contextItem.id)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="chat-input-wrapper">
+            <textarea
+              className="chat-input"
+              value={chatState.newMessage}
+              onChange={(e) => chatState.setNewMessage(e.target.value)}
+              placeholder="Type your message..."
+              disabled={chatState.isThinking}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (chatState.newMessage.trim()) {
+                    chatState.sendMessage();
+                  }
+                }
+              }}
+            />
             <button
-              className="close-chat-button"
-              onClick={chatState.toggleChatSidebar}
-              title="Close Chat (⌘ + I)"
+              className="send-button"
+              onClick={() => chatState.sendMessage()}
+              disabled={chatState.isThinking || !chatState.newMessage.trim()}
             >
-              ×
+              Send
             </button>
           </div>
-          <ChatSidebar
-            messages={chatState.messages}
-            newMessage={chatState.newMessage}
-            setNewMessage={chatState.setNewMessage}
-            sendMessage={chatState.sendMessage}
-            onArtifactClick={handleArtifactClick}
-            isThinking={chatState.isThinking}
-            contextItems={chatState.contextItems}
-            removeContextItem={chatState.removeContextItem}
-            chatMode={chatState.chatMode}
-            toggleChatMode={chatState.toggleChatMode}
-          />
         </div>
-      )}
+      </div>
     </div>
   );
 }
