@@ -1,4 +1,4 @@
-import { ChatIcon, CodeIcon, DashboardsIcon, LogsIcon, TracesIcon } from "../icons";
+import { ChatIcon, DashboardsIcon, LogsIcon, TracesIcon } from "../icons";
 import { TabType } from "../types";
 
 interface NavigationSidebarProps {
@@ -50,14 +50,6 @@ function NavigationSidebar({
         >
           <DashboardsIcon />
           <span className="nav-label">Dashboards</span>
-        </div>
-        <div
-          className={`nav-item ${activeTab === "code" ? "active" : ""}`}
-          onClick={() => handleTabChange("code")}
-          title="Code"
-        >
-          <CodeIcon />
-          <span className="nav-label">Code</span>
         </div>
       </div>
       <div className="sidebar-footer">{/* Footer content can be added here if needed */}</div>

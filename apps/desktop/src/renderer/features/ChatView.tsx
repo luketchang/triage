@@ -435,7 +435,7 @@ const ChatView: React.FC<ChatViewProps> = ({
                 <div className="welcome-message">
                   <h2>Chat with Triage Assistant</h2>
                   <p>Ask questions about your logs, traces, or codebase.</p>
-                  <p>Use ⌘+U in other views to add context to your questions.</p>
+                  <p>Use ⌘+U in other views to add context from those views.</p>
                 </div>
               </div>
             ) : (

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import "./electron.d";
-import "./styles-chat-sidebar.css";
 import "./styles-chat.css";
 import "./styles.css";
 
@@ -15,7 +14,6 @@ import NavigationSidebar from "./components/NavigationSidebar";
 
 // Feature Views
 import ChatView from "./features/ChatView";
-import CodeView from "./features/CodeView";
 import DashboardsView from "./features/DashboardsView";
 import LogsView from "./features/LogsView";
 import TracesView from "./features/TracesView";
@@ -27,7 +25,7 @@ import { useLogs } from "./hooks/useLogs";
 import { useTraces } from "./hooks/useTraces";
 
 function App(): JSX.Element {
-  const [activeTab, setActiveTab] = useState<TabType>("logs");
+  const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
 
   // Use custom hooks
@@ -86,8 +84,6 @@ function App(): JSX.Element {
     // Automatically switch to the appropriate tab based on artifact type
     if (artifact.type === "log") {
       setActiveTab("logs");
-    } else if (artifact.type === "code") {
-      setActiveTab("code");
     }
   };
 
@@ -155,10 +151,9 @@ function App(): JSX.Element {
           console.info("No trace selected - cmd+u has no effect in traces view without selection");
         }
         break;
-      case "code":
       case "dashboards":
       case "chat":
-        // Implement for other tabs as needed
+        // No context to add from these views
         break;
     }
 
@@ -225,14 +220,6 @@ function App(): JSX.Element {
         );
       case "dashboards":
         return <DashboardsView selectedArtifact={null} />;
-      case "code":
-        return (
-          <CodeView
-            selectedArtifact={
-              selectedArtifact && selectedArtifact.type === "code" ? selectedArtifact : null
-            }
-          />
-        );
       case "chat":
         return (
           <ChatView
@@ -250,22 +237,17 @@ function App(): JSX.Element {
         );
       default:
         return (
-          <LogsView
-            logs={logsState.logs}
-            logsWithPagination={logsState.logsWithPagination}
-            logQuery={logsState.logQuery}
-            timeRange={logsState.timeRange}
-            isLoading={logsState.isLoading}
-            setLogQuery={logsState.setLogQuery}
-            onTimeRangeChange={logsState.handleTimeRangeChange}
-            onQuerySubmit={logsState.fetchLogsWithQuery}
-            onLoadMore={logsState.handleLoadMoreLogs}
-            selectedArtifact={null}
-            setLogs={logsState.setLogs}
-            setLogsWithPagination={logsState.setLogsWithPagination}
-            setIsLoading={logsState.setIsLoading}
-            setPageCursor={logsState.setPageCursor}
-            setTimeRange={logsState.setTimeRange}
+          <ChatView
+            messages={chatState.messages}
+            newMessage={chatState.newMessage}
+            setNewMessage={chatState.setNewMessage}
+            sendMessage={chatState.sendMessage}
+            onArtifactClick={handleArtifactClick}
+            isThinking={chatState.isThinking}
+            contextItems={chatState.contextItems}
+            removeContextItem={chatState.removeContextItem}
+            chatMode={chatState.chatMode}
+            toggleChatMode={chatState.toggleChatMode}
           />
         );
     }

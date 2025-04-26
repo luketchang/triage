@@ -45,6 +45,17 @@ body {
   flex-direction: row;
 }
 
+/* Main Content Wrapper */
+.main-content-wrapper {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  background-color: #121212;
+  transition: width 0.3s ease;
+  width: calc(100% - 55px); /* Adjust width to account for 55px navigation sidebar */
+}
+
 /* Navigation Sidebar */
 .navigation-sidebar {
   width: 55px;
@@ -319,6 +330,7 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .logs-header {
@@ -986,147 +998,6 @@ body {
 }
 
 /*****************************************
- * Code View Styling
- *****************************************/
-
-.code-view {
-  display: flex;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-}
-
-.code-placeholder {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-  color: #888;
-  text-align: center;
-  padding: 20px;
-}
-
-.code-explorer {
-  display: flex;
-  width: 100%;
-  height: 100%;
-}
-
-.file-browser {
-  width: 300px;
-  min-width: 200px;
-  border-right: 1px solid #2a2a2a;
-  overflow-y: auto;
-  height: 100%;
-  padding: 10px;
-  background-color: #1a1a1a;
-  color: #eee;
-}
-
-.file-browser h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-top: 0;
-  margin-bottom: 16px;
-  color: #eee;
-}
-
-.file-tree-container {
-  margin-top: 10px;
-  font-size: 14px;
-}
-
-/* Improve the tree node styling */
-.tree-node {
-  display: flex;
-  align-items: center;
-  padding: 4px 0;
-  cursor: pointer;
-  transition: background-color 0.1s;
-  border-radius: 4px;
-  margin: 1px 0;
-  color: #eee;
-}
-
-.tree-node:hover {
-  background-color: #252525;
-}
-
-.tree-node.selected {
-  background-color: #333;
-  color: var(--primary-color);
-}
-
-.tree-node.directory {
-  font-weight: 500;
-}
-
-.tree-node-icon {
-  margin-right: 8px;
-  width: 16px;
-  color: #888;
-}
-
-.tree-node.directory .tree-node-icon {
-  color: #3498db;
-}
-
-.tree-node.file .tree-node-icon {
-  color: #aaa;
-}
-
-.node-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.code-content {
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background-color: #1e1e1e;
-}
-
-.code-header {
-  padding: 10px 15px;
-  border-bottom: 1px solid #2a2a2a;
-  background-color: #1f1f1f;
-}
-
-.code-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #eee;
-}
-
-.loading-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex: 1;
-  color: #888;
-}
-
-.no-file-selected {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  color: #888;
-  font-size: 16px;
-  background-color: #1e1e1e;
-}
-
-/*****************************************
  * Traces View Styling
  *****************************************/
 
@@ -1135,6 +1006,7 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .traces-placeholder {
@@ -1695,6 +1567,7 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .dashboards-placeholder {
@@ -1981,209 +1854,19 @@ body {
   }
 }
 
-/* Add these styles for the repo code explorer and Monaco editor */
-
-/* Code View Styles (extends existing styles) */
-.repo-code-explorer {
-  display: flex;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-}
-
-.file-browser {
-  width: 300px;
-  min-width: 200px;
-  border-right: 1px solid #2a2a2a;
-  overflow-y: auto;
-  height: 100%;
-  padding: 10px;
-  background-color: #1a1a1a;
-  color: #eee;
-}
-
-.file-tree-container {
-  margin-top: 10px;
-  font-size: 14px;
-}
-
-.tree-node {
-  display: flex;
-  align-items: center;
-  padding: 4px 0;
-  cursor: pointer;
-  transition: background-color 0.1s;
-  border-radius: 4px;
-  margin: 1px 0;
-  color: #eee;
-}
-
-.tree-node:hover {
-  background-color: #252525;
-}
-
-.tree-node.selected {
-  background-color: #333;
-  color: var(--primary-color);
-}
-
-.tree-node.directory {
-  font-weight: 500;
-}
-
-.tree-node-icon {
-  margin-right: 8px;
-  width: 16px;
-  color: #888;
-}
-
-.tree-node.directory .tree-node-icon {
-  color: #3498db;
-}
-
-.tree-node.file .tree-node-icon {
-  color: #aaa;
-}
-
-.node-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.loading-repo,
-.repo-error {
-  padding: 20px;
-  color: #888;
-  text-align: center;
-}
-
-.repo-error {
-  color: #cc0000;
-}
-
-.code-content {
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background-color: #1e1e1e;
-}
-
-.code-header {
-  padding: 10px 15px;
-  border-bottom: 1px solid #2a2a2a;
-  background-color: #1f1f1f;
-}
-
-.code-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #eee;
-}
-
-.loading-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex: 1;
-  color: #888;
-}
-
-.no-file-selected {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  color: #888;
-  font-size: 16px;
-  background-color: #1e1e1e;
-}
-
-/*****************************************
- * CodeView Error Handling
- *****************************************/
-
-.code-placeholder.error {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-  color: #e74c3c;
-  text-align: center;
-  padding: 20px;
-  background-color: rgba(231, 76, 60, 0.1);
-}
-
-.code-placeholder.error h3 {
-  color: #e74c3c;
-  margin-bottom: 16px;
-}
-
-.code-placeholder.error button,
-.loading-content.error button,
-.monaco-error-fallback button {
-  background-color: #3498db;
+/* Context count badge in the nav sidebar */
+.context-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: #e74c3c;
   color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 16px;
-  font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-.code-placeholder.error button:hover,
-.loading-content.error button:hover,
-.monaco-error-fallback button:hover {
-  background-color: #2980b9;
-}
-
-.monaco-error-fallback {
-  padding: 20px;
+  font-size: 10px;
+  font-weight: bold;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
   display: flex;
-  flex-direction: column;
-  height: 85vh;
-  overflow: auto;
-}
-
-.monaco-error-fallback h3 {
-  color: #e74c3c;
-  margin-bottom: 8px;
-}
-
-.monaco-error-fallback p {
-  color: #e74c3c;
-  margin-bottom: 16px;
-}
-
-.loading-content.error {
-  color: #e74c3c;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  height: 85vh;
-  overflow: auto;
-}
-
-.fallback-content {
-  flex: 1;
-  overflow: auto;
-  padding: 16px;
-  margin: 0;
-  font-family: "Menlo", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  background-color: #1e1e1e;
-  color: #eee;
-  white-space: pre-wrap;
-  border-radius: 4px;
+  align-items: center;
+  justify-content: center;
 }

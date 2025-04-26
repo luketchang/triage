@@ -184,7 +184,7 @@ export interface ChatMessage {
 }
 
 // Interface for main content tabs
-export type TabType = "logs" | "traces" | "dashboards" | "code" | "chat";
+export type TabType = "logs" | "traces" | "dashboards" | "chat";
 
 export interface TimeRange {
   start: string;

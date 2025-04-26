@@ -139,6 +139,7 @@
   height: 100%;
   width: 100%;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .chat-container {
@@ -147,7 +148,7 @@
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: var(--chat-bg-color);
+  background-color: var(--chat-bg-color, #121212);
 }
 
 .chat-messages-container {

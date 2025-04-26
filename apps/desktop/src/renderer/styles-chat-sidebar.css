@@ -1,16 +1,8 @@
 /* Main layout styles for chat sidebar */
 .with-chat-sidebar .main-content-wrapper {
-  width: calc(100% - 360px);
-}
-
-/* Main Content Wrapper */
-.main-content-wrapper {
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
-  position: relative;
-  background-color: #121212;
-  transition: width 0.3s ease;
+  width: calc(
+    100% - 360px
+  ) !important; /* Override with important to ensure this takes precedence */
 }
 
 /* Chat Toggle Button */
