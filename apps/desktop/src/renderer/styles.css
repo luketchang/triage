@@ -161,6 +161,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .input-wrapper {
@@ -1034,6 +1037,7 @@ body {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  flex: 1;
 }
 
 .traces-header {
@@ -2281,3 +2285,41 @@ body {
 }
 
 /* --- END: Merged Chat and Chat Sidebar Styles --- */
+
+.chat-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  flex: 1;
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--chat-bg-color, #121212);
+  flex: 1;
+}
+
+.chat-messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+.chat-messages {
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
