@@ -1,7 +1,5 @@
 import { useState } from "react";
 import "./electron.d";
-import "./styles-chat-sidebar.css";
-import "./styles-chat.css";
 import "./styles.css";
 
 // Feature flag for Traces view
@@ -14,8 +12,7 @@ import { generateId } from "./utils/formatters";
 import NavigationSidebar from "./components/NavigationSidebar";
 
 // Feature Views
-import ChatSidebar from "./features/ChatSidebar";
-import CodeView from "./features/CodeView";
+import ChatView from "./features/ChatView";
 import DashboardsView from "./features/DashboardsView";
 import LogsView from "./features/LogsView";
 import TracesView from "./features/TracesView";
@@ -27,7 +24,7 @@ import { useLogs } from "./hooks/useLogs";
 import { useTraces } from "./hooks/useTraces";
 
 function App(): JSX.Element {
-  const [activeTab, setActiveTab] = useState<TabType>("logs");
+  const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
 
   // Use custom hooks
@@ -66,14 +63,13 @@ function App(): JSX.Element {
   // Setup keyboard shortcuts
   useKeyboardShortcuts([
     {
-      key: "i",
-      metaKey: true,
-      action: () => chatState.toggleChatSidebar(),
-    },
-    {
       key: "u",
       metaKey: true,
-      action: () => addCurrentContextToChat(),
+      action: () => {
+        addCurrentContextToChat();
+        // Switch to chat view after adding context
+        setActiveTab("chat");
+      },
     },
   ]);
 
@@ -87,12 +83,10 @@ function App(): JSX.Element {
     // Automatically switch to the appropriate tab based on artifact type
     if (artifact.type === "log") {
       setActiveTab("logs");
-    } else if (artifact.type === "code") {
-      setActiveTab("code");
     }
   };
 
-  // Add current view context to chat sidebar
+  // Add current view context to chat
   const addCurrentContextToChat = async (): Promise<void> => {
     let newContextItem: ContextItem | null = null;
 
@@ -156,19 +150,14 @@ function App(): JSX.Element {
           console.info("No trace selected - cmd+u has no effect in traces view without selection");
         }
         break;
-      case "code":
       case "dashboards":
-        // Implement for other tabs as needed
+      case "chat":
+        // No context to add from these views
         break;
     }
 
     if (newContextItem) {
       chatState.setContextItems((prev) => [...prev, newContextItem!]);
-
-      // Open chat sidebar if it's closed
-      if (!chatState.isChatSidebarOpen) {
-        chatState.setIsChatSidebarOpen(true);
-      }
     }
   };
 
@@ -230,65 +219,9 @@ function App(): JSX.Element {
         );
       case "dashboards":
         return <DashboardsView selectedArtifact={null} />;
-      case "code":
+      case "chat":
         return (
-          <CodeView
-            selectedArtifact={
-              selectedArtifact && selectedArtifact.type === "code" ? selectedArtifact : null
-            }
-          />
-        );
-      default:
-        return (
-          <LogsView
-            logs={logsState.logs}
-            logsWithPagination={logsState.logsWithPagination}
-            logQuery={logsState.logQuery}
-            timeRange={logsState.timeRange}
-            isLoading={logsState.isLoading}
-            setLogQuery={logsState.setLogQuery}
-            onTimeRangeChange={logsState.handleTimeRangeChange}
-            onQuerySubmit={logsState.fetchLogsWithQuery}
-            onLoadMore={logsState.handleLoadMoreLogs}
-            selectedArtifact={null}
-            setLogs={logsState.setLogs}
-            setLogsWithPagination={logsState.setLogsWithPagination}
-            setIsLoading={logsState.setIsLoading}
-            setPageCursor={logsState.setPageCursor}
-            setTimeRange={logsState.setTimeRange}
-          />
-        );
-    }
-  };
-
-  return (
-    <div
-      className={`app-container observability-layout ${chatState.isChatSidebarOpen ? "with-chat-sidebar" : ""}`}
-    >
-      {/* Vertical Navigation Sidebar */}
-      <NavigationSidebar
-        activeTab={activeTab}
-        handleTabChange={handleTabChange}
-        toggleChatSidebar={chatState.toggleChatSidebar}
-        contextItemsCount={chatState.contextItems.length}
-      />
-
-      {/* Main Content Area */}
-      <div className="main-content-wrapper">{renderMainContent()}</div>
-
-      {/* Chat Sidebar */}
-      {chatState.isChatSidebarOpen && (
-        <div className="chat-sidebar">
-          <div className="chat-sidebar-header">
-            <button
-              className="close-chat-button"
-              onClick={chatState.toggleChatSidebar}
-              title="Close Chat (⌘ + I)"
-            >
-              ×
-            </button>
-          </div>
-          <ChatSidebar
+          <ChatView
             messages={chatState.messages}
             newMessage={chatState.newMessage}
             setNewMessage={chatState.setNewMessage}
@@ -300,8 +233,36 @@ function App(): JSX.Element {
             chatMode={chatState.chatMode}
             toggleChatMode={chatState.toggleChatMode}
           />
-        </div>
-      )}
+        );
+      default:
+        return (
+          <ChatView
+            messages={chatState.messages}
+            newMessage={chatState.newMessage}
+            setNewMessage={chatState.setNewMessage}
+            sendMessage={chatState.sendMessage}
+            onArtifactClick={handleArtifactClick}
+            isThinking={chatState.isThinking}
+            contextItems={chatState.contextItems}
+            removeContextItem={chatState.removeContextItem}
+            chatMode={chatState.chatMode}
+            toggleChatMode={chatState.toggleChatMode}
+          />
+        );
+    }
+  };
+
+  return (
+    <div className="app-container observability-layout">
+      {/* Vertical Navigation Sidebar */}
+      <NavigationSidebar
+        activeTab={activeTab}
+        handleTabChange={handleTabChange}
+        contextItemsCount={chatState.contextItems.length}
+      />
+
+      {/* Main Content Area */}
+      <div className="main-content-wrapper">{renderMainContent()}</div>
     </div>
   );
 }
