@@ -141,7 +141,7 @@ export const logSearchInputSchema = z.object({
   reasoning: z
     .string()
     .describe(
-      "Objectively outline what you observe in the logs as sequence of events formatted as a numbered list. For example: 1. user clicked X.\n 2. recommendations service provided Y.\n 3. User saw Z. Only after the first step, then enumerate what other services or areas of the logs you may want to explore next if you are missing context."
+      "Objectively outline what you observe in the most recent set of fetched logs. If you need more context, explain the steps you will take. If you have enough context, explain why you are done with the current search."
     ),
 });
 
@@ -178,7 +178,7 @@ export const spanSearchInputSchema = z.object({
   reasoning: z
     .string()
     .describe(
-      "Objectively outline what you observe in the spans as sequence of events formatted as a numbered list. For example: 1. user clicked X.\n 2. recommendations service provided Y.\n 3. User saw Z. Only after the first step, then enumerate what other services or areas of the spans you may want to explore next if you are missing context."
+      "Objectively outline what you observe in the most recent set of fetched spans. If you need more context, explain the steps you will take. If you have enough context, explain why you are done with the current search."
     ),
 });
 
