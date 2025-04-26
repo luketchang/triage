@@ -14,7 +14,7 @@ import { generateId } from "./utils/formatters";
 import NavigationSidebar from "./components/NavigationSidebar";
 
 // Feature Views
-import ChatSidebar from "./features/ChatSidebar";
+import ChatView from "./features/ChatView";
 import CodeView from "./features/CodeView";
 import DashboardsView from "./features/DashboardsView";
 import LogsView from "./features/LogsView";
@@ -66,14 +66,13 @@ function App(): JSX.Element {
   // Setup keyboard shortcuts
   useKeyboardShortcuts([
     {
-      key: "i",
-      metaKey: true,
-      action: () => chatState.toggleChatSidebar(),
-    },
-    {
       key: "u",
       metaKey: true,
-      action: () => addCurrentContextToChat(),
+      action: () => {
+        addCurrentContextToChat();
+        // Switch to chat view after adding context
+        setActiveTab("chat");
+      },
     },
   ]);
 
@@ -92,7 +91,7 @@ function App(): JSX.Element {
     }
   };
 
-  // Add current view context to chat sidebar
+  // Add current view context to chat
   const addCurrentContextToChat = async (): Promise<void> => {
     let newContextItem: ContextItem | null = null;
 
@@ -158,17 +157,13 @@ function App(): JSX.Element {
         break;
       case "code":
       case "dashboards":
+      case "chat":
         // Implement for other tabs as needed
         break;
     }
 
     if (newContextItem) {
       chatState.setContextItems((prev) => [...prev, newContextItem!]);
-
-      // Open chat sidebar if it's closed
-      if (!chatState.isChatSidebarOpen) {
-        chatState.setIsChatSidebarOpen(true);
-      }
     }
   };
 
@@ -238,6 +233,21 @@ function App(): JSX.Element {
             }
           />
         );
+      case "chat":
+        return (
+          <ChatView
+            messages={chatState.messages}
+            newMessage={chatState.newMessage}
+            setNewMessage={chatState.setNewMessage}
+            sendMessage={chatState.sendMessage}
+            onArtifactClick={handleArtifactClick}
+            isThinking={chatState.isThinking}
+            contextItems={chatState.contextItems}
+            removeContextItem={chatState.removeContextItem}
+            chatMode={chatState.chatMode}
+            toggleChatMode={chatState.toggleChatMode}
+          />
+        );
       default:
         return (
           <LogsView
@@ -262,46 +272,16 @@ function App(): JSX.Element {
   };
 
   return (
-    <div
-      className={`app-container observability-layout ${chatState.isChatSidebarOpen ? "with-chat-sidebar" : ""}`}
-    >
+    <div className="app-container observability-layout">
       {/* Vertical Navigation Sidebar */}
       <NavigationSidebar
         activeTab={activeTab}
         handleTabChange={handleTabChange}
-        toggleChatSidebar={chatState.toggleChatSidebar}
         contextItemsCount={chatState.contextItems.length}
       />
 
       {/* Main Content Area */}
       <div className="main-content-wrapper">{renderMainContent()}</div>
-
-      {/* Chat Sidebar */}
-      {chatState.isChatSidebarOpen && (
-        <div className="chat-sidebar">
-          <div className="chat-sidebar-header">
-            <button
-              className="close-chat-button"
-              onClick={chatState.toggleChatSidebar}
-              title="Close Chat (⌘ + I)"
-            >
-              ×
-            </button>
-          </div>
-          <ChatSidebar
-            messages={chatState.messages}
-            newMessage={chatState.newMessage}
-            setNewMessage={chatState.setNewMessage}
-            sendMessage={chatState.sendMessage}
-            onArtifactClick={handleArtifactClick}
-            isThinking={chatState.isThinking}
-            contextItems={chatState.contextItems}
-            removeContextItem={chatState.removeContextItem}
-            chatMode={chatState.chatMode}
-            toggleChatMode={chatState.toggleChatMode}
-          />
-        </div>
-      )}
     </div>
   );
 }
