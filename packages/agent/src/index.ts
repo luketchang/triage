@@ -1,12 +1,4 @@
-import {
-  collectSourceCode,
-  GeminiModel,
-  loadFileTree,
-  logger,
-  Model,
-  OpenAIModel,
-  timer,
-} from "@triage/common";
+import { collectSourceCode, GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -24,12 +16,12 @@ import { Reviewer } from "./nodes/reviewer";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { SpanSearchAgent } from "./nodes/search/span-search";
 import { formatFacetValues } from "./nodes/utils";
-import type { LogRequest, SpanRequest } from "./types";
+import type { CodePostprocessing, LogRequest, SpanRequest } from "./types";
 import {
   CodePostprocessingRequest,
+  LogPostprocessing,
   LogPostprocessingRequest,
   LogSearchInputCore,
-  PostprocessedLogSearchInput,
   ReasoningRequest,
   ReviewRequest,
   SpanSearchInputCore,
@@ -78,8 +70,8 @@ export interface OncallAgentState {
   codeContext: Map<string, string>;
   logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   spanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
-  logPostprocessingResult: Map<PostprocessedLogSearchInput, LogsWithPagination | string> | null;
-  codePostprocessingResult: Map<string, string> | null;
+  logPostprocessingResult: LogPostprocessing | null;
+  codePostprocessingResult: CodePostprocessing | null;
   rootCauseAnalysis: string | null;
 }
 
@@ -274,7 +266,7 @@ export class OnCallAgent {
   ): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
     try {
-      const postprocessor = new LogPostprocessor(this.reasoningModel);
+      const postprocessor = new LogPostprocessor(this.fastModel);
       const response = await postprocessor.invoke({
         query: state.query,
         codebaseOverview: state.codebaseOverview,
@@ -283,7 +275,7 @@ export class OnCallAgent {
         answer: state.rootCauseAnalysis ?? "",
       });
 
-      logger.info(`Log postprocessing complete with ${response.size} relevant log entries`);
+      logger.info(`Log postprocessing complete with ${response.facts.length} relevant facts`);
 
       return {
         logPostprocessingResult: response,
@@ -293,7 +285,7 @@ export class OnCallAgent {
         `Error during log postprocessing: ${error instanceof Error ? error.message : String(error)}`
       );
       return {
-        logPostprocessingResult: new Map(),
+        logPostprocessingResult: null,
       };
     }
   }
@@ -304,7 +296,7 @@ export class OnCallAgent {
   ): Promise<Partial<OncallAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
     try {
-      const postprocessor = new CodePostprocessor(this.reasoningModel);
+      const postprocessor = new CodePostprocessor(this.fastModel);
       const response = await postprocessor.invoke({
         query: state.query,
         codebaseOverview: state.codebaseOverview,
@@ -312,7 +304,7 @@ export class OnCallAgent {
         answer: state.rootCauseAnalysis ?? "",
       });
 
-      logger.info(`Code postprocessing complete with ${response.size} relevant file entries`);
+      logger.info(`Code postprocessing complete with ${response.facts.length} relevant facts`);
 
       return {
         codePostprocessingResult: response,
@@ -322,7 +314,7 @@ export class OnCallAgent {
         `Error during code postprocessing: ${error instanceof Error ? error.message : String(error)}`
       );
       return {
-        codePostprocessingResult: new Map(),
+        codePostprocessingResult: null,
       };
     }
   }
@@ -330,8 +322,8 @@ export class OnCallAgent {
   async invoke(state: OncallAgentState): Promise<{
     chatHistory: string[];
     rca: string | null;
-    logPostprocessing: Map<PostprocessedLogSearchInput, LogsWithPagination | string> | null;
-    codePostprocessing: Map<string, string> | null;
+    logPostprocessing: LogPostprocessing | null;
+    codePostprocessing: CodePostprocessing | null;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     codeContext: Map<string, string>;
   }> {
@@ -412,8 +404,8 @@ export interface AgentArgs {
 export interface AgentResult {
   chatHistory: string[];
   rca: string | null;
-  logPostprocessing: Map<PostprocessedLogSearchInput, LogsWithPagination | string> | null;
-  codePostprocessing: Map<string, string> | null;
+  logPostprocessing: LogPostprocessing | null;
+  codePostprocessing: CodePostprocessing | null;
   logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   codeContext: Map<string, string>;
 }
@@ -504,7 +496,7 @@ export async function invokeAgent({
   };
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
-  const fastModel = OpenAIModel.GPT_4_1_MINI;
+  const fastModel = GeminiModel.GEMINI_2_5_FLASH;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 
@@ -521,7 +513,7 @@ export async function invokeAgent({
 const parseArgs = () => {
   const argsSchema = z.object({
     orgId: z.string().optional(),
-    integration: z.enum(["datadog", "grafana"]).default("grafana"),
+    integration: z.enum(["datadog", "grafana"]).default("datadog"),
     features: z
       .string()
       .default("logs")
@@ -543,8 +535,8 @@ async function main() {
   const { integration, features: observabilityFeatures } = parseArgs();
 
   // Get formatted labels map for time range
-  const startDate = new Date("2025-04-01T21:00:00Z");
-  const endDate = new Date("2025-04-01T22:00:00Z");
+  const startDate = new Date("2025-04-16T21:00:00Z");
+  const endDate = new Date("2025-04-16T23:00:00Z");
 
   const repoPath = "/Users/luketchang/code/ticketing";
 

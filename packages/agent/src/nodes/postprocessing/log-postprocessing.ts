@@ -1,11 +1,7 @@
 import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
 import { generateText } from "ai";
-import {
-  logPostprocessingToolSchema,
-  LogSearchInputCore,
-  PostprocessedLogSearchInput,
-} from "../../types";
+import { LogPostprocessing, logPostprocessingToolSchema, LogSearchInputCore } from "../../types";
 import { ensureSingleToolCall, formatFacetValues, formatLogResults } from "../utils";
 
 function createPrompt(params: {
@@ -18,19 +14,14 @@ function createPrompt(params: {
   return `
   You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from logs.
   
-  Given the user query, the proposed answer/analysis, an overview of the codebase, log labels, and previously gathered log and code context, your task is cite relevant log queries within the <previous_log_context> tags that support the answer. Then you will output a summary of the log results in the form of a sequence of events. This context will be presented to the user in the form of a summary and a list of log queries and their results.
-
-  Query/Result Selection Criteria:
-  - Queries should be a broad view of logs that capture the issue/event.
-  - Queries should not just show a single line (e.g. just the error trace) but should show a broader view of the logs / set of events.
-  - Output at most 5 queries.
-
-  Summary Format:
-  - The summary should be a sequence of events presented as a numbered list.
-  - Each list element should be a concise description of an event.
+  Given the user query, the proposed answer/analysis, an overview of the codebase, log labels, and previously gathered log and code context, your task is to pull out key facts from the log data along with citations supporting the facts. Examples of key facts might include a specific error or warning occurring, a user taking a certain action, an influx of requests to a service, a sequence of events occurring related to the issue, etc. Citations consist of a log query that narrows down the log context to show just the specific fact being cited.
 
   Rules:
   - You must output a single log postprocessing tool call. DO NOT output multiple tool calls.
+
+  Tips:
+  - Look at the log search queries in the previous log context to pick out both relevant facts and the get a base for the log queries you will use to cite the facts.
+  - The citations don't need to exactly match the log search queries in the previous log context. You can narrow the timestamps of the log queries to a very narrow range to get a more precise log result that supports the fact.
   
   <query>
   ${params.query}
@@ -68,7 +59,7 @@ export class LogPostprocessor {
     logLabelsMap: Map<string, string[]>;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     answer: string;
-  }): Promise<Map<PostprocessedLogSearchInput, LogsWithPagination | string>> {
+  }): Promise<LogPostprocessing> {
     const prompt = createPrompt(params);
 
     const { toolCalls } = await generateText({
@@ -80,49 +71,21 @@ export class LogPostprocessor {
       toolChoice: "required",
     });
 
-    const toolCall = ensureSingleToolCall(toolCalls);
-    const relevantQueries = toolCall.args.relevantQueries || [];
-    const typedRelevantQueries = relevantQueries.map((query) => ({
-      ...query,
-      type: "logSearchInput",
-    })); // TODO: this is a bit hacky to tag type and strip title, has to be some better type system way to do it
-
-    logger.info(`Found ${relevantQueries.length} relevant queries in postprocessing response`);
-
-    // Create the final map by looking up each relevant query
-    const relevantResultsMap = new Map<PostprocessedLogSearchInput, LogsWithPagination | string>();
-    const contextEntries = Array.from(params.logContext.entries());
-
-    for (const relevantQuery of typedRelevantQueries) {
-      const { title, summary, ...query } = relevantQuery; // TODO: also hacky to strip title here
-
-      logger.info(`Looking for matching query: ${query.query}`);
-
-      // Find matching entry by direct field comparison
-      // TODO: we should be using a map but stableStringify is error prone due to fields not quite matching
-      let found = false;
-      for (const [contextQuery, result] of contextEntries) {
-        // Compare all relevant fields directly
-        if (
-          query.query === contextQuery.query &&
-          query.start === contextQuery.start &&
-          query.end === contextQuery.end &&
-          ((query.pageCursor == null && contextQuery.pageCursor == null) ||
-            query.pageCursor === contextQuery.pageCursor)
-        ) {
-          logger.info(`Found match with matching query parameters`);
-          relevantResultsMap.set(relevantQuery, result);
-          found = true;
-          break;
-        }
-      }
-
-      if (!found) {
-        logger.warn(`No match found for query: ${JSON.stringify(query, null, 2)}`);
-      }
+    // If multiple tool calls are returned (on accident), we will just merge them
+    let toolCall;
+    if (toolCalls.length > 1) {
+      logger.warn("Multiple tool calls detected, merging results");
+      toolCall = {
+        args: {
+          facts: toolCalls.flatMap((call) => call.args.facts || []),
+        },
+      };
+    } else {
+      toolCall = ensureSingleToolCall(toolCalls);
     }
 
-    logger.info(`Log postprocessing complete with ${relevantResultsMap.size} relevant log entries`);
-    return relevantResultsMap;
+    return {
+      facts: toolCall.args.facts || [],
+    };
   }
 }
