@@ -3,11 +3,10 @@ import mockElectronAPI from "../electronApiMock";
 import {
   AgentConfig,
   ChatMessage,
-  CodePostprocessing,
+  ChatResponse,
   ContextItem,
   FacetData,
   FileTreeNode,
-  LogPostprocessing,
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
@@ -18,15 +17,15 @@ import {
 // Set to false in production or when testing with the real API
 const USE_MOCK_API = false;
 
-// Define the AgentResult interface to match the shape of the agent response
-interface AgentResult {
-  chatHistory: string[];
-  rca: string | null;
-  logPostprocessing: LogPostprocessing | null;
-  codePostprocessing: CodePostprocessing | null;
-  logContext?: Map<LogSearchInputCore, LogsWithPagination | string>;
-  codeContext?: Map<string, string>;
-}
+// Helper function to create an error response
+const createErrorResponse = (errorMessage: string): ChatResponse => ({
+  success: false,
+  content: errorMessage,
+  logContext: new Map(),
+  codeContext: new Map(),
+  logPostprocessing: null,
+  codePostprocessing: null,
+});
 
 // Helper function to check if electron API exists and has specific methods
 const isElectronAPIAvailable = () => {
@@ -214,12 +213,11 @@ const api = {
     }
   },
 
-  // Define the AgentResult interface to match the shape of the agent response
   agentChat: async (
     message: string,
     contextItems: ContextItem[],
     previousMessages: ChatMessage[]
-  ) => {
+  ): Promise<ChatResponse> => {
     // For now, we'll use the invokeAgent method and adapt the response
     console.info("Using agentChat with context items:", contextItems.length);
 
@@ -241,30 +239,26 @@ const api = {
       const agentResponse = await api.invokeAgent(message, logContext.size > 0 ? logContext : null);
 
       if (!agentResponse.success || !agentResponse.data) {
-        return {
-          success: false,
-          content: "Failed to process your request",
-        };
+        return createErrorResponse("Failed to process your request");
       }
 
       // Extract data from the response
-      const data = agentResponse.data as AgentResult;
-      const content = data.rca || data.chatHistory?.join("\n\n") || "I processed your request.";
+      const data = agentResponse.data;
+
+      // Get the content from the response (preferring content field if available)
+      const content = data.content || data.chatHistory?.join("\n\n") || "I processed your request.";
 
       return {
         success: true,
         content,
-        logContext: data.logContext || new Map(),
-        codeContext: data.codeContext || new Map(),
+        logContext: data.logContext || new Map<LogSearchInputCore, LogsWithPagination | string>(),
+        codeContext: data.codeContext || new Map<string, string>(),
         logPostprocessing: data.logPostprocessing,
         codePostprocessing: data.codePostprocessing,
       };
     } catch (error) {
       console.error("Error in agentChat:", error);
-      return {
-        success: false,
-        content: "An error occurred while processing your request",
-      };
+      return createErrorResponse("An error occurred while processing your request");
     }
   },
 
@@ -272,7 +266,7 @@ const api = {
     message: string,
     contextItems: ContextItem[],
     previousMessages: ChatMessage[]
-  ) => {
+  ): Promise<ChatResponse> => {
     // For manual mode, we use the invokeAgent with reasonOnly flag
     console.info("Using manualChat with context items:", contextItems.length);
 
@@ -298,29 +292,29 @@ const api = {
       );
 
       if (!agentResponse.success || !agentResponse.data) {
-        return {
-          success: false,
-          content: "Failed to process your request",
-        };
+        return createErrorResponse("Failed to process your request");
       }
 
       // Extract data from the response
-      const data = agentResponse.data as AgentResult;
-      const content = data.rca || data.chatHistory?.join("\n\n") || "I processed your request.";
+      const data = agentResponse.data;
 
-      // Note: In manual mode, we don't expect postprocessing data, but include them in case
+      // Get the content from the response (preferring content field if available)
+      const content = data.content || data.chatHistory?.join("\n\n") || "I processed your request.";
+
       return {
         success: true,
         content,
-        logContext: data.logContext || new Map(),
-        codeContext: data.codeContext || new Map(),
+        logContext: (data.logContext || new Map()) as Map<
+          LogSearchInputCore,
+          LogsWithPagination | string
+        >,
+        codeContext: (data.codeContext || new Map()) as Map<string, string>,
+        logPostprocessing: data.logPostprocessing,
+        codePostprocessing: data.codePostprocessing,
       };
     } catch (error) {
       console.error("Error in manualChat:", error);
-      return {
-        success: false,
-        content: "An error occurred while processing your request",
-      };
+      return createErrorResponse("An error occurred while processing your request");
     }
   },
 };

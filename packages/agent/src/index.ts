@@ -321,7 +321,7 @@ export class OnCallAgent {
 
   async invoke(state: OncallAgentState): Promise<{
     chatHistory: string[];
-    rca: string | null;
+    response: string | null;
     logPostprocessing: LogPostprocessing | null;
     codePostprocessing: CodePostprocessing | null;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
@@ -373,7 +373,7 @@ export class OnCallAgent {
     // Return the final results including post-processing
     return {
       chatHistory: currentState.chatHistory,
-      rca: currentState.rootCauseAnalysis,
+      response: currentState.rootCauseAnalysis,
       logPostprocessing: currentState.logPostprocessingResult,
       codePostprocessing: currentState.codePostprocessingResult,
       logContext: currentState.logContext,
@@ -403,7 +403,7 @@ export interface AgentArgs {
  */
 export interface AgentResult {
   chatHistory: string[];
-  rca: string | null;
+  response: string | null;
   logPostprocessing: LogPostprocessing | null;
   codePostprocessing: CodePostprocessing | null;
   logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
@@ -558,7 +558,7 @@ async function main() {
   });
 
   logger.info(`Chat History: ${response.chatHistory}`);
-  logger.info(`RCA: ${response.rca}`);
+  logger.info(`Response: ${response.response}`);
   logger.info(`Log Post-processing: ${JSON.stringify(response.logPostprocessing)}`);
   logger.info(`Code Post-processing: ${JSON.stringify(response.codePostprocessing)}`);
 }

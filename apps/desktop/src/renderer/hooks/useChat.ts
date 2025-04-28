@@ -1,12 +1,6 @@
 import { useState } from "react";
 import api from "../services/api";
-import {
-  Artifact,
-  ChatMessage,
-  CodePostprocessing,
-  ContextItem,
-  LogPostprocessing,
-} from "../types";
+import { Artifact, ChatMessage, ContextItem } from "../types";
 import { createCodeArtifacts, createLogArtifacts } from "../utils/artifact-utils";
 import { generateId } from "../utils/formatters";
 
@@ -37,6 +31,8 @@ export function useChat() {
       role: "user",
       content: newMessage,
       contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
+      logPostprocessing: null,
+      codePostprocessing: null,
     };
 
     // Update the messages state
@@ -54,6 +50,8 @@ export function useChat() {
         id: thinkingMessageId,
         role: "assistant",
         content: "Thinking...",
+        logPostprocessing: null,
+        codePostprocessing: null,
       },
     ]);
 
@@ -92,12 +90,6 @@ export function useChat() {
           artifacts = [...artifacts, ...codeArtifacts];
         }
 
-        // Extract postprocessing results
-        const logPostprocessing: LogPostprocessing | undefined =
-          response.logPostprocessing || undefined;
-        const codePostprocessing: CodePostprocessing | undefined =
-          response.codePostprocessing || undefined;
-
         // Get the "Thinking..." message and replace it with the actual response
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
@@ -107,8 +99,8 @@ export function useChat() {
                 content:
                   response.content || "I processed your request but got no response content.",
                 artifacts: artifacts.length > 0 ? artifacts : undefined,
-                logPostprocessing,
-                codePostprocessing,
+                logPostprocessing: response.logPostprocessing || null,
+                codePostprocessing: response.codePostprocessing || null,
               };
             }
             return message;
@@ -122,6 +114,7 @@ export function useChat() {
               return {
                 ...message,
                 content:
+                  response?.content ||
                   "Sorry, I encountered an error processing your request. Please try again later.",
               };
             }

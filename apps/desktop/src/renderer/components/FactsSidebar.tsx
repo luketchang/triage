@@ -2,7 +2,13 @@ import React, { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import LogsView from "../features/LogsView";
 import api from "../services/api";
-import { CodePostprocessingFact, LogPostprocessingFact, TimeRange } from "../types";
+import {
+  CodePostprocessingFact,
+  Log,
+  LogPostprocessingFact,
+  LogsWithPagination,
+  TimeRange,
+} from "../types";
 
 interface FactsSidebarProps {
   logFacts: LogPostprocessingFact[];
@@ -47,8 +53,8 @@ const SlideOver: React.FC<SlideOverProps> = ({ isOpen, onClose, children }) => {
 const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
   const [slideOverOpen, setSlideOverOpen] = useState(false);
   const [selectedLogFact, setSelectedLogFact] = useState<LogPostprocessingFact | null>(null);
-  const [logs, setLogs] = useState([]);
-  const [logsWithPagination, setLogsWithPagination] = useState(null);
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [logsWithPagination, setLogsWithPagination] = useState<LogsWithPagination | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [pageCursor, setPageCursor] = useState<string | undefined>(undefined);
   const [logQuery, setLogQuery] = useState("");
@@ -242,11 +248,11 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         onQuerySubmit={handleQuerySubmit}
         onLoadMore={handleLoadMore}
         selectedArtifact={null}
-        setLogs={setLogs}
-        setLogsWithPagination={setLogsWithPagination}
-        setIsLoading={setIsLoading}
-        setPageCursor={setPageCursor}
-        setTimeRange={setTimeRange}
+        setLogs={(newLogs: Log[]) => setLogs(newLogs)}
+        setLogsWithPagination={(data: LogsWithPagination | null) => setLogsWithPagination(data)}
+        setIsLoading={(loading: boolean) => setIsLoading(loading)}
+        setPageCursor={(cursor: string | undefined) => setPageCursor(cursor)}
+        setTimeRange={(newTimeRange: TimeRange) => setTimeRange(newTimeRange)}
       />
     );
   };

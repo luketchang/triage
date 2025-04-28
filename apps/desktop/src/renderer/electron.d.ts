@@ -6,13 +6,14 @@
 // Import types from types.ts - this is the single source of truth for types
 import {
   AgentConfig,
+  CodePostprocessing,
   FacetData,
   FileTreeNode,
   Log,
+  LogPostprocessing,
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
-  PostprocessedLogSearchInput,
   Trace,
   TraceQueryParams,
 } from "./types";
@@ -42,9 +43,11 @@ declare global {
       ) => Promise<
         ApiResponse<{
           chatHistory: string[];
-          rca: string;
-          logPostprocessing: Map<PostprocessedLogSearchInput, string | LogsWithPagination>;
-          codePostprocessing: Map<string, string>;
+          content: string | null;
+          logPostprocessing: LogPostprocessing | null;
+          codePostprocessing: CodePostprocessing | null;
+          logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
+          codeContext: Map<string, string>;
         }>
       >;
 

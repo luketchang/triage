@@ -1,9 +1,13 @@
 import { ApiResponse } from "./electron.d";
 import {
   AgentConfig,
+  ChatMessage,
+  CodePostprocessing,
+  ContextItem,
   FacetData,
   FileTreeNode,
   Log,
+  LogPostprocessing,
   LogQueryParams,
   LogsWithPagination,
   TraceQueryParams,
@@ -570,16 +574,14 @@ const createSampleTrace = (
 // Create mock data
 const createMockData = () => {
   // Create sample log context
-  const logContext = new Map<PostprocessedLogSearchInput, LogsWithPagination | string>();
+  const logContext = new Map<LogSearchInputCore, LogsWithPagination | string>();
 
   // Sample error query
-  const errorQuery: PostprocessedLogSearchInput = {
+  const errorQuery: LogSearchInputCore = {
     query: "level:error service:auth",
     start: "2023-10-01T00:00:00Z",
     end: new Date().toISOString(),
     limit: 100,
-    title: "Authentication Errors",
-    summary: "Recent authentication service errors",
     pageCursor: null,
     type: "logSearchInput",
   };
@@ -589,13 +591,11 @@ const createMockData = () => {
   });
 
   // Sample performance query
-  const perfQuery: PostprocessedLogSearchInput = {
+  const perfQuery: LogSearchInputCore = {
     query: "level:warn latency:>1000",
     start: "2023-10-01T00:00:00Z",
     end: new Date().toISOString(),
     limit: 100,
-    title: "Performance Warnings",
-    summary: "Recent high latency warnings",
     pageCursor: null,
     type: "logSearchInput",
   };
@@ -654,10 +654,7 @@ const mockElectronAPI = {
    */
   invokeAgent: async (
     query: string,
-    logContext: Map<
-      PostprocessedLogSearchInput | LogSearchInputCore,
-      LogsWithPagination | string
-    > | null,
+    logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null,
     options?: { reasonOnly?: boolean }
   ) => {
     console.info(
@@ -685,9 +682,15 @@ const mockElectronAPI = {
             : "I searched logs and analyzed this in Search mode",
           "Here's what I found: This is a simulated response from the agent.",
         ],
-        rca: "Root cause identified: This is a mock response.",
-        logPostprocessing: mockData.logContext,
-        codePostprocessing: mockData.codeContext,
+        content: "Root cause identified: This is a mock response.",
+        logPostprocessing: {
+          facts: [], // Empty array of facts
+        } as LogPostprocessing,
+        codePostprocessing: {
+          facts: [], // Empty array of facts
+        } as CodePostprocessing,
+        logContext: mockData.logContext,
+        codeContext: mockData.codeContext,
       },
     };
   },
@@ -994,7 +997,11 @@ const mockElectronAPI = {
   /**
    * Mock implementation for agent-based chat
    */
-  agentChat: async (message: string, contextItems: any[], previousMessages: any[]) => {
+  agentChat: async (
+    message: string,
+    contextItems: ContextItem[],
+    previousMessages: ChatMessage[]
+  ) => {
     console.log("Mock agentChat called with message:", message);
     console.log("Context items:", contextItems.length);
 
@@ -1002,8 +1009,8 @@ const mockElectronAPI = {
       success: true,
       content:
         "This is a mock response from the agent chat. In a real implementation, this would use the agent to analyze logs and code.",
-      logContext: new Map(),
-      codeContext: new Map(),
+      logContext: new Map<LogSearchInputCore, LogsWithPagination | string>(),
+      codeContext: new Map<string, string>(),
       logPostprocessing: {
         facts: [
           {
@@ -1035,7 +1042,11 @@ const mockElectronAPI = {
   /**
    * Mock implementation for manual chat
    */
-  manualChat: async (message: string, contextItems: any[], previousMessages: any[]) => {
+  manualChat: async (
+    message: string,
+    contextItems: ContextItem[],
+    previousMessages: ChatMessage[]
+  ) => {
     console.log("Mock manualChat called with message:", message);
     console.log("Context items:", contextItems.length);
 
@@ -1043,8 +1054,10 @@ const mockElectronAPI = {
       success: true,
       content:
         "This is a mock response from manual chat. In the manual mode, I'll just analyze what you've shown me without performing additional searches.",
-      logContext: new Map(),
-      codeContext: new Map(),
+      logContext: new Map<LogSearchInputCore, LogsWithPagination | string>(),
+      codeContext: new Map<string, string>(),
+      logPostprocessing: null,
+      codePostprocessing: null,
     };
   },
 };
