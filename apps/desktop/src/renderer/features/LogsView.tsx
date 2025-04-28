@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import SearchBar from "../components/SearchBar";
 import TimeRangePicker from "../components/TimeRangePicker";
-import api from "../services/api";
 import { Artifact, FacetData, Log, LogsWithPagination, TimeRange } from "../types";
 import { formatDate } from "../utils/formatters";
 
@@ -17,10 +16,13 @@ interface LogsViewProps {
   onLoadMore: () => void;
   selectedArtifact?: Artifact | null;
   setLogs?: (logs: Log[]) => void;
-  setLogsWithPagination?: (data: LogsWithPagination | null) => void;
   setIsLoading?: (isLoading: boolean) => void;
   setPageCursor?: (cursor: string | undefined) => void;
   setTimeRange?: (timeRange: TimeRange) => void;
+  facets: FacetData[];
+  selectedFacets: string[];
+  setSelectedFacets: React.Dispatch<React.SetStateAction<string[]>>;
+  setLogsWithPagination?: (logsWithPagination: LogsWithPagination | null) => void;
 }
 
 const LogsView: React.FC<LogsViewProps> = ({
@@ -35,19 +37,15 @@ const LogsView: React.FC<LogsViewProps> = ({
   onLoadMore,
   selectedArtifact,
   setLogs,
-  setLogsWithPagination,
   setIsLoading,
   setPageCursor,
   setTimeRange,
+  facets,
+  selectedFacets,
+  setSelectedFacets,
+  setLogsWithPagination: _setLogsWithPagination,
 }) => {
   // Component-specific state
-  const [facets, setFacets] = useState<FacetData[]>([]);
-  const [selectedFacets, setSelectedFacets] = useState<string[]>([
-    "service",
-    "level",
-    "host",
-    "environment",
-  ]);
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
 
   // Add an event listener for the Escape key to close log details
@@ -143,38 +141,15 @@ const LogsView: React.FC<LogsViewProps> = ({
         setPageCursor(searchInput.pageCursor);
       }
     }
-  }, [selectedArtifact, setLogQuery, onTimeRangeChange, setLogs, setIsLoading, setPageCursor]);
-
-  // Load facets when the component mounts or time range changes
-  useEffect(() => {
-    const loadFacets = async () => {
-      try {
-        const response = await api.getLogsFacetValues(timeRange.start, timeRange.end);
-
-        if (
-          response &&
-          "data" in response &&
-          response.success &&
-          response.data &&
-          response.data.length > 0
-        ) {
-          setFacets(response.data);
-        } else if (Array.isArray(response) && response.length > 0) {
-          setFacets(response);
-        } else {
-          console.info("No valid facet data received, using empty array");
-          // If API returns empty data, use an empty array
-          setFacets([]);
-        }
-      } catch (error) {
-        console.error("Error loading facets:", error);
-        // If API fails, use an empty array
-        setFacets([]);
-      }
-    };
-
-    loadFacets();
-  }, [timeRange.start, timeRange.end]);
+  }, [
+    selectedArtifact,
+    setLogQuery,
+    onTimeRangeChange,
+    setLogs,
+    setIsLoading,
+    setPageCursor,
+    setTimeRange,
+  ]);
 
   const handleQuerySubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -319,25 +294,6 @@ const LogsView: React.FC<LogsViewProps> = ({
         return [...prev, facet];
       }
     });
-  };
-
-  const getLogLevelClass = (level: string): string => {
-    level = level.toLowerCase();
-    switch (level) {
-      case "error":
-        return "log-level-error";
-      case "warn":
-      case "warning":
-        return "log-level-warn";
-      case "info":
-        return "log-level-info";
-      case "debug":
-        return "log-level-debug";
-      case "trace":
-        return "log-level-trace";
-      default:
-        return "";
-    }
   };
 
   // Handle time range changes from the TimeRangePicker

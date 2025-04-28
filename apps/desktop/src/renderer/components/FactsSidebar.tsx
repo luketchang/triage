@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import LogsView from "../features/LogsView";
 import api from "../services/api";
 import {
   CodePostprocessingFact,
+  FacetData,
   Log,
   LogPostprocessingFact,
   LogsWithPagination,
@@ -62,11 +63,60 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
     start: "",
     end: "",
   });
+  const [facets, setFacets] = useState<FacetData[]>([]);
+  const [selectedFacets, setSelectedFacets] = useState<string[]>([
+    "service",
+    "level",
+    "host",
+    "environment",
+  ]);
+  const loadedFacetsForRange = React.useRef<string>("");
+
+  // Add function to load facets - move it before useEffect
+  const loadFacets = useCallback(async () => {
+    if (!timeRange.start || !timeRange.end) return;
+
+    const rangeKey = `${timeRange.start}-${timeRange.end}`;
+
+    // Only fetch facets if we haven't loaded them for this time range
+    if (loadedFacetsForRange.current !== rangeKey) {
+      try {
+        const response = await api.getLogsFacetValues(timeRange.start, timeRange.end);
+
+        if (
+          response &&
+          "data" in response &&
+          response.success &&
+          response.data &&
+          response.data.length > 0
+        ) {
+          setFacets(response.data);
+        } else if (Array.isArray(response) && response.length > 0) {
+          setFacets(response);
+        } else {
+          console.info("No valid facet data received, using empty array");
+          setFacets([]);
+        }
+
+        loadedFacetsForRange.current = rangeKey;
+      } catch (error) {
+        console.error("Error loading facets:", error);
+        setFacets([]);
+      }
+    }
+  }, [timeRange]);
 
   // Fetch logs when a log fact is selected
   useEffect(() => {
     if (selectedLogFact && slideOverOpen) {
+      // Only fetch logs and facets on first open
       fetchLogsForFact(selectedLogFact);
+
+      // Load facets after fetchLogsForFact, which also sets the timeRange
+      const timeRangeKey = `${selectedLogFact.start}-${selectedLogFact.end}`;
+      if (loadedFacetsForRange.current !== timeRangeKey) {
+        loadFacets();
+      }
     }
   }, [selectedLogFact, slideOverOpen]);
 
@@ -74,12 +124,15 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
     try {
       setIsLoading(true);
 
-      // Set the query and time range from the fact
+      // Set the query and time range from the fact - do this first to update UI state
       setLogQuery(fact.query);
-      setTimeRange({
+
+      // Set time range without triggering more effects
+      const newTimeRange = {
         start: fact.start,
         end: fact.end,
-      });
+      };
+      setTimeRange(newTimeRange);
 
       // Fetch logs using the API
       const response = await api.fetchLogs({
@@ -127,12 +180,13 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
     try {
       setIsLoading(true);
 
+      // Use the current timeRange state
       const response = await api.fetchLogs({
         query: query,
         start: timeRange.start,
         end: timeRange.end,
         limit: selectedLogFact.limit || 100,
-        pageCursor: undefined,
+        pageCursor: undefined, // Reset pagination on new query
       });
 
       if (response.success && response.data) {
@@ -185,16 +239,47 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
   };
 
   const handleTimeRangeChange = (newTimeRange: TimeRange) => {
+    // First update the time range state
     setTimeRange(newTimeRange);
 
-    // Fetch logs with new time range
+    // Fetch logs with new time range, but keep the current query
     if (selectedLogFact) {
-      const updatedFact = {
-        ...selectedLogFact,
-        start: newTimeRange.start,
-        end: newTimeRange.end,
-      };
-      fetchLogsForFact(updatedFact);
+      try {
+        setIsLoading(true);
+
+        // Use current logQuery instead of selectedLogFact.query to preserve any user edits
+        api
+          .fetchLogs({
+            query: logQuery, // Use current query, not the original fact.query
+            start: newTimeRange.start,
+            end: newTimeRange.end,
+            limit: selectedLogFact.limit || 100,
+            pageCursor: undefined, // Reset pagination on time range change
+          })
+          .then((response) => {
+            if (response.success && response.data) {
+              setLogs(response.data.logs);
+              setLogsWithPagination({
+                logs: response.data.logs,
+                pageCursorOrIndicator: response.data.pageCursorOrIndicator,
+              });
+              setPageCursor(response.data.pageCursorOrIndicator);
+            } else {
+              console.error("Error fetching logs:", response);
+            }
+            setIsLoading(false);
+          })
+          .catch((error) => {
+            console.error("Error fetching logs:", error);
+            setIsLoading(false);
+          });
+
+        // Only load facets once per time range (handled by loadFacets function)
+        loadFacets();
+      } catch (error) {
+        console.error("Error in handleTimeRangeChange:", error);
+        setIsLoading(false);
+      }
     }
   };
 
@@ -248,11 +333,14 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         onQuerySubmit={handleQuerySubmit}
         onLoadMore={handleLoadMore}
         selectedArtifact={null}
-        setLogs={(newLogs: Log[]) => setLogs(newLogs)}
-        setLogsWithPagination={(data: LogsWithPagination | null) => setLogsWithPagination(data)}
-        setIsLoading={(loading: boolean) => setIsLoading(loading)}
-        setPageCursor={(cursor: string | undefined) => setPageCursor(cursor)}
-        setTimeRange={(newTimeRange: TimeRange) => setTimeRange(newTimeRange)}
+        setLogs={setLogs}
+        setIsLoading={setIsLoading}
+        setPageCursor={setPageCursor}
+        setTimeRange={setTimeRange}
+        facets={facets}
+        selectedFacets={selectedFacets}
+        setSelectedFacets={setSelectedFacets}
+        setLogsWithPagination={setLogsWithPagination}
       />
     );
   };

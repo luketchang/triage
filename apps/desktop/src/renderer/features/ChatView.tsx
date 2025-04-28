@@ -89,7 +89,7 @@ const ChatView: React.FC<ChatViewProps> = ({
     if (textareaRef.current && !isThinking) {
       textareaRef.current.focus();
     }
-  }, []);
+  }, [isThinking]);
 
   // Add event listeners for textarea
   useEffect(() => {
@@ -154,9 +154,9 @@ const ChatView: React.FC<ChatViewProps> = ({
     return () => clearInterval(interval);
   }, [isThinking]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
       if (newMessage.trim()) {
         sendMessage();
       }
@@ -216,7 +216,8 @@ const ChatView: React.FC<ChatViewProps> = ({
 
       // Different days
       return `${startDate.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} - ${endDate.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`;
-    } catch (e) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_e) {
       return "Invalid time range";
     }
   };
@@ -354,7 +355,7 @@ const ChatView: React.FC<ChatViewProps> = ({
     );
   };
 
-  const renderArtifactCard = (artifact: Artifact): JSX.Element => {
+  const _renderArtifactCard = (artifact: Artifact): JSX.Element => {
     const handleClick = () => {
       onArtifactClick(artifact);
     };

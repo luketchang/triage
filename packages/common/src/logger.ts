@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
-import { config } from "@triage/config";
 import fs from "fs";
 import path from "path";
+
+import { config } from "@triage/config";
 import winston, { transports } from "winston";
 
 // Always use a "logs" directory in the project's root directory.
@@ -15,7 +15,7 @@ if (!fs.existsSync(logDir)) {
 // Log file path for errors
 const errorLogFile = path.join(logDir, "api.error.log");
 
-function getLogger() {
+function getLogger(): winston.Logger {
   return winston.createLogger({
     level: config.env === "development" ? "debug" : "info",
     exitOnError: false,

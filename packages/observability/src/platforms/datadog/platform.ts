@@ -1,6 +1,7 @@
 import { client, v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
 import { config } from "@triage/config";
+
 import { ObservabilityPlatform } from "../../observability.interface";
 import {
   IntegrationType,
@@ -11,6 +12,7 @@ import {
   Trace,
   TracesWithPagination,
 } from "../../types";
+
 import { convertSpansToTrace, extractTraceIds } from "./utils";
 
 const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `
@@ -394,7 +396,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
           });
         });
 
-        // 4b) annotate each trace’s root span with its percentile bucket
+        // 4b) annotate each trace's root span with its percentile bucket
         traces.forEach((t) => {
           const rootResource = t.rootResource;
           if (!rootResource) return;
@@ -638,7 +640,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
           try {
             // Try to parse it as JSON if it's a string
             nestedAttributes = JSON.parse(log.attributes.attributes);
-          } catch (e) {
+          } catch {
             // If not valid JSON, use as is
             nestedAttributes = log.attributes.attributes;
           }
