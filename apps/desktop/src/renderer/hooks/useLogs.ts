@@ -3,7 +3,12 @@ import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../components/TimeRangePic
 import api from "../services/api";
 import { Log, LogQueryParams, LogsWithPagination, TimeRange } from "../types";
 
-export function useLogs() {
+interface UseLogsOptions {
+  shouldFetch?: boolean;
+}
+
+export function useLogs(options: UseLogsOptions = {}) {
+  const { shouldFetch = false } = options;
   const [logs, setLogs] = useState<Log[]>([]);
   const [logsWithPagination, setLogsWithPagination] = useState<LogsWithPagination | null>(null);
   const [logQuery, setLogQuery] = useState<string>("");
@@ -99,18 +104,21 @@ export function useLogs() {
     fetchLogsWithQuery(logQuery, newTimeRange);
   };
 
-  // Initial fetch
+  // Initial fetch only if shouldFetch is true
   useEffect(() => {
-    const params: LogQueryParams = {
-      query: logQuery,
-      start: timeRange.start,
-      end: timeRange.end,
-      limit: queryLimit,
-    };
+    if (shouldFetch) {
+      const params: LogQueryParams = {
+        query: "",
+        start: timeRange.start,
+        end: timeRange.end,
+        limit: queryLimit,
+        pageCursor: undefined,
+      };
 
-    fetchLogs(params);
+      fetchLogs(params);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [shouldFetch]);
 
   return {
     logs,

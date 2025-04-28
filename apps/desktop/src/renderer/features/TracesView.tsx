@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import TimeRangePicker from "../components/TimeRangePicker";
-import { Artifact, UIServiceLatency, UITrace } from "../types";
+import { Artifact, FacetData, UIServiceLatency, UISpan, UITrace } from "../types";
 import { formatDate } from "../utils/formatters";
 
 interface TracesViewProps {
@@ -15,17 +15,17 @@ interface TracesViewProps {
   fetchTracesWithQuery: (query: string) => void;
   handleLoadMoreTraces: () => void;
   handleTimeRangeChange: (timeRange: { start: string; end: string }) => void;
-  facets: any[];
+  facets: FacetData[];
   selectedFacets: string[];
   setSelectedFacets: React.Dispatch<React.SetStateAction<string[]>>;
-  selectedSpan: any | null;
-  handleSpanSelect: (span: any) => void;
+  selectedSpan: UISpan | null;
+  handleSpanSelect: (span: UISpan) => void;
   pageCursor?: string;
-  setSelectedSpan: React.Dispatch<React.SetStateAction<any | null>>;
+  setSelectedSpan: React.Dispatch<React.SetStateAction<UISpan | null>>;
 }
 
 const TracesView: React.FC<TracesViewProps> = ({
-  selectedArtifact,
+  _selectedArtifact,
   selectedTrace,
   handleTraceSelect,
   traces,
@@ -191,15 +191,19 @@ const TracesView: React.FC<TracesViewProps> = ({
 
   // Add escape key handler to close hover card and trace details
   useEffect(() => {
-    const handleEscapeKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+    const handleEscapeKey = (_e: KeyboardEvent) => {
+      if (_e.key === "Escape") {
         // Close hover card if open
         if (hoverCardPosition || hoverCardTrace) {
           setHoverCardPosition(null);
           setHoverCardTrace(null);
         }
-        // Clear selected span if a span is selected
-        else if (selectedSpan) {
+        // Close trace details if open
+        if (selectedTrace) {
+          handleTraceSelect(null);
+        }
+        // Close span details if open
+        if (selectedSpan) {
           setSelectedSpan(null);
         }
         // Close trace details panel if open
@@ -284,7 +288,7 @@ const TracesView: React.FC<TracesViewProps> = ({
     if (!selectedTrace) return null;
 
     const { displayTrace } = selectedTrace;
-    const renderSpan = (span: any, depth = 0, maxDepth = 20) => {
+    const renderSpan = (span: UISpan, depth = 0, maxDepth = 20) => {
       if (depth > maxDepth) return null; // Prevent infinite recursion
 
       const isSelected = selectedSpan && selectedSpan.id === span.id;
@@ -328,7 +332,7 @@ const TracesView: React.FC<TracesViewProps> = ({
 
           {/* Render children recursively */}
           {Array.isArray(span.children) &&
-            span.children.map((child: any) => renderSpan(child, depth + 1, maxDepth))}
+            span.children.map((child: UISpan) => renderSpan(child, depth + 1, maxDepth))}
         </div>
       );
     };
@@ -359,7 +363,7 @@ const TracesView: React.FC<TracesViewProps> = ({
   };
 
   // Handle mouse leave for service breakdown
-  const handleServiceBreakdownLeave = (e: React.MouseEvent) => {
+  const handleServiceBreakdownLeave = (_e: React.MouseEvent) => {
     // We'll keep the card visible until user clicks elsewhere
   };
 

@@ -5,7 +5,7 @@ interface DashboardsViewProps {
   selectedArtifact?: Artifact | null;
 }
 
-const DashboardsView: React.FC<DashboardsViewProps> = ({ selectedArtifact }) => {
+const DashboardsView: React.FC<DashboardsViewProps> = ({ selectedArtifact: _selectedArtifact }) => {
   return (
     <div className="dashboards-view">
       <div className="dashboards-placeholder">

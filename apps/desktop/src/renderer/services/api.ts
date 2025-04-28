@@ -2,11 +2,9 @@ import { ApiResponse } from "../electron.d";
 import mockElectronAPI from "../electronApiMock";
 import {
   AgentConfig,
-  ChatMessage,
   ChatResponse,
   ContextItem,
   FacetData,
-  FileTreeNode,
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
@@ -30,9 +28,9 @@ const createErrorResponse = (errorMessage: string): ChatResponse => ({
 // Helper function to check if electron API exists and has specific methods
 const isElectronAPIAvailable = () => {
   const available = typeof window !== "undefined" && window.electronAPI !== undefined;
-  console.log("[API DEBUG] Is electronAPI available:", available);
+  console.info("[API DEBUG] Is electronAPI available:", available);
   if (available) {
-    console.log("[API DEBUG] electronAPI methods:", Object.keys(window.electronAPI));
+    console.info("[API DEBUG] electronAPI methods:", Object.keys(window.electronAPI));
   }
   return available;
 };
@@ -44,7 +42,7 @@ const isMethodAvailable = (methodName: string) => {
   if (electronAvailable) {
     methodAvailable =
       typeof window.electronAPI[methodName as keyof typeof window.electronAPI] === "function";
-    console.log(`[API DEBUG] Is method '${methodName}' available:`, methodAvailable);
+    console.info(`[API DEBUG] Is method '${methodName}' available:`, methodAvailable);
   }
 
   return electronAvailable && methodAvailable;
@@ -96,9 +94,9 @@ const api = {
   },
 
   fetchLogs: async (params: LogQueryParams) => {
-    console.log("[API DEBUG] fetchLogs called with params:", params);
+    console.info("[API DEBUG] fetchLogs called with params:", params);
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("fetchLogs");
-    console.log("[API DEBUG] Using mock implementation:", shouldUseMock);
+    console.info("[API DEBUG] Using mock implementation:", shouldUseMock);
 
     if (shouldUseMock) {
       console.info("Using mock fetchLogs");
@@ -113,15 +111,15 @@ const api = {
     start: string,
     end: string
   ): Promise<ApiResponse<FacetData[]> | FacetData[]> => {
-    console.log("[API DEBUG] getLogsFacetValues called with:", { start, end });
+    console.info("[API DEBUG] getLogsFacetValues called with:", { start, end });
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getLogsFacetValues");
-    console.log("[API DEBUG] Using mock implementation:", shouldUseMock);
+    console.info("[API DEBUG] Using mock implementation:", shouldUseMock);
 
     if (shouldUseMock) {
       console.info("Using mock getLogsFacetValues");
       try {
         const response = await mockElectronAPI.getLogsFacetValues(start, end);
-        console.log("[API DEBUG] Mock response:", response);
+        console.info("[API DEBUG] Mock response:", response);
         return response;
       } catch (error) {
         console.error("Error in getLogsFacetValues:", error);
@@ -131,7 +129,7 @@ const api = {
       try {
         console.info("Using real electronAPI.getLogsFacetValues");
         const response = await window.electronAPI.getLogsFacetValues(start, end);
-        console.log("[API DEBUG] Real API response:", response);
+        console.info("[API DEBUG] Real API response:", response);
         return response;
       } catch (error) {
         console.error("Error in getLogsFacetValues:", error);
@@ -141,9 +139,9 @@ const api = {
   },
 
   fetchTraces: async (params: TraceQueryParams) => {
-    console.log("[API DEBUG] fetchTraces called with params:", params);
+    console.info("[API DEBUG] fetchTraces called with params:", params);
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("fetchTraces");
-    console.log("[API DEBUG] Using mock implementation:", shouldUseMock);
+    console.info("[API DEBUG] Using mock implementation:", shouldUseMock);
 
     if (shouldUseMock) {
       console.info("Using mock fetchTraces");
@@ -158,15 +156,15 @@ const api = {
     start: string,
     end: string
   ): Promise<ApiResponse<FacetData[]> | FacetData[]> => {
-    console.log("[API DEBUG] getSpansFacetValues called with:", { start, end });
+    console.info("[API DEBUG] getSpansFacetValues called with:", { start, end });
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getSpansFacetValues");
-    console.log("[API DEBUG] Using mock implementation:", shouldUseMock);
+    console.info("[API DEBUG] Using mock implementation:", shouldUseMock);
 
     if (shouldUseMock) {
       console.info("Using mock getSpansFacetValues");
       try {
         const response = await mockElectronAPI.getSpansFacetValues(start, end);
-        console.log("[API DEBUG] Mock response:", response);
+        console.info("[API DEBUG] Mock response:", response);
         return response;
       } catch (error) {
         console.error("Error in getSpansFacetValues:", error);
@@ -176,7 +174,7 @@ const api = {
       try {
         console.info("Using real electronAPI.getSpansFacetValues");
         const response = await window.electronAPI.getSpansFacetValues(start, end);
-        console.log("[API DEBUG] Real API response:", response);
+        console.info("[API DEBUG] Real API response:", response);
         return response;
       } catch (error) {
         console.error("Error in getSpansFacetValues:", error);
@@ -185,39 +183,7 @@ const api = {
     }
   },
 
-  getFileTree: async (repoPath: string): Promise<ApiResponse<FileTreeNode[]>> => {
-    console.log("[API DEBUG] getFileTree called with repoPath:", repoPath);
-    const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getFileTree");
-    console.log("[API DEBUG] Using mock implementation:", shouldUseMock);
-
-    if (shouldUseMock) {
-      console.info("Using mock getFileTree");
-      return mockElectronAPI.getFileTree(repoPath);
-    } else {
-      console.info("Using real electronAPI.getFileTree");
-      return window.electronAPI.getFileTree(repoPath);
-    }
-  },
-
-  getFileContent: async (repoPath: string, filePath: string): Promise<ApiResponse<string>> => {
-    console.log("[API DEBUG] getFileContent called with:", { repoPath, filePath });
-    const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getFileContent");
-    console.log("[API DEBUG] Using mock implementation:", shouldUseMock);
-
-    if (shouldUseMock) {
-      console.info("Using mock getFileContent");
-      return mockElectronAPI.getFileContent(repoPath, filePath);
-    } else {
-      console.info("Using real electronAPI.getFileContent");
-      return window.electronAPI.getFileContent(repoPath, filePath);
-    }
-  },
-
-  agentChat: async (
-    message: string,
-    contextItems: ContextItem[],
-    previousMessages: ChatMessage[]
-  ): Promise<ChatResponse> => {
+  agentChat: async (message: string, contextItems: ContextItem[]): Promise<ChatResponse> => {
     // For now, we'll use the invokeAgent method and adapt the response
     console.info("Using agentChat with context items:", contextItems.length);
 
@@ -262,11 +228,7 @@ const api = {
     }
   },
 
-  manualChat: async (
-    message: string,
-    contextItems: ContextItem[],
-    previousMessages: ChatMessage[]
-  ): Promise<ChatResponse> => {
+  manualChat: async (message: string, contextItems: ContextItem[]): Promise<ChatResponse> => {
     // For manual mode, we use the invokeAgent with reasonOnly flag
     console.info("Using manualChat with context items:", contextItems.length);
 

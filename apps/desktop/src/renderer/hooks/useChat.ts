@@ -66,18 +66,10 @@ export function useChat() {
       let response;
       if (chatMode === "agent") {
         // Call the agent-powered chat API
-        response = await api.agentChat(
-          newMessage,
-          contextItemsToAttach,
-          messages.filter((m) => m.role !== "assistant" || m.content !== "Thinking...")
-        );
+        response = await api.agentChat(newMessage, contextItemsToAttach);
       } else {
         // Call the manual chat API (no agent)
-        response = await api.manualChat(
-          newMessage,
-          contextItemsToAttach,
-          messages.filter((m) => m.role !== "assistant" || m.content !== "Thinking...")
-        );
+        response = await api.manualChat(newMessage, contextItemsToAttach);
       }
 
       if (response && response.success) {

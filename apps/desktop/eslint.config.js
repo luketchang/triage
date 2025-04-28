@@ -1,5 +1,6 @@
 const typescriptPlugin = require("@typescript-eslint/eslint-plugin");
 const typescriptParser = require("@typescript-eslint/parser");
+const reactHooksPlugin = require("eslint-plugin-react-hooks");
 const path = require("path");
 
 /** @type {import("eslint").Linter.FlatConfig[]} */
@@ -16,6 +17,7 @@ module.exports = [
     },
     plugins: {
       "@typescript-eslint": typescriptPlugin,
+      "react-hooks": reactHooksPlugin,
     },
     rules: {
       "no-console": ["error", { allow: ["warn", "error", "info"] }],
@@ -32,6 +34,8 @@ module.exports = [
       ],
       "no-debugger": "error",
       "no-alert": "error",
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
     },
   },
 ];

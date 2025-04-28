@@ -1,34 +1,10 @@
-declare module "*/components/*" {
-  const content: any;
-  export default content;
-}
+// This file provides type definitions for modules without their own type definitions
 
-declare module "*/features/*" {
-  const content: any;
-  export default content;
-}
-
-declare module "*/hooks/*" {
-  const content: any;
-  export default content;
-}
-
-declare module "*/icons/*" {
-  const content: any;
-  export default content;
-}
-
-declare module "*/services/*" {
-  const content: any;
-  export default content;
-}
-
-declare module "*/types/*" {
-  const content: any;
-  export default content;
-}
-
-declare module "*/utils/*" {
-  const content: any;
-  export default content;
-}
+// Allow importing components, features, etc. without type errors
+declare module "*/components/*";
+declare module "*/features/*";
+declare module "*/hooks/*";
+declare module "*/icons/*";
+declare module "*/services/*";
+declare module "*/types/*";
+declare module "*/utils/*";

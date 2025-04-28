@@ -70,7 +70,7 @@ export function hasValidApiKeys(): boolean {
 const redactApiKey = (key?: string) =>
   key ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "Not set";
 
-console.log("Desktop configuration loaded:", {
+console.info("Desktop configuration loaded:", {
   env: desktopConfig.env,
   openaiApiKey: redactApiKey(desktopConfig.openaiApiKey),
   anthropicApiKey: redactApiKey(desktopConfig.anthropicApiKey),

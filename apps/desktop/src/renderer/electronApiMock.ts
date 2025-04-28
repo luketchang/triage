@@ -1,7 +1,6 @@
 import { ApiResponse } from "./electron.d";
 import {
   AgentConfig,
-  ChatMessage,
   CodePostprocessing,
   ContextItem,
   FacetData,
@@ -16,7 +15,7 @@ import {
 import { LogSearchInputCore } from "@triage/agent";
 
 // Define a local version of PostprocessedLogSearchInput to avoid import issues
-interface PostprocessedLogSearchInput {
+export interface PostprocessedLogSearchInput {
   query: string;
   start: string;
   end: string;
@@ -41,7 +40,7 @@ const createLogEntry = (
   service: string,
   level: string,
   metadata: Record<string, string> = {}
-) => ({
+): Log => ({
   timestamp,
   message,
   service,
@@ -50,41 +49,22 @@ const createLogEntry = (
 });
 
 // Create sample logs with varying timestamps
-const createSampleLogs = (count: number, baseService: string): any[] => {
-  const now = new Date("2025-04-09T20:22:25");
-  const logs = [];
+const createSampleLogs = (count: number, baseService: string): Log[] => {
+  const levels = ["info", "warn", "error", "debug"];
+  const logs: Log[] = [];
 
   for (let i = 0; i < count; i++) {
-    // Create timestamps going back from now
-    const logTime = new Date(now.getTime() - i * (i % 2 === 0 ? 60000 : 120000)); // Vary times
-
-    // Determine log level - include warn logs too
-    let level;
-    if (i < 3) {
-      level = "error";
-    } else if (i < 6) {
-      level = "warn";
-    } else {
-      level = "info";
-    }
-
-    // Create different messages based on service and level
-    let message = "";
-    if (level === "error") {
-      message = `Sample error message #${i + 1} for ${baseService}`;
-    } else if (level === "warn") {
-      message = `Sample warning message #${i + 1} for ${baseService}`;
-    } else {
-      message = `Sample info message #${i + 1} for ${baseService}`;
-    }
-
     logs.push(
-      createLogEntry(logTime.toISOString(), message, baseService, level, {
-        requestId: `req-${1000 + i}`,
-        userId: `user-${2000 + i}`,
-        environment: "development",
-        duration: `${100 + i * 10}ms`,
-      })
+      createLogEntry(
+        new Date(Date.now() - Math.floor(Math.random() * 3600000)).toISOString(),
+        `Sample ${levels[i % levels.length]} message #${i + 1} for ${baseService}`,
+        baseService,
+        levels[i % levels.length],
+        {
+          requestId: `req-${Math.random().toString(36).substring(2, 10)}`,
+          userId: `user-${Math.floor(Math.random() * 1000)}`,
+        }
+      )
     );
   }
 
@@ -92,7 +72,7 @@ const createSampleLogs = (count: number, baseService: string): any[] => {
 };
 
 // Mock file system structure for development
-const mockFileSystem: Record<string, any> = {
+const mockFileSystem: Record<string, unknown> = {
   src: {
     components: {
       "Button.tsx": `import React from 'react';
@@ -366,7 +346,7 @@ npm start
 
 // Helper function to convert the mock file system to tree nodes
 const convertMockToTreeNodes = (
-  obj: Record<string, any>,
+  obj: Record<string, unknown>,
   basePath: string = ""
 ): FileTreeNode[] => {
   return Object.entries(obj).map(([name, value]) => {
@@ -378,7 +358,7 @@ const convertMockToTreeNodes = (
         name,
         path,
         isDirectory: true,
-        children: convertMockToTreeNodes(value, path),
+        children: convertMockToTreeNodes(value as Record<string, unknown>, path),
       };
     } else {
       return {
@@ -393,13 +373,13 @@ const convertMockToTreeNodes = (
 // Get content of a mock file
 const getMockFileContent = (filePath: string): string | null => {
   const parts = filePath.split("/");
-  let current: any = mockFileSystem;
+  let current: unknown = mockFileSystem;
 
   for (const part of parts) {
     if (!current || typeof current !== "object") {
       return null;
     }
-    current = current[part];
+    current = (current as Record<string, unknown>)[part];
   }
 
   if (typeof current !== "string") {
@@ -463,7 +443,7 @@ const createSampleTrace = (
 
   // Create breakdown of service latencies
   const services = ["orders", "payments", "auth", "database", "cache"];
-  const serviceBreakdown = services.map((service, index) => {
+  const serviceBreakdown = services.map((service, _index) => {
     const serviceDuration = (duration / services.length) * (1 + Math.random() * 0.5);
     return {
       service,
@@ -587,7 +567,7 @@ const createMockData = () => {
   };
 
   logContext.set(errorQuery, {
-    logs: createSampleLogs(5, "auth-service") as any[],
+    logs: createSampleLogs(5, "auth-service"),
   });
 
   // Sample performance query
@@ -601,7 +581,7 @@ const createMockData = () => {
   };
 
   logContext.set(perfQuery, {
-    logs: createSampleLogs(8, "db-service") as any[],
+    logs: createSampleLogs(8, "db-service"),
   });
 
   // Create sample code context
@@ -997,13 +977,9 @@ const mockElectronAPI = {
   /**
    * Mock implementation for agent-based chat
    */
-  agentChat: async (
-    message: string,
-    contextItems: ContextItem[],
-    previousMessages: ChatMessage[]
-  ) => {
-    console.log("Mock agentChat called with message:", message);
-    console.log("Context items:", contextItems.length);
+  agentChat: async (message: string, contextItems: ContextItem[]) => {
+    console.info("Mock agentChat called with message:", message);
+    console.info("Context items:", contextItems.length);
 
     return {
       success: true,
@@ -1042,13 +1018,9 @@ const mockElectronAPI = {
   /**
    * Mock implementation for manual chat
    */
-  manualChat: async (
-    message: string,
-    contextItems: ContextItem[],
-    previousMessages: ChatMessage[]
-  ) => {
-    console.log("Mock manualChat called with message:", message);
-    console.log("Context items:", contextItems.length);
+  manualChat: async (message: string, contextItems: ContextItem[]) => {
+    console.info("Mock manualChat called with message:", message);
+    console.info("Context items:", contextItems.length);
 
     return {
       success: true,

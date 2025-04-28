@@ -17,7 +17,6 @@ interface LogsViewProps {
   onLoadMore: () => void;
   selectedArtifact?: Artifact | null;
   setLogs?: (logs: Log[]) => void;
-  setLogsWithPagination?: (data: LogsWithPagination | null) => void;
   setIsLoading?: (isLoading: boolean) => void;
   setPageCursor?: (cursor: string | undefined) => void;
   setTimeRange?: (timeRange: TimeRange) => void;
@@ -35,7 +34,6 @@ const LogsView: React.FC<LogsViewProps> = ({
   onLoadMore,
   selectedArtifact,
   setLogs,
-  setLogsWithPagination,
   setIsLoading,
   setPageCursor,
   setTimeRange,
@@ -143,7 +141,15 @@ const LogsView: React.FC<LogsViewProps> = ({
         setPageCursor(searchInput.pageCursor);
       }
     }
-  }, [selectedArtifact, setLogQuery, onTimeRangeChange, setLogs, setIsLoading, setPageCursor]);
+  }, [
+    selectedArtifact,
+    setLogQuery,
+    onTimeRangeChange,
+    setLogs,
+    setIsLoading,
+    setPageCursor,
+    setTimeRange,
+  ]);
 
   // Load facets when the component mounts or time range changes
   useEffect(() => {
@@ -174,7 +180,7 @@ const LogsView: React.FC<LogsViewProps> = ({
     };
 
     loadFacets();
-  }, [timeRange.start, timeRange.end]);
+  }, [timeRange.start, timeRange.end, setTimeRange]);
 
   const handleQuerySubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -319,25 +325,6 @@ const LogsView: React.FC<LogsViewProps> = ({
         return [...prev, facet];
       }
     });
-  };
-
-  const getLogLevelClass = (level: string): string => {
-    level = level.toLowerCase();
-    switch (level) {
-      case "error":
-        return "log-level-error";
-      case "warn":
-      case "warning":
-        return "log-level-warn";
-      case "info":
-        return "log-level-info";
-      case "debug":
-        return "log-level-debug";
-      case "trace":
-        return "log-level-trace";
-      default:
-        return "";
-    }
   };
 
   // Handle time range changes from the TimeRangePicker

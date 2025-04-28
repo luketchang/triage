@@ -28,12 +28,13 @@ function App(): JSX.Element {
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
 
   // Use custom hooks
-  const logsState = useLogs();
+  const logsState = useLogs({ shouldFetch: activeTab === "logs" });
   const chatState = useChat();
 
-  // Only use the traces hook if traces are enabled
+  // Always use the traces hook, but use the result conditionally
+  const tracesHookResult = useTraces({ shouldFetch: activeTab === "traces" && TRACES_ENABLED });
   const tracesState = TRACES_ENABLED
-    ? useTraces()
+    ? tracesHookResult
     : {
         // Dummy implementation when traces are disabled
         traces: [],
@@ -179,7 +180,6 @@ function App(): JSX.Element {
               selectedArtifact && selectedArtifact.type === "log" ? selectedArtifact : null
             }
             setLogs={logsState.setLogs}
-            setLogsWithPagination={logsState.setLogsWithPagination}
             setIsLoading={logsState.setIsLoading}
             setPageCursor={logsState.setPageCursor}
             setTimeRange={logsState.setTimeRange}
