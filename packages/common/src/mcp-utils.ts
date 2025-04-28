@@ -1,7 +1,7 @@
 import { TextContent } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-import { logger } from "./logging";
+import { logger } from "./logger";
 
 /**
  * Zod schema for the inner text content

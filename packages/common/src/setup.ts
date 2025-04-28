@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { logger } from "./logging";
+import { logger } from "./logger";
 
 // Directories to exclude when collecting source code
 const EXCLUDED_DIRS = [

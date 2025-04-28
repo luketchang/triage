@@ -1,4 +1,4 @@
-import { logger } from "./logging";
+import { logger } from "./logger";
 
 export function toUnixNano(dateStr: string): string {
   // Create Date object from input

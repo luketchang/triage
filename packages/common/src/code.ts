@@ -2,7 +2,7 @@ import { execSync, spawnSync } from "child_process";
 import fs from "fs";
 import * as path from "path";
 
-import { logger } from "./logging";
+import { logger } from "./logger";
 
 /**
  * Gets the source code from the given file paths.

@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
-import { logger } from "./logging";
+import { logger } from "./logger";
 
 // Increase the timeout significantly
 const DEFAULT_TOOL_CALL_TIMEOUT = 1200 * 1000; // 20 minutes
