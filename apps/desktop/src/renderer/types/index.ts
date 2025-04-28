@@ -174,6 +174,34 @@ export interface SingleTraceContextItem {
 // Context item type as a discriminated union
 export type ContextItem = LogSearchContextItem | SingleTraceContextItem;
 
+// Log postprocessing types
+export interface LogPostprocessingFact {
+  title: string;
+  fact: string;
+  query: string;
+  start: string;
+  end: string;
+  limit: number;
+  pageCursor: string | null;
+  type: "logSearchInput";
+}
+
+export interface LogPostprocessing {
+  facts: LogPostprocessingFact[];
+}
+
+// Code postprocessing types
+export interface CodePostprocessingFact {
+  title: string;
+  fact: string;
+  filepath: string;
+  codeBlock: string;
+}
+
+export interface CodePostprocessing {
+  facts: CodePostprocessingFact[];
+}
+
 // Interface for chat messages
 export interface ChatMessage {
   id: string;
@@ -181,6 +209,8 @@ export interface ChatMessage {
   content: string;
   artifacts?: Artifact[];
   contextItems?: ContextItem[];
+  logPostprocessing?: LogPostprocessing;
+  codePostprocessing?: CodePostprocessing;
 }
 
 // Interface for main content tabs

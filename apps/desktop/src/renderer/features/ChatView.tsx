@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import FactsSidebar from "../components/FactsSidebar";
 import { Artifact, ChatMessage, ContextItem } from "../types";
 
 interface ChatViewProps {
@@ -33,6 +34,18 @@ const ChatView: React.FC<ChatViewProps> = ({
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localMode, setLocalMode] = useState<"agent" | "manual">(chatMode);
+
+  // Get the latest assistant message with postprocessing data
+  const latestMessageWithPostprocessing = messages
+    .filter((m) => m.role === "assistant" && (m.logPostprocessing || m.codePostprocessing))
+    .pop();
+
+  // Determine if we should show the facts sidebar
+  const shouldShowFactsSidebar =
+    !!latestMessageWithPostprocessing &&
+    latestMessageWithPostprocessing.content !== "Thinking..." &&
+    ((latestMessageWithPostprocessing.logPostprocessing?.facts.length || 0) > 0 ||
+      (latestMessageWithPostprocessing.codePostprocessing?.facts.length || 0) > 0);
 
   useEffect(() => {
     setLocalMode(chatMode);
@@ -414,20 +427,13 @@ const ChatView: React.FC<ChatViewProps> = ({
             <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>
         )}
-
-        {message.artifacts && message.artifacts.length > 0 && (
-          <div className="artifacts-container">
-            <h4>Generated Artifacts</h4>
-            {message.artifacts.map((artifact) => renderArtifactCard(artifact))}
-          </div>
-        )}
       </>
     );
   };
 
   return (
     <div className="chat-tab">
-      <div className="chat-container">
+      <div className={`chat-container ${shouldShowFactsSidebar ? "with-facts-sidebar" : ""}`}>
         <div className="chat-messages-container">
           <div className="chat-messages">
             {messages.length === 0 ? (
@@ -450,6 +456,13 @@ const ChatView: React.FC<ChatViewProps> = ({
             )}
           </div>
         </div>
+
+        {shouldShowFactsSidebar && latestMessageWithPostprocessing && (
+          <FactsSidebar
+            logFacts={latestMessageWithPostprocessing.logPostprocessing?.facts || []}
+            codeFacts={latestMessageWithPostprocessing.codePostprocessing?.facts || []}
+          />
+        )}
 
         <div className="chat-input-container">
           {contextItems.length > 0 && (

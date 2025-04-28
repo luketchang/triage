@@ -3,9 +3,9 @@ import api from "../services/api";
 import {
   Artifact,
   ChatMessage,
+  CodePostprocessing,
   ContextItem,
-  LogSearchInputCore,
-  LogsWithPagination,
+  LogPostprocessing,
 } from "../types";
 import { createCodeArtifacts, createLogArtifacts } from "../utils/artifact-utils";
 import { generateId } from "../utils/formatters";
@@ -58,72 +58,100 @@ export function useChat() {
     ]);
 
     try {
-      // Set reasonOnly flag based on chat mode
-      const reasonOnly = chatMode === "manual";
-
-      // Aggregate logContext from contextItems
-      const logContext: Map<LogSearchInputCore, LogsWithPagination | string> = new Map();
-
-      // Iterate through contextItems to extract log context
-      contextItems.forEach((item) => {
-        if (item.type === "logSearch") {
-          // Extract the input and results from LogSearchPair
-          const { input, results } = item.data;
-          // Add to the map
-          logContext.set(input, results);
-        }
-      });
-
-      // Clear context items after creating the message with them attached
-      setContextItems([]);
-
-      // Invoke the agent with the user's query, logContext, and reasonOnly flag
-      const agentResponse = await api.invokeAgent(
-        newMessage,
-        logContext.size > 0 ? logContext : null,
-        { reasonOnly }
-      );
-
-      // Remove the thinking message
-      setIsThinking(false);
-      setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== thinkingMessageId));
-
-      // Extract artifacts from response
-      let logArtifacts: Artifact[] = [];
-      let codeArtifacts: Artifact[] = [];
-
-      if (agentResponse.data) {
-        logArtifacts = createLogArtifacts(agentResponse.data.logPostprocessing);
-        codeArtifacts = createCodeArtifacts(agentResponse.data.codePostprocessing);
+      // Determine which API to call based on chat mode
+      let response;
+      if (chatMode === "agent") {
+        // Call the agent-powered chat API
+        response = await api.agentChat(
+          newMessage,
+          contextItems,
+          messages.filter((m) => m.role !== "assistant" || m.content !== "Thinking...")
+        );
+      } else {
+        // Call the manual chat API (no agent)
+        response = await api.manualChat(
+          newMessage,
+          contextItems,
+          messages.filter((m) => m.role !== "assistant" || m.content !== "Thinking...")
+        );
       }
 
-      const artifacts = [...logArtifacts, ...codeArtifacts];
+      if (response && response.success) {
+        // Process artifacts if present
+        let artifacts: Artifact[] = [];
 
-      // Create a response message with artifacts
-      const assistantMessage: ChatMessage = {
-        id: generateId(),
-        role: "assistant",
-        content: agentResponse.data?.chatHistory?.join("\n\n") || "I processed your request.",
-        artifacts: artifacts.length > 0 ? artifacts : undefined,
-      };
+        // Convert log search results into log artifacts if present
+        if (response.logContext && response.logContext.size > 0) {
+          const logArtifacts = createLogArtifacts(response.logContext);
+          artifacts = [...artifacts, ...logArtifacts];
+        }
 
-      // Update messages with the assistant's response
-      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+        // Convert code snippets into code artifacts if present
+        if (response.codeContext && response.codeContext.size > 0) {
+          const codeArtifacts = createCodeArtifacts(response.codeContext);
+          artifacts = [...artifacts, ...codeArtifacts];
+        }
+
+        // Extract postprocessing results
+        const logPostprocessing: LogPostprocessing | undefined =
+          response.logPostprocessing || undefined;
+        const codePostprocessing: CodePostprocessing | undefined =
+          response.codePostprocessing || undefined;
+
+        // Get the "Thinking..." message and replace it with the actual response
+        setMessages((prevMessages) =>
+          prevMessages.map((message) => {
+            if (message.id === thinkingMessageId) {
+              return {
+                ...message,
+                content:
+                  response.content || "I processed your request but got no response content.",
+                artifacts: artifacts.length > 0 ? artifacts : undefined,
+                logPostprocessing,
+                codePostprocessing,
+              };
+            }
+            return message;
+          })
+        );
+      } else {
+        // Replace the "Thinking..." message with an error message
+        setMessages((prevMessages) =>
+          prevMessages.map((message) => {
+            if (message.id === thinkingMessageId) {
+              return {
+                ...message,
+                content:
+                  "Sorry, I encountered an error processing your request. Please try again later.",
+              };
+            }
+            return message;
+          })
+        );
+      }
     } catch (error) {
-      console.error("Error sending message to agent:", error);
+      // Log the error
+      console.error("Error in chat API call:", error);
 
-      // Remove the thinking message
+      // Replace the "Thinking..." message with an error message
+      setMessages((prevMessages) =>
+        prevMessages.map((message) => {
+          if (message.id === thinkingMessageId) {
+            return {
+              ...message,
+              content:
+                "Sorry, I encountered an error processing your request. Please try again later.",
+            };
+          }
+          return message;
+        })
+      );
+    } finally {
+      // Hide the thinking indicator
       setIsThinking(false);
-      setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== thinkingMessageId));
 
-      // Add an error message if the agent invocation fails
-      const errorMessage: ChatMessage = {
-        id: generateId(),
-        role: "assistant",
-        content: "Sorry, I encountered an error processing your request.",
-      };
-
-      setMessages((prevMessages) => [...prevMessages, errorMessage]);
+      // Clear context items after sending a message
+      setContextItems([]);
     }
   };
 
@@ -131,12 +159,12 @@ export function useChat() {
     newMessage,
     setNewMessage,
     messages,
+    sendMessage,
     isThinking,
     contextItems,
     setContextItems,
+    removeContextItem,
     chatMode,
     toggleChatMode,
-    removeContextItem,
-    sendMessage,
   };
 }

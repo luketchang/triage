@@ -2,8 +2,12 @@ import { ApiResponse } from "../electron.d";
 import mockElectronAPI from "../electronApiMock";
 import {
   AgentConfig,
+  ChatMessage,
+  CodePostprocessing,
+  ContextItem,
   FacetData,
   FileTreeNode,
+  LogPostprocessing,
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
@@ -13,6 +17,16 @@ import {
 // TESTING ONLY: Set to true to use mock API instead of real Electron API
 // Set to false in production or when testing with the real API
 const USE_MOCK_API = false;
+
+// Define the AgentResult interface to match the shape of the agent response
+interface AgentResult {
+  chatHistory: string[];
+  rca: string | null;
+  logPostprocessing: LogPostprocessing | null;
+  codePostprocessing: CodePostprocessing | null;
+  logContext?: Map<LogSearchInputCore, LogsWithPagination | string>;
+  codeContext?: Map<string, string>;
+}
 
 // Helper function to check if electron API exists and has specific methods
 const isElectronAPIAvailable = () => {
@@ -197,6 +211,116 @@ const api = {
     } else {
       console.info("Using real electronAPI.getFileContent");
       return window.electronAPI.getFileContent(repoPath, filePath);
+    }
+  },
+
+  // Define the AgentResult interface to match the shape of the agent response
+  agentChat: async (
+    message: string,
+    contextItems: ContextItem[],
+    previousMessages: ChatMessage[]
+  ) => {
+    // For now, we'll use the invokeAgent method and adapt the response
+    console.info("Using agentChat with context items:", contextItems.length);
+
+    // Aggregate logContext from contextItems
+    const logContext: Map<LogSearchInputCore, LogsWithPagination | string> = new Map();
+
+    // Iterate through contextItems to extract log context
+    contextItems.forEach((item) => {
+      if (item.type === "logSearch") {
+        // Extract the input and results from LogSearchPair
+        const { input, results } = item.data;
+        // Add to the map
+        logContext.set(input, results);
+      }
+    });
+
+    try {
+      // Invoke the agent with the user's query and logContext
+      const agentResponse = await api.invokeAgent(message, logContext.size > 0 ? logContext : null);
+
+      if (!agentResponse.success || !agentResponse.data) {
+        return {
+          success: false,
+          content: "Failed to process your request",
+        };
+      }
+
+      // Extract data from the response
+      const data = agentResponse.data as AgentResult;
+      const content = data.rca || data.chatHistory?.join("\n\n") || "I processed your request.";
+
+      return {
+        success: true,
+        content,
+        logContext: data.logContext || new Map(),
+        codeContext: data.codeContext || new Map(),
+        logPostprocessing: data.logPostprocessing,
+        codePostprocessing: data.codePostprocessing,
+      };
+    } catch (error) {
+      console.error("Error in agentChat:", error);
+      return {
+        success: false,
+        content: "An error occurred while processing your request",
+      };
+    }
+  },
+
+  manualChat: async (
+    message: string,
+    contextItems: ContextItem[],
+    previousMessages: ChatMessage[]
+  ) => {
+    // For manual mode, we use the invokeAgent with reasonOnly flag
+    console.info("Using manualChat with context items:", contextItems.length);
+
+    // Aggregate logContext from contextItems
+    const logContext: Map<LogSearchInputCore, LogsWithPagination | string> = new Map();
+
+    // Iterate through contextItems to extract log context
+    contextItems.forEach((item) => {
+      if (item.type === "logSearch") {
+        // Extract the input and results from LogSearchPair
+        const { input, results } = item.data;
+        // Add to the map
+        logContext.set(input, results);
+      }
+    });
+
+    try {
+      // Invoke the agent with the user's query, logContext, and reasonOnly flag
+      const agentResponse = await api.invokeAgent(
+        message,
+        logContext.size > 0 ? logContext : null,
+        { reasonOnly: true }
+      );
+
+      if (!agentResponse.success || !agentResponse.data) {
+        return {
+          success: false,
+          content: "Failed to process your request",
+        };
+      }
+
+      // Extract data from the response
+      const data = agentResponse.data as AgentResult;
+      const content = data.rca || data.chatHistory?.join("\n\n") || "I processed your request.";
+
+      // Note: In manual mode, we don't expect postprocessing data, but include them in case
+      return {
+        success: true,
+        content,
+        logContext: data.logContext || new Map(),
+        codeContext: data.codeContext || new Map(),
+      };
+    } catch (error) {
+      console.error("Error in manualChat:", error);
+      return {
+        success: false,
+        content: "An error occurred while processing your request",
+      };
     }
   },
 };
