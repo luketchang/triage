@@ -120,6 +120,12 @@ export const rootCauseAnalysisToolSchema = {
 };
 
 export const logSearchInputSchema = z.object({
+  // NOTE: this is reasoning for the previous log search results
+  reasoning: z
+    .string()
+    .describe(
+      "Objectively outline what you observe in the most recent set of fetched logs as a sequential list of events (if there exist any log search results). If you notice anything unusual and want to investigate further, explain what you will investigate. If you did not find anything useful, describe how you will change your query for next time."
+    ),
   start: z
     .string()
     .describe(
@@ -138,11 +144,6 @@ export const logSearchInputSchema = z.object({
     .describe(
       "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
     ),
-  reasoning: z
-    .string()
-    .describe(
-      "Objectively outline what you observe in the most recent set of fetched logs. If you need more context, explain the steps you will take. If you have enough context, explain why you are done with the current search."
-    ),
 });
 
 // Full LogSearchInput type with reasoning - used when interfacing with LLMs
@@ -157,6 +158,12 @@ export const logSearchInputToolSchema = {
 };
 
 export const spanSearchInputSchema = z.object({
+  // NOTE: this is reasoning for the previous span search results
+  reasoning: z
+    .string()
+    .describe(
+      "Objectively outline what you observe in the most recent set of fetched spans as a sequential list of events. If you notice anything unusual and want to investigate further, explain what you will investigate. If you did not find anything useful, describe how you will change your query for next time. If you have enough context, explain why you are done with the current search."
+    ),
   start: z
     .string()
     .describe(
@@ -174,11 +181,6 @@ export const spanSearchInputSchema = z.object({
     .nullable()
     .describe(
       "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
-    ),
-  reasoning: z
-    .string()
-    .describe(
-      "Objectively outline what you observe in the most recent set of fetched spans. If you need more context, explain the steps you will take. If you have enough context, explain why you are done with the current search."
     ),
 });
 
@@ -244,53 +246,58 @@ export const codeSearchInputToolSchema = {
   parameters: codeSearchInputSchema,
 };
 
-export const postprocessedLogSearchInputSchema = logSearchInputSchema
+export const logPostprocessingFactSchema = logSearchInputSchema
   .omit({
     reasoning: true,
   })
   .extend({
-    title: z.string().describe("A concise title summarizing the log search results"),
-    summary: z
+    title: z.string().describe("A concise title summarizing the fact"),
+    fact: z
       .string()
       .describe(
-        "A short summary of the log search results in the form of a sequence of events (numbered list). Be precise and sequential."
+        "A fact derived from the log search result that supports the answer and some context on why it is relevant."
       ),
   });
 
 export const logPostprocessingSchema = z.object({
-  relevantQueries: z
-    .array(postprocessedLogSearchInputSchema)
-    .describe("List of queries with titles who's results support the answer."),
-  summary: z
-    .string()
+  facts: z
+    .array(logPostprocessingFactSchema)
     .describe(
-      "Summary of all the log results collectively in the form of a sequence of events (numbered list). Be precise and sequential."
+      "An array of facts along with the log query for citation. Note this returned type MUST BE an array containing one or more fact types. It should contain at most 8 facts."
     ),
 });
 
 export type LogPostprocessing = zInfer<typeof logPostprocessingSchema>;
-
-export type PostprocessedLogSearchInput = zInfer<typeof postprocessedLogSearchInputSchema>;
 
 export const logPostprocessingToolSchema = {
   description: "Postprocess log results.",
   parameters: logPostprocessingSchema,
 };
 
-export const codePostprocessingSchema = z.object({
-  relevantFilepaths: z
-    .array(z.string())
-    .describe("List of filepaths that contain relevant code to the answer."),
-  summary: z
+export const codePostprocessingFactSchema = z.object({
+  title: z.string().describe("A concise title summarizing the fact"),
+  fact: z
     .string()
     .describe(
-      "Summary of the relevant code files and how they contribute to the answer. Be precise and sequential."
+      "A fact derived from the code search result that supports the answer and some context on why it is relevant."
+    ),
+  filepath: z.string().describe("The absolute file path of the code block that supports the fact"),
+  codeBlock: z
+    .string()
+    .describe(
+      "A block of code that supports the fact. This should be a snippet from the filepath."
     ),
 });
 
-export type CodePostprocessing = zInfer<typeof codePostprocessingSchema> & {
-  type: "codePostprocessing";
-};
+export const codePostprocessingSchema = z.object({
+  facts: z
+    .array(codePostprocessingFactSchema)
+    .describe(
+      "An array of facts along with the file path for citation. Note this returned type MUST BE an array containing one or more fact types. It should contain at most 8 facts."
+    ),
+});
+
+export type CodePostprocessing = zInfer<typeof codePostprocessingSchema>;
 
 export const codePostprocessingToolSchema = {
   description: "Postprocess code results.",

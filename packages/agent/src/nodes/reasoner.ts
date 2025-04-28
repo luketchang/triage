@@ -62,13 +62,13 @@ export const createPrompt = ({
   const formattedSpanLabels = formatFacetValues(spanLabelsMap);
 
   const prompt = `
-Given the user query about the potential issue/event, an overview of the codebase, log labels, span labels, and previously gathered log and code context, your task is to come up with a concrete answer to the user query. If the query asks you to diagnose a live issue/failure, your response should attempt to provide a root cause analysis and a concrete/unambiguous code fix if possible. If you do not have enough information to diagnose the issue, output a \`CodeRequest\` or \`SpanRequest\` to gather more context.
+Given the user query about the potential issue/event, an overview of the codebase, log labels, span labels, and previously gathered log and code context, your task is to come up with a concrete answer to the user query. If the query asks you to diagnose a live issue/failure, your response should attempt to provide a root cause analysis and a concrete/unambiguous code fix if possible. If you do not have enough information to diagnose the issue OR if your hypotheses are hand-wavy and cannot be concretely supported by walking through the sequence of events of the issue/event, output a \`CodeRequest\` or \`SpanRequest\` to gather more context.
 
 Tips:
-- Reflect on 5-7 different possible sources of the issue/event before outputting any response.
 - Especially in microservices, the root cause may not be in the service that is failing, but in another service that is interacting with it. Consider other services when reasoning about what you may be missing and write down those hypotheses.
 - If you provide a root cause analysis, it should explicitly cite concrete evidence used to reach the conclusion: code blocks with comments, log results with captions, etc.
 - If you believe you are missing key context, output a \`CodeRequest\` or \`SpanRequest\` to gather more context.
+- Review your own hypotheses and ensure they are concrete and can ve verified by walking through a concrete sequence of events. If they cannot be verified, output a \`CodeRequest\` or \`SpanRequest\` to gather more context.
 - If you propose code fixes, they must follow these rules:
   - They must be extremely concrete changes to the actual codebase, no examples or conceptual illustrations or how you "might" make changes.
   - Do not miss the forest for the trees and suggest a narrow bandaid fix. Think about how the system should ideally function if it were fully correct. Then rerun the sequence of events from the issue/event in your head given your proposed fix and ensure the end-to-end behavior is correct.

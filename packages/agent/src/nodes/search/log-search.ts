@@ -17,7 +17,7 @@ export interface LogSearchAgentResponse {
 
 export type LogSearchResponse = LogSearchInput | TaskComplete;
 
-const MAX_ITERS = 15;
+const MAX_ITERS = 12;
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that helps engineers debug production issues by searching through logs. Your task is to find logs relevant to the issue/event.

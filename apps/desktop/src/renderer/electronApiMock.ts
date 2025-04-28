@@ -1,15 +1,32 @@
 import { ApiResponse } from "./electron.d";
 import {
   AgentConfig,
+  ChatMessage,
+  CodePostprocessing,
+  ContextItem,
   FacetData,
   FileTreeNode,
   Log,
+  LogPostprocessing,
   LogQueryParams,
   LogsWithPagination,
   TraceQueryParams,
 } from "./types";
 
-import { LogSearchInputCore, PostprocessedLogSearchInput } from "@triage/agent";
+import { LogSearchInputCore } from "@triage/agent";
+
+// Define a local version of PostprocessedLogSearchInput to avoid import issues
+interface PostprocessedLogSearchInput {
+  query: string;
+  start: string;
+  end: string;
+  limit: number;
+  pageCursor: string | null;
+  type?: string;
+  title?: string;
+  reasoning?: string;
+  summary?: string;
+}
 
 /**
  * Mock implementation of the Electron API for local development and testing
@@ -557,17 +574,16 @@ const createSampleTrace = (
 // Create mock data
 const createMockData = () => {
   // Create sample log context
-  const logContext = new Map<PostprocessedLogSearchInput, LogsWithPagination | string>();
+  const logContext = new Map<LogSearchInputCore, LogsWithPagination | string>();
 
   // Sample error query
-  const errorQuery: PostprocessedLogSearchInput = {
-    query: "service:(tickets OR orders OR expiration)",
+  const errorQuery: LogSearchInputCore = {
+    query: "level:error service:auth",
     start: "2023-10-01T00:00:00Z",
     end: new Date().toISOString(),
-    limit: 10,
-    title: "Duplicate ticket errors",
-    summary: "Looking for duplicate ticket errors",
+    limit: 100,
     pageCursor: null,
+    type: "logSearchInput",
   };
 
   logContext.set(errorQuery, {
@@ -575,14 +591,13 @@ const createMockData = () => {
   });
 
   // Sample performance query
-  const perfQuery: PostprocessedLogSearchInput = {
-    query: "service:mongo",
+  const perfQuery: LogSearchInputCore = {
+    query: "level:warn latency:>1000",
     start: "2023-10-01T00:00:00Z",
     end: new Date().toISOString(),
-    limit: 10,
-    title: "Mongo performance issues",
-    summary: "Slow MongoDB queries",
+    limit: 100,
     pageCursor: null,
+    type: "logSearchInput",
   };
 
   logContext.set(perfQuery, {
@@ -639,10 +654,7 @@ const mockElectronAPI = {
    */
   invokeAgent: async (
     query: string,
-    logContext: Map<
-      PostprocessedLogSearchInput | LogSearchInputCore,
-      LogsWithPagination | string
-    > | null,
+    logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null,
     options?: { reasonOnly?: boolean }
   ) => {
     console.info(
@@ -670,9 +682,15 @@ const mockElectronAPI = {
             : "I searched logs and analyzed this in Search mode",
           "Here's what I found: This is a simulated response from the agent.",
         ],
-        rca: "Root cause identified: This is a mock response.",
-        logPostprocessing: mockData.logContext,
-        codePostprocessing: mockData.codeContext,
+        content: "Root cause identified: This is a mock response.",
+        logPostprocessing: {
+          facts: [], // Empty array of facts
+        } as LogPostprocessing,
+        codePostprocessing: {
+          facts: [], // Empty array of facts
+        } as CodePostprocessing,
+        logContext: mockData.logContext,
+        codeContext: mockData.codeContext,
       },
     };
   },
@@ -974,6 +992,73 @@ const mockElectronAPI = {
         error: `File not found: ${filePath}`,
       };
     }
+  },
+
+  /**
+   * Mock implementation for agent-based chat
+   */
+  agentChat: async (
+    message: string,
+    contextItems: ContextItem[],
+    previousMessages: ChatMessage[]
+  ) => {
+    console.log("Mock agentChat called with message:", message);
+    console.log("Context items:", contextItems.length);
+
+    return {
+      success: true,
+      content:
+        "This is a mock response from the agent chat. In a real implementation, this would use the agent to analyze logs and code.",
+      logContext: new Map<LogSearchInputCore, LogsWithPagination | string>(),
+      codeContext: new Map<string, string>(),
+      logPostprocessing: {
+        facts: [
+          {
+            title: "Sample Log Error",
+            fact: "There was a 500 error in the authentication service at 2:15 PM",
+            query: "level:error service:auth",
+            start: new Date(Date.now() - 86400000).toISOString(),
+            end: new Date().toISOString(),
+            limit: 100,
+            pageCursor: null,
+            type: "logSearchInput",
+          },
+        ],
+      },
+      codePostprocessing: {
+        facts: [
+          {
+            title: "Authentication Logic",
+            fact: "The auth service uses JWT but the token validation has a bug in the expiry check",
+            filepath: "/services/auth/src/middleware/auth.ts",
+            codeBlock:
+              "function validateToken(token) {\n  // Bug: doesn't check token expiry correctly\n  return jwt.verify(token, process.env.JWT_SECRET);\n}",
+          },
+        ],
+      },
+    };
+  },
+
+  /**
+   * Mock implementation for manual chat
+   */
+  manualChat: async (
+    message: string,
+    contextItems: ContextItem[],
+    previousMessages: ChatMessage[]
+  ) => {
+    console.log("Mock manualChat called with message:", message);
+    console.log("Context items:", contextItems.length);
+
+    return {
+      success: true,
+      content:
+        "This is a mock response from manual chat. In the manual mode, I'll just analyze what you've shown me without performing additional searches.",
+      logContext: new Map<LogSearchInputCore, LogsWithPagination | string>(),
+      codeContext: new Map<string, string>(),
+      logPostprocessing: null,
+      codePostprocessing: null,
+    };
   },
 };
 
