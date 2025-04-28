@@ -1,5 +1,6 @@
-import tracer, { Span } from "dd-trace";
 import path from "path";
+
+import tracer, { Span } from "dd-trace";
 
 export function trace<T>(cb: (span?: Span) => Promise<T>): Promise<T> {
   // Logic to compute the span name
@@ -31,7 +32,7 @@ export function trace<T>(cb: (span?: Span) => Promise<T>): Promise<T> {
         resolve(result);
       } catch (error) {
         span?.setTag("error", error);
-        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+         
         reject(error);
       } finally {
         span?.finish();

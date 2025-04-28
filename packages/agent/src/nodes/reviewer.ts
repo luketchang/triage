@@ -1,6 +1,7 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
 import { generateText } from "ai";
+
 import {
   logRequestToolSchema,
   LogSearchInputCore,
@@ -8,6 +9,7 @@ import {
   RootCauseAnalysis,
   spanRequestToolSchema,
 } from "../types";
+
 import { formatFacetValues, formatLogResults } from "./utils";
 
 export type ReviewerResponse = RequestToolCalls | RootCauseAnalysis;

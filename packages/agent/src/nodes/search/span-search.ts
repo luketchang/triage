@@ -1,6 +1,7 @@
 import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { ObservabilityPlatform, SpansWithPagination } from "@triage/observability";
 import { generateText } from "ai";
+
 import {
   SpanSearchInput,
   SpanSearchInputCore,

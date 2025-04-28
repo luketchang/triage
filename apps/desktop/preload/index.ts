@@ -2,6 +2,18 @@ import { LogSearchInputCore } from "@triage/agent";
 import { LogsWithPagination } from "@triage/observability";
 import { contextBridge, ipcRenderer } from "electron";
 
+// Store the environment values we're exposing for logging
+const tracesEnabled = process.env.TRACES_ENABLED === "true";
+const useMockApi = process.env.USE_MOCK_API === "true";
+
+/**
+ * Expose environment variables to the renderer process
+ */
+contextBridge.exposeInMainWorld("env", {
+  TRACES_ENABLED: tracesEnabled,
+  USE_MOCK_API: useMockApi,
+});
+
 /**
  * Expose protected methods that allow the renderer process to use
  * the ipcRenderer without exposing the entire object
@@ -101,4 +113,8 @@ function domReady(condition: DocumentReadyState[] = ["complete", "interactive"])
 // Perform any initialization logic when DOM is ready
 domReady().then(() => {
   console.log("Preload script initialized");
+  console.log("Environment variables exposed:", {
+    TRACES_ENABLED: tracesEnabled,
+    USE_MOCK_API: useMockApi,
+  });
 });

@@ -1,3 +1,5 @@
+import fs from "fs/promises";
+
 import { collectSourceCode, GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common";
 import {
   getObservabilityPlatform,
@@ -7,8 +9,8 @@ import {
   SpansWithPagination,
 } from "@triage/observability";
 import { Command as CommanderCommand } from "commander";
-import fs from "fs/promises";
 import { z } from "zod";
+
 import { CodePostprocessor } from "./nodes/postprocessing/code-postprocessing";
 import { LogPostprocessor } from "./nodes/postprocessing/log-postprocessing";
 import { Reasoner } from "./nodes/reasoner";
@@ -39,16 +41,6 @@ const INITIAL_SPAN_REQUEST: SpanRequest = {
     "fetch spans relevant to the issue/event that will give you a full picture of the issue/event",
   reasoning: "",
 };
-
-// Type definitions
-type NodeType =
-  | "spanSearch"
-  | "logSearch"
-  | "reasoner"
-  | "reviewer"
-  | "logPostprocessor"
-  | "codePostprocessor"
-  | "END";
 
 export interface OncallAgentState {
   firstPass: boolean;
@@ -510,7 +502,7 @@ export async function invokeAgent({
   return await agent.invoke(state);
 }
 
-const parseArgs = () => {
+const parseArgs = (): { integration: "datadog" | "grafana"; features: string[] } => {
   const argsSchema = z.object({
     orgId: z.string().optional(),
     integration: z.enum(["datadog", "grafana"]).default("datadog"),
@@ -531,7 +523,7 @@ const parseArgs = () => {
   return argsSchema.parse(program.opts());
 };
 
-async function main() {
+async function main(): Promise<void> {
   const { integration, features: observabilityFeatures } = parseArgs();
 
   // Get formatted labels map for time range

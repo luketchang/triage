@@ -1,7 +1,6 @@
 {
   "name": "triage",
   "private": true,
-  "type": "module",
   "scripts": {
     "build": "pnpm clean-tsbuildinfo && turbo clean && turbo build",
     "clean": "turbo clean",

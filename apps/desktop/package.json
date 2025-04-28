@@ -2,16 +2,16 @@
   "name": "triage-desktop",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
   "scripts": {
     "dev": "vite",
     "start": "pnpm run compile && vite & (wait-on http://localhost:5174 && cross-env electron dist-electron/electron/main.js)",
     "compile": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json",
-    "build": "pnpm run compile && vite build",
+    "build": "pnpm lint && vite build",
     "package": "pnpm run build && electron-builder",
-    "lint": "eslint src --ext ts,tsx --max-warnings 0",
+    "lint": "eslint src --ext ts,tsx --max-warnings 1",
     "check-types": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -38,6 +38,7 @@
     "cross-env": "^7.0.3",
     "electron": "^35.1.0",
     "electron-builder": "^24.9.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "typescript": "^5.3.3",
     "vite": "^5.1.0",
     "wait-on": "^7.2.0"

@@ -32,13 +32,13 @@ export function toUnixNano(dateStr: string): string {
  * @param descriptor The property descriptor
  */
 export function timer(
-  target: any,
+  target: object,
   propertyKey: string,
   descriptor: PropertyDescriptor
 ): PropertyDescriptor {
   const originalMethod = descriptor.value;
 
-  descriptor.value = async function (...args: any[]) {
+  descriptor.value = async function (...args: unknown[]): Promise<unknown> {
     const startTime = Date.now();
     try {
       const result = await originalMethod.apply(this, args);

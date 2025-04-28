@@ -1,5 +1,6 @@
 import { TextContent } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+
 import { logger } from "./logger";
 
 /**
@@ -130,15 +131,11 @@ export function parseMCPToolCallResponse(response: unknown): NormalizedToolRespo
               item &&
               typeof item === "object" &&
               "type" in item &&
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               typeof item.type === "string" &&
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               item.type === "text" &&
               "text" in item &&
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               typeof item.text === "string"
             ) {
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               normalizedContent.push({ type: "text", text: item.text as string });
             }
           }
