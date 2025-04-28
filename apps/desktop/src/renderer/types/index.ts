@@ -1,12 +1,7 @@
 // Types and interfaces for the application
 
 // Import types from packages instead of redefining them
-import {
-  LogSearchInput,
-  LogSearchInputCore,
-  PostprocessedLogSearchInput,
-  TraceSearchInput,
-} from "@triage/agent";
+import { AgentResult, LogSearchInput, LogSearchInputCore, TraceSearchInput } from "@triage/agent";
 
 import {
   IntegrationType,
@@ -21,12 +16,12 @@ import {
 
 // Re-export imported types
 export type {
+  AgentResult,
   IntegrationType,
   Log,
   LogSearchInput,
   LogSearchInputCore,
   LogsWithPagination,
-  PostprocessedLogSearchInput,
   ServiceLatency,
   Span,
   SpansWithPagination,
@@ -174,6 +169,34 @@ export interface SingleTraceContextItem {
 // Context item type as a discriminated union
 export type ContextItem = LogSearchContextItem | SingleTraceContextItem;
 
+// Log postprocessing types
+export interface LogPostprocessingFact {
+  title: string;
+  fact: string;
+  query: string;
+  start: string;
+  end: string;
+  limit: number;
+  pageCursor: string | null;
+  type: "logSearchInput";
+}
+
+export interface LogPostprocessing {
+  facts: LogPostprocessingFact[];
+}
+
+// Code postprocessing types
+export interface CodePostprocessingFact {
+  title: string;
+  fact: string;
+  filepath: string;
+  codeBlock: string;
+}
+
+export interface CodePostprocessing {
+  facts: CodePostprocessingFact[];
+}
+
 // Interface for chat messages
 export interface ChatMessage {
   id: string;
@@ -181,6 +204,8 @@ export interface ChatMessage {
   content: string;
   artifacts?: Artifact[];
   contextItems?: ContextItem[];
+  logPostprocessing: LogPostprocessing | null;
+  codePostprocessing: CodePostprocessing | null;
 }
 
 // Interface for main content tabs
@@ -194,4 +219,21 @@ export interface TimeRange {
 export interface TimeRangePreset {
   label: string;
   value: number | string;
+}
+
+// Define PostprocessedLogSearchInput locally since it's not exported by @triage/agent
+export interface PostprocessedLogSearchInput extends LogSearchInputCore {
+  title?: string;
+  reasoning?: string;
+  summary?: string;
+}
+
+// Interface for chat API responses
+export interface ChatResponse {
+  success: boolean;
+  content: string;
+  logContext?: Map<LogSearchInputCore, LogsWithPagination | string>;
+  codeContext?: Map<string, string>;
+  logPostprocessing: LogPostprocessing | null;
+  codePostprocessing: CodePostprocessing | null;
 }

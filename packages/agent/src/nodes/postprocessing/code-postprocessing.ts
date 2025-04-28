@@ -1,6 +1,6 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { generateText } from "ai";
-import { codePostprocessingToolSchema } from "../../types";
+import { CodePostprocessing, codePostprocessingToolSchema } from "../../types";
 import { ensureSingleToolCall } from "../utils";
 
 function createPrompt(params: {
@@ -12,7 +12,7 @@ function createPrompt(params: {
   return `
   You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from code.
   
-  Given the user query, the proposed answer/analysis, an overview of the codebase, and previously gathered code context, your task is cite relevant code file paths within the <previous_code_context> tags that support the answer. Then you will output a summary of the code files and how they contribute to the answer. This context will be presented to the user in the form of a summary and a list of code files and their results.
+  Given the user query, the proposed answer/analysis, an overview of the codebase, and previously gathered code context, your task is to pull out key/relevant facts from the code context that support the answer along with citations for the facts. Examples of key facts might include a specific region of code that has a bug, a code section that is related to the issue, etc. Citations consist of a block of code and the file path for that code block.
 
   Rules:
   - You must output a single code postprocessing tool call. DO NOT output multiple tool calls.
@@ -48,7 +48,7 @@ export class CodePostprocessor {
     codebaseOverview: string;
     codeContext: Map<string, string>;
     answer: string;
-  }): Promise<Map<string, string>> {
+  }): Promise<CodePostprocessing> {
     logger.info(`Code postprocessing for query: ${params.query}`);
 
     const prompt = createPrompt(params);
@@ -62,17 +62,20 @@ export class CodePostprocessor {
       toolChoice: "required",
     });
 
-    const toolCall = ensureSingleToolCall(toolCalls);
-
-    const relevantCodeMap = new Map<string, string>();
-    const relevantFilepaths = toolCall.args.relevantFilepaths || [];
-
-    for (const filepath of relevantFilepaths) {
-      if (params.codeContext.has(filepath)) {
-        relevantCodeMap.set(filepath, params.codeContext.get(filepath)!);
-      }
+    let toolCall;
+    if (toolCalls.length > 1) {
+      logger.warn("Multiple tool calls detected, merging results");
+      toolCall = {
+        args: {
+          facts: toolCalls.flatMap((call) => call.args.facts || []),
+        },
+      };
+    } else {
+      toolCall = ensureSingleToolCall(toolCalls);
     }
 
-    return relevantCodeMap;
+    return {
+      facts: toolCall.args.facts || [],
+    };
   }
 }

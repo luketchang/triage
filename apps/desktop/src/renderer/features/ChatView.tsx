@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import FactsSidebar from "../components/FactsSidebar";
 import { Artifact, ChatMessage, ContextItem } from "../types";
 
 interface ChatViewProps {
@@ -33,6 +34,18 @@ const ChatView: React.FC<ChatViewProps> = ({
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localMode, setLocalMode] = useState<"agent" | "manual">(chatMode);
+
+  // Get the latest assistant message with postprocessing data
+  const latestMessageWithPostprocessing = messages
+    .filter((m) => m.role === "assistant" && (m.logPostprocessing || m.codePostprocessing))
+    .pop();
+
+  // Determine if we should show the facts sidebar
+  const shouldShowFactsSidebar =
+    !!latestMessageWithPostprocessing &&
+    latestMessageWithPostprocessing.content !== "Thinking..." &&
+    ((latestMessageWithPostprocessing.logPostprocessing?.facts.length || 0) > 0 ||
+      (latestMessageWithPostprocessing.codePostprocessing?.facts.length || 0) > 0);
 
   useEffect(() => {
     setLocalMode(chatMode);
@@ -180,6 +193,13 @@ const ChatView: React.FC<ChatViewProps> = ({
           textareaRef.current.style.height = "28px";
         }
       }, 50);
+    }
+
+    // Ensure context items are cleared even if there's an issue with the hook's clearing
+    if (contextItems.length > 0 && removeContextItem) {
+      // Create a copy to avoid modification during iteration
+      const itemsToRemove = [...contextItems];
+      itemsToRemove.forEach((item) => removeContextItem(item.id));
     }
   };
 
@@ -408,17 +428,12 @@ const ChatView: React.FC<ChatViewProps> = ({
         )}
 
         {message.content === "Thinking..." ? (
-          <div className="thinking-message">Thinking{ellipsis}</div>
-        ) : (
-          <div className={hasContextItems ? "message-text-with-context" : ""}>
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+          <div className="thinking-message">
+            <span className="thinking-text">Thinking{ellipsis}</span>
           </div>
-        )}
-
-        {message.artifacts && message.artifacts.length > 0 && (
-          <div className="artifacts-container">
-            <h4>Generated Artifacts</h4>
-            {message.artifacts.map((artifact) => renderArtifactCard(artifact))}
+        ) : (
+          <div className={`message-text ${hasContextItems ? "message-text-with-context" : ""}`}>
+            <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>
         )}
       </>
@@ -427,7 +442,7 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   return (
     <div className="chat-tab">
-      <div className="chat-container">
+      <div className={`chat-container ${shouldShowFactsSidebar ? "with-facts-sidebar" : ""}`}>
         <div className="chat-messages-container">
           <div className="chat-messages">
             {messages.length === 0 ? (
@@ -440,8 +455,15 @@ const ChatView: React.FC<ChatViewProps> = ({
               </div>
             ) : (
               <>
-                {messages.map((message) => (
-                  <div key={message.id} className={`chat-message ${message.role}`}>
+                {messages.map((message, index) => (
+                  <div
+                    key={message.id}
+                    className={`chat-message ${message.role} ${
+                      message.content === "Thinking..." ? "thinking-state" : ""
+                    } ${
+                      index > 0 && messages[index - 1].role !== message.role ? "role-change" : ""
+                    }`}
+                  >
                     <div className="message-content">{renderMessageContent(message)}</div>
                   </div>
                 ))}
@@ -450,6 +472,13 @@ const ChatView: React.FC<ChatViewProps> = ({
             )}
           </div>
         </div>
+
+        {shouldShowFactsSidebar && latestMessageWithPostprocessing && (
+          <FactsSidebar
+            logFacts={latestMessageWithPostprocessing.logPostprocessing?.facts || []}
+            codeFacts={latestMessageWithPostprocessing.codePostprocessing?.facts || []}
+          />
+        )}
 
         <div className="chat-input-container">
           {contextItems.length > 0 && (
