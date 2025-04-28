@@ -2332,3 +2332,36 @@ body {
   overflow: hidden;
   position: relative;
 }
+
+.chat-message {
+  margin-bottom: 20px;
+}
+
+.chat-message.assistant {
+  margin-top: 12px;
+}
+
+.chat-message.thinking-state {
+  margin-top: 16px;
+}
+
+.chat-message.role-change {
+  margin-top: 24px;
+}
+
+/* Make the thinking message styling more distinct */
+.thinking-message {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 8px 12px;
+  background-color: #25252520;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.thinking-text {
+  font-size: 14px;
+  color: #aaa;
+  font-style: italic;
+}

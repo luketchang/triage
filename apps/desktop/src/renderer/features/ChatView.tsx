@@ -421,9 +421,11 @@ const ChatView: React.FC<ChatViewProps> = ({
         )}
 
         {message.content === "Thinking..." ? (
-          <div className="thinking-message">Thinking{ellipsis}</div>
+          <div className="thinking-message">
+            <span className="thinking-text">Thinking{ellipsis}</span>
+          </div>
         ) : (
-          <div className={hasContextItems ? "message-text-with-context" : ""}>
+          <div className={`message-text ${hasContextItems ? "message-text-with-context" : ""}`}>
             <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>
         )}
@@ -446,8 +448,15 @@ const ChatView: React.FC<ChatViewProps> = ({
               </div>
             ) : (
               <>
-                {messages.map((message) => (
-                  <div key={message.id} className={`chat-message ${message.role}`}>
+                {messages.map((message, index) => (
+                  <div
+                    key={message.id}
+                    className={`chat-message ${message.role} ${
+                      message.content === "Thinking..." ? "thinking-state" : ""
+                    } ${
+                      index > 0 && messages[index - 1].role !== message.role ? "role-change" : ""
+                    }`}
+                  >
                     <div className="message-content">{renderMessageContent(message)}</div>
                   </div>
                 ))}
