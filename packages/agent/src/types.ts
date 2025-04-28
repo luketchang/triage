@@ -308,7 +308,7 @@ export const codePostprocessingToolSchema = {
 export function stripReasoning<T extends { reasoning: string; type?: string }>(
   input: T
 ): Omit<T, "reasoning"> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const { reasoning, ...core } = input;
   return core;
 }

@@ -1,11 +1,12 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
+
 import { LogSearchInput, SpanSearchInput } from "../types";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {
     throw new Error(
       `Expected exactly one tool call, got ${toolCalls?.length}. Calls: ${
-        toolCalls?.map((call: any) => call.toolName).join(", ") || ""
+        toolCalls?.map((call: { toolName: string }) => call.toolName).join(", ") || ""
       }`
     );
   }
@@ -83,7 +84,7 @@ export function formatLogResults(
         pageCursor = logsOrError.pageCursorOrIndicator;
       }
 
-      return `${formatLogQuery(input)}\nResults:\n${formattedContent}`;
+      return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
     })
     .join("\n\n");
 }
@@ -114,7 +115,7 @@ export function formatSpanResults(
     .join("\n\n");
 }
 
-export const formatFacetValues = (facetValues: Map<string, Array<string>>) => {
+export const formatFacetValues = (facetValues: Map<string, Array<string>>): string => {
   return Array.from(facetValues.entries())
     .map(([facet, values]) => `${facet}: ${values.join(", ")}`)
     .join("\n");

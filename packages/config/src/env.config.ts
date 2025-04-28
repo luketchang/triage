@@ -1,6 +1,7 @@
 import crypto from "crypto";
-import { config } from "dotenv";
 import path from "path";
+
+import { config } from "dotenv";
 import { z } from "zod";
 
 config({ path: path.join(process.cwd(), ".env") });
@@ -31,11 +32,14 @@ const envSchema = z.object({
     .default(() => crypto.randomBytes(32).toString("hex")),
 });
 
-function validateEnv() {
+// Define the return type
+type EnvConfig = z.infer<typeof envSchema>;
+
+function validateEnv(): EnvConfig {
   // Allow skipping validation in development environments
   if (process.env.SKIP_ENV_VALIDATION === "true") {
-    console.log("Skipping environment validation");
-    return envSchema.partial().parse(process.env);
+    console.info("Skipping environment validation");
+    return envSchema.partial().parse(process.env) as EnvConfig;
   }
 
   try {

@@ -1,6 +1,7 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination, SpansWithPagination } from "@triage/observability";
 import { streamText } from "ai";
+
 import {
   logRequestToolSchema,
   LogSearchInputCore,
@@ -8,6 +9,7 @@ import {
   RootCauseAnalysis,
   SpanSearchInputCore,
 } from "../types";
+
 import { formatFacetValues, formatLogResults, formatSpanResults } from "./utils";
 
 type ReasoningResponse = RootCauseAnalysis | RequestToolCalls;
@@ -35,17 +37,18 @@ export interface ReasoningOutput {
   spanContext: Map<string, string | SpansWithPagination>;
 }
 
+// TODO: some unused params, will fix
 export const createPrompt = ({
   query,
-  repoPath,
+  repoPath: _repoPath,
   codebaseOverview,
-  fileTree,
+  fileTree: _fileTree,
   codeContext,
   logContext,
   spanContext,
   logLabelsMap,
   spanLabelsMap,
-  chatHistory,
+  chatHistory: _chatHistory,
 }: {
   query: string;
   repoPath: string;
@@ -57,7 +60,7 @@ export const createPrompt = ({
   logLabelsMap: Map<string, string[]>;
   spanLabelsMap: Map<string, string[]>;
   chatHistory: string[];
-}) => {
+}): string => {
   const formattedLogLabels = formatFacetValues(logLabelsMap);
   const formattedSpanLabels = formatFacetValues(spanLabelsMap);
 
@@ -144,6 +147,7 @@ export class Reasoner {
     });
 
     let text = "";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const toolCalls: Array<{ toolName: string; args: any }> = [];
     for await (const part of fullStream) {
       if (part.type === "text-delta") {

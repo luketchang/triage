@@ -1,6 +1,7 @@
 import { logger, toUnixNano } from "@triage/common";
 import { config } from "@triage/config";
 import axios from "axios";
+
 import { ObservabilityPlatform } from "../../observability.interface";
 import {
   IntegrationType,
@@ -204,7 +205,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     }
   }
 
-  fetchTraces(params: {
+  fetchTraces(_params: {
     query: string;
     start: string;
     end: string;
@@ -214,7 +215,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     throw new Error("fetchTraces is not implemented for Grafana platform");
   }
 
-  async fetchTraceById(params: {
+  async fetchTraceById(_params: {
     traceId: string;
     start?: string;
     end?: string;
@@ -237,19 +238,19 @@ export class GrafanaPlatform implements ObservabilityPlatform {
       for (const [nsTs, rawLine] of streamObj.values || []) {
         let logMessage: string;
         let logTime: string | null = null;
-        let parsedJson: Record<string, any> | null = null;
+        let parsedJson: Record<string, unknown> | null = null;
 
         try {
           interface ParsedLog {
             log?: string;
             time?: string;
             level?: string;
-            [key: string]: any;
+            [key: string]: unknown;
           }
 
           parsedJson = JSON.parse(rawLine) as ParsedLog;
-          logMessage = parsedJson.log || rawLine;
-          logTime = parsedJson.time || null;
+          logMessage = parsedJson.log ? String(parsedJson.log) : rawLine;
+          logTime = parsedJson.time ? String(parsedJson.time) : null;
         } catch {
           // Omit unused error variable
           logMessage = rawLine;
@@ -289,7 +290,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
         // Determine log level
         let level = "info"; // Default level
         if (parsedJson?.level) {
-          level = parsedJson.level;
+          level = parsedJson.level ? String(parsedJson.level) : "info";
         } else if (logMessage.toLowerCase().includes("error")) {
           level = "error";
         } else if (logMessage.toLowerCase().includes("warn")) {

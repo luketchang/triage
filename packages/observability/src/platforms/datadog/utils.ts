@@ -1,5 +1,6 @@
 import { v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
+
 import { DisplaySpan, DisplayTrace, ServiceLatency, SpanError, Trace } from "../../types";
 
 /**
@@ -47,7 +48,6 @@ export function findRootSpan(
   const rootCandidates: v2.Span[] = [];
 
   for (const span of spanList) {
-    const spanId = span.attributes?.spanId;
     const parentId = span.attributes?.parentId;
 
     // Root span either has no parent_id or its parent is not in this trace
@@ -181,13 +181,13 @@ export function buildTraceHierarchy(spans: v2.Span[]): DisplaySpan[] {
   });
 
   // Sort children by start time
-  const sortChildren = (span: DisplaySpan) => {
+  const sortChildren = (span: DisplaySpan): void => {
     span.children.sort((a, b) => a.start.getTime() - b.start.getTime());
     span.children.forEach(sortChildren);
   };
 
   // Set hierarchy levels and sort
-  const setLevels = (span: DisplaySpan, level: number) => {
+  const setLevels = (span: DisplaySpan, level: number): void => {
     span.level = level;
     span.children.forEach((child) => setLevels(child, level + 1));
   };
@@ -393,7 +393,7 @@ export function convertSpansToTrace(spanList: v2.Span[], traceId: string): Trace
   let traceEnd = rootDisplaySpan.end;
 
   // Find the earliest start and latest end times among all spans
-  const findExtremes = (span: DisplaySpan) => {
+  const findExtremes = (span: DisplaySpan): void => {
     if (span.start < traceStart) traceStart = span.start;
     if (span.end > traceEnd) traceEnd = span.end;
     span.children.forEach(findExtremes);

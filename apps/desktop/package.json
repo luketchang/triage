@@ -9,7 +9,7 @@
     "compile": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json",
     "build": "pnpm run compile && vite build",
     "package": "pnpm run build && electron-builder",
-    "lint": "eslint src --ext ts,tsx --max-warnings 0",
+    "lint": "eslint src --ext ts,tsx --config eslint.config.cjs --max-warnings 0",
     "check-types": "tsc --noEmit",
     "preview": "vite preview"
   },

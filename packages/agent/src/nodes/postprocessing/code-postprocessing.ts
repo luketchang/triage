@@ -1,5 +1,6 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { generateText } from "ai";
+
 import { CodePostprocessing, codePostprocessingToolSchema } from "../../types";
 import { ensureSingleToolCall } from "../utils";
 
@@ -8,7 +9,7 @@ function createPrompt(params: {
   codebaseOverview: string;
   codeContext: Map<string, string>;
   answer: string;
-}) {
+}): string {
   return `
   You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from code.
   

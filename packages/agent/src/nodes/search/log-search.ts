@@ -1,6 +1,7 @@
 import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination, ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
+
 import {
   LogSearchInput,
   LogSearchInputCore,
@@ -101,7 +102,7 @@ ${formatLogResults(params.logResultHistory)}
 `;
 }
 
-function createLogSearchSummaryPrompt(params: {
+function _createLogSearchSummaryPrompt(params: {
   query: string;
   logResults: Map<LogSearchInputCore, LogsWithPagination | string>;
 }): string {
