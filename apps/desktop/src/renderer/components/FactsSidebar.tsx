@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import LogsView from "../features/LogsView";
 import api from "../services/api";
 import {
   CodePostprocessingFact,
+  FacetData,
   Log,
   LogPostprocessingFact,
   LogsWithPagination,
@@ -62,13 +63,56 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
     start: "",
     end: "",
   });
+  const [facets, setFacets] = useState<FacetData[]>([]);
+  const [selectedFacets, setSelectedFacets] = useState<string[]>([
+    "service",
+    "level",
+    "host",
+    "environment",
+  ]);
+  const loadedFacetsForRange = React.useRef<string>("");
+
+  // Add function to load facets - move it before useEffect
+  const loadFacets = useCallback(async () => {
+    if (!timeRange.start || !timeRange.end) return;
+
+    const rangeKey = `${timeRange.start}-${timeRange.end}`;
+
+    // Only fetch facets if we haven't loaded them for this time range
+    if (loadedFacetsForRange.current !== rangeKey) {
+      try {
+        const response = await api.getLogsFacetValues(timeRange.start, timeRange.end);
+
+        if (
+          response &&
+          "data" in response &&
+          response.success &&
+          response.data &&
+          response.data.length > 0
+        ) {
+          setFacets(response.data);
+        } else if (Array.isArray(response) && response.length > 0) {
+          setFacets(response);
+        } else {
+          console.info("No valid facet data received, using empty array");
+          setFacets([]);
+        }
+
+        loadedFacetsForRange.current = rangeKey;
+      } catch (error) {
+        console.error("Error loading facets:", error);
+        setFacets([]);
+      }
+    }
+  }, [timeRange]);
 
   // Fetch logs when a log fact is selected
   useEffect(() => {
     if (selectedLogFact && slideOverOpen) {
       fetchLogsForFact(selectedLogFact);
+      loadFacets();
     }
-  }, [selectedLogFact, slideOverOpen]);
+  }, [selectedLogFact, slideOverOpen, loadFacets]);
 
   const fetchLogsForFact = async (fact: LogPostprocessingFact) => {
     try {
@@ -195,6 +239,9 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         end: newTimeRange.end,
       };
       fetchLogsForFact(updatedFact);
+
+      // Also load new facets for this time range
+      loadFacets();
     }
   };
 
@@ -253,6 +300,9 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         setIsLoading={(loading: boolean) => setIsLoading(loading)}
         setPageCursor={(cursor: string | undefined) => setPageCursor(cursor)}
         setTimeRange={(newTimeRange: TimeRange) => setTimeRange(newTimeRange)}
+        facets={facets}
+        selectedFacets={selectedFacets}
+        setSelectedFacets={setSelectedFacets}
       />
     );
   };

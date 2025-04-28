@@ -183,6 +183,9 @@ function App(): JSX.Element {
             setIsLoading={logsState.setIsLoading}
             setPageCursor={logsState.setPageCursor}
             setTimeRange={logsState.setTimeRange}
+            facets={logsState.facets}
+            selectedFacets={logsState.selectedFacets}
+            setSelectedFacets={logsState.setSelectedFacets}
           />
         );
       case "traces":

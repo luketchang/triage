@@ -25,7 +25,7 @@ interface TracesViewProps {
 }
 
 const TracesView: React.FC<TracesViewProps> = ({
-  _selectedArtifact,
+  selectedArtifact: _selectedArtifact,
   selectedTrace,
   handleTraceSelect,
   traces,
