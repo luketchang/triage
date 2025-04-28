@@ -3,7 +3,7 @@ import "./electron.d";
 import "./styles.css";
 
 // Feature flag for Traces view
-const TRACES_ENABLED = false;
+const TRACES_ENABLED = window.env.TRACES_ENABLED;
 
 import { Artifact, ContextItem, LogSearchInputCore, TabType, TraceForAgent } from "./types";
 import { generateId } from "./utils/formatters";

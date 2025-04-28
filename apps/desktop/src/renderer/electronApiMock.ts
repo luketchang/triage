@@ -651,6 +651,112 @@ const mockElectronAPI = {
     // If logContext is provided, use it, otherwise create mock data
     const mockData = logContext ? { logContext, codeContext: new Map() } : createMockData();
 
+    // Create a much fuller response content with detailed analysis
+    const responseContent = `## Root Cause Analysis
+    
+I've analyzed the issue and identified several key problems:
+
+1. The authentication service is returning 401 Unauthorized errors intermittently
+2. Database connection timeouts are occurring in the payment service
+3. The order service is experiencing high latency during checkout
+
+The primary issue appears to be in the authentication middleware where token validation is failing due to an incorrect JWT secret configuration in the production environment. This is causing cascading failures in downstream services.`;
+
+    // Create comprehensive log postprocessing facts for the sidebar
+    const logFacts = [
+      {
+        title: "Authentication Errors",
+        fact: "Multiple 401 Unauthorized errors observed in auth service with error message 'Invalid token signature'",
+        query: 'level:error service:auth message:"Invalid token signature"',
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+      {
+        title: "Database Timeouts",
+        fact: "Payment service experiencing database connection timeouts with error message 'Connection timeout after 5000ms'",
+        query: 'level:error service:payments message:"Connection timeout"',
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+      {
+        title: "High Latency Events",
+        fact: "Order service API endpoints show increased latency with processing times over 5 seconds",
+        query: "service:orders latency:>5000",
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+      {
+        title: "User Impact",
+        fact: "Approximately 15% of checkout requests are failing with HTTP 500 errors",
+        query: 'service:api-gateway status:500 path:"/api/checkout"',
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+    ];
+
+    // Create comprehensive code postprocessing facts for the sidebar
+    const codeFacts = [
+      {
+        title: "Auth Middleware Issue",
+        fact: "The authentication middleware is using a hardcoded JWT secret instead of loading from environment variables",
+        filepath: "src/services/auth.ts",
+        codeBlock: `export function validateToken(token: string): boolean {
+  try {
+    // BUG: Hardcoded secret instead of using process.env.JWT_SECRET
+    const decoded = jwt.verify(token, 'hardcoded_secret_do_not_use_in_production');
+    return true;
+  } catch (error) {
+    console.error('Token validation failed:', error);
+    return false;
+  }
+}`,
+      },
+      {
+        title: "Database Connection Configuration",
+        fact: "The database connection pool size is set too low for production traffic and timeout is misconfigured",
+        filepath: "src/services/payments/database.ts",
+        codeBlock: `export const dbConfig = {
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT || '5432'),
+  username: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  // BUG: Connection pool size too small and timeout too short
+  pool: {
+    max: 5,          // Should be higher for production
+    min: 0,
+    timeout: 5000    // Too short for complex queries
+  }
+};`,
+      },
+      {
+        title: "Order Processing Performance",
+        fact: "The order service is not properly caching inventory checks, leading to duplicate database queries",
+        filepath: "src/services/orders/service.ts",
+        codeBlock: `async function checkInventory(productId: string): Promise<boolean> {
+  // BUG: No caching, causing repeated database calls
+  const inventory = await db.query(
+    'SELECT quantity FROM inventory WHERE product_id = $1',
+    [productId]
+  );
+  
+  return inventory.rows[0]?.quantity > 0;
+}`,
+      },
+    ];
+
     return {
       success: true,
       message: "Agent invoked successfully",
@@ -660,14 +766,14 @@ const mockElectronAPI = {
           options?.reasonOnly
             ? "I analyzed this using Manual mode (reasoning only)"
             : "I searched logs and analyzed this in Search mode",
-          "Here's what I found: This is a simulated response from the agent.",
+          responseContent,
         ],
-        content: "Root cause identified: This is a mock response.",
+        content: responseContent,
         logPostprocessing: {
-          facts: [], // Empty array of facts
+          facts: logFacts,
         } as LogPostprocessing,
         codePostprocessing: {
-          facts: [], // Empty array of facts
+          facts: codeFacts,
         } as CodePostprocessing,
         logContext: mockData.logContext,
         codeContext: mockData.codeContext,
@@ -981,36 +1087,206 @@ const mockElectronAPI = {
     console.info("Mock agentChat called with message:", message);
     console.info("Context items:", contextItems.length);
 
+    // Create detailed response content
+    const detailedContent = `## Analysis of the Issue
+
+Based on the logs and code you've shared, I can see the following issues:
+
+1. The authentication service is failing with 401 errors due to JWT token validation problems
+2. There are database connection timeouts occurring in the payment service
+3. The order service shows high latency during peak traffic periods
+
+The root cause appears to be a misconfiguration in the authentication middleware where JWT validation is using an incorrect secret key in production. This is causing a cascade of failures in dependent services.
+
+**Recommended fix:** Update the JWT secret configuration in the auth service to use environment variables properly and ensure the same secret is used consistently across services.`;
+
+    // Create comprehensive log postprocessing facts
+    const detailedLogFacts = [
+      {
+        title: "Authentication Failures",
+        fact: "JWT token validation errors showing 'Invalid signature' in auth service logs",
+        query: 'service:auth level:error message:"Invalid signature"',
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+      {
+        title: "Payment Service Database Issues",
+        fact: "Database connection timeouts occurring in payment service during checkout flow",
+        query: 'service:payments level:error message:"Connection timeout"',
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+      {
+        title: "Order Service Latency",
+        fact: "Order service experiencing high latency (>2s) during checkout operations",
+        query: 'service:orders duration:>2000 operation:"checkout"',
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+      {
+        title: "Error Rate Spike",
+        fact: "Error rate increased by 25% during the incident period compared to baseline",
+        query: "status:error",
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+      {
+        title: "API Gateway Errors",
+        fact: "API Gateway returning 502 Bad Gateway errors when calling auth service",
+        query: 'service:api-gateway status:502 path:"/api/auth"',
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+    ];
+
+    // Create comprehensive code postprocessing facts
+    const detailedCodeFacts = [
+      {
+        title: "JWT Secret Misconfiguration",
+        fact: "Auth middleware using hardcoded JWT secret instead of environment variable",
+        filepath: "src/services/auth/middleware/auth.ts",
+        codeBlock: `// JWT validation middleware
+function validateToken(token) {
+  try {
+    // ISSUE: Hardcoded secret instead of using environment variable
+    const decoded = jwt.verify(token, 'dev_secret_key');
+    return { valid: true, user: decoded };
+  } catch (err) {
+    logger.error('Token validation failed:', err);
+    return { valid: false, error: err.message };
+  }
+}`,
+      },
+      {
+        title: "Database Connection Pool",
+        fact: "Payment service has insufficient database connection pool configuration",
+        filepath: "src/services/payments/config/database.ts",
+        codeBlock: `// Database configuration
+module.exports = {
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'payments',
+  username: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || '',
+  // ISSUE: Connection pool too small for production traffic
+  pool: {
+    max: 5,
+    min: 0,
+    idle: 10000,
+    acquire: 30000,
+    evict: 1000
+  }
+};`,
+      },
+      {
+        title: "Missing Query Optimization",
+        fact: "Order service making inefficient database queries during checkout",
+        filepath: "src/services/orders/repositories/order.repository.ts",
+        codeBlock: `// Get order details with items
+async function getOrderWithItems(orderId) {
+  // ISSUE: N+1 query problem - fetching items individually
+  const order = await db.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+  
+  // This should use a JOIN instead of separate queries
+  const items = await Promise.all(
+    order.items.map(item => db.query('SELECT * FROM order_items WHERE id = $1', [item.id]))
+  );
+  
+  return { ...order, items };
+}`,
+      },
+      {
+        title: "Environment Configuration",
+        fact: "Production environment configuration missing crucial settings",
+        filepath: "config/production.env",
+        codeBlock: `# Production environment settings
+NODE_ENV=production
+PORT=3000
+API_URL=https://api.example.com
+
+# ISSUE: JWT_SECRET is missing from production config
+# JWT_SECRET should be defined here
+
+DB_HOST=production-db.example.com
+DB_PORT=5432
+DB_NAME=ticketing
+DB_USER=app
+# DB_PASSWORD is loaded from secrets manager`,
+      },
+    ];
+
+    // Create mock log and code context maps
+    const mockLogContext = new Map<LogSearchInputCore, LogsWithPagination | string>();
+    const mockCodeContext = new Map<string, string>();
+
+    // Add sample items to the context maps
+    mockLogContext.set(
+      {
+        query: 'service:auth level:error message:"Invalid signature"',
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+      {
+        logs: createSampleLogs(5, "auth-service"),
+      }
+    );
+
+    mockCodeContext.set(
+      "src/services/auth/middleware/auth.ts",
+      `// Authentication middleware
+import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
+import logger from '../utils/logger';
+
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).send({ error: 'Authentication required' });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    // Problematic code: hardcoded secret
+    const payload = jwt.verify(token, 'dev_secret_key');
+    req.currentUser = payload;
+    next();
+  } catch (err) {
+    logger.error('Token validation failed:', err);
+    return res.status(401).send({ error: 'Invalid authentication token' });
+  }
+}`
+    );
+
     return {
       success: true,
-      content:
-        "This is a mock response from the agent chat. In a real implementation, this would use the agent to analyze logs and code.",
-      logContext: new Map<LogSearchInputCore, LogsWithPagination | string>(),
-      codeContext: new Map<string, string>(),
+      content: detailedContent,
+      logContext: mockLogContext,
+      codeContext: mockCodeContext,
       logPostprocessing: {
-        facts: [
-          {
-            title: "Sample Log Error",
-            fact: "There was a 500 error in the authentication service at 2:15 PM",
-            query: "level:error service:auth",
-            start: new Date(Date.now() - 86400000).toISOString(),
-            end: new Date().toISOString(),
-            limit: 100,
-            pageCursor: null,
-            type: "logSearchInput",
-          },
-        ],
+        facts: detailedLogFacts,
       },
       codePostprocessing: {
-        facts: [
-          {
-            title: "Authentication Logic",
-            fact: "The auth service uses JWT but the token validation has a bug in the expiry check",
-            filepath: "/services/auth/src/middleware/auth.ts",
-            codeBlock:
-              "function validateToken(token) {\n  // Bug: doesn't check token expiry correctly\n  return jwt.verify(token, process.env.JWT_SECRET);\n}",
-          },
-        ],
+        facts: detailedCodeFacts,
       },
     };
   },
@@ -1022,14 +1298,105 @@ const mockElectronAPI = {
     console.info("Mock manualChat called with message:", message);
     console.info("Context items:", contextItems.length);
 
+    // Create a more comprehensive response for manual chat
+    const manualContent = `## Analysis Based on Provided Context
+
+Based on the logs and code snippets you've shared, I can see several issues:
+
+1. The authentication service is consistently failing with JWT validation errors
+2. These errors occur when the application is deployed to the production environment
+3. The auth middleware is using a hardcoded JWT secret rather than loading from environment variables
+4. This is likely causing authentication failures for users trying to access protected endpoints
+
+**Root Cause:** The JWT secret used for token validation in the authentication middleware is hardcoded to a development value ('dev_secret_key') instead of being loaded from environment variables. In production, this is causing token validation to fail since tokens were likely issued with a different secret.
+
+**Recommended Fix:** Update the auth middleware to use the JWT_SECRET environment variable instead of the hardcoded value, and ensure this environment variable is properly set in all environments.`;
+
+    // Create mock log and code context based on what was provided
+    const manualLogContext = new Map<LogSearchInputCore, LogsWithPagination | string>();
+    const manualCodeContext = new Map<string, string>();
+
+    // For manual mode, we don't create new searches but use what was provided in contextItems
+    for (const item of contextItems) {
+      if (item.type === "logSearch") {
+        manualLogContext.set(item.data.input, item.data.results);
+      } else if (item.type === "singleTrace") {
+        // For traces, we'd do something different, but this is just a mock
+        // This would be different for traces but we're simplifying for the mock
+      }
+    }
+
+    // Create log processing facts based on provided context
+    const manualLogFacts = [
+      {
+        title: "Authentication Failures",
+        fact: "Multiple authentication failures with 'Invalid signature' errors in auth service logs",
+        query: 'service:auth level:error message:"Invalid signature"',
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+      {
+        title: "Production vs Development",
+        fact: "Error rate is significantly higher in production (15%) compared to development (0.2%)",
+        query: "service:auth environment:production",
+        start: new Date(Date.now() - 86400000).toISOString(),
+        end: new Date().toISOString(),
+        limit: 100,
+        pageCursor: null,
+        type: "logSearchInput",
+      },
+    ];
+
+    // Create code processing facts based on provided context
+    const manualCodeFacts = [
+      {
+        title: "JWT Secret Hardcoding",
+        fact: "Authentication middleware using a hardcoded JWT secret instead of environment variable",
+        filepath: "src/services/auth/middleware/auth.ts",
+        codeBlock: `// Authentication middleware
+export function requireAuth(req, res, next) {
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    // ISSUE: Hardcoded secret instead of using environment variable
+    const decoded = jwt.verify(token, 'dev_secret_key');
+    req.user = decoded.user;
+    next();
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+}`,
+      },
+      {
+        title: "Environment Configuration",
+        fact: "JWT_SECRET environment variable is defined but not used in the code",
+        filepath: "config/env/.env.production",
+        codeBlock: `# Production Environment Variables
+NODE_ENV=production
+PORT=3000
+DB_URI=mongodb+srv://user:password@cluster.mongodb.net/ticketing
+JWT_SECRET=production_secret_key_123
+# JWT_SECRET is defined here but not used in the code`,
+      },
+    ];
+
     return {
       success: true,
-      content:
-        "This is a mock response from manual chat. In the manual mode, I'll just analyze what you've shown me without performing additional searches.",
-      logContext: new Map<LogSearchInputCore, LogsWithPagination | string>(),
-      codeContext: new Map<string, string>(),
-      logPostprocessing: null,
-      codePostprocessing: null,
+      content: manualContent,
+      logContext: manualLogContext,
+      codeContext: manualCodeContext,
+      logPostprocessing: {
+        facts: manualLogFacts,
+      },
+      codePostprocessing: {
+        facts: manualCodeFacts,
+      },
     };
   },
 };

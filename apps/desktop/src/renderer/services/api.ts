@@ -11,9 +11,8 @@ import {
   TraceQueryParams,
 } from "../types";
 
-// TESTING ONLY: Set to true to use mock API instead of real Electron API
-// Set to false in production or when testing with the real API
-const USE_MOCK_API = false;
+// Get mock API setting from environment
+const USE_MOCK_API = window.env.USE_MOCK_API;
 
 // Helper function to create an error response
 const createErrorResponse = (errorMessage: string): ChatResponse => ({
