@@ -194,6 +194,13 @@ const ChatView: React.FC<ChatViewProps> = ({
         }
       }, 50);
     }
+
+    // Ensure context items are cleared even if there's an issue with the hook's clearing
+    if (contextItems.length > 0 && removeContextItem) {
+      // Create a copy to avoid modification during iteration
+      const itemsToRemove = [...contextItems];
+      itemsToRemove.forEach((item) => removeContextItem(item.id));
+    }
   };
 
   // Format timestamp range in a compact way

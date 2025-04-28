@@ -35,6 +35,12 @@ export function useChat() {
       codePostprocessing: null,
     };
 
+    // Store context items to attach to message
+    const contextItemsToAttach = [...contextItems];
+
+    // Clear context items immediately after creating the message
+    setContextItems([]);
+
     // Update the messages state
     setMessages((prevMessages) => [...prevMessages, userMessage]);
 
@@ -62,14 +68,14 @@ export function useChat() {
         // Call the agent-powered chat API
         response = await api.agentChat(
           newMessage,
-          contextItems,
+          contextItemsToAttach,
           messages.filter((m) => m.role !== "assistant" || m.content !== "Thinking...")
         );
       } else {
         // Call the manual chat API (no agent)
         response = await api.manualChat(
           newMessage,
-          contextItems,
+          contextItemsToAttach,
           messages.filter((m) => m.role !== "assistant" || m.content !== "Thinking...")
         );
       }
@@ -143,7 +149,7 @@ export function useChat() {
       // Hide the thinking indicator
       setIsThinking(false);
 
-      // Clear context items after sending a message
+      // Ensure context items are cleared after sending a message
       setContextItems([]);
     }
   };

@@ -1980,6 +1980,42 @@ body {
   justify-content: flex-start;
 }
 
+/* Styles for the context items container in the chat input area */
+.context-items-container {
+  width: 100%;
+  margin-bottom: 12px;
+  background-color: #252525;
+  border-radius: 6px;
+  padding: 10px;
+  border: 1px solid #333;
+}
+
+.context-items-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #bbb;
+  font-weight: 600;
+}
+
+.context-keyboard-shortcut {
+  font-size: 11px;
+  color: #777;
+}
+
+.context-items-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0;
+  max-height: 150px;
+  overflow-y: auto;
+  width: 100%;
+  justify-content: flex-start;
+}
+
 /* Ensure there's proper spacing after the context items */
 .chat-message .message-content > .thinking-message,
 .chat-message .message-content > p:first-child,
@@ -2004,6 +2040,46 @@ body {
   flex-shrink: 0;
 }
 
+/* Context card styling for both message context and input context */
+.context-card {
+  background-color: #2a2a2a;
+  border-radius: 4px;
+  padding: 6px 10px;
+  position: relative;
+  cursor: default;
+  display: flex;
+  align-items: flex-start;
+  transition: background-color 0.2s ease;
+  max-width: 100%;
+  border: none;
+  width: 200px;
+  min-height: 60px;
+  flex-shrink: 0;
+}
+
+/* Remove context button styling */
+.remove-context-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #444;
+  color: #eee;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.remove-context-button:hover {
+  background-color: #666;
+}
+
 /* Styling for user message text that follows context items */
 .chat-message.user .message-text-with-context {
   border-top: 1px solid #333;
@@ -2015,7 +2091,12 @@ body {
   background-color: #333;
 }
 
-.chat-message .context-card .context-card-content {
+.context-card:hover {
+  background-color: #333;
+}
+
+.chat-message .context-card .context-card-content,
+.context-card .context-card-content {
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -2023,7 +2104,8 @@ body {
   padding: 2px 0;
 }
 
-.chat-message .context-card .context-type {
+.chat-message .context-card .context-type,
+.context-card .context-type {
   font-size: 10px;
   padding: 1px 4px;
   border-radius: 2px;
@@ -2037,7 +2119,8 @@ body {
   color: #3498db;
 }
 
-.chat-message .context-card .context-title {
+.chat-message .context-card .context-title,
+.context-card .context-title {
   font-weight: 600;
   font-size: 12px;
   color: #eee;
@@ -2049,26 +2132,33 @@ body {
 
 .chat-message .context-card .context-time-range,
 .chat-message .context-card .context-page-cursor,
-.chat-message .context-card .context-trace-id {
+.chat-message .context-card .context-trace-id,
+.context-card .context-time-range,
+.context-card .context-page-cursor,
+.context-card .context-trace-id,
+.context-card .context-description {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: #999;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 2px;
 }
 
-.chat-message .context-card .context-time-range {
-  color: var(--accent-color);
+.chat-message .context-card .context-time-range,
+.context-card .context-time-range {
+  color: #ff6a3d;
 }
 
-.chat-message .context-card .context-page-cursor {
-  color: var(--text-tertiary);
+.chat-message .context-card .context-page-cursor,
+.context-card .context-page-cursor {
+  color: #777;
 }
 
-.chat-message .context-card .context-trace-id {
-  color: var(--text-tertiary);
-  font-family: var(--mono-font);
+.chat-message .context-card .context-trace-id,
+.context-card .context-trace-id {
+  color: #777;
+  font-family: monospace;
 }
 
 /* Facts Sidebar Styles */
