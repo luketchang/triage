@@ -107,6 +107,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
   }, [timeRange]);
 
   // Fetch logs when a log fact is selected
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (selectedLogFact && slideOverOpen) {
       // Only fetch logs and facets on first open
@@ -118,7 +119,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         loadFacets();
       }
     }
-  }, [selectedLogFact, slideOverOpen, loadFacets]);
+  }, [selectedLogFact, slideOverOpen]);
 
   const fetchLogsForFact = async (fact: LogPostprocessingFact) => {
     try {
