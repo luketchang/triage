@@ -2,6 +2,7 @@ import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination, ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
 
+import { v4 as uuidv4 } from "uuid";
 import { AgentStreamUpdate } from "../..";
 import {
   LogSearchInput,
@@ -11,7 +12,6 @@ import {
   TaskComplete,
 } from "../../types";
 import { ensureSingleToolCall, formatFacetValues, formatLogResults } from "../utils";
-
 export interface LogSearchAgentResponse {
   newLogContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   summary: string;
@@ -295,6 +295,7 @@ export class LogSearchAgent {
         if (params.onUpdate) {
           params.onUpdate({
             type: "intermediateToolCall",
+            id: uuidv4(),
             parentId: params.logSearchId,
             tool: "Search Query",
             details: {

@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import { Artifact, ChatMessage, ContextItem, StreamUpdate } from "../types";
+import {
+  Artifact,
+  ChatMessage,
+  ContextItem,
+  HighLevelToolCallUpdate,
+  StreamUpdate,
+} from "../types";
 import { createCodeArtifacts, createLogArtifacts } from "../utils/artifact-utils";
 import { generateId } from "../utils/formatters";
 
@@ -24,7 +30,7 @@ export function useChat() {
     // Register for updates and store the cleanup function
     const unregister = api.onAgentUpdate((update) => {
       setMessages((prevMessages) => {
-        // Find the thinking message
+        // Only register onAgentUpdate if we have thinking message (beginning of agent run)
         const messageIndex = prevMessages.findIndex((msg) => msg.id === thinkingMessageId);
         if (messageIndex === -1) return prevMessages;
 
@@ -36,60 +42,40 @@ export function useChat() {
 
         if (update.type === "highLevelToolCall") {
           // Check if we already have this high-level tool call
-          const typedUpdate = update as StreamUpdate & { id: string; tool: string };
           const existingIndex = currentUpdates.findIndex(
-            (u) => u.type === "highLevelToolCall" && (u as { id: string }).id === typedUpdate.id
+            (u) => u.type === "highLevelToolCall" && u.id === update.id
           );
 
           if (existingIndex === -1) {
             // Add a new high-level tool call with empty children array
-            newUpdates = [...currentUpdates, { ...typedUpdate, children: [] }];
+            newUpdates = [...currentUpdates, { ...update, children: [] }];
           } else {
             // This high-level tool call already exists, don't add it again
             newUpdates = [...currentUpdates];
           }
         } else if (update.type === "intermediateToolCall") {
-          // Find the parent high-level tool and add this as a child
-          const typedUpdate = update as StreamUpdate & {
-            parentId: string;
-            tool: string;
-            details?: Record<string, unknown>;
-          };
-
           const parentIndex = currentUpdates.findIndex(
-            (u) =>
-              u.type === "highLevelToolCall" && (u as { id: string }).id === typedUpdate.parentId
+            (u) => u.type === "highLevelToolCall" && u.id === update.parentId
           );
 
           if (parentIndex !== -1 && "children" in currentUpdates[parentIndex]) {
             // Check if this intermediate tool call already exists in the parent's children
-            const parent = currentUpdates[parentIndex] as {
-              type: "highLevelToolCall";
-              id: string;
-              tool: string;
-              children: StreamUpdate[];
-            };
+            const parent = currentUpdates[parentIndex] as HighLevelToolCallUpdate;
 
             // Check if we already have this same intermediate tool call
-            const existingChild = parent.children.find(
-              (child) =>
+            const existingChild = parent?.children?.find(
+              (child: StreamUpdate) =>
                 child.type === "intermediateToolCall" &&
-                (child as { tool: string }).tool === typedUpdate.tool &&
-                JSON.stringify((child as { details?: Record<string, unknown> }).details) ===
-                  JSON.stringify(typedUpdate.details)
+                child.tool === update.tool &&
+                JSON.stringify(child.details) === JSON.stringify(update.details)
             );
 
             if (!existingChild) {
               // Deep clone the updates array to avoid mutating the state directly
               newUpdates = [...currentUpdates];
               // Add the intermediate tool call to the parent's children
-              const parentInNewUpdates = newUpdates[parentIndex] as {
-                type: "highLevelToolCall";
-                id: string;
-                tool: string;
-                children: StreamUpdate[];
-              };
-              parentInNewUpdates.children = [...(parentInNewUpdates.children || []), typedUpdate];
+              const parentInNewUpdates = newUpdates[parentIndex] as HighLevelToolCallUpdate;
+              parentInNewUpdates.children = [...(parentInNewUpdates.children || []), update];
             } else {
               // Don't add duplicate intermediate tool call
               newUpdates = [...currentUpdates];
@@ -100,23 +86,39 @@ export function useChat() {
             const existingIndex = currentUpdates.findIndex(
               (u) =>
                 u.type === "intermediateToolCall" &&
-                (u as { tool: string }).tool === typedUpdate.tool &&
-                JSON.stringify((u as { details?: Record<string, unknown> }).details) ===
-                  JSON.stringify(typedUpdate.details)
+                u.tool === update.tool &&
+                JSON.stringify(u.details) === JSON.stringify(update.details)
             );
 
             if (existingIndex === -1) {
-              newUpdates = [...currentUpdates, typedUpdate];
+              newUpdates = [...currentUpdates, update];
             } else {
               newUpdates = [...currentUpdates];
             }
           }
         } else if (update.type === "response") {
-          // For response updates, just add them to the list
-          newUpdates = [...currentUpdates, update as StreamUpdate];
+          if (update.parentId) {
+            // Find the parent high-level tool call
+            const parentIndex = currentUpdates.findIndex(
+              (u) => u.type === "highLevelToolCall" && u.id === update.parentId
+            );
+
+            if (parentIndex !== -1 && "children" in currentUpdates[parentIndex]) {
+              // Add the response as a child of the high-level tool call
+              newUpdates = [...currentUpdates];
+              const parentInNewUpdates = newUpdates[parentIndex] as HighLevelToolCallUpdate;
+              parentInNewUpdates.children = [...(parentInNewUpdates.children || []), update];
+            } else {
+              // If parent not found, add at top level
+              newUpdates = [...currentUpdates, update];
+            }
+          } else {
+            // No parentId, add at top level
+            newUpdates = [...currentUpdates, update];
+          }
         } else {
           // Fallback - just add the update as-is
-          newUpdates = [...currentUpdates, update as StreamUpdate];
+          newUpdates = [...currentUpdates, update];
         }
 
         // Create the new message with updated streamingUpdates

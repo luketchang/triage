@@ -4,8 +4,10 @@
 import {
   AgentResult,
   AgentStreamUpdate,
+  HighLevelToolCallUpdate,
   LogSearchInput,
   LogSearchInputCore,
+  ResponseUpdate,
   TraceSearchInput,
 } from "@triage/agent";
 
@@ -23,11 +25,13 @@ import {
 // Re-export imported types
 export type {
   AgentResult,
+  HighLevelToolCallUpdate,
   IntegrationType,
   Log,
   LogSearchInput,
   LogSearchInputCore,
   LogsWithPagination,
+  ResponseUpdate,
   ServiceLatency,
   Span,
   SpansWithPagination,
@@ -213,7 +217,7 @@ export interface ChatMessage {
   contextItems?: ContextItem[];
   logPostprocessing: LogPostprocessing | null;
   codePostprocessing: CodePostprocessing | null;
-  streamingUpdates?: StreamUpdate[]; // For displaying streaming tool call updates
+  streamingUpdates?: AgentStreamUpdate[]; // For displaying streaming tool call updates
 }
 
 // Interface for main content tabs

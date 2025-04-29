@@ -451,9 +451,9 @@ const ChatView: React.FC<ChatViewProps> = ({
   const renderStreamUpdates = (updates: StreamUpdate[]) => {
     if (!updates || updates.length === 0) return null;
 
-    // Combine all response content
-    const responseContent = updates
-      .filter((update) => update.type === "response")
+    // Get standalone response content (responses without a parentId)
+    const standaloneResponseContent = updates
+      .filter((update) => update.type === "response" && !update.parentId)
       .map((update) => (update as { type: "response"; content: string }).content)
       .join("");
 
@@ -469,6 +469,17 @@ const ChatView: React.FC<ChatViewProps> = ({
               tool: string;
               children?: StreamUpdate[];
             };
+
+            // Get response content for this specific high-level tool
+            const toolResponseContent = updates
+              .filter(
+                (u) =>
+                  u.type === "response" &&
+                  (u as { parentId?: string }).parentId === highLevelUpdate.id
+              )
+              .map((u) => (u as { content: string }).content)
+              .join("");
+
             return (
               <div key={`high-${index}`} style={styles.highLevelToolCall}>
                 <div style={styles.highLevelToolHeader}>{highLevelUpdate.tool}</div>
@@ -496,6 +507,13 @@ const ChatView: React.FC<ChatViewProps> = ({
                       }
                       return null;
                     })}
+                  </div>
+                )}
+
+                {/* Render response content specific to this tool if present */}
+                {toolResponseContent && (
+                  <div style={{ ...styles.responseStream, marginLeft: "16px" }}>
+                    <ReactMarkdown>{toolResponseContent}</ReactMarkdown>
                   </div>
                 )}
               </div>
@@ -537,10 +555,10 @@ const ChatView: React.FC<ChatViewProps> = ({
             );
           })}
 
-        {/* Render response content if present */}
-        {responseContent && (
+        {/* Render standalone response content if present */}
+        {standaloneResponseContent && (
           <div style={styles.responseStream}>
-            <ReactMarkdown>{responseContent}</ReactMarkdown>
+            <ReactMarkdown>{standaloneResponseContent}</ReactMarkdown>
           </div>
         )}
       </div>

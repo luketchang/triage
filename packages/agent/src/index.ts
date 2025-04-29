@@ -68,23 +68,32 @@ export interface TriageAgentState {
   rootCauseAnalysis: string | null;
 }
 
+export type HighLevelToolCallUpdate = {
+  type: "highLevelToolCall";
+  id: string;
+  tool: string;
+  children?: AgentStreamUpdate[];
+};
+
+export type IntermediateToolCallUpdate = {
+  type: "intermediateToolCall";
+  parentId: string;
+  id: string;
+  tool: string;
+  details?: Record<string, any>;
+};
+
+export type ResponseUpdate = {
+  type: "response";
+  parentId?: string;
+  content: string;
+};
+
 // Stream update type for agent
 export type AgentStreamUpdate =
-  | {
-      type: "highLevelToolCall";
-      id: string;
-      tool: string;
-    }
-  | {
-      type: "intermediateToolCall";
-      parentId: string;
-      tool: string;
-      details?: Record<string, any>;
-    }
-  | {
-      type: "response";
-      content: string;
-    };
+  | HighLevelToolCallUpdate
+  | IntermediateToolCallUpdate
+  | ResponseUpdate;
 
 export class TriageAgent {
   private reasoningModel: Model;
@@ -225,6 +234,7 @@ export class TriageAgent {
       spanContext: state.spanContext,
       logLabelsMap: state.logLabelsMap,
       spanLabelsMap: state.spanLabelsMap,
+      parentId: reasoningId,
       onUpdate,
     });
 
@@ -282,6 +292,8 @@ export class TriageAgent {
       codeContext: state.codeContext,
       logContext: state.logContext,
       rootCauseAnalysis: state.rootCauseAnalysis ?? "",
+      parentId: reviewId,
+      onUpdate,
     });
 
     // Define base updates

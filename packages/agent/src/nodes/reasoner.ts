@@ -127,6 +127,7 @@ export class Reasoner {
     logLabelsMap: Map<string, string[]>;
     spanLabelsMap: Map<string, string[]>;
     chatHistory: string[];
+    parentId: string;
     onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${params.query}`);
@@ -140,7 +141,7 @@ export class Reasoner {
       model: getModelWrapper(this.llm),
       prompt,
       tools: {
-        // spanRequest: spanRequestToolSchema,
+        // TODO: add other tools
         logRequest: logRequestToolSchema,
       },
       toolChoice: "auto",
@@ -149,26 +150,39 @@ export class Reasoner {
 
     let text = "";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const toolCalls: Array<{ toolName: string; args: any }> = [];
+    const requestToolCalls: RequestToolCalls = {
+      type: "toolCalls",
+      toolCalls: [],
+    };
     for await (const part of fullStream) {
       if (part.type === "text-delta") {
         text += part.textDelta;
         // If this is root cause analysis (no tool calls), stream text as it's generated
-        if (params.onUpdate && toolCalls.length === 0) {
+        if (params.onUpdate) {
           params.onUpdate({
             type: "response",
+            parentId: params.parentId,
             content: part.textDelta,
           });
         }
+      } else if (part.type === "tool-call") {
+        if (part.toolName === "logRequest") {
+          requestToolCalls.toolCalls.push({
+            type: "logRequest",
+            request: part.args.request,
+            reasoning: part.args.reasoning,
+          });
+        }
+        // TODO: add cases for other future tools
       }
     }
 
     logger.info(`Reasoning response:\n${text}`);
-    logger.info(`Reasoning tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
+    logger.info(`Reasoning tool calls:\n${JSON.stringify(requestToolCalls, null, 2)}`);
 
     // Create the appropriate output object based on the type
     let output: ReasoningResponse;
-    if (toolCalls.length === 0) {
+    if (requestToolCalls.toolCalls.length === 0) {
       output = {
         type: "rootCauseAnalysis",
         rootCause: text,
@@ -178,22 +192,15 @@ export class Reasoner {
         type: "toolCalls",
         toolCalls: [],
       };
-      for (const toolCall of toolCalls) {
-        if (toolCall.toolName === "logRequest") {
+      for (const toolCall of requestToolCalls.toolCalls) {
+        if (toolCall.type === "logRequest") {
           output.toolCalls.push({
             type: "logRequest",
-            request: toolCall.args.request,
-            reasoning: toolCall.args.reasoning,
+            request: toolCall.request,
+            reasoning: toolCall.reasoning,
           });
-        } else if (toolCall.toolName === "spanRequest") {
-          output.toolCalls.push({
-            type: "spanRequest",
-            request: toolCall.args.request,
-            reasoning: toolCall.args.reasoning,
-          });
-        } else {
-          throw new Error(`Unexpected tool name: ${toolCall.toolName}`);
         }
+        // TODO: add cases for other future tools
       }
     }
 

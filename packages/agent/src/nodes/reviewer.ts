@@ -1,15 +1,15 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
-import { generateText } from "ai";
+import { streamText } from "ai";
 
 import {
   logRequestToolSchema,
   LogSearchInputCore,
   RequestToolCalls,
   RootCauseAnalysis,
-  spanRequestToolSchema,
 } from "../types";
 
+import { AgentStreamUpdate } from "..";
 import { formatFacetValues, formatLogResults } from "./utils";
 
 export type ReviewerResponse = RequestToolCalls | RootCauseAnalysis;
@@ -98,28 +98,60 @@ export class Reviewer {
     codeContext: Map<string, string>;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     rootCauseAnalysis: string;
+    parentId: string;
+    onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<ReviewerResponse> {
     logger.info(`Reviewing root cause analysis for query: ${params.query}`);
 
     const prompt = createPrompt(params);
     logger.info(`Reviewer prompt: ${prompt}`);
 
-    const { toolCalls, text } = await generateText({
+    const { fullStream } = streamText({
       model: getModelWrapper(this.llm),
       prompt: prompt,
       tools: {
-        spanRequest: spanRequestToolSchema,
+        // TODO: add other tools
         logRequest: logRequestToolSchema,
       },
       toolChoice: "auto",
+      toolCallStreaming: true,
     });
 
+    let text = "";
+    const requestToolCalls: RequestToolCalls = {
+      type: "toolCalls",
+      toolCalls: [],
+    };
+
+    for await (const part of fullStream) {
+      if (part.type === "text-delta") {
+        text += part.textDelta;
+
+        if (params.onUpdate) {
+          params.onUpdate({
+            type: "response",
+            parentId: params.parentId,
+            content: part.textDelta,
+          });
+        }
+      } else if (part.type === "tool-call") {
+        if (part.toolName === "logRequest") {
+          requestToolCalls.toolCalls.push({
+            type: "logRequest",
+            request: part.args.request,
+            reasoning: part.args.reasoning,
+          });
+        }
+        // TODO: add cases for other future tools like spanRequest
+      }
+    }
+
     logger.info(`Reviewer response:\n${text}`);
-    logger.info(`Reviewer tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
+    logger.info(`Reviewer tool calls:\n${JSON.stringify(requestToolCalls.toolCalls, null, 2)}`);
 
     // Create the appropriate output object based on the type
     let output: ReviewerResponse;
-    if (toolCalls.length === 0) {
+    if (requestToolCalls.toolCalls.length === 0) {
       // If no tool calls, return the root cause analysis as-is
       output = {
         type: "rootCauseAnalysis",
@@ -132,23 +164,15 @@ export class Reviewer {
         toolCalls: [],
       };
 
-      for (const toolCall of toolCalls) {
-        const toolName = toolCall.toolName as string;
-        if (toolName === "logRequest") {
+      for (const toolCall of requestToolCalls.toolCalls) {
+        if (toolCall.type === "logRequest") {
           output.toolCalls.push({
             type: "logRequest",
-            request: toolCall.args.request,
-            reasoning: toolCall.args.reasoning,
+            request: toolCall.request,
+            reasoning: toolCall.reasoning,
           });
-        } else if (toolName === "spanRequest") {
-          output.toolCalls.push({
-            type: "spanRequest",
-            request: toolCall.args.request,
-            reasoning: toolCall.args.reasoning,
-          });
-        } else {
-          throw new Error(`Unexpected tool name: ${toolName}`);
         }
+        // TODO: add cases for other future tools
       }
     }
 
