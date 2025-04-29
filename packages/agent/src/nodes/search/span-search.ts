@@ -35,6 +35,7 @@ function createSpanSearchPrompt(params: {
     spans: SpansWithPagination | string;
   };
   remainingQueries: number;
+  codebaseOverview: string;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -100,6 +101,10 @@ ${formattedPreviousResult}
 <span_results_history>
 ${formatSpanResults(params.spanResultHistory)}
 </span_results_history>
+
+<system_overview>
+${params.codebaseOverview}
+</system_overview>
 `;
 }
 
@@ -160,6 +165,7 @@ class SpanSearch {
       spans: SpansWithPagination | string;
     };
     remainingQueries: number;
+    codebaseOverview: string;
   }): Promise<SpanSearchResponse> {
     const prompt = createSpanSearchPrompt({
       ...params,
@@ -233,6 +239,7 @@ export class SpanSearchAgent {
     spanLabelsMap: Map<string, string[]>;
     spanResultHistory?: Map<SpanSearchInputCore, SpansWithPagination | string>;
     maxIters?: number;
+    codebaseOverview: string;
   }): Promise<SpanSearchAgentResponse> {
     // Convert spanResultHistory to Map if provided or create empty map
     let spanResultHistory: Map<SpanSearchInputCore, SpansWithPagination | string>;
@@ -264,6 +271,7 @@ export class SpanSearchAgent {
         spanLabelsMap: params.spanLabelsMap,
         previousSpanQueryResult: previousSpanQueryResult,
         remainingQueries: maxIters - currentIter,
+        codebaseOverview: params.codebaseOverview,
       });
 
       currentIter++;

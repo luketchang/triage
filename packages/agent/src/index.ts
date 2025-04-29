@@ -42,7 +42,7 @@ const INITIAL_SPAN_REQUEST: SpanRequest = {
   reasoning: "",
 };
 
-export interface OncallAgentState {
+export interface TriageAgentState {
   firstPass: boolean;
   toolCalls: Array<
     | SpanRequest
@@ -67,7 +67,7 @@ export interface OncallAgentState {
   rootCauseAnalysis: string | null;
 }
 
-export class OnCallAgent {
+export class TriageAgent {
   private reasoningModel: Model;
   private fastModel: Model;
   private observabilityPlatform: ObservabilityPlatform;
@@ -87,9 +87,9 @@ export class OnCallAgent {
 
   @timer
   async processLogRequest(
-    state: OncallAgentState,
+    state: TriageAgentState,
     request: LogRequest
-  ): Promise<Partial<OncallAgentState>> {
+  ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
 
     if (!this.observabilityFeatures.includes("logs")) {
@@ -108,6 +108,7 @@ export class OnCallAgent {
       logRequest: request.request,
       logLabelsMap: state.logLabelsMap,
       logResultHistory: state.logContext,
+      codebaseOverview: state.codebaseOverview,
     });
 
     // Check if this is the last tool call in queue and if so, add a reasoning call to the queue
@@ -125,9 +126,9 @@ export class OnCallAgent {
 
   @timer
   async processSpanRequest(
-    state: OncallAgentState,
+    state: TriageAgentState,
     request: SpanRequest
-  ): Promise<Partial<OncallAgentState>> {
+  ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Span Search " + "=".repeat(25));
 
     if (!this.observabilityFeatures.includes("spans")) {
@@ -145,6 +146,7 @@ export class OnCallAgent {
       query: state.query,
       spanRequest: request.request,
       spanLabelsMap: state.spanLabelsMap,
+      codebaseOverview: state.codebaseOverview,
     });
 
     // Check if this is the last tool call in queue and if so, add a reasoning call to the queue
@@ -161,7 +163,7 @@ export class OnCallAgent {
   }
 
   @timer
-  async processReasoningRequest(state: OncallAgentState): Promise<Partial<OncallAgentState>> {
+  async processReasoningRequest(state: TriageAgentState): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
     const reasoner = new Reasoner(this.reasoningModel);
     const response = await reasoner.invoke({
@@ -180,7 +182,7 @@ export class OnCallAgent {
     logger.info(`Reasoning response: ${JSON.stringify(response)}`);
 
     // Define base updates
-    const updates: Partial<OncallAgentState> = {
+    const updates: Partial<TriageAgentState> = {
       firstPass: false,
     };
 
@@ -207,7 +209,7 @@ export class OnCallAgent {
   }
 
   @timer
-  async processReviewRequest(state: OncallAgentState): Promise<Partial<OncallAgentState>> {
+  async processReviewRequest(state: TriageAgentState): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
 
     const reviewer = new Reviewer(this.reasoningModel);
@@ -224,7 +226,7 @@ export class OnCallAgent {
     });
 
     // Define base updates
-    const updates: Partial<OncallAgentState> = {
+    const updates: Partial<TriageAgentState> = {
       chatHistory: [...state.chatHistory],
     };
 
@@ -254,8 +256,8 @@ export class OnCallAgent {
 
   @timer
   async processLogPostprocessingRequest(
-    state: OncallAgentState
-  ): Promise<Partial<OncallAgentState>> {
+    state: TriageAgentState
+  ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
     try {
       const postprocessor = new LogPostprocessor(this.fastModel);
@@ -284,8 +286,8 @@ export class OnCallAgent {
 
   @timer
   async processCodePostprocessingRequest(
-    state: OncallAgentState
-  ): Promise<Partial<OncallAgentState>> {
+    state: TriageAgentState
+  ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
     try {
       const postprocessor = new CodePostprocessor(this.fastModel);
@@ -311,7 +313,7 @@ export class OnCallAgent {
     }
   }
 
-  async invoke(state: OncallAgentState): Promise<{
+  async invoke(state: TriageAgentState): Promise<{
     chatHistory: string[];
     response: string | null;
     logPostprocessing: LogPostprocessing | null;
@@ -335,7 +337,7 @@ export class OnCallAgent {
       };
 
       // Process the tool call based on its type
-      let stateUpdates: Partial<OncallAgentState> = {};
+      let stateUpdates: Partial<TriageAgentState> = {};
 
       if (nextToolCall) {
         if (nextToolCall.type === "logRequest") {
@@ -469,7 +471,7 @@ export async function invokeAgent({
     toolCalls.push({ type: "reasoningRequest" });
   }
 
-  const state: OncallAgentState = {
+  const state: TriageAgentState = {
     firstPass: true,
     toolCalls,
     query,
@@ -492,7 +494,7 @@ export async function invokeAgent({
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 
-  const agent = new OnCallAgent(
+  const agent = new TriageAgent(
     reasoningModel,
     fastModel,
     observabilityPlatform,
@@ -586,3 +588,4 @@ export * from "./nodes/search/log-search";
 export * from "./nodes/search/span-search";
 export * from "./nodes/utils";
 export * from "./types";
+
