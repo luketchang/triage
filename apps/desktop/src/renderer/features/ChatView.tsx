@@ -518,7 +518,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               type: "intermediateToolCall";
               parentId: string;
               tool: string;
-              details?: Record<string, any>;
+              details?: Record<string, unknown>;
             };
             let details = "";
             if (intermediateUpdate.details) {

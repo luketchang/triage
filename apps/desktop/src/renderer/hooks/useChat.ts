@@ -53,7 +53,7 @@ export function useChat() {
           const typedUpdate = update as StreamUpdate & {
             parentId: string;
             tool: string;
-            details?: Record<string, any>;
+            details?: Record<string, unknown>;
           };
 
           const parentIndex = currentUpdates.findIndex(
@@ -75,7 +75,7 @@ export function useChat() {
               (child) =>
                 child.type === "intermediateToolCall" &&
                 (child as { tool: string }).tool === typedUpdate.tool &&
-                JSON.stringify((child as { details?: Record<string, any> }).details) ===
+                JSON.stringify((child as { details?: Record<string, unknown> }).details) ===
                   JSON.stringify(typedUpdate.details)
             );
 
@@ -101,7 +101,7 @@ export function useChat() {
               (u) =>
                 u.type === "intermediateToolCall" &&
                 (u as { tool: string }).tool === typedUpdate.tool &&
-                JSON.stringify((u as { details?: Record<string, any> }).details) ===
+                JSON.stringify((u as { details?: Record<string, unknown> }).details) ===
                   JSON.stringify(typedUpdate.details)
             );
 
