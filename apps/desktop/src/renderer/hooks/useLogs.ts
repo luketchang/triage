@@ -84,7 +84,7 @@ export function useLogs(options: UseLogsOptions = {}) {
         setIsLoading(false);
       }
     },
-    [setIsLoading, setLogs, setLogsWithPagination, setPageCursor]
+    [setIsLoading, setLogs, setLogsWithPagination, setPageCursor, logsWithPagination]
   );
 
   // Fetch logs with query

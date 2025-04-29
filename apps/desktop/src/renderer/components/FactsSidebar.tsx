@@ -118,7 +118,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         loadFacets();
       }
     }
-  }, [selectedLogFact, slideOverOpen]);
+  }, [selectedLogFact, slideOverOpen, loadFacets]);
 
   const fetchLogsForFact = async (fact: LogPostprocessingFact) => {
     try {
