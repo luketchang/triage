@@ -92,18 +92,15 @@ function setupIpcHandlers(): void {
       try {
         console.log("Invoking agent with query:", query);
 
-        // Define the agent config
+        // TODO: Don't extract these from env
         const agentConfig: AgentConfig = {
-          repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
-          codebaseOverviewPath:
-            process.env.CODEBASE_OVERVIEW_PATH ||
-            "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-          observabilityPlatform: process.env.OBSERVABILITY_PLATFORM || "datadog",
-          observabilityFeatures: process.env.OBSERVABILITY_FEATURES
-            ? process.env.OBSERVABILITY_FEATURES.split(",")
-            : ["logs"],
-          startDate: new Date(process.env.START_DATE || "2025-04-16T21:00:00Z"),
-          endDate: new Date(process.env.END_DATE || "2025-04-16T23:59:59Z"),
+          repoPath: process.env.REPO_PATH!,
+          codebaseOverviewPath: process.env.CODEBASE_OVERVIEW_PATH!,
+          observabilityPlatform: process.env.OBSERVABILITY_PLATFORM!,
+          observabilityFeatures: process.env.OBSERVABILITY_FEATURES!.split(","),
+          // TODO: These should be loaded based on time range extracted from query
+          startDate: new Date(process.env.START_DATE!),
+          endDate: new Date(process.env.END_DATE!),
         };
 
         // Get reasonOnly flag from options
