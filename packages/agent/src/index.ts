@@ -9,6 +9,7 @@ import {
   SpansWithPagination,
 } from "@triage/observability";
 import { Command as CommanderCommand } from "commander";
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
 import { CodePostprocessor } from "./nodes/postprocessing/code-postprocessing";
@@ -68,10 +69,22 @@ export interface TriageAgentState {
 }
 
 // Stream update type for agent
-export type AgentStreamUpdate = {
-  type: "toolCall";
-  tool: string;
-};
+export type AgentStreamUpdate =
+  | {
+      type: "highLevelToolCall";
+      id: string;
+      tool: string;
+    }
+  | {
+      type: "intermediateToolCall";
+      parentId: string;
+      tool: string;
+      details?: Record<string, any>;
+    }
+  | {
+      type: "response";
+      content: string;
+    };
 
 export class TriageAgent {
   private reasoningModel: Model;
@@ -99,8 +112,11 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
 
+    // Generate a UUID for this high-level tool call
+    const logSearchId = uuidv4();
+
     if (onUpdate) {
-      onUpdate({ type: "toolCall", tool: "Log Search" });
+      onUpdate({ type: "highLevelToolCall", id: logSearchId, tool: "Log Search" });
     }
 
     if (!this.observabilityFeatures.includes("logs")) {
@@ -115,11 +131,13 @@ export class TriageAgent {
     );
 
     const response = await logSearchAgent.invoke({
+      logSearchId,
       query: state.query,
       logRequest: request.request,
       logLabelsMap: state.logLabelsMap,
       logResultHistory: state.logContext,
       codebaseOverview: state.codebaseOverview,
+      onUpdate,
     });
 
     // Check if this is the last tool call in queue and if so, add a reasoning call to the queue
@@ -143,8 +161,11 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Span Search " + "=".repeat(25));
 
+    // Generate a UUID for this high-level tool call
+    const spanSearchId = uuidv4();
+
     if (onUpdate) {
-      onUpdate({ type: "toolCall", tool: "Span Search" });
+      onUpdate({ type: "highLevelToolCall", id: spanSearchId, tool: "Span Search" });
     }
 
     if (!this.observabilityFeatures.includes("spans")) {
@@ -185,8 +206,11 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
 
+    // Generate a UUID for this high-level tool call
+    const reasoningId = uuidv4();
+
     if (onUpdate) {
-      onUpdate({ type: "toolCall", tool: "Reasoning" });
+      onUpdate({ type: "highLevelToolCall", id: reasoningId, tool: "Reasoning" });
     }
 
     const reasoner = new Reasoner(this.reasoningModel);
@@ -201,6 +225,7 @@ export class TriageAgent {
       spanContext: state.spanContext,
       logLabelsMap: state.logLabelsMap,
       spanLabelsMap: state.spanLabelsMap,
+      onUpdate,
     });
 
     logger.info(`Reasoning response: ${JSON.stringify(response)}`);
@@ -239,8 +264,11 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
 
+    // Generate a UUID for this high-level tool call
+    const reviewId = uuidv4();
+
     if (onUpdate) {
-      onUpdate({ type: "toolCall", tool: "Review" });
+      onUpdate({ type: "highLevelToolCall", id: reviewId, tool: "Review" });
     }
 
     const reviewer = new Reviewer(this.reasoningModel);
@@ -292,8 +320,11 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
 
+    // Generate a UUID for this high-level tool call
+    const logPostprocessingId = uuidv4();
+
     if (onUpdate) {
-      onUpdate({ type: "toolCall", tool: "Log Postprocessing" });
+      onUpdate({ type: "highLevelToolCall", id: logPostprocessingId, tool: "Log Postprocessing" });
     }
 
     try {
@@ -328,8 +359,15 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
 
+    // Generate a UUID for this high-level tool call
+    const codePostprocessingId = uuidv4();
+
     if (onUpdate) {
-      onUpdate({ type: "toolCall", tool: "Code Postprocessing" });
+      onUpdate({
+        type: "highLevelToolCall",
+        id: codePostprocessingId,
+        tool: "Code Postprocessing",
+      });
     }
 
     try {
@@ -599,7 +637,13 @@ async function main(): Promise<void> {
     startDate,
     endDate,
     onUpdate: (update) => {
-      console.log(`${update.type}: ${update.tool}`);
+      if (update.type === "highLevelToolCall") {
+        logger.info(`HighLevelTool: ${update.tool}`);
+      } else if (update.type === "intermediateToolCall") {
+        logger.info(`IntermediateTool: ${update.parentId} -> ${update.tool}`, update.details || "");
+      } else if (update.type === "response") {
+        logger.info(`Response: ${update.content}`);
+      }
     },
   });
 

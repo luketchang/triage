@@ -13,6 +13,7 @@ import {
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
+  StreamUpdate,
   Trace,
   TraceQueryParams,
 } from "./types";
@@ -55,7 +56,7 @@ declare global {
        * @param callback Function to call when an agent update is received
        * @returns Function to remove the event listener
        */
-      onAgentUpdate: (callback: (update: { type: string; tool: string }) => void) => () => void;
+      onAgentUpdate: (callback: (update: StreamUpdate) => void) => () => void;
 
       /**
        * Get the current agent configuration

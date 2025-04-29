@@ -1,7 +1,13 @@
 // Types and interfaces for the application
 
 // Import types from packages instead of redefining them
-import { AgentResult, LogSearchInput, LogSearchInputCore, TraceSearchInput } from "@triage/agent";
+import {
+  AgentResult,
+  AgentStreamUpdate,
+  LogSearchInput,
+  LogSearchInputCore,
+  TraceSearchInput,
+} from "@triage/agent";
 
 import {
   IntegrationType,
@@ -25,6 +31,7 @@ export type {
   ServiceLatency,
   Span,
   SpansWithPagination,
+  AgentStreamUpdate as StreamUpdate,
   Trace,
   TracesWithPagination,
 };
@@ -206,7 +213,7 @@ export interface ChatMessage {
   contextItems?: ContextItem[];
   logPostprocessing: LogPostprocessing | null;
   codePostprocessing: CodePostprocessing | null;
-  streamingUpdates?: string[]; // For displaying streaming tool call updates
+  streamingUpdates?: StreamUpdate[]; // For displaying streaming tool call updates
 }
 
 // Interface for main content tabs

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import { Artifact, ChatMessage, ContextItem } from "../types";
+import { Artifact, ChatMessage, ContextItem, StreamUpdate } from "../types";
 import { createCodeArtifacts, createLogArtifacts } from "../utils/artifact-utils";
 import { generateId } from "../utils/formatters";
 
@@ -23,25 +23,114 @@ export function useChat() {
 
     // Register for updates and store the cleanup function
     const unregister = api.onAgentUpdate((update) => {
-      if (update.type === "toolCall" && thinkingMessageId) {
-        // Update the thinking message with the current tool being called
-        setMessages((prevMessages) =>
-          prevMessages.map((message) => {
-            if (message.id === thinkingMessageId) {
-              // Create or update streamingUpdates array
-              const streamingUpdates = message.streamingUpdates
-                ? [...message.streamingUpdates, update.tool]
-                : [update.tool];
+      setMessages((prevMessages) => {
+        // Find the thinking message
+        const messageIndex = prevMessages.findIndex((msg) => msg.id === thinkingMessageId);
+        if (messageIndex === -1) return prevMessages;
 
-              return {
-                ...message,
-                streamingUpdates,
+        const message = prevMessages[messageIndex];
+        const currentUpdates = message.streamingUpdates || [];
+
+        // Handle the update based on its type
+        let newUpdates: StreamUpdate[];
+
+        if (update.type === "highLevelToolCall") {
+          // Check if we already have this high-level tool call
+          const typedUpdate = update as StreamUpdate & { id: string; tool: string };
+          const existingIndex = currentUpdates.findIndex(
+            (u) => u.type === "highLevelToolCall" && (u as { id: string }).id === typedUpdate.id
+          );
+
+          if (existingIndex === -1) {
+            // Add a new high-level tool call with empty children array
+            newUpdates = [...currentUpdates, { ...typedUpdate, children: [] }];
+          } else {
+            // This high-level tool call already exists, don't add it again
+            newUpdates = [...currentUpdates];
+          }
+        } else if (update.type === "intermediateToolCall") {
+          // Find the parent high-level tool and add this as a child
+          const typedUpdate = update as StreamUpdate & {
+            parentId: string;
+            tool: string;
+            details?: Record<string, any>;
+          };
+
+          const parentIndex = currentUpdates.findIndex(
+            (u) =>
+              u.type === "highLevelToolCall" && (u as { id: string }).id === typedUpdate.parentId
+          );
+
+          if (parentIndex !== -1 && "children" in currentUpdates[parentIndex]) {
+            // Check if this intermediate tool call already exists in the parent's children
+            const parent = currentUpdates[parentIndex] as {
+              type: "highLevelToolCall";
+              id: string;
+              tool: string;
+              children: StreamUpdate[];
+            };
+
+            // Check if we already have this same intermediate tool call
+            const existingChild = parent.children.find(
+              (child) =>
+                child.type === "intermediateToolCall" &&
+                (child as { tool: string }).tool === typedUpdate.tool &&
+                JSON.stringify((child as { details?: Record<string, any> }).details) ===
+                  JSON.stringify(typedUpdate.details)
+            );
+
+            if (!existingChild) {
+              // Deep clone the updates array to avoid mutating the state directly
+              newUpdates = [...currentUpdates];
+              // Add the intermediate tool call to the parent's children
+              const parentInNewUpdates = newUpdates[parentIndex] as {
+                type: "highLevelToolCall";
+                id: string;
+                tool: string;
+                children: StreamUpdate[];
               };
+              parentInNewUpdates.children = [...(parentInNewUpdates.children || []), typedUpdate];
+            } else {
+              // Don't add duplicate intermediate tool call
+              newUpdates = [...currentUpdates];
             }
-            return message;
-          })
-        );
-      }
+          } else {
+            // If parent not found, just add it at the top level
+            // But first check if it's already there
+            const existingIndex = currentUpdates.findIndex(
+              (u) =>
+                u.type === "intermediateToolCall" &&
+                (u as { tool: string }).tool === typedUpdate.tool &&
+                JSON.stringify((u as { details?: Record<string, any> }).details) ===
+                  JSON.stringify(typedUpdate.details)
+            );
+
+            if (existingIndex === -1) {
+              newUpdates = [...currentUpdates, typedUpdate];
+            } else {
+              newUpdates = [...currentUpdates];
+            }
+          }
+        } else if (update.type === "response") {
+          // For response updates, just add them to the list
+          newUpdates = [...currentUpdates, update as StreamUpdate];
+        } else {
+          // Fallback - just add the update as-is
+          newUpdates = [...currentUpdates, update as StreamUpdate];
+        }
+
+        // Create the new message with updated streamingUpdates
+        const updatedMessage = {
+          ...message,
+          streamingUpdates: newUpdates,
+        };
+
+        // Create a new messages array with the updated message
+        const updatedMessages = [...prevMessages];
+        updatedMessages[messageIndex] = updatedMessage;
+
+        return updatedMessages;
+      });
     });
 
     // Cleanup the event listener when the component unmounts or when thinkingMessageId changes

@@ -13,7 +13,6 @@
 - **Naming**: camelCase for variables/functions, PascalCase for classes/components/types
 - **Error Handling**: Use proper try/catch and typed Error objects
 - **Architecture**: Follow modular design in monorepo structure
-- **Linting**: Zero warnings policy (`--max-warnings 0`)
 - **Components**: Use functional components with proper prop typing
 - **Logging**: For print statements to test code, use console.info. For actual logging, use logger.info, logger.warn, logger.error (`import logger from 'utils/logger.ts'`)
 - **Scripts**: Parse any command line arguments with commander

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import FactsSidebar from "../components/FactsSidebar";
-import { Artifact, ChatMessage, ContextItem } from "../types";
+import { Artifact, ChatMessage, ContextItem, StreamUpdate } from "../types";
 
 // Add some CSS for streaming updates
 const styles = {
@@ -23,6 +23,37 @@ const styles = {
     fontWeight: "600",
     color: "#0066cc",
     fontSize: "16px",
+  },
+  highLevelToolCall: {
+    marginBottom: "12px",
+  },
+  highLevelToolHeader: {
+    fontWeight: "600",
+    color: "#0066cc",
+    fontSize: "16px",
+    marginBottom: "6px",
+  },
+  intermediateToolCalls: {
+    marginLeft: "16px",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "6px",
+  },
+  intermediateToolCall: {
+    padding: "6px 10px",
+    background: "rgba(0, 0, 0, 0.03)",
+    borderRadius: "4px",
+    fontSize: "14px",
+    color: "#444",
+  },
+  responseStream: {
+    marginTop: "12px",
+    padding: "12px",
+    borderRadius: "6px",
+    fontSize: "14px",
+    whiteSpace: "pre-wrap" as const,
+    maxHeight: "300px",
+    overflow: "auto",
   },
 };
 
@@ -416,6 +447,106 @@ const ChatView: React.FC<ChatViewProps> = ({
     );
   };
 
+  // Function to render stream updates
+  const renderStreamUpdates = (updates: StreamUpdate[]) => {
+    if (!updates || updates.length === 0) return null;
+
+    // Combine all response content
+    const responseContent = updates
+      .filter((update) => update.type === "response")
+      .map((update) => (update as { type: "response"; content: string }).content)
+      .join("");
+
+    return (
+      <div style={styles.streamingUpdates}>
+        {/* Render high-level tool calls */}
+        {updates
+          .filter((update) => update.type === "highLevelToolCall")
+          .map((update, index) => {
+            const highLevelUpdate = update as {
+              type: "highLevelToolCall";
+              id: string;
+              tool: string;
+              children?: StreamUpdate[];
+            };
+            return (
+              <div key={`high-${index}`} style={styles.highLevelToolCall}>
+                <div style={styles.highLevelToolHeader}>{highLevelUpdate.tool}</div>
+
+                {/* Render intermediate tool calls under this high-level tool */}
+                {highLevelUpdate.children && highLevelUpdate.children.length > 0 && (
+                  <div style={styles.intermediateToolCalls}>
+                    {highLevelUpdate.children.map((child, childIndex) => {
+                      if (child.type === "intermediateToolCall") {
+                        let details = "";
+                        if (child.details) {
+                          if (typeof child.details === "object") {
+                            details = Object.entries(child.details)
+                              .map(([key, value]) => `${key}: ${value}`)
+                              .join(", ");
+                          } else {
+                            details = String(child.details);
+                          }
+                        }
+                        return (
+                          <div key={`inter-${childIndex}`} style={styles.intermediateToolCall}>
+                            {child.tool} {details ? `(${details})` : ""}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+        {/* Render standalone intermediate tool calls (those without a parent) */}
+        {updates
+          .filter(
+            (update) =>
+              update.type === "intermediateToolCall" &&
+              !updates.some(
+                (u) =>
+                  u.type === "highLevelToolCall" &&
+                  u.id === (update as { parentId: string }).parentId
+              )
+          )
+          .map((update, index) => {
+            const intermediateUpdate = update as {
+              type: "intermediateToolCall";
+              parentId: string;
+              tool: string;
+              details?: Record<string, any>;
+            };
+            let details = "";
+            if (intermediateUpdate.details) {
+              if (typeof intermediateUpdate.details === "object") {
+                details = Object.entries(intermediateUpdate.details)
+                  .map(([key, value]) => `${key}: ${value}`)
+                  .join(", ");
+              } else {
+                details = String(intermediateUpdate.details);
+              }
+            }
+            return (
+              <div key={`standalone-${index}`} style={styles.intermediateToolCall}>
+                {intermediateUpdate.tool} {details ? `(${details})` : ""}
+              </div>
+            );
+          })}
+
+        {/* Render response content if present */}
+        {responseContent && (
+          <div style={styles.responseStream}>
+            <ReactMarkdown>{responseContent}</ReactMarkdown>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Function to render message content with animated ellipsis for "Thinking..."
   const renderMessageContent = (message: ChatMessage) => {
     // First check if there are context items
@@ -437,12 +568,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         {message.content === "Thinking..." ? (
           <div className="thinking-message">
             {message.streamingUpdates && message.streamingUpdates.length > 0 ? (
-              <div style={styles.streamingUpdates}>
-                <div style={styles.streamingUpdatesLabel}>Current step:</div>
-                <div style={styles.streamingUpdatesValue}>
-                  {message.streamingUpdates[message.streamingUpdates.length - 1]}
-                </div>
-              </div>
+              renderStreamUpdates(message.streamingUpdates)
             ) : (
               <span className="thinking-text">Processing...</span>
             )}

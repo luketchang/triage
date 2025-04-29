@@ -1,4 +1,4 @@
-import { LogSearchInputCore } from "@triage/agent";
+import { AgentStreamUpdate, LogSearchInputCore } from "@triage/agent";
 import { LogsWithPagination } from "@triage/observability";
 import { contextBridge, ipcRenderer } from "electron";
 
@@ -41,8 +41,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * Register a callback for agent update events
    * @param callback Function to call when an agent update is received
    */
-  onAgentUpdate: (callback: (update: unknown) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, update: unknown) => callback(update);
+  onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, update: AgentStreamUpdate) =>
+      callback(update);
     ipcRenderer.on("agent-update", listener);
     // Return a function to remove the listener when no longer needed
     return () => {

@@ -2,6 +2,7 @@ import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/co
 import { LogsWithPagination, SpansWithPagination } from "@triage/observability";
 import { streamText } from "ai";
 
+import { AgentStreamUpdate } from "../index";
 import {
   logRequestToolSchema,
   LogSearchInputCore,
@@ -11,7 +12,6 @@ import {
 } from "../types";
 
 import { formatFacetValues, formatLogResults, formatSpanResults } from "./utils";
-
 type ReasoningResponse = RootCauseAnalysis | RequestToolCalls;
 
 export interface ReasoningParams {
@@ -127,6 +127,7 @@ export class Reasoner {
     logLabelsMap: Map<string, string[]>;
     spanLabelsMap: Map<string, string[]>;
     chatHistory: string[];
+    onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${params.query}`);
 
@@ -152,14 +153,13 @@ export class Reasoner {
     for await (const part of fullStream) {
       if (part.type === "text-delta") {
         text += part.textDelta;
-      } else if (part.type === "reasoning") {
-        process.stdout.write(part.textDelta);
-      } else if (part.type === "redacted-reasoning") {
-        process.stdout.write(part.data);
-      } else if (part.type === "reasoning-signature") {
-        process.stdout.write(part.signature);
-      } else if (part.type === "tool-call") {
-        toolCalls.push({ toolName: part.toolName, args: part.args });
+        // If this is root cause analysis (no tool calls), stream text as it's generated
+        if (params.onUpdate && toolCalls.length === 0) {
+          params.onUpdate({
+            type: "response",
+            content: part.textDelta,
+          });
+        }
       }
     }
 
