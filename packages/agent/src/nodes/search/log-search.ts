@@ -35,6 +35,7 @@ function createLogSearchPrompt(params: {
     logs: LogsWithPagination | string;
   };
   remainingQueries: number;
+  codebaseOverview: string;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -99,6 +100,10 @@ ${formattedPreviousResult}
 <log_results_history>
 ${formatLogResults(params.logResultHistory)}
 </log_results_history>
+
+<system_overview>
+${params.codebaseOverview}
+</system_overview>
 `;
 }
 
@@ -160,6 +165,7 @@ class LogSearch {
       logs: LogsWithPagination | string;
     };
     remainingQueries: number;
+    codebaseOverview: string;
   }): Promise<LogSearchResponse> {
     const prompt = createLogSearchPrompt({
       ...params,
@@ -239,6 +245,7 @@ export class LogSearchAgent {
     logLabelsMap: Map<string, string[]>;
     logResultHistory?: Map<LogSearchInputCore, LogsWithPagination | string>;
     maxIters?: number;
+    codebaseOverview: string;
   }): Promise<LogSearchAgentResponse> {
     // Convert string[] logResultHistory to Map if needed, or create empty map if not provided
     let logResultHistory: Map<LogSearchInputCore, LogsWithPagination | string>;
@@ -270,6 +277,7 @@ export class LogSearchAgent {
         logResultHistory: logResultHistory,
         previousLogQueryResult: previousLogQueryResult,
         remainingQueries: maxIters - currentIter,
+        codebaseOverview: params.codebaseOverview,
       });
 
       currentIter++;

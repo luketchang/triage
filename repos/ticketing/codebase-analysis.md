@@ -1,149 +1,371 @@
-# Comprehensive System Architecture Document
+# Ticketing System Codebase Walkthrough
 
-## 1. Overview
+## Overview
 
-This ticketing platform is designed as a collection of decoupled microservices communicating through an event-driven architecture using NATS Streaming. The key services include:
-
-- **Auth Service** – Manages user registration, sign in/out, and session management.
-- **Tickets Service** – Handles ticket creation, update, retrieval, and reservation state.
-- **Orders Service** – Manages ticket orders including creation, cancellation, and order status updates.
-- **Payments Service** – Processes payments (via Stripe), records payment events, and updates order status upon successful transactions.
-- **Expiration Service** – Monitors order lifetimes and issues expiration events to automatically cancel unpaid orders.
-- **Client** – A Next.js web application acting as the user interface (UI) to access and interact with the backend services.
-- **Common Module** – Provides shared utilities such as error classes, logging, request validation, authentication middleware, and event abstractions that standardize behavior across all services.
-- **Infrastructure (Infra)** – Contains Kubernetes deployment manifests for production-level orchestration, service discovery (via Ingress), and connectivity to dependencies like MongoDB, Redis, and NATS.
-- **NATS Test Module** – A demonstration/test harness for simulating event publishing and consumption using the NATS Streaming platform.
-
----
-
-## 2. System Components and File Tree Overview
-
-Below is an abstracted file tree representation of the entire repository. Each directory corresponds to a logical microservice or component group:
+The Ticketing system is a microservices-based platform for buying and selling tickets to events. It follows an event-driven architecture where services communicate asynchronously through a message broker (NATS Streaming). The system consists of six main services, each with its own database and responsibility, plus a shared common library.
 
 ```
-.
-├── auth                -> Authentication microservice (user management)
-├── client              -> Next.js web client (UI) for end users
-├── common              -> Shared utilities (errors, events, middlewares, logger)
-├── expiration          -> Service handling order expiration logic
-├── infra               -> Kubernetes resources and cluster configuration
-├── nats-test           -> Test harness for demonstrating NATS event integration
-├── orders              -> Service managing order creation, listing, and cancellation
-├── payments            -> Payment processing service (integrates with Stripe)
-└── tickets             -> Service managing ticket data (creation, update, query)
+ticketing/
+├── auth/                 # Authentication service
+├── client/               # React frontend application
+├── common/               # Shared library used across services
+├── expiration/           # Order expiration service
+├── infra/                # Kubernetes configuration
+├── orders/               # Order management service
+├── payments/             # Payment processing service
+├── tickets/              # Ticket management service
+├── skaffold.yaml         # Development workflow configuration
+└── README.md             # Project documentation
 ```
 
-Each service is built as a standalone Node.js/Express application (except for the client, which is a Next.js app) and leverages common patterns for middleware registration, database (Mongo) connection, and inter-service communication via NATS.
+## Service Architecture
 
----
+### Common Library (`/common`)
 
-## 3. Detailed Module Breakdown
+The common library provides shared functionality across all services, ensuring consistency and reducing code duplication.
 
-### 3.1 Auth Service
+```
+common/
+├── src/
+│   ├── errors/                # Custom error classes
+│   │   ├── bad-request-error.ts
+│   │   ├── custom-error.ts
+│   │   ├── database-connection-error.ts
+│   │   ├── not-authorized-error.ts
+│   │   ├── not-found-error.ts
+│   │   └── request-validation-error.ts
+│   ├── events/                # Event definitions and base classes
+│   │   ├── base-event.ts      # Base interface for all events
+│   │   ├── base-listener.ts   # Abstract class for event subscribers
+│   │   ├── base-publisher.ts  # Abstract class for event publishers
+│   │   ├── subject.ts         # Enum of event types
+│   │   ├── ticket-created-event.ts
+│   │   ├── ticket-updated-event.ts
+│   │   ├── order-created-event.ts
+│   │   ├── order-cancelled-event.ts
+│   │   ├── expiration-complete-event.ts
+│   │   ├── payment-created-event.ts
+│   │   └── types/
+│   │       ├── order-status.ts    # Enum of order states
+│   │       └── queue-group-names.ts # Constants for NATS consumer groups
+│   ├── middlewares/           # Express middlewares
+│   │   ├── current-user.ts    # Extracts user from JWT
+│   │   ├── error-handler.ts   # Standardized error responses
+│   │   ├── require-auth.ts    # Authentication check
+│   │   └── validate-request.ts # Request validation
+│   ├── logger.ts              # Logging utility
+│   └── index.ts               # Exports all shared components
+```
 
-**Path:** `auth/`
+**Key Components:**
 
-**Purpose:**  
-Manages user registration, login, logout, and verifying the current authenticated user by issuing and checking JWTs. It persists user data in MongoDB.
+- **Error Handling**: Standardized error classes that extend `CustomError` for consistent error responses.
+- **Event System**: Base classes for event publishing and subscription with NATS Streaming.
+- **Middlewares**: Express middlewares for authentication, validation, and error handling.
+- **Event Interfaces**: Type definitions for all events exchanged between services.
 
-**File Tree & Key Components:**
+The event system is particularly important as it defines the contract between services. The `base-listener.ts` and `base-publisher.ts` provide abstract classes that handle the mechanics of event subscription and publishing, while specific event interfaces define the data structure for each event type.
+
+### Auth Service (`/auth`)
+
+The Auth service handles user authentication, including signup, signin, and signout operations.
 
 ```
 auth/
-└── src/
-    ├── app.ts            -> Sets up the Express app, registers middlewares (JSON parsing, cookie-session), and mounts auth routes.
-    ├── index.ts          -> Bootstraps the service: validates environment variables (JWT_KEY, AUTH_MONGO_URI), connects to MongoDB, and starts the HTTP server.
-    ├── models/
-    │   └── user.ts       -> Defines the User schema and model (includes password hashing pre-save logic).
-    ├── routes/
-    │   ├── currentuser.ts -> GET endpoint to return current authenticated user details.
-    │   ├── signin.ts      -> POST endpoint to authenticate users using email/password and issue JWT.
-    │   ├── signout.ts     -> POST endpoint to clear the session (user logout).
-    │   └── signup.ts      -> POST endpoint for user registration.
-    └── utils/
-        └── password.ts   -> Contains password hashing and comparison functions using crypto.
+├── src/
+│   ├── models/
+│   │   └── user.ts           # User model with password hashing
+│   ├── routes/
+│   │   ├── currentuser.ts    # Returns current user info
+│   │   ├── signin.ts         # Handles user login
+│   │   ├── signout.ts        # Handles user logout
+│   │   └── signup.ts         # Handles user registration
+│   ├── utils/
+│   │   └── password.ts       # Password hashing utilities
+│   ├── app.ts                # Express app setup
+│   ├── index.ts              # Service entry point
+│   └── tracer.ts             # Tracing configuration
 ```
 
----
+**Key Components:**
 
-### 3.2 Tickets Service
+- **User Model**: Defines the MongoDB schema for users with password hashing using bcrypt.
+- **Authentication Routes**: Express routes for user signup, signin, signout, and current user.
+- **JWT**: Uses JSON Web Tokens for authentication, stored in cookies.
 
-**Path:** `tickets/`
+The Auth service is independent and doesn't publish or subscribe to any events. It provides JWT tokens that other services use to authenticate requests. The `currentuser` route is used by the client to determine if a user is logged in.
 
-**Purpose:**  
-Handles ticket lifecycle management (creation, updates, display) and ensures ticket availability is kept in sync with orders. It publishes events when tickets are created or updated and subscribes to order events (e.g., order cancellation/creation) to adjust ticket reservations.
+### Tickets Service (`/tickets`)
 
-**File Tree & Key Components:**
+The Tickets service manages the creation, updating, and retrieval of ticket listings.
 
 ```
 tickets/
-└── src/
-    ├── __mocks__/
-    │   └── nats-wrapper.ts          -> Mock implementation of NATS client for testing.
-    ├── app.ts                     -> Configures the Express app; registers ticket routes and common middleware.
-    ├── index.ts                   -> Entry point: validates env variables, connects to MongoDB & NATS; instantiates event listeners; starts server.
-    ├── logger.ts                  -> Configures Winston logger for structured logging.
-    ├── nats-wrapper.ts            -> Abstraction over NATS Streaming client; ensures reliable connection for event publishing/subscription.
-    ├── models/
-    │   └── ticket.ts              -> Mongoose model for Ticket with fields (title, price, userId, optional orderId) and concurrency control.
-    ├── events/
-    │   ├── listeners/
-    │   │   ├── order-created-listener.ts  -> Listens for OrderCreated events; marks ticket as reserved.
-    │   │   └── order-cancelled-listener.ts  -> Listens for OrderCancelled events; clears ticket reservation.
-    │   └── publishers/
-    │       ├── ticket-created-publisher.ts  -> Publishes TicketCreated events upon new ticket creation.
-    │       └── ticket-updated-publisher.ts  -> Publishes TicketUpdated events after ticket modifications.
-    └── routes/
-        ├── index.ts             -> GET endpoint to list all tickets.
-        ├── new.ts               -> POST endpoint to create a new ticket (with authentication and validation).
-        ├── show.ts              -> GET endpoint to retrieve details of a specific ticket.
-        └── update.ts            -> PUT endpoint to update ticket details—ensures only ticket owners or valid non-reserved tickets may be updated.
+├── src/
+│   ├── events/
+│   │   ├── listeners/
+│   │   │   ├── order-created-listener.ts    # Marks tickets as reserved
+│   │   │   └── order-cancelled-listener.ts  # Releases reserved tickets
+│   │   └── publishers/
+│   │       ├── ticket-created-publisher.ts  # Announces new tickets
+│   │       └── ticket-updated-publisher.ts  # Announces ticket updates
+│   ├── models/
+│   │   └── ticket.ts          # Ticket model with versioning
+│   ├── routes/
+│   │   ├── index.ts           # Lists all tickets
+│   │   ├── new.ts             # Creates new tickets
+│   │   ├── show.ts            # Shows ticket details
+│   │   └── update.ts          # Updates ticket details
+│   ├── app.ts                 # Express app setup
+│   ├── index.ts               # Service entry point
+│   ├── nats-wrapper.ts        # NATS client singleton
+│   └── tracer.ts              # Tracing configuration
 ```
 
----
+**Key Components:**
 
-## 4. Component Interactions and Overall System Workflow
+- **Ticket Model**: Defines the MongoDB schema for tickets with optimistic concurrency control using versioning.
+- **CRUD Routes**: Express routes for creating, reading, updating, and listing tickets.
+- **Event Publishers**: Publish events when tickets are created or updated.
+- **Event Listeners**: Listen for order events to mark tickets as reserved or release them.
 
-### Event-Driven Communication
+The Tickets service demonstrates the event-driven architecture well. When a ticket is created or updated, it publishes events that other services can subscribe to. It also listens for order events to update the ticket's reservation status, ensuring that tickets can't be double-booked.
 
-- **NATS Streaming Server** is at the heart of the event-driven architecture. Every service uses a common **nats-wrapper** module to establish a connection, publish domain events (e.g., TicketCreated, OrderCreated, PaymentCreated, ExpirationComplete), and subscribe to events in order to maintain consistent state across the system.
+### Orders Service (`/orders`)
 
-- **Tickets Service** publishes events (TicketCreated, TicketUpdated) whenever a ticket is added or modified. It also listens for order-related events to update the reservation status.
+The Orders service manages the creation and cancellation of orders for tickets.
 
-- **Orders Service** creates orders by validating ticket availability, publishes OrderCreated events, and listens to ExpirationComplete and PaymentCreated events to transition order states.
+```
+orders/
+├── src/
+│   ├── events/
+│   │   ├── listeners/
+│   │   │   ├── expiration-complete-listener.ts  # Handles expired orders
+│   │   │   ├── payment-created-listener.ts      # Marks orders as complete
+│   │   │   ├── ticket-created-listener.ts       # Tracks available tickets
+│   │   │   └── ticket-updated-listener.ts       # Updates ticket info
+│   │   └── publishers/
+│   │       ├── order-created-publisher.ts       # Announces new orders
+│   │       └── order-cancelled-publisher.ts     # Announces cancelled orders
+│   ├── models/
+│   │   ├── order.ts           # Order model with status tracking
+│   │   └── ticket.ts          # Local ticket model with reservation check
+│   ├── routes/
+│   │   ├── delete.ts          # Cancels orders
+│   │   ├── index.ts           # Lists user's orders
+│   │   ├── new.ts             # Creates new orders
+│   │   └── show.ts            # Shows order details
+│   ├── app.ts                 # Express app setup
+│   ├── index.ts               # Service entry point
+│   ├── nats-wrapper.ts        # NATS client singleton
+│   └── tracer.ts              # Tracing configuration
+```
 
-- **Payments Service** consumes order state information to verify and process payments using Stripe. Upon a successful transaction, it publishes a PaymentCreated event, indicating that the order has been paid.
+**Key Components:**
 
-- **Expiration Service** listens for OrderCreated events, schedules expiration jobs via a Redis-backed queue, and when an order’s time expires, publishes an ExpirationComplete event. This ensures that unpaid orders are cancelled promptly.
+- **Order Model**: Defines the MongoDB schema for orders with status tracking.
+- **Local Ticket Model**: A local representation of tickets with methods to check if a ticket is already reserved.
+- **Order Routes**: Express routes for creating, cancelling, and viewing orders.
+- **Event Publishers**: Publish events when orders are created or cancelled.
+- **Event Listeners**: Listen for ticket, expiration, and payment events to update order status.
 
----
+The Orders service maintains its own copy of ticket data, updated through events from the Tickets service. This demonstrates the concept of data duplication in microservices, where each service has its own view of the data it needs. The service also implements the reservation logic, ensuring that tickets can't be double-booked.
 
-## 5. How the System Works as a Whole
+### Expiration Service (`/expiration`)
 
-1. **User Journey:**
+The Expiration service handles the time-based expiration of orders, ensuring that unpaid orders are automatically cancelled after a set period.
 
-   - A new user registers or signs in via the Auth service.
-   - Upon authentication, the user navigates the client to browse available tickets and selects a ticket to purchase.
+```
+expiration/
+├── src/
+│   ├── events/
+│   │   ├── listeners/
+│   │   │   └── order-created-listener.ts    # Schedules order expiration
+│   │   └── publishers/
+│   │       └── expiration-complete-publisher.ts  # Announces expired orders
+│   ├── queues/
+│   │   └── expiration-queue.ts  # Bull queue for delayed jobs
+│   ├── index.ts                 # Service entry point
+│   ├── nats-wrapper.ts          # NATS client singleton
+│   └── tracer.ts                # Tracing configuration
+```
 
-2. **Order Creation:**
+**Key Components:**
 
-   - When a user places an order, the Orders service checks for ticket availability and creates an order with an expiration time.
-   - An OrderCreated event is published via NATS.
+- **Expiration Queue**: A Bull queue backed by Redis that schedules delayed jobs for order expiration.
+- **Order Created Listener**: Listens for new orders and schedules expiration jobs.
+- **Expiration Complete Publisher**: Publishes events when orders expire.
 
-3. **Order Management:**
+The Expiration service is unique in that it doesn't have a REST API or a database. It uses Redis and Bull to schedule delayed jobs that trigger when an order's expiration time is reached. When an order is created, the service calculates the delay until expiration and adds a job to the queue. When the job executes, it publishes an expiration event that the Orders service listens for.
 
-   - The Expiration service schedules a background job and publishes an ExpirationComplete event if the payment is not completed in time.
-   - Concurrently, the Orders service listens to PaymentCreated events to mark orders as complete.
+### Payments Service (`/payments`)
 
-4. **Payment Processing:**
+The Payments service handles payment processing for orders using Stripe.
 
-   - The Payments service verifies the order, processes a charge through Stripe, and publishes a PaymentCreated event.
+```
+payments/
+├── src/
+│   ├── events/
+│   │   ├── listeners/
+│   │   │   ├── order-created-listener.ts    # Tracks orders for payment
+│   │   │   └── order-cancelled-listener.ts  # Prevents payment for cancelled orders
+│   │   └── publishers/
+│   │       └── payment-created-publisher.ts  # Announces successful payments
+│   ├── models/
+│   │   ├── order.ts           # Local order model
+│   │   └── payment.ts         # Payment record model
+│   ├── routes/
+│   │   └── new.ts             # Processes payments
+│   ├── app.ts                 # Express app setup
+│   ├── index.ts               # Service entry point
+│   ├── nats-wrapper.ts        # NATS client singleton
+│   ├── stripe.ts              # Stripe API client
+│   └── tracer.ts              # Tracing configuration
+```
 
-5. **Synchronized Updates:**
-   - The Tickets service listens to changes from the Orders service and updates ticket reservation flags accordingly.
+**Key Components:**
 
----
+- **Payment Model**: Records successful payments with references to orders and Stripe charges.
+- **Local Order Model**: A local representation of orders to validate payment requests.
+- **Payment Route**: Processes payments through Stripe and records successful transactions.
+- **Event Listeners**: Listen for order events to track which orders can be paid for.
+- **Payment Created Publisher**: Publishes events when payments are successful.
 
-## 6. Conclusion
+The Payments service demonstrates how a third-party service (Stripe) is integrated into the microservices architecture. It maintains its own copy of order data, updated through events, and uses this to validate payment requests. When a payment is successful, it publishes an event that the Orders service listens for to mark the order as complete.
 
-This document provides a holistic view of the ticketing platform’s architecture. The event-driven design and modular implementation ensure that each service can scale independently while maintaining tight integration via a robust messaging layer and common utilities.
+### Client Application (`/client`)
+
+The Client application is a React frontend built with Next.js that provides the user interface for the ticketing system.
+
+```
+client/
+├── api/
+│   └── build-client.js        # Axios client configuration
+├── components/
+│   └── header.js              # Navigation header component
+├── hooks/
+│   └── use-request.js         # Custom hook for API requests
+├── pages/
+│   ├── auth/
+│   │   ├── signin.js          # Sign in page
+│   │   ├── signout.js         # Sign out page
+│   │   └── signup.js          # Sign up page
+│   ├── orders/
+│   │   ├── [orderId].js       # Order details page
+│   │   └── index.js           # List user's orders
+│   ├── tickets/
+│   │   ├── [ticketId].js      # Ticket details page
+│   │   └── new.js             # Create ticket page
+│   ├── _app.js                # Next.js app component
+│   └── index.js               # Landing page with ticket list
+└── next.config.js             # Next.js configuration
+```
+
+**Key Components:**
+
+- **Pages**: Next.js pages for different routes in the application.
+- **API Client**: Configured Axios client for making requests to the backend services.
+- **Custom Hooks**: Reusable logic for API requests with error handling.
+- **Components**: Reusable UI components like the header.
+
+The Client application interacts with all the backend services through their REST APIs. It uses Next.js's server-side rendering to fetch data on the server before rendering pages, which improves performance and SEO. The application also handles authentication by storing and sending JWT tokens in cookies.
+
+### Infrastructure (`/infra`)
+
+The Infrastructure directory contains Kubernetes configuration files for deploying the services.
+
+```
+infra/
+├── k8s/
+│   ├── auth-depl.yaml             # Auth service deployment
+│   ├── auth-mongo-depl.yaml       # MongoDB for Auth service
+│   ├── client-depl.yaml           # Client application deployment
+│   ├── expiration-depl.yaml       # Expiration service deployment
+│   ├── expiration-redis-depl.yaml # Redis for Expiration service
+│   ├── ingress-srv.yaml           # Ingress controller for routing
+│   ├── nats-depl.yaml             # NATS Streaming deployment
+│   ├── orders-depl.yaml           # Orders service deployment
+│   ├── orders-mongo-depl.yaml     # MongoDB for Orders service
+│   ├── payments-depl.yaml         # Payments service deployment
+│   ├── payments-mongo-depl.yaml   # MongoDB for Payments service
+│   ├── tickets-depl.yaml          # Tickets service deployment
+│   └── tickets-mongo-depl.yaml    # MongoDB for Tickets service
+```
+
+**Key Components:**
+
+- **Service Deployments**: Kubernetes deployments for each service with container configurations.
+- **Database Deployments**: MongoDB deployments for each service that needs persistent storage.
+- **NATS Deployment**: Configuration for the NATS Streaming server.
+- **Ingress Controller**: Routes external traffic to the appropriate service based on the URL path.
+
+The infrastructure configuration demonstrates how the microservices are deployed and connected in a Kubernetes cluster. Each service has its own deployment and database, and they communicate through the NATS Streaming server. The Ingress controller routes external traffic to the appropriate service based on the URL path.
+
+## Development Workflow
+
+The `skaffold.yaml` file configures the development workflow using Skaffold, a tool for continuous development with Kubernetes.
+
+```yaml
+apiVersion: skaffold/v2alpha3
+kind: Config
+deploy:
+  kubectl:
+    manifests:
+      - ./infra/k8s/*
+build:
+  local:
+    push: false
+  artifacts:
+    - image: luketchang/auth
+      context: .
+      docker:
+        dockerfile: auth/Dockerfile
+      sync:
+        manual:
+          - src: "auth/src/*.ts"
+            dest: .
+    # Similar configurations for other services
+```
+
+Skaffold watches for file changes and automatically rebuilds and redeploys the affected services, making development faster and more efficient.
+
+## Event Flow and Communication
+
+The services communicate through events published to NATS Streaming. Here's a summary of the event flow:
+
+1. **Ticket Creation**:
+
+   - User creates a ticket through the Tickets service.
+   - Tickets service publishes a `ticket:created` event.
+   - Orders service listens for this event and creates a local copy of the ticket.
+
+2. **Order Creation**:
+
+   - User creates an order through the Orders service.
+   - Orders service checks if the ticket is available and marks it as reserved.
+   - Orders service publishes an `order:created` event.
+   - Tickets service listens for this event and marks the ticket as reserved.
+   - Expiration service listens for this event and schedules an expiration job.
+   - Payments service listens for this event and creates a local copy of the order.
+
+3. **Order Expiration**:
+
+   - Expiration service publishes an `expiration:complete` event when the order expires.
+   - Orders service listens for this event and cancels the order if it's not paid.
+   - Orders service publishes an `order:cancelled` event if the order is cancelled.
+   - Tickets service listens for this event and releases the ticket.
+   - Payments service listens for this event and prevents payment for the cancelled order.
+
+4. **Payment Processing**:
+   - User makes a payment through the Payments service.
+   - Payments service processes the payment with Stripe and records it.
+   - Payments service publishes a `payment:created` event.
+   - Orders service listens for this event and marks the order as complete.
+
+This event-driven architecture ensures that each service has the data it needs to function independently while maintaining consistency across the system.
+
+## Conclusion
+
+The Ticketing system demonstrates a well-designed microservices architecture with clear separation of concerns and robust event-driven communication. Each service has its own responsibility and database, and they communicate asynchronously through events, making the system scalable and resilient.
+
+The use of TypeScript, Express, MongoDB, NATS Streaming, and Kubernetes provides a modern and powerful tech stack for building distributed systems. The event-driven architecture ensures that data is consistent across services while allowing them to operate independently.
