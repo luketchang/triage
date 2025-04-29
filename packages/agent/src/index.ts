@@ -108,6 +108,7 @@ export class OnCallAgent {
       logRequest: request.request,
       logLabelsMap: state.logLabelsMap,
       logResultHistory: state.logContext,
+      codebaseOverview: state.codebaseOverview,
     });
 
     // Check if this is the last tool call in queue and if so, add a reasoning call to the queue
@@ -145,6 +146,7 @@ export class OnCallAgent {
       query: state.query,
       spanRequest: request.request,
       spanLabelsMap: state.spanLabelsMap,
+      codebaseOverview: state.codebaseOverview,
     });
 
     // Check if this is the last tool call in queue and if so, add a reasoning call to the queue
