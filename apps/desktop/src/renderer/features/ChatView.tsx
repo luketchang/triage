@@ -6,21 +6,23 @@ import { Artifact, ChatMessage, ContextItem } from "../types";
 // Add some CSS for streaming updates
 const styles = {
   streamingUpdates: {
-    marginTop: "8px",
-    padding: "8px 12px",
+    padding: "12px 16px",
     background: "rgba(0, 0, 0, 0.05)",
     borderRadius: "6px",
-    fontSize: "14px",
+    fontSize: "15px",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "6px",
   },
   streamingUpdatesLabel: {
     fontWeight: "bold",
-    marginBottom: "4px",
-    fontSize: "12px",
+    fontSize: "13px",
     color: "#666",
   },
   streamingUpdatesValue: {
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#0066cc",
+    fontSize: "16px",
   },
 };
 
@@ -49,7 +51,6 @@ const ChatView: React.FC<ChatViewProps> = ({
   chatMode = "agent",
   toggleChatMode,
 }) => {
-  const [ellipsis, setEllipsis] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hoveredContextId, setHoveredContextId] = useState<string | null>(null);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
@@ -158,22 +159,6 @@ const ChatView: React.FC<ChatViewProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // Animate ellipsis for the "Thinking..." message
-  useEffect(() => {
-    if (!isThinking) return;
-
-    const interval = setInterval(() => {
-      setEllipsis((prev) => {
-        if (prev === "...") return "";
-        if (prev === "..") return "...";
-        if (prev === ".") return "..";
-        return ".";
-      });
-    }, 400);
-
-    return () => clearInterval(interval);
-  }, [isThinking]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -451,14 +436,15 @@ const ChatView: React.FC<ChatViewProps> = ({
 
         {message.content === "Thinking..." ? (
           <div className="thinking-message">
-            <span className="thinking-text">Thinking{ellipsis}</span>
-            {message.streamingUpdates && message.streamingUpdates.length > 0 && (
+            {message.streamingUpdates && message.streamingUpdates.length > 0 ? (
               <div style={styles.streamingUpdates}>
                 <div style={styles.streamingUpdatesLabel}>Current step:</div>
                 <div style={styles.streamingUpdatesValue}>
                   {message.streamingUpdates[message.streamingUpdates.length - 1]}
                 </div>
               </div>
+            ) : (
+              <span className="thinking-text">Processing...</span>
             )}
           </div>
         ) : (
