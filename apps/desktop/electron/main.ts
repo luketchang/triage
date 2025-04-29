@@ -112,6 +112,13 @@ function setupIpcHandlers(): void {
           logContext = new Map(serializedLogContext);
         }
 
+        // Send updates to renderer via mainWindow
+        const onUpdate = (update: any) => {
+          if (mainWindow) {
+            mainWindow.webContents.send("agent-update", update);
+          }
+        };
+
         const result = await invokeAgent({
           query,
           repoPath: agentConfig.repoPath,
@@ -122,6 +129,7 @@ function setupIpcHandlers(): void {
           endDate: agentConfig.endDate,
           reasonOnly: finalReasonOnly,
           logContext: logContext,
+          onUpdate: onUpdate,
         });
 
         return {

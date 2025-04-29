@@ -51,6 +51,13 @@ declare global {
       >;
 
       /**
+       * Register a callback for agent update events
+       * @param callback Function to call when an agent update is received
+       * @returns Function to remove the event listener
+       */
+      onAgentUpdate: (callback: (update: { type: string; tool: string }) => void) => () => void;
+
+      /**
        * Get the current agent configuration
        * @returns Promise with the current agent configuration
        */

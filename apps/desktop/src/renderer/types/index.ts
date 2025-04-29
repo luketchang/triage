@@ -206,6 +206,7 @@ export interface ChatMessage {
   contextItems?: ContextItem[];
   logPostprocessing: LogPostprocessing | null;
   codePostprocessing: CodePostprocessing | null;
+  streamingUpdates?: string[]; // For displaying streaming tool call updates
 }
 
 // Interface for main content tabs

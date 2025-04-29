@@ -3,6 +3,27 @@ import ReactMarkdown from "react-markdown";
 import FactsSidebar from "../components/FactsSidebar";
 import { Artifact, ChatMessage, ContextItem } from "../types";
 
+// Add some CSS for streaming updates
+const styles = {
+  streamingUpdates: {
+    marginTop: "8px",
+    padding: "8px 12px",
+    background: "rgba(0, 0, 0, 0.05)",
+    borderRadius: "6px",
+    fontSize: "14px",
+  },
+  streamingUpdatesLabel: {
+    fontWeight: "bold",
+    marginBottom: "4px",
+    fontSize: "12px",
+    color: "#666",
+  },
+  streamingUpdatesValue: {
+    fontWeight: "500",
+    color: "#0066cc",
+  },
+};
+
 interface ChatViewProps {
   messages: ChatMessage[];
   newMessage: string;
@@ -431,6 +452,14 @@ const ChatView: React.FC<ChatViewProps> = ({
         {message.content === "Thinking..." ? (
           <div className="thinking-message">
             <span className="thinking-text">Thinking{ellipsis}</span>
+            {message.streamingUpdates && message.streamingUpdates.length > 0 && (
+              <div style={styles.streamingUpdates}>
+                <div style={styles.streamingUpdatesLabel}>Current step:</div>
+                <div style={styles.streamingUpdatesValue}>
+                  {message.streamingUpdates[message.streamingUpdates.length - 1]}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className={`message-text ${hasContextItems ? "message-text-with-context" : ""}`}>

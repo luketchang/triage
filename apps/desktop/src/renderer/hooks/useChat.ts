@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import { Artifact, ChatMessage, ContextItem } from "../types";
 import { createCodeArtifacts, createLogArtifacts } from "../utils/artifact-utils";
@@ -13,6 +13,42 @@ export function useChat() {
   const [isThinking, setIsThinking] = useState(false);
   const [contextItems, setContextItems] = useState<ContextItem[]>([]);
   const [chatMode, setChatMode] = useState<ChatMode>("agent");
+  // Add state to track the current thinking message ID
+  const [thinkingMessageId, setThinkingMessageId] = useState<string | null>(null);
+
+  // Register for agent updates when the component mounts
+  useEffect(() => {
+    // Only register if we have a thinking message in progress
+    if (!thinkingMessageId) return;
+
+    // Register for updates and store the cleanup function
+    const unregister = api.onAgentUpdate((update) => {
+      if (update.type === "toolCall" && thinkingMessageId) {
+        // Update the thinking message with the current tool being called
+        setMessages((prevMessages) =>
+          prevMessages.map((message) => {
+            if (message.id === thinkingMessageId) {
+              // Create or update streamingUpdates array
+              const streamingUpdates = message.streamingUpdates
+                ? [...message.streamingUpdates, update.tool]
+                : [update.tool];
+
+              return {
+                ...message,
+                streamingUpdates,
+              };
+            }
+            return message;
+          })
+        );
+      }
+    });
+
+    // Cleanup the event listener when the component unmounts or when thinkingMessageId changes
+    return () => {
+      unregister();
+    };
+  }, [thinkingMessageId]);
 
   const toggleChatMode = () => {
     setChatMode((prevMode) => (prevMode === "agent" ? "manual" : "agent"));
@@ -49,15 +85,18 @@ export function useChat() {
 
     // Show thinking message
     setIsThinking(true);
-    const thinkingMessageId = generateId();
+    const newThinkingMessageId = generateId();
+    setThinkingMessageId(newThinkingMessageId);
+
     setMessages((prevMessages) => [
       ...prevMessages,
       {
-        id: thinkingMessageId,
+        id: newThinkingMessageId,
         role: "assistant",
         content: "Thinking...",
         logPostprocessing: null,
         codePostprocessing: null,
+        streamingUpdates: [], // Initialize empty array for streaming updates
       },
     ]);
 
@@ -91,7 +130,7 @@ export function useChat() {
         // Get the "Thinking..." message and replace it with the actual response
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
-            if (message.id === thinkingMessageId) {
+            if (message.id === newThinkingMessageId) {
               return {
                 ...message,
                 content:
@@ -99,6 +138,8 @@ export function useChat() {
                 artifacts: artifacts.length > 0 ? artifacts : undefined,
                 logPostprocessing: response.logPostprocessing || null,
                 codePostprocessing: response.codePostprocessing || null,
+                // Keep the streaming updates in the final message
+                streamingUpdates: message.streamingUpdates,
               };
             }
             return message;
@@ -108,7 +149,7 @@ export function useChat() {
         // Replace the "Thinking..." message with an error message
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
-            if (message.id === thinkingMessageId) {
+            if (message.id === newThinkingMessageId) {
               return {
                 ...message,
                 content:
@@ -127,7 +168,7 @@ export function useChat() {
       // Replace the "Thinking..." message with an error message
       setMessages((prevMessages) =>
         prevMessages.map((message) => {
-          if (message.id === thinkingMessageId) {
+          if (message.id === newThinkingMessageId) {
             return {
               ...message,
               content:
@@ -140,7 +181,8 @@ export function useChat() {
     } finally {
       // Hide the thinking indicator
       setIsThinking(false);
-
+      // Clear the thinking message ID
+      setThinkingMessageId(null);
       // Ensure context items are cleared after sending a message
       setContextItems([]);
     }

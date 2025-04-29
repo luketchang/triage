@@ -38,6 +38,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   /**
+   * Register a callback for agent update events
+   * @param callback Function to call when an agent update is received
+   */
+  onAgentUpdate: (callback: (update: unknown) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, update: unknown) => callback(update);
+    ipcRenderer.on("agent-update", listener);
+    // Return a function to remove the listener when no longer needed
+    return () => {
+      ipcRenderer.removeListener("agent-update", listener);
+    };
+  },
+
+  /**
    * Get the current agent configuration
    */
   getAgentConfig: () => ipcRenderer.invoke("get-agent-config"),

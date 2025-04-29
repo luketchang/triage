@@ -67,6 +67,12 @@ export interface TriageAgentState {
   rootCauseAnalysis: string | null;
 }
 
+// Stream update type for agent
+export type AgentStreamUpdate = {
+  type: "toolCall";
+  tool: string;
+};
+
 export class TriageAgent {
   private reasoningModel: Model;
   private fastModel: Model;
@@ -88,9 +94,14 @@ export class TriageAgent {
   @timer
   async processLogRequest(
     state: TriageAgentState,
-    request: LogRequest
+    request: LogRequest,
+    onUpdate?: (update: AgentStreamUpdate) => void
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
+
+    if (onUpdate) {
+      onUpdate({ type: "toolCall", tool: "Log Search" });
+    }
 
     if (!this.observabilityFeatures.includes("logs")) {
       logger.info("Log search not enabled, skipping");
@@ -127,9 +138,14 @@ export class TriageAgent {
   @timer
   async processSpanRequest(
     state: TriageAgentState,
-    request: SpanRequest
+    request: SpanRequest,
+    onUpdate?: (update: AgentStreamUpdate) => void
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Span Search " + "=".repeat(25));
+
+    if (onUpdate) {
+      onUpdate({ type: "toolCall", tool: "Span Search" });
+    }
 
     if (!this.observabilityFeatures.includes("spans")) {
       logger.info("Span search not enabled, skipping");
@@ -163,8 +179,16 @@ export class TriageAgent {
   }
 
   @timer
-  async processReasoningRequest(state: TriageAgentState): Promise<Partial<TriageAgentState>> {
+  async processReasoningRequest(
+    state: TriageAgentState,
+    onUpdate?: (update: AgentStreamUpdate) => void
+  ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
+
+    if (onUpdate) {
+      onUpdate({ type: "toolCall", tool: "Reasoning" });
+    }
+
     const reasoner = new Reasoner(this.reasoningModel);
     const response = await reasoner.invoke({
       query: state.query,
@@ -209,8 +233,15 @@ export class TriageAgent {
   }
 
   @timer
-  async processReviewRequest(state: TriageAgentState): Promise<Partial<TriageAgentState>> {
+  async processReviewRequest(
+    state: TriageAgentState,
+    onUpdate?: (update: AgentStreamUpdate) => void
+  ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
+
+    if (onUpdate) {
+      onUpdate({ type: "toolCall", tool: "Review" });
+    }
 
     const reviewer = new Reviewer(this.reasoningModel);
     const response = await reviewer.invoke({
@@ -256,9 +287,15 @@ export class TriageAgent {
 
   @timer
   async processLogPostprocessingRequest(
-    state: TriageAgentState
+    state: TriageAgentState,
+    onUpdate?: (update: AgentStreamUpdate) => void
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
+
+    if (onUpdate) {
+      onUpdate({ type: "toolCall", tool: "Log Postprocessing" });
+    }
+
     try {
       const postprocessor = new LogPostprocessor(this.fastModel);
       const response = await postprocessor.invoke({
@@ -286,9 +323,15 @@ export class TriageAgent {
 
   @timer
   async processCodePostprocessingRequest(
-    state: TriageAgentState
+    state: TriageAgentState,
+    onUpdate?: (update: AgentStreamUpdate) => void
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
+
+    if (onUpdate) {
+      onUpdate({ type: "toolCall", tool: "Code Postprocessing" });
+    }
+
     try {
       const postprocessor = new CodePostprocessor(this.fastModel);
       const response = await postprocessor.invoke({
@@ -313,7 +356,10 @@ export class TriageAgent {
     }
   }
 
-  async invoke(state: TriageAgentState): Promise<{
+  async invoke(
+    state: TriageAgentState,
+    options?: { onUpdate?: (update: AgentStreamUpdate) => void }
+  ): Promise<{
     chatHistory: string[];
     response: string | null;
     logPostprocessing: LogPostprocessing | null;
@@ -321,6 +367,7 @@ export class TriageAgent {
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     codeContext: Map<string, string>;
   }> {
+    const { onUpdate } = options || {};
     let currentState = state;
     let iterationCount = 0;
     const maxIterations = 50;
@@ -341,17 +388,17 @@ export class TriageAgent {
 
       if (nextToolCall) {
         if (nextToolCall.type === "logRequest") {
-          stateUpdates = await this.processLogRequest(currentState, nextToolCall);
+          stateUpdates = await this.processLogRequest(currentState, nextToolCall, onUpdate);
         } else if (nextToolCall.type === "spanRequest") {
-          stateUpdates = await this.processSpanRequest(currentState, nextToolCall);
+          stateUpdates = await this.processSpanRequest(currentState, nextToolCall, onUpdate);
         } else if (nextToolCall.type === "reasoningRequest") {
-          stateUpdates = await this.processReasoningRequest(currentState);
+          stateUpdates = await this.processReasoningRequest(currentState, onUpdate);
         } else if (nextToolCall.type === "reviewRequest") {
-          stateUpdates = await this.processReviewRequest(currentState);
+          stateUpdates = await this.processReviewRequest(currentState, onUpdate);
         } else if (nextToolCall.type === "logPostprocessing") {
-          stateUpdates = await this.processLogPostprocessingRequest(currentState);
+          stateUpdates = await this.processLogPostprocessingRequest(currentState, onUpdate);
         } else if (nextToolCall.type === "codePostprocessing") {
-          stateUpdates = await this.processCodePostprocessingRequest(currentState);
+          stateUpdates = await this.processCodePostprocessingRequest(currentState, onUpdate);
         }
       }
 
@@ -390,6 +437,7 @@ export interface AgentArgs {
   reasonOnly?: boolean;
   logContext?: Map<LogSearchInputCore, LogsWithPagination | string>;
   spanContext?: Map<SpanSearchInputCore, SpansWithPagination | string>;
+  onUpdate?: (update: AgentStreamUpdate) => void;
 }
 
 /**
@@ -418,6 +466,7 @@ export async function invokeAgent({
   reasonOnly = false,
   logContext,
   spanContext,
+  onUpdate,
 }: AgentArgs): Promise<AgentResult> {
   // If reasonOnly is true, override observabilityFeatures to be empty
   if (reasonOnly) {
@@ -501,7 +550,7 @@ export async function invokeAgent({
     observabilityFeatures
   );
 
-  return await agent.invoke(state);
+  return await agent.invoke(state, { onUpdate });
 }
 
 const parseArgs = (): { integration: "datadog" | "grafana"; features: string[] } => {
@@ -549,6 +598,9 @@ async function main(): Promise<void> {
     observabilityFeatures,
     startDate,
     endDate,
+    onUpdate: (update) => {
+      console.log(`${update.type}: ${update.tool}`);
+    },
   });
 
   logger.info(`Chat History: ${response.chatHistory}`);
@@ -588,4 +640,3 @@ export * from "./nodes/search/log-search";
 export * from "./nodes/search/span-search";
 export * from "./nodes/utils";
 export * from "./types";
-
