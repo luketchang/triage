@@ -3,6 +3,25 @@ import ReactMarkdown from "react-markdown";
 import FactsSidebar from "../components/FactsSidebar";
 import { Artifact, ChatMessage, ContextItem, StreamUpdate } from "../types";
 
+// AnimatedEllipsis component that cycles through ., .., ...
+const AnimatedEllipsis = () => {
+  const [dots, setDots] = useState(".");
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => {
+        if (prev === ".") return "..";
+        if (prev === "..") return "...";
+        return ".";
+      });
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return <span>{dots}</span>;
+};
+
 // Add some CSS for streaming updates
 const styles = {
   streamingUpdates: {
@@ -13,6 +32,7 @@ const styles = {
     display: "flex",
     flexDirection: "column" as const,
     gap: "6px",
+    width: "100%",
   },
   streamingUpdatesLabel: {
     fontWeight: "bold",
@@ -55,6 +75,13 @@ const styles = {
     maxHeight: "300px",
     overflow: "auto",
     lineHeight: "1.5",
+    color: "#444",
+  },
+  loadingEllipsis: {
+    padding: "6px 10px",
+    fontSize: "14px",
+    color: "#666",
+    fontStyle: "italic",
   },
 };
 
@@ -88,11 +115,33 @@ const ChatView: React.FC<ChatViewProps> = ({
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localMode, setLocalMode] = useState<"agent" | "manual">(chatMode);
+  const responseStreamRef = useRef<HTMLDivElement>(null);
+
+  // Use refs instead of state for tracking update times to avoid render loops
+  const lastUpdateTimeRef = useRef<number>(Date.now());
+  const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
 
   // Get the latest assistant message with postprocessing data
   const latestMessageWithPostprocessing = messages
     .filter((m) => m.role === "assistant" && (m.logPostprocessing || m.codePostprocessing))
     .pop();
+
+  // Get standalone response content from the latest thinking message
+  const latestThinkingMessage = messages.find(
+    (m) => m.content === "Thinking..." && m.streamingUpdates && m.streamingUpdates.length > 0
+  );
+  const standaloneResponseContent =
+    latestThinkingMessage?.streamingUpdates
+      ?.filter((update) => update.type === "response" && !update.parentId)
+      .map((update) => (update as { type: "response"; content: string }).content)
+      .join("") || "";
+
+  // Get all response content for scrolling detection
+  const allResponseContent =
+    latestThinkingMessage?.streamingUpdates
+      ?.filter((update) => update.type === "response")
+      .map((update) => (update as { type: "response"; content: string }).content)
+      .join("") || "";
 
   // Determine if we should show the facts sidebar
   const shouldShowFactsSidebar =
@@ -104,6 +153,34 @@ const ChatView: React.FC<ChatViewProps> = ({
   useEffect(() => {
     setLocalMode(chatMode);
   }, [chatMode]);
+
+  // Effect to track updates from latest thinking message's streaming updates
+  useEffect(() => {
+    if (latestThinkingMessage?.streamingUpdates) {
+      // Update the last update time whenever streamingUpdates changes
+      lastUpdateTimeRef.current = Date.now();
+      setShowWaitingIndicator(false); // Reset indicator whenever there's an update
+    }
+  }, [latestThinkingMessage?.streamingUpdates]);
+
+  // Effect to show waiting indicator after 1 second of no updates while thinking
+  useEffect(() => {
+    if (!isThinking) {
+      setShowWaitingIndicator(false);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
+      if (timeSinceLastUpdate > 1000) {
+        setShowWaitingIndicator(true);
+      }
+    }, 500);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isThinking]);
 
   // Function to resize textarea based on content
   const resizeTextarea = () => {
@@ -191,6 +268,20 @@ const ChatView: React.FC<ChatViewProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Auto-scroll to the bottom of the response stream when response content changes
+  useEffect(() => {
+    if (responseStreamRef.current) {
+      const responseElement = responseStreamRef.current;
+      const isScrolledToBottom =
+        responseElement.scrollHeight - responseElement.clientHeight <=
+        responseElement.scrollTop + 30;
+
+      if (isScrolledToBottom) {
+        responseElement.scrollTop = responseElement.scrollHeight;
+      }
+    }
+  }, [allResponseContent, standaloneResponseContent]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -520,7 +611,11 @@ const ChatView: React.FC<ChatViewProps> = ({
                       } else if (child.type === "response") {
                         // Ensure we render response children directly
                         return (
-                          <div key={`response-${childIndex}`} style={styles.responseStream}>
+                          <div
+                            key={`response-${childIndex}`}
+                            style={styles.responseStream}
+                            ref={responseStreamRef}
+                          >
                             <ReactMarkdown
                               components={{
                                 pre: ({ node, ...props }) => (
@@ -543,7 +638,10 @@ const ChatView: React.FC<ChatViewProps> = ({
 
                 {/* Render response content specific to this tool if present */}
                 {toolResponseContent && (
-                  <div style={{ ...styles.responseStream, marginLeft: "16px" }}>
+                  <div
+                    style={{ ...styles.responseStream, marginLeft: "16px" }}
+                    ref={responseStreamRef}
+                  >
                     <ReactMarkdown
                       components={{
                         pre: ({ node, ...props }) => (
@@ -597,7 +695,7 @@ const ChatView: React.FC<ChatViewProps> = ({
 
         {/* Render standalone response content if present */}
         {standaloneResponseContent && (
-          <div style={styles.responseStream}>
+          <div style={styles.responseStream} ref={responseStreamRef}>
             <ReactMarkdown
               components={{
                 pre: ({ node, ...props }) => <pre style={{ whiteSpace: "pre-wrap" }} {...props} />,
@@ -606,6 +704,13 @@ const ChatView: React.FC<ChatViewProps> = ({
             >
               {standaloneResponseContent}
             </ReactMarkdown>
+          </div>
+        )}
+
+        {/* Show animated ellipsis only once at the very bottom of all stream updates */}
+        {isThinking && showWaitingIndicator && (
+          <div style={styles.loadingEllipsis}>
+            <AnimatedEllipsis />
           </div>
         )}
       </div>
