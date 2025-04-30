@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import FactsSidebar from "../components/FactsSidebar";
 import { Artifact, ChatMessage, ContextItem, StreamUpdate } from "../types";
@@ -115,11 +115,43 @@ const ChatView: React.FC<ChatViewProps> = ({
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localMode, setLocalMode] = useState<"agent" | "manual">(chatMode);
-  const responseStreamRef = useRef<HTMLDivElement>(null);
+
+  // Replace single ref with ref collection for response streams
+  const responseStreamRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Use refs instead of state for tracking update times to avoid render loops
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
+
+  // Track whether user has manually scrolled up
+  const [userHasScrolled, setUserHasScrolled] = useState(false);
+
+  // Tracking for the streaming container element
+  const streamingContainerRef = useRef<HTMLDivElement>(null);
+
+  // Function to register response stream elements
+  const registerResponseStreamRef = useCallback((id: string, element: HTMLDivElement | null) => {
+    if (element) {
+      responseStreamRefs.current.set(id, element);
+    } else {
+      responseStreamRefs.current.delete(id);
+    }
+  }, []);
+
+  // Function to scroll to bottom of a specific response stream
+  const scrollResponseToBottom = useCallback((id: string) => {
+    const element = responseStreamRefs.current.get(id);
+    if (element) {
+      element.scrollTop = element.scrollHeight;
+    }
+  }, []);
+
+  // Function to scroll to bottom of the entire streaming container
+  const scrollStreamingContainerToBottom = useCallback(() => {
+    if (streamingContainerRef.current && !userHasScrolled) {
+      streamingContainerRef.current.scrollTop = streamingContainerRef.current.scrollHeight;
+    }
+  }, [userHasScrolled]);
 
   // Get the latest assistant message with postprocessing data
   const latestMessageWithPostprocessing = messages
@@ -160,8 +192,29 @@ const ChatView: React.FC<ChatViewProps> = ({
       // Update the last update time whenever streamingUpdates changes
       lastUpdateTimeRef.current = Date.now();
       setShowWaitingIndicator(false); // Reset indicator whenever there's an update
+
+      // Auto-scroll when new content arrives
+      requestAnimationFrame(() => {
+        // Scroll all response streams to bottom
+        responseStreamRefs.current.forEach((_, id) => {
+          scrollResponseToBottom(id);
+        });
+
+        // Scroll the streaming container
+        scrollStreamingContainerToBottom();
+      });
+
+      // Reset user scroll flag when thinking starts
+      if (isThinking) {
+        setUserHasScrolled(false);
+      }
     }
-  }, [latestThinkingMessage?.streamingUpdates]);
+  }, [
+    latestThinkingMessage?.streamingUpdates,
+    isThinking,
+    scrollResponseToBottom,
+    scrollStreamingContainerToBottom,
+  ]);
 
   // Effect to show waiting indicator after 1 second of no updates while thinking
   useEffect(() => {
@@ -271,14 +324,16 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   // Auto-scroll to the bottom of the response stream when response content changes
   useEffect(() => {
-    if (responseStreamRef.current) {
-      const responseElement = responseStreamRef.current;
-      const isScrolledToBottom =
-        responseElement.scrollHeight - responseElement.clientHeight <=
-        responseElement.scrollTop + 30;
+    if (responseStreamRefs.current.size > 0) {
+      const responseElements = Array.from(responseStreamRefs.current.values());
+      const isScrolledToBottom = responseElements.every(
+        (element) => element.scrollHeight - element.clientHeight <= element.scrollTop + 30
+      );
 
       if (isScrolledToBottom) {
-        responseElement.scrollTop = responseElement.scrollHeight;
+        responseElements.forEach((element) => {
+          element.scrollTop = element.scrollHeight;
+        });
       }
     }
   }, [allResponseContent, standaloneResponseContent]);
@@ -539,6 +594,21 @@ const ChatView: React.FC<ChatViewProps> = ({
     );
   };
 
+  // Handler for streaming container scroll events to detect manual scrolling
+  const handleStreamingContainerScroll = useCallback(() => {
+    if (streamingContainerRef.current) {
+      const container = streamingContainerRef.current;
+      const isNearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+
+      if (!isNearBottom && isThinking) {
+        setUserHasScrolled(true);
+      } else if (isNearBottom) {
+        setUserHasScrolled(false);
+      }
+    }
+  }, [isThinking]);
+
   // Function to render stream updates
   const renderStreamUpdates = (updates: StreamUpdate[]) => {
     if (!updates || updates.length === 0) return null;
@@ -562,7 +632,11 @@ const ChatView: React.FC<ChatViewProps> = ({
     console.log("All response content:", allResponseContent);
 
     return (
-      <div style={styles.streamingUpdates}>
+      <div
+        style={styles.streamingUpdates}
+        ref={streamingContainerRef}
+        onScroll={handleStreamingContainerScroll}
+      >
         {/* Render high-level tool calls */}
         {updates
           .filter((update) => update.type === "highLevelToolCall")
@@ -583,6 +657,8 @@ const ChatView: React.FC<ChatViewProps> = ({
               )
               .map((u) => (u as { content: string }).content)
               .join("");
+
+            const responseId = `tool-response-${highLevelUpdate.id}`;
 
             return (
               <div key={`high-${index}`} style={styles.highLevelToolCall}>
@@ -609,12 +685,13 @@ const ChatView: React.FC<ChatViewProps> = ({
                           </div>
                         );
                       } else if (child.type === "response") {
+                        const childResponseId = `child-response-${highLevelUpdate.id}-${childIndex}`;
                         // Ensure we render response children directly
                         return (
                           <div
                             key={`response-${childIndex}`}
                             style={styles.responseStream}
-                            ref={responseStreamRef}
+                            ref={(el) => registerResponseStreamRef(childResponseId, el)}
                           >
                             <ReactMarkdown
                               components={{
@@ -640,7 +717,7 @@ const ChatView: React.FC<ChatViewProps> = ({
                 {toolResponseContent && (
                   <div
                     style={{ ...styles.responseStream, marginLeft: "16px" }}
-                    ref={responseStreamRef}
+                    ref={(el) => registerResponseStreamRef(responseId, el)}
                   >
                     <ReactMarkdown
                       components={{
@@ -695,7 +772,10 @@ const ChatView: React.FC<ChatViewProps> = ({
 
         {/* Render standalone response content if present */}
         {standaloneResponseContent && (
-          <div style={styles.responseStream} ref={responseStreamRef}>
+          <div
+            style={styles.responseStream}
+            ref={(el) => registerResponseStreamRef("standalone-response", el)}
+          >
             <ReactMarkdown
               components={{
                 pre: ({ node, ...props }) => <pre style={{ whiteSpace: "pre-wrap" }} {...props} />,
