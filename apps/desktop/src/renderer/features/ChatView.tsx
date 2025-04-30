@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import CellView from "../components/CellView";
 import FactsSidebar from "../components/FactsSidebar";
-import { Artifact, ChatMessage, ContextItem, StreamUpdate } from "../types";
+import { Artifact, ChatMessage, ContextItem } from "../types";
 
 // AnimatedEllipsis component that cycles through ., .., ...
 const AnimatedEllipsis = () => {
@@ -22,7 +23,7 @@ const AnimatedEllipsis = () => {
   return <span>{dots}</span>;
 };
 
-// Add some CSS for streaming updates
+// Add CSS for streaming updates
 const styles = {
   streamingUpdates: {
     padding: "12px 16px",
@@ -115,128 +116,22 @@ const ChatView: React.FC<ChatViewProps> = ({
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localMode, setLocalMode] = useState<"agent" | "manual">(chatMode);
-
-  // Replace single ref with ref collection for response streams
-  const responseStreamRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [showFactsSidebar, setShowFactsSidebar] = useState(false);
+  const [currentFacts, setCurrentFacts] = useState<{
+    logFacts: any[] | null;
+    codeFacts: any[] | null;
+  }>({
+    logFacts: null,
+    codeFacts: null,
+  });
+  const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
 
   // Use refs instead of state for tracking update times to avoid render loops
   const lastUpdateTimeRef = useRef<number>(Date.now());
-  const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
-
-  // Track whether user has manually scrolled up
-  const [userHasScrolled, setUserHasScrolled] = useState(false);
-
-  // Tracking for the streaming container element
-  const streamingContainerRef = useRef<HTMLDivElement>(null);
-
-  // Function to register response stream elements
-  const registerResponseStreamRef = useCallback((id: string, element: HTMLDivElement | null) => {
-    if (element) {
-      responseStreamRefs.current.set(id, element);
-    } else {
-      responseStreamRefs.current.delete(id);
-    }
-  }, []);
-
-  // Function to scroll to bottom of a specific response stream
-  const scrollResponseToBottom = useCallback((id: string) => {
-    const element = responseStreamRefs.current.get(id);
-    if (element) {
-      element.scrollTop = element.scrollHeight;
-    }
-  }, []);
-
-  // Function to scroll to bottom of the entire streaming container
-  const scrollStreamingContainerToBottom = useCallback(() => {
-    if (streamingContainerRef.current && !userHasScrolled) {
-      streamingContainerRef.current.scrollTop = streamingContainerRef.current.scrollHeight;
-    }
-  }, [userHasScrolled]);
-
-  // Get the latest assistant message with postprocessing data
-  const latestMessageWithPostprocessing = messages
-    .filter((m) => m.role === "assistant" && (m.logPostprocessing || m.codePostprocessing))
-    .pop();
-
-  // Get standalone response content from the latest thinking message
-  const latestThinkingMessage = messages.find(
-    (m) => m.content === "Thinking..." && m.streamingUpdates && m.streamingUpdates.length > 0
-  );
-  const standaloneResponseContent =
-    latestThinkingMessage?.streamingUpdates
-      ?.filter((update) => update.type === "response" && !update.parentId)
-      .map((update) => (update as { type: "response"; content: string }).content)
-      .join("") || "";
-
-  // Get all response content for scrolling detection
-  const allResponseContent =
-    latestThinkingMessage?.streamingUpdates
-      ?.filter((update) => update.type === "response")
-      .map((update) => (update as { type: "response"; content: string }).content)
-      .join("") || "";
-
-  // Determine if we should show the facts sidebar
-  const shouldShowFactsSidebar =
-    !!latestMessageWithPostprocessing &&
-    latestMessageWithPostprocessing.content !== "Thinking..." &&
-    ((latestMessageWithPostprocessing.logPostprocessing?.facts.length || 0) > 0 ||
-      (latestMessageWithPostprocessing.codePostprocessing?.facts.length || 0) > 0);
-
-  useEffect(() => {
-    setLocalMode(chatMode);
-  }, [chatMode]);
-
-  // Effect to track updates from latest thinking message's streaming updates
-  useEffect(() => {
-    if (latestThinkingMessage?.streamingUpdates) {
-      // Update the last update time whenever streamingUpdates changes
-      lastUpdateTimeRef.current = Date.now();
-      setShowWaitingIndicator(false); // Reset indicator whenever there's an update
-
-      // Auto-scroll when new content arrives
-      requestAnimationFrame(() => {
-        // Scroll all response streams to bottom
-        responseStreamRefs.current.forEach((_, id) => {
-          scrollResponseToBottom(id);
-        });
-
-        // Scroll the streaming container
-        scrollStreamingContainerToBottom();
-      });
-
-      // Reset user scroll flag when thinking starts
-      if (isThinking) {
-        setUserHasScrolled(false);
-      }
-    }
-  }, [
-    latestThinkingMessage?.streamingUpdates,
-    isThinking,
-    scrollResponseToBottom,
-    scrollStreamingContainerToBottom,
-  ]);
-
-  // Effect to show waiting indicator after 1 second of no updates while thinking
-  useEffect(() => {
-    if (!isThinking) {
-      setShowWaitingIndicator(false);
-      return;
-    }
-
-    const intervalId = setInterval(() => {
-      const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
-      if (timeSinceLastUpdate > 1000) {
-        setShowWaitingIndicator(true);
-      }
-    }, 500);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [isThinking]);
+  const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to resize textarea based on content
-  const resizeTextarea = () => {
+  const resizeTextarea = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -249,12 +144,45 @@ const ChatView: React.FC<ChatViewProps> = ({
       const newHeight = Math.min(150, scrollHeight);
       textarea.style.height = `${newHeight}px`;
     }
-  };
+  }, []);
+
+  // Handle showing the waiting indicator when no updates are received for a while
+  useEffect(() => {
+    // Clear any existing interval
+    if (waitingCheckIntervalRef.current) {
+      clearInterval(waitingCheckIntervalRef.current);
+      waitingCheckIntervalRef.current = null;
+    }
+
+    // Only set up the interval if we're in thinking state
+    if (isThinking) {
+      waitingCheckIntervalRef.current = setInterval(() => {
+        const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
+        if (timeSinceLastUpdate > 3000) {
+          // Show waiting indicator after 3 seconds of no updates
+          setShowWaitingIndicator(true);
+        }
+      }, 1000);
+    } else {
+      setShowWaitingIndicator(false);
+    }
+
+    return () => {
+      if (waitingCheckIntervalRef.current) {
+        clearInterval(waitingCheckIntervalRef.current);
+      }
+    };
+  }, [isThinking]);
 
   // Auto-resize textarea when message changes
   useEffect(() => {
     resizeTextarea();
-  }, [newMessage]);
+  }, [newMessage, resizeTextarea]);
+
+  // Update local mode when chatMode prop changes
+  useEffect(() => {
+    setLocalMode(chatMode);
+  }, [chatMode]);
 
   // Auto-focus the textarea when the chat view is selected or when thinking state changes
   useEffect(() => {
@@ -300,7 +228,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       textarea.removeEventListener("paste", handlePaste);
       textarea.removeEventListener("input", handleInput);
     };
-  }, []);
+  }, [resizeTextarea]);
 
   // Force reset textarea height when empty
   useEffect(() => {
@@ -321,22 +249,6 @@ const ChatView: React.FC<ChatViewProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // Auto-scroll to the bottom of the response stream when response content changes
-  useEffect(() => {
-    if (responseStreamRefs.current.size > 0) {
-      const responseElements = Array.from(responseStreamRefs.current.values());
-      const isScrolledToBottom = responseElements.every(
-        (element) => element.scrollHeight - element.clientHeight <= element.scrollTop + 30
-      );
-
-      if (isScrolledToBottom) {
-        responseElements.forEach((element) => {
-          element.scrollTop = element.scrollHeight;
-        });
-      }
-    }
-  }, [allResponseContent, standaloneResponseContent]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -539,7 +451,7 @@ const ChatView: React.FC<ChatViewProps> = ({
     );
   };
 
-  const _renderArtifactCard = (artifact: Artifact): JSX.Element => {
+  const renderArtifactCard = (artifact: Artifact): JSX.Element => {
     const handleClick = () => {
       onArtifactClick(artifact);
     };
@@ -594,214 +506,12 @@ const ChatView: React.FC<ChatViewProps> = ({
     );
   };
 
-  // Handler for streaming container scroll events to detect manual scrolling
-  const handleStreamingContainerScroll = useCallback(() => {
-    if (streamingContainerRef.current) {
-      const container = streamingContainerRef.current;
-      const isNearBottom =
-        container.scrollHeight - container.scrollTop - container.clientHeight < 50;
-
-      if (!isNearBottom && isThinking) {
-        setUserHasScrolled(true);
-      } else if (isNearBottom) {
-        setUserHasScrolled(false);
-      }
-    }
-  }, [isThinking]);
-
-  // Function to render stream updates
-  const renderStreamUpdates = (updates: StreamUpdate[]) => {
-    if (!updates || updates.length === 0) return null;
-
-    // Log updates to console for debugging
-    console.log("Stream updates:", updates);
-
-    // Get standalone response content (responses without a parentId)
-    const standaloneResponseContent = updates
-      .filter((update) => update.type === "response" && !update.parentId)
-      .map((update) => (update as { type: "response"; content: string }).content)
-      .join("");
-
-    // Also get all response content, even with parentId, to ensure we're showing all responses
-    const allResponseContent = updates
-      .filter((update) => update.type === "response")
-      .map((update) => (update as { type: "response"; content: string }).content)
-      .join("");
-
-    console.log("Standalone response content:", standaloneResponseContent);
-    console.log("All response content:", allResponseContent);
-
-    return (
-      <div
-        style={styles.streamingUpdates}
-        ref={streamingContainerRef}
-        onScroll={handleStreamingContainerScroll}
-      >
-        {/* Render high-level tool calls */}
-        {updates
-          .filter((update) => update.type === "highLevelToolCall")
-          .map((update, index) => {
-            const highLevelUpdate = update as {
-              type: "highLevelToolCall";
-              id: string;
-              tool: string;
-              children?: StreamUpdate[];
-            };
-
-            // Get response content for this specific high-level tool
-            const toolResponseContent = updates
-              .filter(
-                (u) =>
-                  u.type === "response" &&
-                  (u as { parentId?: string }).parentId === highLevelUpdate.id
-              )
-              .map((u) => (u as { content: string }).content)
-              .join("");
-
-            const responseId = `tool-response-${highLevelUpdate.id}`;
-
-            return (
-              <div key={`high-${index}`} style={styles.highLevelToolCall}>
-                <div style={styles.highLevelToolHeader}>{highLevelUpdate.tool}</div>
-
-                {/* Render intermediate tool calls under this high-level tool */}
-                {highLevelUpdate.children && highLevelUpdate.children.length > 0 && (
-                  <div style={styles.intermediateToolCalls}>
-                    {highLevelUpdate.children.map((child, childIndex) => {
-                      if (child.type === "intermediateToolCall") {
-                        let details = "";
-                        if (child.details) {
-                          if (typeof child.details === "object") {
-                            details = Object.entries(child.details)
-                              .map(([key, value]) => `${key}: ${value}`)
-                              .join(", ");
-                          } else {
-                            details = String(child.details);
-                          }
-                        }
-                        return (
-                          <div key={`inter-${childIndex}`} style={styles.intermediateToolCall}>
-                            {child.tool} {details ? `(${details})` : ""}
-                          </div>
-                        );
-                      } else if (child.type === "response") {
-                        const childResponseId = `child-response-${highLevelUpdate.id}-${childIndex}`;
-                        // Ensure we render response children directly
-                        return (
-                          <div
-                            key={`response-${childIndex}`}
-                            style={styles.responseStream}
-                            ref={(el) => registerResponseStreamRef(childResponseId, el)}
-                          >
-                            <ReactMarkdown
-                              components={{
-                                pre: ({ node, ...props }) => (
-                                  <pre style={{ whiteSpace: "pre-wrap" }} {...props} />
-                                ),
-                                p: ({ node, ...props }) => (
-                                  <p style={{ marginBottom: "8px" }} {...props} />
-                                ),
-                              }}
-                            >
-                              {child.content}
-                            </ReactMarkdown>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
-                  </div>
-                )}
-
-                {/* Render response content specific to this tool if present */}
-                {toolResponseContent && (
-                  <div
-                    style={{ ...styles.responseStream, marginLeft: "16px" }}
-                    ref={(el) => registerResponseStreamRef(responseId, el)}
-                  >
-                    <ReactMarkdown
-                      components={{
-                        pre: ({ node, ...props }) => (
-                          <pre style={{ whiteSpace: "pre-wrap" }} {...props} />
-                        ),
-                        p: ({ node, ...props }) => <p style={{ marginBottom: "8px" }} {...props} />,
-                      }}
-                    >
-                      {toolResponseContent}
-                    </ReactMarkdown>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-        {/* Render standalone intermediate tool calls (those without a parent) */}
-        {updates
-          .filter(
-            (update) =>
-              update.type === "intermediateToolCall" &&
-              !updates.some(
-                (u) =>
-                  u.type === "highLevelToolCall" &&
-                  u.id === (update as { parentId: string }).parentId
-              )
-          )
-          .map((update, index) => {
-            const intermediateUpdate = update as {
-              type: "intermediateToolCall";
-              parentId: string;
-              tool: string;
-              details?: Record<string, unknown>;
-            };
-            let details = "";
-            if (intermediateUpdate.details) {
-              if (typeof intermediateUpdate.details === "object") {
-                details = Object.entries(intermediateUpdate.details)
-                  .map(([key, value]) => `${key}: ${value}`)
-                  .join(", ");
-              } else {
-                details = String(intermediateUpdate.details);
-              }
-            }
-            return (
-              <div key={`standalone-${index}`} style={styles.intermediateToolCall}>
-                {intermediateUpdate.tool} {details ? `(${details})` : ""}
-              </div>
-            );
-          })}
-
-        {/* Render standalone response content if present */}
-        {standaloneResponseContent && (
-          <div
-            style={styles.responseStream}
-            ref={(el) => registerResponseStreamRef("standalone-response", el)}
-          >
-            <ReactMarkdown
-              components={{
-                pre: ({ node, ...props }) => <pre style={{ whiteSpace: "pre-wrap" }} {...props} />,
-                p: ({ node, ...props }) => <p style={{ marginBottom: "8px" }} {...props} />,
-              }}
-            >
-              {standaloneResponseContent}
-            </ReactMarkdown>
-          </div>
-        )}
-
-        {/* Show animated ellipsis only once at the very bottom of all stream updates */}
-        {isThinking && showWaitingIndicator && (
-          <div style={styles.loadingEllipsis}>
-            <AnimatedEllipsis />
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Function to render message content with animated ellipsis for "Thinking..."
+  // Function to render message content
   const renderMessageContent = (message: ChatMessage) => {
     // First check if there are context items
     const hasContextItems = message.contextItems && message.contextItems.length > 0;
 
+    // Combine the check for both context items and message type
     return (
       <>
         {hasContextItems && message.contextItems && (
@@ -817,27 +527,41 @@ const ChatView: React.FC<ChatViewProps> = ({
 
         {message.content === "Thinking..." ? (
           <div className="thinking-message">
-            {message.streamingUpdates && message.streamingUpdates.length > 0 ? (
-              renderStreamUpdates(message.streamingUpdates)
+            {message.cell ? (
+              // Render the cell view for detailed progress
+              <CellView cell={message.cell} />
             ) : (
-              <span className="thinking-text">Processing...</span>
+              <span className="thinking-text">
+                Processing{showWaitingIndicator && <AnimatedEllipsis />}
+              </span>
             )}
           </div>
         ) : (
           <div className={`message-text ${hasContextItems ? "message-text-with-context" : ""}`}>
-            <ReactMarkdown
-              components={{
-                pre: ({ node, ...props }) => <pre style={{ whiteSpace: "pre-wrap" }} {...props} />,
-                p: ({ node, ...props }) => <p style={{ marginBottom: "8px" }} {...props} />,
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
+            <ReactMarkdown>{message.content}</ReactMarkdown>
+            {message.cell && <CellView cell={message.cell} />}
           </div>
+        )}
+
+        {/* Show artifacts if present */}
+        {message.artifacts && message.artifacts.length > 0 && (
+          <div className="artifacts-container">{message.artifacts.map(renderArtifactCard)}</div>
         )}
       </>
     );
   };
+
+  // Get the latest assistant message with postprocessing data to show facts if needed
+  const latestMessageWithPostprocessing = messages
+    .filter((m) => m.role === "assistant" && (m.logPostprocessing || m.codePostprocessing))
+    .pop();
+
+  // Determine if we should show the facts sidebar
+  const shouldShowFactsSidebar =
+    !!latestMessageWithPostprocessing &&
+    latestMessageWithPostprocessing.content !== "Thinking..." &&
+    ((latestMessageWithPostprocessing.logPostprocessing?.facts.length || 0) > 0 ||
+      (latestMessageWithPostprocessing.codePostprocessing?.facts.length || 0) > 0);
 
   return (
     <div className="chat-tab">
@@ -854,13 +578,11 @@ const ChatView: React.FC<ChatViewProps> = ({
               </div>
             ) : (
               <>
-                {messages.map((message, index) => (
+                {messages.map((message) => (
                   <div
                     key={message.id}
                     className={`chat-message ${message.role} ${
                       message.content === "Thinking..." ? "thinking-state" : ""
-                    } ${
-                      index > 0 && messages[index - 1].role !== message.role ? "role-change" : ""
                     }`}
                   >
                     <div className="message-content">{renderMessageContent(message)}</div>
@@ -878,67 +600,67 @@ const ChatView: React.FC<ChatViewProps> = ({
             codeFacts={latestMessageWithPostprocessing.codePostprocessing?.facts || []}
           />
         )}
+      </div>
 
-        <div className="chat-input-container">
-          {contextItems.length > 0 && (
-            <div className="context-items-container">
-              <div className="context-items-header">
-                <span>Current Context</span>
-                <span className="context-keyboard-shortcut">Add more with ⌘+U in other views</span>
-              </div>
-              <div className="context-items-list">
-                {contextItems.map((item) => renderContextCard(item, true))}
-              </div>
+      <div className="chat-input-container">
+        {contextItems.length > 0 && (
+          <div className="context-items-container">
+            <div className="context-items-header">
+              <span>Current Context</span>
+              <span className="context-keyboard-shortcut">Add more with ⌘+U in other views</span>
             </div>
-          )}
-
-          <div className="input-wrapper">
-            <textarea
-              ref={textareaRef}
-              className="message-input"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask a question..."
-              disabled={isThinking}
-              rows={1}
-              autoFocus={!isThinking}
-            />
+            <div className="context-items-list">
+              {contextItems.map((item) => renderContextCard(item, true))}
+            </div>
           </div>
+        )}
 
-          <div className="message-controls">
-            <div className="mode-dropdown">
-              <button className="mode-selector-button" onClick={toggleModeMenu}>
-                <span className="current-mode">{localMode === "agent" ? "Agent" : "Manual"}</span>
-                <span className="dropdown-arrow">▼</span>
-              </button>
+        <div className="input-wrapper">
+          <textarea
+            ref={textareaRef}
+            className="message-input"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask a question..."
+            disabled={isThinking}
+            rows={1}
+            autoFocus={!isThinking}
+          />
+        </div>
 
-              {modeMenuOpen && (
-                <div className="mode-menu">
-                  <div
-                    className={`mode-option ${localMode === "agent" ? "active" : ""}`}
-                    onClick={() => setMode("agent")}
-                  >
-                    Agent
-                  </div>
-                  <div
-                    className={`mode-option ${localMode === "manual" ? "active" : ""}`}
-                    onClick={() => setMode("manual")}
-                  >
-                    Manual
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button
-              className="send-button"
-              onClick={handleSendMessage}
-              disabled={isThinking || !newMessage.trim()}
-            >
-              Send
+        <div className="message-controls">
+          <div className="mode-dropdown">
+            <button className="mode-selector-button" onClick={toggleModeMenu}>
+              <span className="current-mode">{localMode === "agent" ? "Agent" : "Manual"}</span>
+              <span className="dropdown-arrow">▼</span>
             </button>
+
+            {modeMenuOpen && (
+              <div className="mode-menu">
+                <div
+                  className={`mode-option ${localMode === "agent" ? "active" : ""}`}
+                  onClick={() => setMode("agent")}
+                >
+                  Agent
+                </div>
+                <div
+                  className={`mode-option ${localMode === "manual" ? "active" : ""}`}
+                  onClick={() => setMode("manual")}
+                >
+                  Manual
+                </div>
+              </div>
+            )}
           </div>
+
+          <button
+            className="send-button"
+            onClick={handleSendMessage}
+            disabled={isThinking || !newMessage.trim()}
+          >
+            Send
+          </button>
         </div>
       </div>
     </div>

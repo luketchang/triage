@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import {
-  Artifact,
-  ChatMessage,
-  ContextItem,
-  HighLevelToolCallUpdate,
-  StreamUpdate,
-} from "../types";
+import { AgentStep, Artifact, Cell, ChatMessage, ContextItem } from "../types";
+import { CellUpdateManager } from "../utils/CellUpdateManager";
 import { createCodeArtifacts, createLogArtifacts } from "../utils/artifact-utils";
 import { generateId } from "../utils/formatters";
 
@@ -19,182 +14,161 @@ export function useChat() {
   const [isThinking, setIsThinking] = useState(false);
   const [contextItems, setContextItems] = useState<ContextItem[]>([]);
   const [chatMode, setChatMode] = useState<ChatMode>("agent");
-  // Add state to track the current thinking message ID
-  const [thinkingMessageId, setThinkingMessageId] = useState<string | null>(null);
+  // Track the current cell manager for active streaming responses
+  const [cellManager, setCellManager] = useState<CellUpdateManager | null>(null);
 
-  // Register for agent updates when the component mounts
+  // Register for agent updates when we have an active cell manager
   useEffect(() => {
-    // Only register if we have a thinking message in progress
-    if (!thinkingMessageId) return;
+    if (!cellManager) return;
 
     // Register for updates and store the cleanup function
     const unregister = api.onAgentUpdate((update) => {
-      // Add debug logging
-      console.log("Got agent update:", update);
+      console.info("Received agent update:", update);
 
-      setMessages((prevMessages) => {
-        // Only register onAgentUpdate if we have thinking message (beginning of agent run)
-        const messageIndex = prevMessages.findIndex((msg) => msg.id === thinkingMessageId);
-        if (messageIndex === -1) return prevMessages;
-
-        const message = prevMessages[messageIndex];
-        const currentUpdates = message.streamingUpdates || [];
-
-        console.log("Current updates:", currentUpdates);
-
-        // Handle the update based on its type
-        let newUpdates: StreamUpdate[];
-
-        if (update.type === "highLevelToolCall") {
-          // Check if we already have this high-level tool call
-          const existingIndex = currentUpdates.findIndex(
-            (u) => u.type === "highLevelToolCall" && u.id === update.id
-          );
-
-          if (existingIndex === -1) {
-            // Add a new high-level tool call with empty children array
-            newUpdates = [...currentUpdates, { ...update, children: [] }];
-          } else {
-            // This high-level tool call already exists, don't add it again
-            newUpdates = [...currentUpdates];
-          }
-        } else if (update.type === "intermediateToolCall") {
-          const parentIndex = currentUpdates.findIndex(
-            (u) => u.type === "highLevelToolCall" && u.id === update.parentId
-          );
-
-          if (parentIndex !== -1 && "children" in currentUpdates[parentIndex]) {
-            // Check if this intermediate tool call already exists in the parent's children
-            const parent = currentUpdates[parentIndex] as HighLevelToolCallUpdate;
-
-            // Check if we already have this same intermediate tool call
-            const existingChild = parent?.children?.find(
-              (child: StreamUpdate) =>
-                child.type === "intermediateToolCall" &&
-                child.tool === update.tool &&
-                JSON.stringify(child.details) === JSON.stringify(update.details)
-            );
-
-            if (!existingChild) {
-              // Deep clone the updates array to avoid mutating the state directly
-              newUpdates = [...currentUpdates];
-              // Add the intermediate tool call to the parent's children
-              const parentInNewUpdates = newUpdates[parentIndex] as HighLevelToolCallUpdate;
-              parentInNewUpdates.children = [...(parentInNewUpdates.children || []), update];
-            } else {
-              // Don't add duplicate intermediate tool call
-              newUpdates = [...currentUpdates];
-            }
-          } else {
-            // If parent not found, just add it at the top level
-            // But first check if it's already there
-            const existingIndex = currentUpdates.findIndex(
-              (u) =>
-                u.type === "intermediateToolCall" &&
-                u.tool === update.tool &&
-                JSON.stringify(u.details) === JSON.stringify(update.details)
-            );
-
-            if (existingIndex === -1) {
-              newUpdates = [...currentUpdates, update];
-            } else {
-              newUpdates = [...currentUpdates];
-            }
-          }
-        } else if (update.type === "response") {
-          if (update.parentId) {
-            // Find the parent high-level tool call
-            const parentIndex = currentUpdates.findIndex(
-              (u) => u.type === "highLevelToolCall" && u.id === update.parentId
-            );
-
-            if (parentIndex !== -1) {
-              // Check if there's already a response child for this parent
-              const existingResponseIndex = (
-                currentUpdates[parentIndex] as HighLevelToolCallUpdate
-              ).children?.findIndex((child: StreamUpdate) => child.type === "response");
-
-              newUpdates = [...currentUpdates];
-              const parentInNewUpdates = newUpdates[parentIndex] as HighLevelToolCallUpdate;
-
-              if (existingResponseIndex !== undefined && existingResponseIndex !== -1) {
-                // Append to existing response content instead of creating a new entry
-                const existingResponse = parentInNewUpdates.children?.[existingResponseIndex] as {
-                  type: string;
-                  content: string;
-                };
-                if (existingResponse && existingResponse.content) {
-                  existingResponse.content += update.content;
-                }
-              } else {
-                // No existing response, add as a new child
-                parentInNewUpdates.children = [...(parentInNewUpdates.children || []), update];
-              }
-            } else {
-              // If parent not found, check if there's a standalone response with this parentId
-              const existingResponseIndex = currentUpdates.findIndex(
-                (u) => u.type === "response" && u.parentId === update.parentId
-              );
-
-              if (existingResponseIndex !== -1) {
-                // Append to existing response
-                newUpdates = [...currentUpdates];
-                const existingResponse = newUpdates[existingResponseIndex] as {
-                  type: string;
-                  content: string;
-                  parentId?: string;
-                };
-                existingResponse.content += update.content;
-              } else {
-                // Add as new response
-                newUpdates = [...currentUpdates, update];
-              }
-            }
-          } else {
-            // For responses without parentId, check if there's an existing standalone response
-            const existingResponseIndex = currentUpdates.findIndex(
-              (u) => u.type === "response" && !u.parentId
-            );
-
-            if (existingResponseIndex !== -1) {
-              // Append to existing standalone response
-              newUpdates = [...currentUpdates];
-              const existingResponse = newUpdates[existingResponseIndex] as {
-                type: string;
-                content: string;
-              };
-              existingResponse.content += update.content;
-            } else {
-              // Add as new standalone response
-              newUpdates = [...currentUpdates, update];
-            }
-          }
-        } else {
-          // Fallback - just add the update as-is
-          newUpdates = [...currentUpdates, update];
-        }
-
-        console.log("New updates:", newUpdates);
-
-        // Create the new message with updated streamingUpdates
-        const updatedMessage = {
-          ...message,
-          streamingUpdates: newUpdates,
-        };
-
-        // Create a new messages array with the updated message
-        const updatedMessages = [...prevMessages];
-        updatedMessages[messageIndex] = updatedMessage;
-
-        return updatedMessages;
-      });
+      // Process the update based on its type
+      if (update.type === "highLevelUpdate") {
+        // A new high-level step is starting (logSearch, reasoning, etc.)
+        handleHighLevelUpdate(update);
+      } else if (update.type === "intermediateUpdate") {
+        // An intermediate update for an existing step
+        handleIntermediateUpdate(update);
+      }
     });
 
-    // Cleanup the event listener when the component unmounts or when thinkingMessageId changes
     return () => {
       unregister();
     };
-  }, [thinkingMessageId]);
+  }, [cellManager]);
+
+  /**
+   * Handle a high-level update from the agent
+   * Creates a new step in the cell
+   */
+  const handleHighLevelUpdate = (update: {
+    type: "highLevelUpdate";
+    stepType: string;
+    id: string;
+  }) => {
+    if (!cellManager) return;
+
+    cellManager.queueUpdate((cell) => {
+      let newStep: AgentStep;
+
+      // Create the appropriate type of step based on stepType
+      switch (update.stepType) {
+        case "logSearch":
+          newStep = {
+            id: update.id,
+            type: "logSearch",
+            searches: [],
+          };
+          break;
+        case "reasoning":
+          newStep = {
+            id: update.id,
+            type: "reasoning",
+            content: "",
+          };
+          break;
+        case "review":
+          newStep = {
+            id: update.id,
+            type: "review",
+            content: "",
+          };
+          break;
+        case "logPostprocessing":
+          newStep = {
+            id: update.id,
+            type: "logPostprocessing",
+            content: "",
+          };
+          break;
+        case "codePostprocessing":
+          newStep = {
+            id: update.id,
+            type: "codePostprocessing",
+            content: "",
+          };
+          break;
+        default:
+          console.warn(`Unknown step type: ${update.stepType}`);
+          return cell; // Return unchanged cell if we don't recognize the step type
+      }
+
+      // Add the new step to the cell
+      return {
+        ...cell,
+        steps: [...cell.steps, newStep],
+      };
+    });
+  };
+
+  /**
+   * Handle an intermediate update from the agent
+   * Updates the content of an existing step
+   */
+  const handleIntermediateUpdate = (update: {
+    type: "intermediateUpdate";
+    stepType: string;
+    parentId: string;
+    id: string;
+    content: string;
+  }) => {
+    if (!cellManager) return;
+
+    cellManager.queueUpdate((cell) => {
+      // Find the step to update
+      const stepIndex = cell.steps.findIndex((step) => step.id === update.parentId);
+      if (stepIndex === -1) {
+        console.warn(`Step with ID ${update.parentId} not found`);
+        return cell; // Return unchanged cell if step not found
+      }
+
+      const step = cell.steps[stepIndex];
+
+      // Update the step based on its type
+      let updatedStep: AgentStep;
+      switch (step.type) {
+        case "logSearch":
+          updatedStep = {
+            ...step,
+            searches: [...step.searches, update.content],
+          };
+          break;
+        case "reasoning":
+          updatedStep = {
+            ...step,
+            content: step.content + update.content,
+          };
+          break;
+        case "review":
+          updatedStep = {
+            ...step,
+            content: step.content + update.content,
+          };
+          break;
+        case "logPostprocessing":
+        // TODO
+        case "codePostprocessing":
+        // TODO
+        default:
+          // Type assertion to avoid the "never" type error
+          console.warn(`Unknown step type: ${(step as AgentStep).type}`);
+          return cell; // Return unchanged cell if unknown step type
+      }
+
+      // Create new steps array with the updated step
+      const updatedSteps = [...cell.steps];
+      updatedSteps[stepIndex] = updatedStep;
+
+      // Return updated cell
+      return {
+        ...cell,
+        steps: updatedSteps,
+      };
+    });
+  };
 
   const toggleChatMode = () => {
     setChatMode((prevMode) => (prevMode === "agent" ? "manual" : "agent"));
@@ -229,22 +203,50 @@ export function useChat() {
     // Clear the input field
     setNewMessage("");
 
-    // Show thinking message
+    // Set thinking state
     setIsThinking(true);
-    const newThinkingMessageId = generateId();
-    setThinkingMessageId(newThinkingMessageId);
 
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      {
-        id: newThinkingMessageId,
-        role: "assistant",
-        content: "Thinking...",
-        logPostprocessing: null,
-        codePostprocessing: null,
-        streamingUpdates: [], // Initialize empty array for streaming updates
-      },
-    ]);
+    // Create a unique ID for the assistant message
+    const assistantMessageId = generateId();
+
+    // Create initial cell for streaming updates
+    const initialCell: Cell = {
+      id: assistantMessageId,
+      steps: [],
+      response: "",
+    };
+
+    // Create assistant message with the initial cell
+    const assistantMessage: ChatMessage = {
+      id: assistantMessageId,
+      role: "assistant",
+      content: "Thinking...",
+      logPostprocessing: null,
+      codePostprocessing: null,
+      cell: initialCell,
+    };
+
+    // Add the assistant message to the messages array
+    setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+
+    // Create a CellUpdateManager to handle updates to the cell
+    const manager = new CellUpdateManager(initialCell, (updatedCell) => {
+      // Update the assistant message with the updated cell
+      setMessages((prevMessages) =>
+        prevMessages.map((message) => {
+          if (message.id === assistantMessageId) {
+            return {
+              ...message,
+              cell: updatedCell,
+            };
+          }
+          return message;
+        })
+      );
+    });
+
+    // Store the cell manager
+    setCellManager(manager);
 
     try {
       // Determine which API to call based on chat mode
@@ -273,10 +275,19 @@ export function useChat() {
           artifacts = [...artifacts, ...codeArtifacts];
         }
 
-        // Get the "Thinking..." message and replace it with the actual response
+        // Update the cell with the final response
+        manager.queueUpdate((cell) => ({
+          ...cell,
+          response: response.content || "I processed your request but got no response content.",
+          artifacts: artifacts.length > 0 ? artifacts : undefined,
+          logPostprocessing: response.logPostprocessing || null,
+          codePostprocessing: response.codePostprocessing || null,
+        }));
+
+        // Also update the message content to match the cell response
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
-            if (message.id === newThinkingMessageId) {
+            if (message.id === assistantMessageId) {
               return {
                 ...message,
                 content:
@@ -284,22 +295,25 @@ export function useChat() {
                 artifacts: artifacts.length > 0 ? artifacts : undefined,
                 logPostprocessing: response.logPostprocessing || null,
                 codePostprocessing: response.codePostprocessing || null,
-                // Keep the streaming updates in the final message
-                streamingUpdates: message.streamingUpdates,
               };
             }
             return message;
           })
         );
       } else {
-        // Replace the "Thinking..." message with an error message
+        // Handle error response
+        manager.queueUpdate((cell) => ({
+          ...cell,
+          error: "Sorry, I encountered an error processing your request. Please try again later.",
+        }));
+
+        // Also update the message content with the error
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
-            if (message.id === newThinkingMessageId) {
+            if (message.id === assistantMessageId) {
               return {
                 ...message,
                 content:
-                  response?.content ||
                   "Sorry, I encountered an error processing your request. Please try again later.",
               };
             }
@@ -311,10 +325,16 @@ export function useChat() {
       // Log the error
       console.error("Error in chat API call:", error);
 
-      // Replace the "Thinking..." message with an error message
+      // Update the cell with the error
+      manager.queueUpdate((cell) => ({
+        ...cell,
+        error: "Sorry, I encountered an error processing your request. Please try again later.",
+      }));
+
+      // Also update the message content with the error
       setMessages((prevMessages) =>
         prevMessages.map((message) => {
-          if (message.id === newThinkingMessageId) {
+          if (message.id === assistantMessageId) {
             return {
               ...message,
               content:
@@ -327,8 +347,8 @@ export function useChat() {
     } finally {
       // Hide the thinking indicator
       setIsThinking(false);
-      // Clear the thinking message ID
-      setThinkingMessageId(null);
+      // Clear the cell manager
+      setCellManager(null);
       // Ensure context items are cleared after sending a message
       setContextItems([]);
     }
