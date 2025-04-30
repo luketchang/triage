@@ -12,7 +12,27 @@ import {
 
 interface CellViewProps {
   cell: Cell;
+  isThinking?: boolean;
 }
+
+// AnimatedEllipsis component that cycles through ., .., ...
+const AnimatedEllipsis = () => {
+  const [dots, setDots] = useState(".");
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => {
+        if (prev === ".") return "..";
+        if (prev === "..") return "...";
+        return ".";
+      });
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return <span>{dots}</span>;
+};
 
 const styles = {
   container: {
@@ -74,6 +94,12 @@ const styles = {
   collapseIcon: {
     fontSize: "12px",
     color: "#888",
+  },
+  waitingIndicator: {
+    color: "#aaa",
+    fontSize: "14px",
+    padding: "12px 0",
+    fontStyle: "italic",
   },
 };
 
@@ -170,7 +196,7 @@ const renderReviewStep = (step: ReviewStep) => (
  * Renders a log postprocessing step
  */
 const renderLogPostprocessingStep = (step: LogPostprocessingStep) => (
-  <CollapsibleStep title="Log Analysis">
+  <CollapsibleStep title="Log Postprocessing">
     {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing logs...</em>}
   </CollapsibleStep>
 );
@@ -179,7 +205,7 @@ const renderLogPostprocessingStep = (step: LogPostprocessingStep) => (
  * Renders a code postprocessing step
  */
 const renderCodePostprocessingStep = (step: CodePostprocessingStep) => (
-  <CollapsibleStep title="Code Analysis">
+  <CollapsibleStep title="Code Postprocessing">
     {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing code...</em>}
   </CollapsibleStep>
 );
@@ -189,13 +215,61 @@ const renderCodePostprocessingStep = (step: CodePostprocessingStep) => (
  *
  * Displays the content of a Cell, including all its steps and the final response.
  */
-const CellView: React.FC<CellViewProps> = ({ cell }) => {
+const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
+  const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
+  const lastUpdateTimeRef = useRef<number>(Date.now());
+  const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Set up a time-based check for showing the waiting indicator
+  useEffect(() => {
+    // Clear any existing interval
+    if (waitingCheckIntervalRef.current) {
+      clearInterval(waitingCheckIntervalRef.current);
+      waitingCheckIntervalRef.current = null;
+    }
+
+    // Reset last update time when the cell changes (e.g., new step added)
+    lastUpdateTimeRef.current = Date.now();
+
+    // Only set up the interval if we're in thinking state and have steps
+    if (isThinking && cell.steps.length > 0) {
+      waitingCheckIntervalRef.current = setInterval(() => {
+        const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
+        if (timeSinceLastUpdate > 1000) {
+          // Show waiting indicator after 1 second of no updates
+          setShowWaitingIndicator(true);
+        }
+      }, 500);
+    } else {
+      setShowWaitingIndicator(false);
+    }
+
+    return () => {
+      if (waitingCheckIntervalRef.current) {
+        clearInterval(waitingCheckIntervalRef.current);
+      }
+    };
+  }, [cell, isThinking]);
+
+  // Update last update time when cell steps change
+  useEffect(() => {
+    lastUpdateTimeRef.current = Date.now();
+    setShowWaitingIndicator(false);
+  }, [cell.steps]);
+
   return (
     <div style={styles.container}>
       {/* Render each step */}
       {cell.steps.map((step) => (
         <React.Fragment key={step.id}>{renderStep(step)}</React.Fragment>
       ))}
+
+      {/* Show waiting indicator if needed */}
+      {isThinking && showWaitingIndicator && cell.steps.length > 0 && !cell.response && (
+        <div style={styles.waitingIndicator}>
+          <AnimatedEllipsis />
+        </div>
+      )}
 
       {/* Render error if present */}
       {cell.error && <div style={styles.error}>{cell.error}</div>}

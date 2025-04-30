@@ -529,7 +529,7 @@ const ChatView: React.FC<ChatViewProps> = ({
           <div className="thinking-message">
             {message.cell ? (
               // Render the cell view for detailed progress
-              <CellView cell={message.cell} />
+              <CellView cell={message.cell} isThinking={isThinking} />
             ) : (
               <span className="thinking-text">
                 Processing{showWaitingIndicator && <AnimatedEllipsis />}
@@ -538,8 +538,13 @@ const ChatView: React.FC<ChatViewProps> = ({
           </div>
         ) : (
           <div className={`message-text ${hasContextItems ? "message-text-with-context" : ""}`}>
-            <ReactMarkdown>{message.content}</ReactMarkdown>
-            {message.cell && <CellView cell={message.cell} />}
+            {message.cell ? (
+              // When we have a cell, only render the CellView component
+              <CellView cell={message.cell} isThinking={false} />
+            ) : (
+              // For messages without cells, render the content directly
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            )}
           </div>
         )}
 
