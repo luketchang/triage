@@ -68,32 +68,28 @@ export interface TriageAgentState {
   rootCauseAnalysis: string | null;
 }
 
-export type HighLevelToolCallUpdate = {
-  type: "highLevelToolCall";
+export type HighLevelUpdate = {
+  type: "highLevelUpdate";
+  stepType:
+    | "logSearch"
+    | "spanSearch"
+    | "reasoning"
+    | "review"
+    | "logPostprocessing"
+    | "codePostprocessing";
   id: string;
-  tool: string;
-  children: AgentStreamUpdate[];
 };
 
-export type IntermediateToolCallUpdate = {
-  type: "intermediateToolCall";
+export type IntermediateUpdate = {
+  type: "intermediateUpdate";
+  stepType: "logSearch" | "spanSearch" | "reasoning" | "review";
   parentId: string;
   id: string;
-  tool: string;
-  details?: Record<string, any>;
-};
-
-export type ResponseUpdate = {
-  type: "response";
-  parentId?: string;
   content: string;
 };
 
 // Stream update type for agent
-export type AgentStreamUpdate =
-  | HighLevelToolCallUpdate
-  | IntermediateToolCallUpdate
-  | ResponseUpdate;
+export type AgentStreamUpdate = HighLevelUpdate | IntermediateUpdate;
 
 export class TriageAgent {
   private reasoningModel: Model;
@@ -125,7 +121,7 @@ export class TriageAgent {
     const logSearchId = uuidv4();
 
     if (onUpdate) {
-      onUpdate({ type: "highLevelToolCall", id: logSearchId, tool: "Log Search", children: [] });
+      onUpdate({ type: "highLevelUpdate", id: logSearchId, stepType: "logSearch" });
     }
 
     if (!this.observabilityFeatures.includes("logs")) {
@@ -174,7 +170,7 @@ export class TriageAgent {
     const spanSearchId = uuidv4();
 
     if (onUpdate) {
-      onUpdate({ type: "highLevelToolCall", id: spanSearchId, tool: "Span Search", children: [] });
+      onUpdate({ type: "highLevelUpdate", id: spanSearchId, stepType: "spanSearch" });
     }
 
     if (!this.observabilityFeatures.includes("spans")) {
@@ -219,7 +215,7 @@ export class TriageAgent {
     const reasoningId = uuidv4();
 
     if (onUpdate) {
-      onUpdate({ type: "highLevelToolCall", id: reasoningId, tool: "Reasoning", children: [] });
+      onUpdate({ type: "highLevelUpdate", id: reasoningId, stepType: "reasoning" });
     }
 
     const reasoner = new Reasoner(this.reasoningModel);
@@ -278,7 +274,7 @@ export class TriageAgent {
     const reviewId = uuidv4();
 
     if (onUpdate) {
-      onUpdate({ type: "highLevelToolCall", id: reviewId, tool: "Review", children: [] });
+      onUpdate({ type: "highLevelUpdate", id: reviewId, stepType: "review" });
     }
 
     const reviewer = new Reviewer(this.reasoningModel);
@@ -336,12 +332,7 @@ export class TriageAgent {
     const logPostprocessingId = uuidv4();
 
     if (onUpdate) {
-      onUpdate({
-        type: "highLevelToolCall",
-        id: logPostprocessingId,
-        tool: "Log Postprocessing",
-        children: [],
-      });
+      onUpdate({ type: "highLevelUpdate", id: logPostprocessingId, stepType: "logPostprocessing" });
     }
 
     try {
@@ -381,10 +372,9 @@ export class TriageAgent {
 
     if (onUpdate) {
       onUpdate({
-        type: "highLevelToolCall",
+        type: "highLevelUpdate",
         id: codePostprocessingId,
-        tool: "Code Postprocessing",
-        children: [],
+        stepType: "codePostprocessing",
       });
     }
 
@@ -655,12 +645,10 @@ async function main(): Promise<void> {
     startDate,
     endDate,
     onUpdate: (update) => {
-      if (update.type === "highLevelToolCall") {
-        logger.info(`HighLevelTool: ${update.tool}`);
-      } else if (update.type === "intermediateToolCall") {
-        logger.info(`IntermediateTool: ${update.parentId} -> ${update.tool}`, update.details || "");
-      } else if (update.type === "response") {
-        logger.info(`Response: ${update.content}`);
+      if (update.type === "highLevelUpdate") {
+        logger.info(`HighLevelUpdate: ${update.stepType}`);
+      } else if (update.type === "intermediateUpdate") {
+        logger.info(`IntermediateUpdate: ${update.stepType}`, update.content);
       }
     },
   });

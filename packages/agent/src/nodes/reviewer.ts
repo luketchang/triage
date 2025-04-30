@@ -9,9 +9,9 @@ import {
   RootCauseAnalysis,
 } from "../types";
 
+import { v4 as uuidv4 } from "uuid";
 import { AgentStreamUpdate } from "..";
 import { formatFacetValues, formatLogResults } from "./utils";
-
 export type ReviewerResponse = RequestToolCalls | RootCauseAnalysis;
 
 export interface ReviewerParams {
@@ -130,8 +130,10 @@ export class Reviewer {
         if (params.onUpdate) {
           // Always send the text delta with a parent ID for proper rendering
           params.onUpdate({
-            type: "response",
-            parentId: params.parentId, // Ensure parentId is always provided
+            type: "intermediateUpdate",
+            stepType: "review",
+            id: uuidv4(),
+            parentId: params.parentId,
             content: part.textDelta,
           });
         }

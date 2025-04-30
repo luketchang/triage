@@ -294,16 +294,11 @@ export class LogSearchAgent {
         // and only once before the fetch
         if (params.onUpdate) {
           params.onUpdate({
-            type: "intermediateToolCall",
+            type: "intermediateUpdate",
+            stepType: "logSearch",
             id: uuidv4(),
             parentId: params.logSearchId,
-            tool: "Search Query",
-            details: {
-              query: response.query,
-              start: response.start,
-              end: response.end,
-              limit: response.limit,
-            },
+            content: `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`,
           });
         }
 

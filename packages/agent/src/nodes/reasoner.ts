@@ -1,7 +1,7 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination, SpansWithPagination } from "@triage/observability";
 import { streamText } from "ai";
-
+import { v4 as uuidv4 } from "uuid";
 import { AgentStreamUpdate } from "../index";
 import {
   logRequestToolSchema,
@@ -160,7 +160,9 @@ export class Reasoner {
         // If this is root cause analysis (no tool calls), stream text as it's generated
         if (params.onUpdate) {
           params.onUpdate({
-            type: "response",
+            type: "intermediateUpdate",
+            stepType: "reasoning",
+            id: uuidv4(),
             parentId: params.parentId,
             content: part.textDelta,
           });
