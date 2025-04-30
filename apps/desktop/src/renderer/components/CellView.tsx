@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   AgentStep,
@@ -22,15 +22,23 @@ const styles = {
     width: "100%",
   },
   stepContainer: {
-    marginBottom: "8px",
-    border: "1px solid #e0e0e0",
-    borderRadius: "8px",
-    padding: "10px",
-    backgroundColor: "#f8f8f8",
+    marginBottom: "12px",
+    borderRadius: "6px",
+    padding: "10px 12px",
+    backgroundColor: "transparent",
+    border: "1px solid #333",
   },
   stepHeader: {
     fontWeight: "bold" as const,
     marginBottom: "6px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    cursor: "pointer",
+    userSelect: "none" as const,
+    color: "#aaa",
+  },
+  stepHeaderContent: {
     display: "flex",
     alignItems: "center",
   },
@@ -39,25 +47,68 @@ const styles = {
   },
   stepContent: {
     whiteSpace: "pre-wrap" as const,
+    color: "#aaa", // Light grey for intermediate outputs
+    fontFamily: "inherit",
+    maxHeight: "300px",
+    overflowY: "auto" as const,
   },
   logSearchItem: {
     padding: "4px 0",
     fontFamily: "monospace",
+    color: "#aaa",
   },
   error: {
-    color: "red",
+    color: "#ff6b6b",
     marginTop: "8px",
     padding: "10px",
-    backgroundColor: "#ffebee",
+    backgroundColor: "rgba(255, 107, 107, 0.1)",
     borderRadius: "4px",
   },
   response: {
     marginTop: "16px",
-    padding: "12px",
-    backgroundColor: "#e3f2fd",
-    borderRadius: "8px",
+    padding: "0",
+    backgroundColor: "transparent",
+    color: "#fff", // White for final response
     whiteSpace: "pre-wrap" as const,
   },
+  collapseIcon: {
+    fontSize: "12px",
+    color: "#888",
+  },
+};
+
+/**
+ * Collapsible step container component
+ */
+const CollapsibleStep: React.FC<{
+  title: string;
+  children: React.ReactNode;
+}> = ({ title, children }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to the bottom of content when new content is added
+  useEffect(() => {
+    if (!isCollapsed && contentRef.current) {
+      contentRef.current.scrollTop = contentRef.current.scrollHeight;
+    }
+  });
+
+  return (
+    <div style={styles.stepContainer}>
+      <div style={styles.stepHeader} onClick={() => setIsCollapsed(!isCollapsed)}>
+        <div style={styles.stepHeaderContent}>
+          <span>{title}</span>
+        </div>
+        <span style={styles.collapseIcon}>{isCollapsed ? "▼" : "▲"}</span>
+      </div>
+      {!isCollapsed && (
+        <div style={styles.stepContent} ref={contentRef}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
 };
 
 /**
@@ -84,83 +135,53 @@ const renderStep = (step: AgentStep) => {
  * Renders a log search step
  */
 const renderLogSearchStep = (step: LogSearchStep) => (
-  <div style={styles.stepContainer}>
-    <div style={styles.stepHeader}>
-      <span style={styles.stepIcon}>🔍</span>
-      <span>Log Search</span>
-    </div>
-    <div style={styles.stepContent}>
-      {step.searches.length === 0 ? (
-        <em>Searching logs...</em>
-      ) : (
-        step.searches.map((search, index) => (
-          <div key={`${step.id}-search-${index}`} style={styles.logSearchItem}>
-            {search}
-          </div>
-        ))
-      )}
-    </div>
-  </div>
+  <CollapsibleStep title="Log Search">
+    {step.searches.length === 0 ? (
+      <em>Searching logs...</em>
+    ) : (
+      step.searches.map((search, index) => (
+        <div key={`${step.id}-search-${index}`} style={styles.logSearchItem}>
+          {search}
+        </div>
+      ))
+    )}
+  </CollapsibleStep>
 );
 
 /**
  * Renders a reasoning step
  */
 const renderReasoningStep = (step: ReasoningStep) => (
-  <div style={styles.stepContainer}>
-    <div style={styles.stepHeader}>
-      <span style={styles.stepIcon}>🧠</span>
-      <span>Reasoning</span>
-    </div>
-    <div style={styles.stepContent}>
-      {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing...</em>}
-    </div>
-  </div>
+  <CollapsibleStep title="Reasoning">
+    {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing...</em>}
+  </CollapsibleStep>
 );
 
 /**
  * Renders a review step
  */
 const renderReviewStep = (step: ReviewStep) => (
-  <div style={styles.stepContainer}>
-    <div style={styles.stepHeader}>
-      <span style={styles.stepIcon}>✓</span>
-      <span>Review</span>
-    </div>
-    <div style={styles.stepContent}>
-      {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Reviewing...</em>}
-    </div>
-  </div>
+  <CollapsibleStep title="Review">
+    {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Reviewing...</em>}
+  </CollapsibleStep>
 );
 
 /**
  * Renders a log postprocessing step
  */
 const renderLogPostprocessingStep = (step: LogPostprocessingStep) => (
-  <div style={styles.stepContainer}>
-    <div style={styles.stepHeader}>
-      <span style={styles.stepIcon}>📊</span>
-      <span>Log Analysis</span>
-    </div>
-    <div style={styles.stepContent}>
-      {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing logs...</em>}
-    </div>
-  </div>
+  <CollapsibleStep title="Log Analysis">
+    {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing logs...</em>}
+  </CollapsibleStep>
 );
 
 /**
  * Renders a code postprocessing step
  */
 const renderCodePostprocessingStep = (step: CodePostprocessingStep) => (
-  <div style={styles.stepContainer}>
-    <div style={styles.stepHeader}>
-      <span style={styles.stepIcon}>💻</span>
-      <span>Code Analysis</span>
-    </div>
-    <div style={styles.stepContent}>
-      {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing code...</em>}
-    </div>
-  </div>
+  <CollapsibleStep title="Code Analysis">
+    {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing code...</em>}
+  </CollapsibleStep>
 );
 
 /**
