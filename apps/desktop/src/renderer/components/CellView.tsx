@@ -1,14 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import {
-  AgentStep,
-  Cell,
-  CodePostprocessingStep,
-  LogPostprocessingStep,
-  LogSearchStep,
-  ReasoningStep,
-  ReviewStep,
-} from "../types";
+import { AgentStep, Cell, LogSearchStep, ReasoningStep, ReviewStep } from "../types";
 
 interface CellViewProps {
   cell: Cell;
@@ -46,7 +38,7 @@ const styles = {
     borderRadius: "6px",
     padding: "10px 12px",
     backgroundColor: "transparent",
-    border: "1px solid #333",
+    // Remove border to match dark background
   },
   stepHeader: {
     fontWeight: "bold" as const,
@@ -56,7 +48,7 @@ const styles = {
     alignItems: "center",
     cursor: "pointer",
     userSelect: "none" as const,
-    color: "#aaa",
+    color: "#fff",
   },
   stepHeaderContent: {
     display: "flex",
@@ -149,9 +141,9 @@ const renderStep = (step: AgentStep) => {
     case "review":
       return renderReviewStep(step);
     case "logPostprocessing":
-      return renderLogPostprocessingStep(step);
+      return null; // Don't render log postprocessing in UI
     case "codePostprocessing":
-      return renderCodePostprocessingStep(step);
+      return null; // Don't render code postprocessing in UI
     default:
       return null;
   }
@@ -189,24 +181,6 @@ const renderReasoningStep = (step: ReasoningStep) => (
 const renderReviewStep = (step: ReviewStep) => (
   <CollapsibleStep title="Review">
     {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Reviewing...</em>}
-  </CollapsibleStep>
-);
-
-/**
- * Renders a log postprocessing step
- */
-const renderLogPostprocessingStep = (step: LogPostprocessingStep) => (
-  <CollapsibleStep title="Log Postprocessing">
-    {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing logs...</em>}
-  </CollapsibleStep>
-);
-
-/**
- * Renders a code postprocessing step
- */
-const renderCodePostprocessingStep = (step: CodePostprocessingStep) => (
-  <CollapsibleStep title="Code Postprocessing">
-    {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing code...</em>}
   </CollapsibleStep>
 );
 
@@ -249,7 +223,7 @@ const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
         clearInterval(waitingCheckIntervalRef.current);
       }
     };
-  }, [cell, isThinking]);
+  }, [cell, isThinking, visibleSteps.length]);
 
   // Update last update time when cell steps change
   useEffect(() => {
@@ -259,13 +233,13 @@ const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
 
   return (
     <div style={styles.container}>
-      {/* Render each step */}
-      {cell.steps.map((step) => (
+      {/* Render each visible step */}
+      {visibleSteps.map((step) => (
         <React.Fragment key={step.id}>{renderStep(step)}</React.Fragment>
       ))}
 
       {/* Show waiting indicator if needed */}
-      {isThinking && showWaitingIndicator && cell.steps.length > 0 && !cell.response && (
+      {isThinking && showWaitingIndicator && visibleSteps.length > 0 && !cell.response && (
         <div style={styles.waitingIndicator}>
           <AnimatedEllipsis />
         </div>

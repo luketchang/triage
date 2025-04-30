@@ -547,11 +547,6 @@ const ChatView: React.FC<ChatViewProps> = ({
             )}
           </div>
         )}
-
-        {/* Show artifacts if present */}
-        {message.artifacts && message.artifacts.length > 0 && (
-          <div className="artifacts-container">{message.artifacts.map(renderArtifactCard)}</div>
-        )}
       </>
     );
   };
