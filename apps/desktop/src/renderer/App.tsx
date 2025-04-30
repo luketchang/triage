@@ -166,11 +166,6 @@ function App(): JSX.Element {
             onTimeRangeChange={logsState.handleTimeRangeChange}
             onQuerySubmit={logsState.fetchLogsWithQuery}
             onLoadMore={logsState.handleLoadMoreLogs}
-            selectedArtifact={null}
-            setLogs={logsState.setLogs}
-            setIsLoading={logsState.setIsLoading}
-            setPageCursor={logsState.setPageCursor}
-            setTimeRange={logsState.setTimeRange}
             facets={logsState.facets}
             selectedFacets={logsState.selectedFacets}
             setSelectedFacets={logsState.setSelectedFacets}
@@ -179,7 +174,6 @@ function App(): JSX.Element {
       case "traces":
         return TRACES_ENABLED ? (
           <TracesView
-            selectedArtifact={null}
             selectedTrace={tracesState.selectedTrace}
             handleTraceSelect={tracesState.handleTraceSelect}
             traces={tracesState.traces}
@@ -207,7 +201,7 @@ function App(): JSX.Element {
           </div>
         );
       case "dashboards":
-        return <DashboardsView selectedArtifact={null} />;
+        return <DashboardsView />;
       case "chat":
         return (
           <ChatView

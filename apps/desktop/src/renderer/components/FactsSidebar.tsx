@@ -333,11 +333,6 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         onTimeRangeChange={handleTimeRangeChange}
         onQuerySubmit={handleQuerySubmit}
         onLoadMore={handleLoadMore}
-        selectedArtifact={null}
-        setLogs={setLogs}
-        setIsLoading={setIsLoading}
-        setPageCursor={setPageCursor}
-        setTimeRange={setTimeRange}
         facets={facets}
         selectedFacets={selectedFacets}
         setSelectedFacets={setSelectedFacets}

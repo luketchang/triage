@@ -1,11 +1,8 @@
 import React from "react";
-import { Artifact } from "../types";
 
-interface DashboardsViewProps {
-  selectedArtifact?: Artifact | null;
-}
+interface DashboardsViewProps {}
 
-const DashboardsView: React.FC<DashboardsViewProps> = ({ selectedArtifact: _selectedArtifact }) => {
+const DashboardsView: React.FC<DashboardsViewProps> = () => {
   return (
     <div className="dashboards-view">
       <div className="dashboards-placeholder">

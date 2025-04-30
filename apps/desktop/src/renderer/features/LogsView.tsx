@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import SearchBar from "../components/SearchBar";
 import TimeRangePicker from "../components/TimeRangePicker";
-import { Artifact, FacetData, Log, LogsWithPagination, TimeRange } from "../types";
+import { FacetData, Log, LogsWithPagination, TimeRange } from "../types";
 import { formatDate } from "../utils/formatters";
 
 interface LogsViewProps {
@@ -14,11 +14,6 @@ interface LogsViewProps {
   isLoading: boolean;
   onQuerySubmit: (query: string) => void;
   onLoadMore: () => void;
-  selectedArtifact?: Artifact | null;
-  setLogs?: (logs: Log[]) => void;
-  setIsLoading?: (isLoading: boolean) => void;
-  setPageCursor?: (cursor: string | undefined) => void;
-  setTimeRange?: (timeRange: TimeRange) => void;
   facets: FacetData[];
   selectedFacets: string[];
   setSelectedFacets: React.Dispatch<React.SetStateAction<string[]>>;
@@ -35,11 +30,6 @@ const LogsView: React.FC<LogsViewProps> = ({
   onTimeRangeChange,
   onQuerySubmit,
   onLoadMore,
-  selectedArtifact,
-  setLogs,
-  setIsLoading,
-  setPageCursor,
-  setTimeRange,
   facets,
   selectedFacets,
   setSelectedFacets,
@@ -66,90 +56,6 @@ const LogsView: React.FC<LogsViewProps> = ({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [selectedLog]);
-
-  // Effect to handle the selectedArtifact changes
-  useEffect(() => {
-    if (
-      selectedArtifact &&
-      selectedArtifact.type === "log" &&
-      selectedArtifact.data &&
-      selectedArtifact.data.input
-    ) {
-      const searchInput = selectedArtifact.data.input;
-
-      // Update query through props
-      setLogQuery(searchInput.query);
-
-      // Handle the results if they exist - we want to do this FIRST
-      if (selectedArtifact.data.results) {
-        // For results that are objects (LogsWithPagination)
-        if (
-          typeof selectedArtifact.data.results === "object" &&
-          selectedArtifact.data.results !== null
-        ) {
-          // Update logs directly from the artifact data
-          if (
-            "logs" in selectedArtifact.data.results &&
-            Array.isArray(selectedArtifact.data.results.logs) &&
-            setLogs
-          ) {
-            // Mark as loading while we update everything
-            if (setIsLoading) {
-              setIsLoading(true);
-            }
-
-            // Update logs from the artifact data
-            setLogs(selectedArtifact.data.results.logs);
-
-            // Update cursor for pagination if available
-            if ("pageCursorOrIndicator" in selectedArtifact.data.results && setPageCursor) {
-              setPageCursor(selectedArtifact.data.results.pageCursorOrIndicator);
-            }
-
-            // Now update the time range WITHOUT triggering a new fetch
-            if (searchInput.start && searchInput.end) {
-              // Just update the state directly without triggering a fetch
-              setTimeRange &&
-                setTimeRange({
-                  start: searchInput.start,
-                  end: searchInput.end,
-                });
-            }
-
-            // Mark as loaded when done
-            if (setIsLoading) {
-              setIsLoading(false);
-            }
-
-            // We've handled everything from the artifact data, so return early
-            // to prevent the time range change from triggering a fetch
-            return;
-          }
-        }
-      }
-
-      // Only reach here if we don't have results in the artifact
-      // In this case, we DO want to trigger a fetch with the time range
-      if (searchInput.start && searchInput.end) {
-        const newTimeRange = {
-          start: searchInput.start,
-          end: searchInput.end,
-        };
-        onTimeRangeChange(newTimeRange);
-      } else if (searchInput.pageCursor && setPageCursor) {
-        // Fallback to cursor in the input if results don't have it
-        setPageCursor(searchInput.pageCursor);
-      }
-    }
-  }, [
-    selectedArtifact,
-    setLogQuery,
-    onTimeRangeChange,
-    setLogs,
-    setIsLoading,
-    setPageCursor,
-    setTimeRange,
-  ]);
 
   const handleQuerySubmit = (e: React.FormEvent) => {
     e.preventDefault();
