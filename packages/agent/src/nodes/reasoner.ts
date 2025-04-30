@@ -2,6 +2,7 @@ import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/co
 import { LogsWithPagination, SpansWithPagination } from "@triage/observability";
 import { streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
+
 import { AgentStreamUpdate } from "../index";
 import {
   logRequestToolSchema,
@@ -149,7 +150,7 @@ export class Reasoner {
     });
 
     let text = "";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const requestToolCalls: RequestToolCalls = {
       type: "toolCalls",
       toolCalls: [],

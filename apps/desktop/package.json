@@ -6,9 +6,10 @@
     "dev": "vite",
     "start": "pnpm run compile && vite & (wait-on http://localhost:5174 && cross-env electron dist-electron/electron/main.js)",
     "compile": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json",
-    "build": "pnpm lint && vite build",
+    "build": "pnpm lint:check && vite build",
     "package": "pnpm run build && electron-builder",
-    "lint": "eslint src --ext ts,tsx --max-warnings 9999",
+    "lint:check": "eslint src --ext ts,tsx --max-warnings 99",
+    "lint:fix": "eslint src --ext ts,tsx --fix --max-warnings 99",
     "check-types": "tsc --noEmit",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"

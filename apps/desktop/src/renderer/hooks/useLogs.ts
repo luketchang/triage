@@ -34,7 +34,7 @@ export function useLogs(options: UseLogsOptions = {}) {
   const initialLoadDone = useRef(false);
 
   // Fetch logs with the given parameters - memoize with useCallback
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   const fetchLogs = useCallback(
     async (params: LogQueryParams): Promise<void> => {
       setIsLoading(true);

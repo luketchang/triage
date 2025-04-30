@@ -1,7 +1,9 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
 import { streamText } from "ai";
+import { v4 as uuidv4 } from "uuid";
 
+import { AgentStreamUpdate } from "..";
 import {
   logRequestToolSchema,
   LogSearchInputCore,
@@ -9,8 +11,6 @@ import {
   RootCauseAnalysis,
 } from "../types";
 
-import { v4 as uuidv4 } from "uuid";
-import { AgentStreamUpdate } from "..";
 import { formatFacetValues, formatLogResults } from "./utils";
 export type ReviewerResponse = RequestToolCalls | RootCauseAnalysis;
 
