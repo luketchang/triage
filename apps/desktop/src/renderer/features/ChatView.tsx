@@ -451,11 +451,23 @@ const ChatView: React.FC<ChatViewProps> = ({
   const renderStreamUpdates = (updates: StreamUpdate[]) => {
     if (!updates || updates.length === 0) return null;
 
+    // Log updates to console for debugging
+    console.log("Stream updates:", updates);
+
     // Get standalone response content (responses without a parentId)
     const standaloneResponseContent = updates
       .filter((update) => update.type === "response" && !update.parentId)
       .map((update) => (update as { type: "response"; content: string }).content)
       .join("");
+
+    // Also get all response content, even with parentId, to ensure we're showing all responses
+    const allResponseContent = updates
+      .filter((update) => update.type === "response")
+      .map((update) => (update as { type: "response"; content: string }).content)
+      .join("");
+
+    console.log("Standalone response content:", standaloneResponseContent);
+    console.log("All response content:", allResponseContent);
 
     return (
       <div style={styles.streamingUpdates}>
@@ -502,6 +514,13 @@ const ChatView: React.FC<ChatViewProps> = ({
                         return (
                           <div key={`inter-${childIndex}`} style={styles.intermediateToolCall}>
                             {child.tool} {details ? `(${details})` : ""}
+                          </div>
+                        );
+                      } else if (child.type === "response") {
+                        // Ensure we render response children directly
+                        return (
+                          <div key={`response-${childIndex}`} style={styles.responseStream}>
+                            <ReactMarkdown>{child.content}</ReactMarkdown>
                           </div>
                         );
                       }

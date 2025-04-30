@@ -29,6 +29,9 @@ export function useChat() {
 
     // Register for updates and store the cleanup function
     const unregister = api.onAgentUpdate((update) => {
+      // Add debug logging
+      console.log("Got agent update:", update);
+
       setMessages((prevMessages) => {
         // Only register onAgentUpdate if we have thinking message (beginning of agent run)
         const messageIndex = prevMessages.findIndex((msg) => msg.id === thinkingMessageId);
@@ -36,6 +39,8 @@ export function useChat() {
 
         const message = prevMessages[messageIndex];
         const currentUpdates = message.streamingUpdates || [];
+
+        console.log("Current updates:", currentUpdates);
 
         // Handle the update based on its type
         let newUpdates: StreamUpdate[];
@@ -103,7 +108,7 @@ export function useChat() {
               (u) => u.type === "highLevelToolCall" && u.id === update.parentId
             );
 
-            if (parentIndex !== -1 && "children" in currentUpdates[parentIndex]) {
+            if (parentIndex !== -1) {
               // Add the response as a child of the high-level tool call
               newUpdates = [...currentUpdates];
               const parentInNewUpdates = newUpdates[parentIndex] as HighLevelToolCallUpdate;
@@ -120,6 +125,8 @@ export function useChat() {
           // Fallback - just add the update as-is
           newUpdates = [...currentUpdates, update];
         }
+
+        console.log("New updates:", newUpdates);
 
         // Create the new message with updated streamingUpdates
         const updatedMessage = {

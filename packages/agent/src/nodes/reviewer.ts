@@ -128,9 +128,10 @@ export class Reviewer {
         text += part.textDelta;
 
         if (params.onUpdate) {
+          // Always send the text delta with a parent ID for proper rendering
           params.onUpdate({
             type: "response",
-            parentId: params.parentId,
+            parentId: params.parentId, // Ensure parentId is always provided
             content: part.textDelta,
           });
         }
@@ -142,7 +143,7 @@ export class Reviewer {
             reasoning: part.args.reasoning,
           });
         }
-        // TODO: add cases for other future tools like spanRequest
+        // TODO: add cases for other future tools
       }
     }
 
@@ -152,10 +153,11 @@ export class Reviewer {
     // Create the appropriate output object based on the type
     let output: ReviewerResponse;
     if (requestToolCalls.toolCalls.length === 0) {
-      // If no tool calls, return the root cause analysis as-is
+      // If no tool calls, return the actual streamed text from the model
+      // instead of just re-using the original rootCauseAnalysis input
       output = {
         type: "rootCauseAnalysis",
-        rootCause: params.rootCauseAnalysis,
+        rootCause: text.trim() || params.rootCauseAnalysis,
       };
     } else {
       // For tool calls, construct the RequestToolCalls object

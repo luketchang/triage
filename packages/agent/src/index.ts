@@ -72,7 +72,7 @@ export type HighLevelToolCallUpdate = {
   type: "highLevelToolCall";
   id: string;
   tool: string;
-  children?: AgentStreamUpdate[];
+  children: AgentStreamUpdate[];
 };
 
 export type IntermediateToolCallUpdate = {
@@ -125,7 +125,7 @@ export class TriageAgent {
     const logSearchId = uuidv4();
 
     if (onUpdate) {
-      onUpdate({ type: "highLevelToolCall", id: logSearchId, tool: "Log Search" });
+      onUpdate({ type: "highLevelToolCall", id: logSearchId, tool: "Log Search", children: [] });
     }
 
     if (!this.observabilityFeatures.includes("logs")) {
@@ -174,7 +174,7 @@ export class TriageAgent {
     const spanSearchId = uuidv4();
 
     if (onUpdate) {
-      onUpdate({ type: "highLevelToolCall", id: spanSearchId, tool: "Span Search" });
+      onUpdate({ type: "highLevelToolCall", id: spanSearchId, tool: "Span Search", children: [] });
     }
 
     if (!this.observabilityFeatures.includes("spans")) {
@@ -219,7 +219,7 @@ export class TriageAgent {
     const reasoningId = uuidv4();
 
     if (onUpdate) {
-      onUpdate({ type: "highLevelToolCall", id: reasoningId, tool: "Reasoning" });
+      onUpdate({ type: "highLevelToolCall", id: reasoningId, tool: "Reasoning", children: [] });
     }
 
     const reasoner = new Reasoner(this.reasoningModel);
@@ -278,7 +278,7 @@ export class TriageAgent {
     const reviewId = uuidv4();
 
     if (onUpdate) {
-      onUpdate({ type: "highLevelToolCall", id: reviewId, tool: "Review" });
+      onUpdate({ type: "highLevelToolCall", id: reviewId, tool: "Review", children: [] });
     }
 
     const reviewer = new Reviewer(this.reasoningModel);
@@ -336,7 +336,12 @@ export class TriageAgent {
     const logPostprocessingId = uuidv4();
 
     if (onUpdate) {
-      onUpdate({ type: "highLevelToolCall", id: logPostprocessingId, tool: "Log Postprocessing" });
+      onUpdate({
+        type: "highLevelToolCall",
+        id: logPostprocessingId,
+        tool: "Log Postprocessing",
+        children: [],
+      });
     }
 
     try {
@@ -379,6 +384,7 @@ export class TriageAgent {
         type: "highLevelToolCall",
         id: codePostprocessingId,
         tool: "Code Postprocessing",
+        children: [],
       });
     }
 
