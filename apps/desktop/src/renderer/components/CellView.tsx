@@ -32,6 +32,7 @@ const styles = {
     display: "flex",
     flexDirection: "column" as const,
     width: "100%",
+    maxWidth: "100%",
   },
   stepContainer: {
     marginBottom: "12px",
@@ -39,6 +40,7 @@ const styles = {
     padding: "10px 12px",
     backgroundColor: "transparent",
     width: "100%", // Ensure containers take full width
+    minWidth: "300px", // Ensure a minimum width even when collapsed
   },
   stepHeader: {
     fontWeight: "bold" as const,
@@ -54,6 +56,7 @@ const styles = {
   stepHeaderContent: {
     display: "flex",
     alignItems: "center",
+    flex: 1, // Take up available space
   },
   stepIcon: {
     marginRight: "8px",
@@ -67,6 +70,7 @@ const styles = {
     paddingLeft: "12px", // Add indentation
     width: "100%", // Ensure step content takes full width
     overflow: "auto", // Prevent text overflow
+    backgroundColor: "transparent", // Ensure transparent background
   },
   logSearchItem: {
     padding: "4px 0",
@@ -130,7 +134,10 @@ const CollapsibleStep: React.FC<{
         </div>
         <span style={styles.collapseIcon}>{isCollapsed ? "▼" : "▲"}</span>
       </div>
-      {!isCollapsed && (
+      {isCollapsed ? (
+        // When collapsed, add a placeholder div to maintain width
+        <div style={{ minHeight: "8px", width: "100%" }} />
+      ) : (
         <div style={styles.stepContent} ref={contentRef}>
           {children}
         </div>
@@ -245,7 +252,7 @@ const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
   }, [cell.steps]);
 
   return (
-    <div style={styles.container}>
+    <div className="cellview-container" style={styles.container}>
       {/* Render each visible step */}
       {visibleSteps.map((step) => (
         <React.Fragment key={step.id}>{renderStep(step)}</React.Fragment>

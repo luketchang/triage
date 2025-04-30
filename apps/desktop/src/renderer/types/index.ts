@@ -94,7 +94,6 @@ export interface Cell {
   steps: AgentStep[];
   response: string;
   error?: string;
-  artifacts?: Artifact[];
   logPostprocessing?: LogPostprocessing | null;
   codePostprocessing?: CodePostprocessing | null;
 }
@@ -268,15 +267,20 @@ export interface CodePostprocessing {
 }
 
 // Interface for chat messages
-export interface ChatMessage {
+export type ChatMessage = UserChatMessage | AssistantChatMessage;
+
+export interface UserChatMessage {
+  role: "user";
   id: string;
-  role: "user" | "assistant";
   content: string;
-  artifacts?: Artifact[];
   contextItems?: ContextItem[];
-  logPostprocessing: LogPostprocessing | null;
-  codePostprocessing: CodePostprocessing | null;
-  cell?: Cell; // Reference to the Cell for assistant messages
+}
+
+export interface AssistantChatMessage {
+  role: "assistant";
+  id: string;
+  content: string;
+  cell: Cell; // Reference to the Cell for assistant messages
 }
 
 // Interface for main content tabs

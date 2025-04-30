@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView";
 import FactsSidebar from "../components/FactsSidebar";
-import { Artifact, ChatMessage, ContextItem } from "../types";
+import { AssistantChatMessage, ChatMessage, ContextItem } from "../types";
 
 // AnimatedEllipsis component that cycles through ., .., ...
 const AnimatedEllipsis = () => {
@@ -28,7 +28,6 @@ interface ChatViewProps {
   newMessage: string;
   setNewMessage: (message: string) => void;
   sendMessage: () => Promise<void>;
-  onArtifactClick: (artifact: Artifact) => void;
   isThinking: boolean;
   contextItems?: ContextItem[];
   removeContextItem?: (id: string) => void;
@@ -381,60 +380,73 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   // Function to render message content
   const renderMessageContent = (message: ChatMessage) => {
-    // First check if there are context items
-    const hasContextItems = message.contextItems && message.contextItems.length > 0;
+    if (message.role === "user") {
+      // Handle user message
+      const hasContextItems = message.contextItems && message.contextItems.length > 0;
 
-    // Combine the check for both context items and message type
-    return (
-      <>
-        {hasContextItems && message.contextItems && (
-          <div className="message-context-items">
-            <div className="context-items-header">
-              <span>Attached Context</span>
+      return (
+        <>
+          {hasContextItems && message.contextItems && (
+            <div className="message-context-items">
+              <div className="context-items-header">
+                <span>Attached Context</span>
+              </div>
+              <div className="context-items-attached">
+                {message.contextItems.map((item) => renderContextCard(item, false))}
+              </div>
             </div>
-            <div className="context-items-attached">
-              {message.contextItems.map((item) => renderContextCard(item, false))}
-            </div>
-          </div>
-        )}
+          )}
 
-        {message.content === "Thinking..." ? (
-          <div className="thinking-message">
-            {message.cell ? (
-              // Render the cell view for detailed progress
-              <CellView cell={message.cell} isThinking={isThinking} />
-            ) : (
-              <span className="thinking-text">
-                Processing{showWaitingIndicator && <AnimatedEllipsis />}
-              </span>
-            )}
-          </div>
-        ) : (
           <div className={`message-text ${hasContextItems ? "message-text-with-context" : ""}`}>
-            {message.cell ? (
-              // When we have a cell, only render the CellView component
-              <CellView cell={message.cell} isThinking={false} />
-            ) : (
-              // For messages without cells, render the content directly
-              <ReactMarkdown>{message.content}</ReactMarkdown>
-            )}
+            <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>
-        )}
-      </>
-    );
+        </>
+      );
+    } else {
+      // Handle assistant message
+      return (
+        <>
+          {message.content === "Thinking..." ? (
+            <div className="thinking-message">
+              {message.cell ? (
+                // Render the cell view for detailed progress
+                <CellView cell={message.cell} isThinking={isThinking} />
+              ) : (
+                <span className="thinking-text">
+                  Processing{showWaitingIndicator && <AnimatedEllipsis />}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="message-text">
+              {message.cell ? (
+                // When we have a cell, only render the CellView component
+                <CellView cell={message.cell} isThinking={false} />
+              ) : (
+                // For messages without cells, render the content directly
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              )}
+            </div>
+          )}
+        </>
+      );
+    }
   };
 
   // Get the latest assistant message with postprocessing data to show facts if needed
   const latestMessageWithPostprocessing = messages
-    .filter((m) => m.role === "assistant" && (m.logPostprocessing || m.codePostprocessing))
+    .filter(
+      (m): m is AssistantChatMessage =>
+        m.role === "assistant" && !!(m.cell.logPostprocessing || m.cell.codePostprocessing)
+    )
     .pop();
 
   // Determine if we should show the facts sidebar
   const shouldShowFactsSidebar =
     !!latestMessageWithPostprocessing &&
     latestMessageWithPostprocessing.content !== "Thinking..." &&
-    ((latestMessageWithPostprocessing.logPostprocessing?.facts.length || 0) > 0 ||
-      (latestMessageWithPostprocessing.codePostprocessing?.facts.length || 0) > 0);
+    ((latestMessageWithPostprocessing.cell.logPostprocessing?.facts.length || 0) > 0 ||
+      (latestMessageWithPostprocessing.cell.codePostprocessing?.facts.length || 0) > 0);
 
   return (
     <div className="chat-tab">
@@ -469,8 +481,8 @@ const ChatView: React.FC<ChatViewProps> = ({
 
         {shouldShowFactsSidebar && latestMessageWithPostprocessing && (
           <FactsSidebar
-            logFacts={latestMessageWithPostprocessing.logPostprocessing?.facts || []}
-            codeFacts={latestMessageWithPostprocessing.codePostprocessing?.facts || []}
+            logFacts={latestMessageWithPostprocessing.cell.logPostprocessing?.facts || []}
+            codeFacts={latestMessageWithPostprocessing.cell.codePostprocessing?.facts || []}
           />
         )}
       </div>

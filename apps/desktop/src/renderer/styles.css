@@ -166,6 +166,7 @@ body {
   box-sizing: border-box;
 }
 
+/* Ensure the input wrapper has the correct styling */
 .input-wrapper {
   width: 100%;
   box-sizing: border-box;
@@ -1610,21 +1611,6 @@ body {
   }
 }
 
-/* Artifact display styling */
-.artifact-data-dump {
-  background-color: #1a1a1a;
-  padding: 16px;
-  border-radius: 4px;
-  color: #eee;
-  font-family: "Menlo", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  white-space: pre-wrap;
-  overflow: auto;
-  height: 100%;
-  width: 100%;
-  box-sizing: border-box;
-}
-
 /* Facet filtering styles */
 .active-filters {
   margin-top: 20px;
@@ -2432,12 +2418,37 @@ body {
   word-break: break-word;
 }
 
-/* Ensure the input wrapper has the correct styling */
-.input-wrapper {
+/* Ensure message text takes full width */
+.message-text {
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
-  overflow: hidden;
-  position: relative;
+}
+
+/* Make the thinking message styling more distinct */
+.thinking-message {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 8px 12px;
+  background-color: transparent;
+  border-radius: 6px;
+  width: 100%;
+}
+
+.thinking-text {
+  font-size: 14px;
+  color: #aaa;
+  font-style: italic;
+}
+
+/* Ensure code blocks and pre elements don't overflow */
+.chat-message pre,
+.chat-message code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .chat-message {
@@ -2456,28 +2467,9 @@ body {
   margin-top: 24px;
 }
 
-/* Make the thinking message styling more distinct */
-.thinking-message {
-  display: flex;
-  align-items: center;
-  margin: 0;
-  padding: 8px 12px;
-  background-color: #25252520;
-  border-radius: 6px;
-  width: fit-content;
-}
-
-.thinking-text {
-  font-size: 14px;
-  color: #aaa;
-  font-style: italic;
-}
-
-/* Ensure code blocks and pre elements don't overflow */
-.chat-message pre,
-.chat-message code {
-  white-space: pre-wrap;
-  word-break: break-word;
+/* Ensure CellView container takes full width */
+.cellview-container {
+  width: 100%;
   max-width: 100%;
-  overflow-x: auto;
+  min-width: 300px;
 }

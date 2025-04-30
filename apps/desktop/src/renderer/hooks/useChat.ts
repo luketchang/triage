@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import { AgentStep, Artifact, Cell, ChatMessage, ContextItem } from "../types";
+import { AgentStep, Cell, ChatMessage, ContextItem } from "../types";
 import { CellUpdateManager } from "../utils/CellUpdateManager";
-import { createCodeArtifacts, createLogArtifacts } from "../utils/artifact-utils";
 import { generateId } from "../utils/formatters";
 
 // Define the chat mode type
@@ -187,8 +186,6 @@ export function useChat() {
       role: "user",
       content: newMessage,
       contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
-      logPostprocessing: null,
-      codePostprocessing: null,
     };
 
     // Store context items to attach to message
@@ -221,8 +218,6 @@ export function useChat() {
       id: assistantMessageId,
       role: "assistant",
       content: "Thinking...",
-      logPostprocessing: null,
-      codePostprocessing: null,
       cell: initialCell,
     };
 
@@ -260,26 +255,10 @@ export function useChat() {
       }
 
       if (response && response.success) {
-        // Process artifacts if present
-        let artifacts: Artifact[] = [];
-
-        // Convert log search results into log artifacts if present
-        if (response.logContext && response.logContext.size > 0) {
-          const logArtifacts = createLogArtifacts(response.logContext);
-          artifacts = [...artifacts, ...logArtifacts];
-        }
-
-        // Convert code snippets into code artifacts if present
-        if (response.codeContext && response.codeContext.size > 0) {
-          const codeArtifacts = createCodeArtifacts(response.codeContext);
-          artifacts = [...artifacts, ...codeArtifacts];
-        }
-
         // Update the cell with the final response
         manager.queueUpdate((cell) => ({
           ...cell,
           response: response.content || "I processed your request but got no response content.",
-          artifacts: artifacts.length > 0 ? artifacts : undefined,
           logPostprocessing: response.logPostprocessing || null,
           codePostprocessing: response.codePostprocessing || null,
         }));
@@ -292,9 +271,6 @@ export function useChat() {
                 ...message,
                 content:
                   response.content || "I processed your request but got no response content.",
-                artifacts: artifacts.length > 0 ? artifacts : undefined,
-                logPostprocessing: response.logPostprocessing || null,
-                codePostprocessing: response.codePostprocessing || null,
               };
             }
             return message;
