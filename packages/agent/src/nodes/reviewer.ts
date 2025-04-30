@@ -52,7 +52,7 @@ If you believe additional information is needed to provide a complete root cause
 - logRequest - Get logs, using a query with service names and filters 
 - spanRequest - Get spans/traces, using a query with service names
 
-If you believe the root cause analysis is correct and complete, do not call any tools and just return the original analysis.
+If you believe the root cause analysis is correct and complete, do not call any tools.
 
 <query>
 ${params.query}

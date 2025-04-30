@@ -194,6 +194,9 @@ const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Filter steps to only show the ones that should be visible in the UI
+  const visibleSteps = cell.steps;
+
   // Set up a time-based check for showing the waiting indicator
   useEffect(() => {
     // Clear any existing interval

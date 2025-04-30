@@ -23,69 +23,6 @@ const AnimatedEllipsis = () => {
   return <span>{dots}</span>;
 };
 
-// Add CSS for streaming updates
-const styles = {
-  streamingUpdates: {
-    padding: "12px 16px",
-    background: "rgba(0, 0, 0, 0.05)",
-    borderRadius: "6px",
-    fontSize: "15px",
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "6px",
-    width: "100%",
-  },
-  streamingUpdatesLabel: {
-    fontWeight: "bold",
-    fontSize: "13px",
-    color: "#666",
-  },
-  streamingUpdatesValue: {
-    fontWeight: "600",
-    color: "#0066cc",
-    fontSize: "16px",
-  },
-  highLevelToolCall: {
-    marginBottom: "12px",
-  },
-  highLevelToolHeader: {
-    fontWeight: "600",
-    color: "#0066cc",
-    fontSize: "16px",
-    marginBottom: "6px",
-  },
-  intermediateToolCalls: {
-    marginLeft: "16px",
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "6px",
-  },
-  intermediateToolCall: {
-    padding: "6px 10px",
-    background: "rgba(0, 0, 0, 0.03)",
-    borderRadius: "4px",
-    fontSize: "14px",
-    color: "#444",
-  },
-  responseStream: {
-    marginTop: "12px",
-    padding: "12px",
-    borderRadius: "6px",
-    fontSize: "14px",
-    whiteSpace: "pre-wrap" as const,
-    maxHeight: "300px",
-    overflow: "auto",
-    lineHeight: "1.5",
-    color: "#444",
-  },
-  loadingEllipsis: {
-    padding: "6px 10px",
-    fontSize: "14px",
-    color: "#666",
-    fontStyle: "italic",
-  },
-};
-
 interface ChatViewProps {
   messages: ChatMessage[];
   newMessage: string;
@@ -104,7 +41,6 @@ const ChatView: React.FC<ChatViewProps> = ({
   newMessage,
   setNewMessage,
   sendMessage,
-  onArtifactClick,
   isThinking,
   contextItems = [],
   removeContextItem,
@@ -116,14 +52,6 @@ const ChatView: React.FC<ChatViewProps> = ({
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localMode, setLocalMode] = useState<"agent" | "manual">(chatMode);
-  const [showFactsSidebar, setShowFactsSidebar] = useState(false);
-  const [currentFacts, setCurrentFacts] = useState<{
-    logFacts: any[] | null;
-    codeFacts: any[] | null;
-  }>({
-    logFacts: null,
-    codeFacts: null,
-  });
   const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
 
   // Use refs instead of state for tracking update times to avoid render loops
@@ -447,61 +375,6 @@ const ChatView: React.FC<ChatViewProps> = ({
             ×
           </button>
         )}
-      </div>
-    );
-  };
-
-  const renderArtifactCard = (artifact: Artifact): JSX.Element => {
-    const handleClick = () => {
-      onArtifactClick(artifact);
-    };
-
-    let displayInfo = "";
-
-    // Use discriminated union pattern for type-safe handling
-    if (artifact.type === "log") {
-      const input = artifact.data.input;
-
-      // Display time range if available
-      if (input.start && input.end) {
-        displayInfo = formatTimeRange(input.start, input.end);
-      }
-
-      // Add page cursor info if available
-      if (input.pageCursor) {
-        displayInfo += displayInfo
-          ? ` • Page ${input.pageCursor.substring(0, 6)}...`
-          : `Page: ${input.pageCursor.substring(0, 6)}...`;
-      }
-    } else if (artifact.type === "code") {
-      // For code artifacts
-      const codeMap = artifact.data;
-
-      // If data is a Map with entries, show info about the files
-      const fileCount = codeMap.size;
-      const files = Array.from(codeMap.keys());
-
-      if (fileCount === 1) {
-        displayInfo = files[0];
-      } else {
-        displayInfo = `${fileCount} files: ${files[0]}${fileCount > 1 ? `, ...` : ""}`;
-      }
-    }
-
-    return (
-      <div key={artifact.id} className="artifact-card" onClick={handleClick}>
-        <div className="artifact-header">
-          <div className="artifact-title" title={artifact.title}>
-            {artifact.title}
-          </div>
-          <div className={`artifact-type ${artifact.type}`}>{artifact.type}</div>
-        </div>
-        <div className="artifact-query">
-          {artifact.type === "log" && (
-            <div title={artifact.data.input.query}>{artifact.data.input.query}</div>
-          )}
-        </div>
-        {displayInfo && <div className="artifact-details">{displayInfo}</div>}
       </div>
     );
   };
