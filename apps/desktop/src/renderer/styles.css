@@ -1947,6 +1947,8 @@ body {
   display: flex;
   flex-direction: column;
   flex: 1;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Message context items styling - specifically for attached context on messages */
@@ -2033,11 +2035,12 @@ body {
   display: flex;
   align-items: flex-start;
   transition: background-color 0.2s ease;
-  max-width: 100%;
+  max-width: 200px;
   border: none;
   width: 200px;
   min-height: 60px;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 /* Context card styling for both message context and input context */
@@ -2050,11 +2053,12 @@ body {
   display: flex;
   align-items: flex-start;
   transition: background-color 0.2s ease;
-  max-width: 100%;
+  max-width: 200px;
   border: none;
   width: 200px;
   min-height: 60px;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 /* Remove context button styling */
@@ -2407,12 +2411,25 @@ body {
 
 /* Fix user message styling */
 .chat-message.user .message-content {
-  background-color: #f2f2f210;
+  background-color: rgba(255, 255, 255, 0.03); /* Very faint highlight */
   border-radius: 8px;
   padding: 12px 16px;
-  width: 94%;
-  max-width: 94%;
+  width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Remove background from assistant messages */
+.chat-message.assistant .message-content {
+  background-color: transparent; /* No background */
+  padding: 12px 16px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Ensure the input wrapper has the correct styling */
@@ -2454,4 +2471,13 @@ body {
   font-size: 14px;
   color: #aaa;
   font-style: italic;
+}
+
+/* Ensure code blocks and pre elements don't overflow */
+.chat-message pre,
+.chat-message code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-x: auto;
 }

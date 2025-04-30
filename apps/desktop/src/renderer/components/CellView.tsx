@@ -38,17 +38,18 @@ const styles = {
     borderRadius: "6px",
     padding: "10px 12px",
     backgroundColor: "transparent",
-    // Remove border to match dark background
+    width: "100%", // Ensure containers take full width
   },
   stepHeader: {
     fontWeight: "bold" as const,
-    marginBottom: "6px",
+    marginBottom: "8px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     cursor: "pointer",
     userSelect: "none" as const,
     color: "#fff",
+    width: "100%", // Ensure full width
   },
   stepHeaderContent: {
     display: "flex",
@@ -63,11 +64,16 @@ const styles = {
     fontFamily: "inherit",
     maxHeight: "300px",
     overflowY: "auto" as const,
+    paddingLeft: "12px", // Add indentation
+    width: "100%", // Ensure step content takes full width
+    overflow: "auto", // Prevent text overflow
   },
   logSearchItem: {
     padding: "4px 0",
     fontFamily: "monospace",
     color: "#aaa",
+    wordBreak: "break-word" as const, // Prevent overflow
+    width: "100%", // Ensure full width
   },
   error: {
     color: "#ff6b6b",
@@ -75,6 +81,7 @@ const styles = {
     padding: "10px",
     backgroundColor: "rgba(255, 107, 107, 0.1)",
     borderRadius: "4px",
+    width: "100%", // Ensure full width
   },
   response: {
     marginTop: "16px",
@@ -82,6 +89,8 @@ const styles = {
     backgroundColor: "transparent",
     color: "#fff", // White for final response
     whiteSpace: "pre-wrap" as const,
+    wordBreak: "break-word" as const, // Prevent overflow
+    width: "100%", // Ensure full width
   },
   collapseIcon: {
     fontSize: "12px",
@@ -92,6 +101,7 @@ const styles = {
     fontSize: "14px",
     padding: "12px 0",
     fontStyle: "italic",
+    width: "100%", // Ensure full width
   },
 };
 
