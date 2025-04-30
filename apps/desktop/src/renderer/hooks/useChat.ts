@@ -109,17 +109,65 @@ export function useChat() {
             );
 
             if (parentIndex !== -1) {
-              // Add the response as a child of the high-level tool call
+              // Check if there's already a response child for this parent
+              const existingResponseIndex = (
+                currentUpdates[parentIndex] as HighLevelToolCallUpdate
+              ).children?.findIndex((child: StreamUpdate) => child.type === "response");
+
               newUpdates = [...currentUpdates];
               const parentInNewUpdates = newUpdates[parentIndex] as HighLevelToolCallUpdate;
-              parentInNewUpdates.children = [...(parentInNewUpdates.children || []), update];
+
+              if (existingResponseIndex !== undefined && existingResponseIndex !== -1) {
+                // Append to existing response content instead of creating a new entry
+                const existingResponse = parentInNewUpdates.children?.[existingResponseIndex] as {
+                  type: string;
+                  content: string;
+                };
+                if (existingResponse && existingResponse.content) {
+                  existingResponse.content += update.content;
+                }
+              } else {
+                // No existing response, add as a new child
+                parentInNewUpdates.children = [...(parentInNewUpdates.children || []), update];
+              }
             } else {
-              // If parent not found, add at top level
-              newUpdates = [...currentUpdates, update];
+              // If parent not found, check if there's a standalone response with this parentId
+              const existingResponseIndex = currentUpdates.findIndex(
+                (u) => u.type === "response" && u.parentId === update.parentId
+              );
+
+              if (existingResponseIndex !== -1) {
+                // Append to existing response
+                newUpdates = [...currentUpdates];
+                const existingResponse = newUpdates[existingResponseIndex] as {
+                  type: string;
+                  content: string;
+                  parentId?: string;
+                };
+                existingResponse.content += update.content;
+              } else {
+                // Add as new response
+                newUpdates = [...currentUpdates, update];
+              }
             }
           } else {
-            // No parentId, add at top level
-            newUpdates = [...currentUpdates, update];
+            // For responses without parentId, check if there's an existing standalone response
+            const existingResponseIndex = currentUpdates.findIndex(
+              (u) => u.type === "response" && !u.parentId
+            );
+
+            if (existingResponseIndex !== -1) {
+              // Append to existing standalone response
+              newUpdates = [...currentUpdates];
+              const existingResponse = newUpdates[existingResponseIndex] as {
+                type: string;
+                content: string;
+              };
+              existingResponse.content += update.content;
+            } else {
+              // Add as new standalone response
+              newUpdates = [...currentUpdates, update];
+            }
           }
         } else {
           // Fallback - just add the update as-is

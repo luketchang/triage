@@ -54,6 +54,7 @@ const styles = {
     whiteSpace: "pre-wrap" as const,
     maxHeight: "300px",
     overflow: "auto",
+    lineHeight: "1.5",
   },
 };
 
@@ -520,7 +521,18 @@ const ChatView: React.FC<ChatViewProps> = ({
                         // Ensure we render response children directly
                         return (
                           <div key={`response-${childIndex}`} style={styles.responseStream}>
-                            <ReactMarkdown>{child.content}</ReactMarkdown>
+                            <ReactMarkdown
+                              components={{
+                                pre: ({ node, ...props }) => (
+                                  <pre style={{ whiteSpace: "pre-wrap" }} {...props} />
+                                ),
+                                p: ({ node, ...props }) => (
+                                  <p style={{ marginBottom: "8px" }} {...props} />
+                                ),
+                              }}
+                            >
+                              {child.content}
+                            </ReactMarkdown>
                           </div>
                         );
                       }
@@ -532,7 +544,16 @@ const ChatView: React.FC<ChatViewProps> = ({
                 {/* Render response content specific to this tool if present */}
                 {toolResponseContent && (
                   <div style={{ ...styles.responseStream, marginLeft: "16px" }}>
-                    <ReactMarkdown>{toolResponseContent}</ReactMarkdown>
+                    <ReactMarkdown
+                      components={{
+                        pre: ({ node, ...props }) => (
+                          <pre style={{ whiteSpace: "pre-wrap" }} {...props} />
+                        ),
+                        p: ({ node, ...props }) => <p style={{ marginBottom: "8px" }} {...props} />,
+                      }}
+                    >
+                      {toolResponseContent}
+                    </ReactMarkdown>
                   </div>
                 )}
               </div>
@@ -577,7 +598,14 @@ const ChatView: React.FC<ChatViewProps> = ({
         {/* Render standalone response content if present */}
         {standaloneResponseContent && (
           <div style={styles.responseStream}>
-            <ReactMarkdown>{standaloneResponseContent}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                pre: ({ node, ...props }) => <pre style={{ whiteSpace: "pre-wrap" }} {...props} />,
+                p: ({ node, ...props }) => <p style={{ marginBottom: "8px" }} {...props} />,
+              }}
+            >
+              {standaloneResponseContent}
+            </ReactMarkdown>
           </div>
         )}
       </div>
@@ -612,7 +640,14 @@ const ChatView: React.FC<ChatViewProps> = ({
           </div>
         ) : (
           <div className={`message-text ${hasContextItems ? "message-text-with-context" : ""}`}>
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                pre: ({ node, ...props }) => <pre style={{ whiteSpace: "pre-wrap" }} {...props} />,
+                p: ({ node, ...props }) => <p style={{ marginBottom: "8px" }} {...props} />,
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
           </div>
         )}
       </>
