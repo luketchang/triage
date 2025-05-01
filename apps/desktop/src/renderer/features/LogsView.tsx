@@ -24,16 +24,16 @@ const LogsView: React.FC<LogsViewProps> = ({
   logs,
   logsWithPagination,
   logQuery,
-  timeRange,
-  isLoading,
   setLogQuery,
+  timeRange,
   onTimeRangeChange,
+  isLoading,
   onQuerySubmit,
   onLoadMore,
   facets,
   selectedFacets,
   setSelectedFacets,
-  setLogsWithPagination: _setLogsWithPagination,
+  setLogsWithPagination,
 }) => {
   // Component-specific state
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
@@ -255,7 +255,7 @@ const LogsView: React.FC<LogsViewProps> = ({
 
   // Render logs list section
   const renderLogsList = () => (
-    <div className="logs-display">
+    <div className="logs-display" style={{ width: "100%", maxWidth: "100%" }}>
       {isLoading ? (
         <div className="loading-indicator">Loading logs...</div>
       ) : logs.length === 0 ? (
@@ -264,8 +264,8 @@ const LogsView: React.FC<LogsViewProps> = ({
         </div>
       ) : (
         <>
-          <div className="logs-list">
-            <div className="logs-list-header">
+          <div className="logs-list" style={{ width: "100%", maxWidth: "100%" }}>
+            <div className="logs-list-header" style={{ width: "100%", maxWidth: "100%" }}>
               <div className="log-column timestamp-column">Timestamp</div>
               <div className="log-column service-column">Service</div>
               <div className="log-column message-column">Message</div>
@@ -277,12 +277,18 @@ const LogsView: React.FC<LogsViewProps> = ({
                 onClick={() => {
                   handleLogSelect(log);
                 }}
+                style={{ width: "100%", maxWidth: "100%" }}
               >
                 <div className={`log-level-indicator ${log.level}`}></div>
-                <div className="log-entry-content">
+                <div className="log-entry-content" style={{ width: "100%", maxWidth: "100%" }}>
                   <span className="log-timestamp">{formatDate(log.timestamp)}</span>
                   <span className="log-service">{log.service}</span>
-                  <span className="log-message">{log.message}</span>
+                  <span
+                    className="log-message"
+                    style={{ overflow: "hidden", textOverflow: "ellipsis" }}
+                  >
+                    {log.message}
+                  </span>
                 </div>
               </div>
             ))}
@@ -300,18 +306,21 @@ const LogsView: React.FC<LogsViewProps> = ({
   );
 
   return (
-    <div className="logs-tab">
-      <div className="logs-header">
-        <div className="time-range-controls">
+    <div className="logs-tab" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
+      <div
+        className="logs-header"
+        style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }}
+      >
+        <div className="time-range-controls" style={{ width: "100%", maxWidth: "100%" }}>
           <TimeRangePicker initialTimeRange={timeRange} onTimeRangeChange={handleTimeRangeChange} />
         </div>
 
-        <div className="log-query-container">
+        <div className="log-query-container" style={{ width: "100%", maxWidth: "100%" }}>
           <SearchBar query={logQuery} setQuery={setLogQuery} onSubmit={handleQuerySubmit} />
         </div>
       </div>
 
-      <div className="logs-content">
+      <div className="logs-content" style={{ width: "100%", maxWidth: "100%", display: "flex" }}>
         {renderFacetSection()}
         {renderLogsList()}
 
@@ -338,7 +347,9 @@ const LogsView: React.FC<LogsViewProps> = ({
               </div>
               <div className="log-detail">
                 <span className="detail-label">Message:</span>
-                <span className="detail-value">{selectedLog.message}</span>
+                <span className="detail-value" style={{ wordBreak: "break-word" }}>
+                  {selectedLog.message}
+                </span>
               </div>
 
               {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
@@ -347,7 +358,9 @@ const LogsView: React.FC<LogsViewProps> = ({
                   {Object.entries(selectedLog.metadata).map(([key, value]) => (
                     <div key={key} className="log-detail">
                       <span className="detail-label">{key}:</span>
-                      <span className="detail-value">{value}</span>
+                      <span className="detail-value" style={{ wordBreak: "break-word" }}>
+                        {value}
+                      </span>
                     </div>
                   ))}
                 </>
@@ -356,7 +369,7 @@ const LogsView: React.FC<LogsViewProps> = ({
               {selectedLog.attributes && Object.keys(selectedLog.attributes).length > 0 && (
                 <>
                   <h4>Attributes</h4>
-                  <pre className="attributes-json">
+                  <pre className="attributes-json" style={{ maxWidth: "100%", overflow: "auto" }}>
                     {JSON.stringify(selectedLog.attributes, null, 2)}
                   </pre>
                 </>

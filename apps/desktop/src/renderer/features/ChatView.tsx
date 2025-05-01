@@ -2,8 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import AnimatedEllipsis from "../components/AnimatedEllipsis";
 import CellView from "../components/CellView";
-import FactsSidebar from "../components/FactsSidebar";
-import { AssistantChatMessage, ChatMessage, ContextItem } from "../types";
+import { ChatMessage, ContextItem } from "../types";
 
 interface ChatViewProps {
   messages: ChatMessage[];
@@ -415,26 +414,32 @@ const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
-  // Get the latest assistant message with postprocessing data to show facts if needed
-  const latestMessageWithPostprocessing = messages
-    .filter(
-      (m): m is AssistantChatMessage =>
-        m.role === "assistant" && !!(m.cell.logPostprocessing || m.cell.codePostprocessing)
-    )
-    .pop();
-
-  // Determine if we should show the facts sidebar
-  const shouldShowFactsSidebar =
-    !!latestMessageWithPostprocessing &&
-    latestMessageWithPostprocessing.content !== "Thinking..." &&
-    ((latestMessageWithPostprocessing.cell.logPostprocessing?.facts.length || 0) > 0 ||
-      (latestMessageWithPostprocessing.cell.codePostprocessing?.facts.length || 0) > 0);
-
   return (
-    <div className="chat-tab">
-      <div className={`chat-container ${shouldShowFactsSidebar ? "with-facts-sidebar" : ""}`}>
-        <div className="chat-messages-container">
-          <div className="chat-messages">
+    <div className="chat-tab" style={{ overflow: "hidden", width: "100%", height: "100%" }}>
+      <div
+        className="chat-container"
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          overflowX: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+        }}
+      >
+        <div
+          className="chat-messages-container"
+          style={{
+            width: "100%",
+            maxWidth: "100%",
+            flex: "1 1 auto",
+            overflow: "auto",
+          }}
+        >
+          <div
+            className="chat-messages"
+            style={{ width: "100%", maxWidth: "100%", padding: "0 8px" }}
+          >
             {messages.length === 0 ? (
               <div className="empty-chat">
                 <div className="welcome-message">
@@ -451,8 +456,17 @@ const ChatView: React.FC<ChatViewProps> = ({
                     className={`chat-message ${message.role} ${
                       message.content === "Thinking..." ? "thinking-state" : ""
                     }`}
+                    style={{
+                      width: "100%",
+                      maxWidth: "100%",
+                      boxSizing: "border-box",
+                      overflow: "hidden",
+                      marginBottom: "16px",
+                    }}
                   >
-                    <div className="message-content">{renderMessageContent(message)}</div>
+                    <div className="message-content" style={{ width: "100%", maxWidth: "100%" }}>
+                      {renderMessageContent(message)}
+                    </div>
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
@@ -460,13 +474,6 @@ const ChatView: React.FC<ChatViewProps> = ({
             )}
           </div>
         </div>
-
-        {shouldShowFactsSidebar && latestMessageWithPostprocessing && (
-          <FactsSidebar
-            logFacts={latestMessageWithPostprocessing.cell.logPostprocessing?.facts || []}
-            codeFacts={latestMessageWithPostprocessing.cell.codePostprocessing?.facts || []}
-          />
-        )}
       </div>
 
       <div className="chat-input-container">
