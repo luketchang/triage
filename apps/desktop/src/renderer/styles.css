@@ -2184,126 +2184,8 @@ body {
   box-sizing: border-box;
 }
 
-.facts-sidebar {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-  background-color: var(--sidebar-bg-color, #1a1a1a);
-  border-left: 1px solid var(--border-color, #333);
-}
-
-.facts-sidebar-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid var(--border-color, #333);
-}
-
-.facts-sidebar-header h2 {
-  margin: 0;
-  font-size: 18px;
-  color: var(--text-color, #fff);
-}
-
-.facts-sidebar-content {
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  overflow-y: auto;
-}
-
-.fact-item {
-  background-color: #252525;
-  border-radius: 8px;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border: 1px solid var(--border-color, #333);
-}
-
-.fact-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.fact-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-color, #fff);
-}
-
-.fact-type {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-}
-
-.log-fact .fact-type {
-  background-color: #3498db33;
-  color: #3498db;
-}
-
-.code-fact .fact-type {
-  background-color: #9b59b633;
-  color: #9b59b6;
-}
-
-.fact-content {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-color-secondary, #ccc);
-}
-
-.fact-code-path {
-  font-family: monospace;
-  font-size: 13px;
-  padding: 5px 10px;
-  margin-top: 10px;
-  background-color: #1e1e1e;
-  border-radius: 4px;
-  color: #e67e22;
-  overflow-x: auto;
-}
-
-.fact-code-block {
-  margin-top: 10px;
-  background-color: #1e1e1e;
-  border-radius: 4px;
-  padding: 5px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.fact-code-block pre {
-  margin: 0;
-  padding: 0;
-}
-
-.fact-code-block code {
-  font-family: monospace;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.view-logs-button {
-  align-self: flex-start;
-  padding: 8px 12px;
-  background-color: #3498db33;
-  color: #3498db;
-  border: 1px solid #3498db;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-.view-logs-button:hover {
-  background-color: #3498db55;
+.with-facts-sidebar .chat-input-container {
+  width: 65%;
 }
 
 /* SlideOver component styles */
@@ -2472,16 +2354,48 @@ body {
   width: 100%;
   max-width: 100%;
   min-width: 300px;
+  position: relative;
+  height: 600px; /* Fixed height instead of 100% */
 }
 
-/*****************************************
- * FactsSidebar Component Styling
- *****************************************/
-
-.facts-sidebar {
+.cellview-container.with-facts {
+  display: block; /* Reset to block instead of flex */
   width: 100%;
-  height: 100%;
+  height: 600px; /* Fixed height */
+  min-height: 400px;
+  position: relative;
+}
+
+.cellview-main-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 35%; /* Leave space for facts sidebar */
+  bottom: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 16px;
   box-sizing: border-box;
+}
+
+.facts-sidebar-wrapper {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 35%;
+  bottom: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 16px;
+  box-sizing: border-box;
+}
+
+/* The actual sidebar inside the wrapper */
+.facts-sidebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
 }
@@ -2489,7 +2403,7 @@ body {
 .facts-header {
   padding: 14px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .facts-title {
@@ -2500,11 +2414,14 @@ body {
 }
 
 .facts-content {
+  position: absolute;
+  top: 60px; /* Leave space for header */
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  flex: 1 1 auto;
-  width: 100%;
-  padding: 0 6px 0 0;
+  padding: 20px 16px 0 0;
 }
 
 .fact-item {
@@ -2600,125 +2517,9 @@ body {
   background-color: rgba(52, 152, 219, 0.3);
 }
 
-/*****************************************
- * CellView Component Styling
- *****************************************/
-
-.cellview-container {
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 100%;
-}
-
-.cellview-container.with-facts {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  width: 100%;
-  gap: 32px;
-}
-
-.cellview-main-content {
-  flex: 65 1 65%;
-  min-width: 0;
-  width: 100%;
-  overflow: visible;
-}
-
-.facts-sidebar-wrapper {
-  flex: 35 1 35%;
-  min-width: 380px;
-  max-width: 700px;
-  align-self: stretch;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0 0 0 32px;
-}
-
-.step-container {
-  margin-bottom: 12px;
-  border-radius: 6px;
-  padding: 10px 12px;
-  background-color: transparent;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.step-header {
-  font-weight: bold;
-  margin-bottom: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  user-select: none;
-  color: #fff;
-  width: 100%;
-}
-
-.step-header-content {
-  display: flex;
-  align-items: center;
-  flex: 1;
-}
-
-.step-icon {
-  margin-right: 8px;
-}
-
-.step-content {
-  white-space: pre-wrap;
-  color: #aaa;
-  font-family: inherit;
-  max-height: 300px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-left: 12px;
-  width: 100%;
-  box-sizing: border-box;
-  word-break: break-word;
-}
-
-.log-search-item {
-  padding: 4px 0;
-  font-family: monospace;
-  color: #aaa;
-  word-break: break-word;
-  width: 100%;
-}
-
-.error-message {
-  color: #ff6b6b;
-  margin-top: 8px;
-  padding: 10px;
-  background-color: rgba(255, 107, 107, 0.1);
-  border-radius: 4px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
 .response-content {
-  margin-top: 16px;
-  padding: 0;
-  background-color: transparent;
-  color: #fff;
-  white-space: pre-wrap;
-  word-break: break-word;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.collapse-icon {
-  font-size: 12px;
-  color: #888;
-}
-
-.waiting-indicator {
-  color: #aaa;
-  font-size: 14px;
-  padding: 12px 0;
-  font-style: italic;
-  width: 100%;
+  margin-top: 20px;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
 }
