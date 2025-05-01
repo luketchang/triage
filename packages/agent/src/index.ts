@@ -68,21 +68,23 @@ export interface TriageAgentState {
   rootCauseAnalysis: string | null;
 }
 
+export type StepType =
+  | "logSearch"
+  | "spanSearch"
+  | "reasoning"
+  | "review"
+  | "logPostprocessing"
+  | "codePostprocessing";
+
 export type HighLevelUpdate = {
   type: "highLevelUpdate";
-  stepType:
-    | "logSearch"
-    | "spanSearch"
-    | "reasoning"
-    | "review"
-    | "logPostprocessing"
-    | "codePostprocessing";
+  stepType: StepType;
   id: string;
 };
 
 export type IntermediateUpdate = {
   type: "intermediateUpdate";
-  stepType: "logSearch" | "spanSearch" | "reasoning" | "review";
+  stepType: StepType;
   parentId: string;
   id: string;
   content: string;

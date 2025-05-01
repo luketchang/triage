@@ -13,7 +13,7 @@ interface ChatViewProps {
   isThinking: boolean;
   contextItems?: ContextItem[];
   removeContextItem?: (id: string) => void;
-  chatMode?: "agent" | "manual";
+  initialChatMode?: "agent" | "manual";
   toggleChatMode?: () => void;
 }
 
@@ -25,14 +25,14 @@ const ChatView: React.FC<ChatViewProps> = ({
   isThinking,
   contextItems = [],
   removeContextItem,
-  chatMode = "agent",
+  initialChatMode = "agent",
   toggleChatMode,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hoveredContextId, setHoveredContextId] = useState<string | null>(null);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [localMode, setLocalMode] = useState<"agent" | "manual">(chatMode);
+  const [chatMode, setChatMode] = useState<"agent" | "manual">(initialChatMode);
   const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
 
   // Use refs instead of state for tracking update times to avoid render loops
@@ -90,7 +90,7 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   // Update local mode when chatMode prop changes
   useEffect(() => {
-    setLocalMode(chatMode);
+    setChatMode(chatMode);
   }, [chatMode]);
 
   // Auto-focus the textarea when the chat view is selected or when thinking state changes
@@ -176,7 +176,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   // Set mode and close menu
   const setMode = (mode: "agent" | "manual") => {
     // Update local state immediately for UI
-    setLocalMode(mode);
+    setChatMode(mode);
 
     // Only trigger change if needed and handler exists
     if (chatMode !== mode && toggleChatMode) {
@@ -499,20 +499,20 @@ const ChatView: React.FC<ChatViewProps> = ({
         <div className="message-controls">
           <div className="mode-dropdown">
             <button className="mode-selector-button" onClick={toggleModeMenu}>
-              <span className="current-mode">{localMode === "agent" ? "Agent" : "Manual"}</span>
+              <span className="current-mode">{chatMode === "agent" ? "Agent" : "Manual"}</span>
               <span className="dropdown-arrow">▼</span>
             </button>
 
             {modeMenuOpen && (
               <div className="mode-menu">
                 <div
-                  className={`mode-option ${localMode === "agent" ? "active" : ""}`}
+                  className={`mode-option ${chatMode === "agent" ? "active" : ""}`}
                   onClick={() => setMode("agent")}
                 >
                   Agent
                 </div>
                 <div
-                  className={`mode-option ${localMode === "manual" ? "active" : ""}`}
+                  className={`mode-option ${chatMode === "manual" ? "active" : ""}`}
                   onClick={() => setMode("manual")}
                 >
                   Manual

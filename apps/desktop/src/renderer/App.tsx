@@ -212,7 +212,7 @@ function App(): JSX.Element {
             isThinking={chatState.isThinking}
             contextItems={chatState.contextItems}
             removeContextItem={chatState.removeContextItem}
-            chatMode={chatState.chatMode}
+            initialChatMode={chatState.chatMode}
             toggleChatMode={chatState.toggleChatMode}
           />
         );
@@ -226,7 +226,7 @@ function App(): JSX.Element {
             isThinking={chatState.isThinking}
             contextItems={chatState.contextItems}
             removeContextItem={chatState.removeContextItem}
-            chatMode={chatState.chatMode}
+            initialChatMode={chatState.chatMode}
             toggleChatMode={chatState.toggleChatMode}
           />
         );
