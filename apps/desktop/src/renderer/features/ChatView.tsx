@@ -31,11 +31,6 @@ const ChatView: React.FC<ChatViewProps> = ({
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [chatMode, setChatMode] = useState<"agent" | "manual">(initialChatMode);
-  const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
-
-  // Use refs instead of state for tracking update times to avoid render loops
-  const lastUpdateTimeRef = useRef<number>(Date.now());
-  const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to resize textarea based on content
   const resizeTextarea = useCallback(() => {
@@ -52,34 +47,6 @@ const ChatView: React.FC<ChatViewProps> = ({
       textarea.style.height = `${newHeight}px`;
     }
   }, []);
-
-  // Handle showing the waiting indicator when no updates are received for a while
-  useEffect(() => {
-    // Clear any existing interval
-    if (waitingCheckIntervalRef.current) {
-      clearInterval(waitingCheckIntervalRef.current);
-      waitingCheckIntervalRef.current = null;
-    }
-
-    // Only set up the interval if we're in thinking state
-    if (isThinking) {
-      waitingCheckIntervalRef.current = setInterval(() => {
-        const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
-        if (timeSinceLastUpdate > 3000) {
-          // Show waiting indicator after 3 seconds of no updates
-          setShowWaitingIndicator(true);
-        }
-      }, 1000);
-    } else {
-      setShowWaitingIndicator(false);
-    }
-
-    return () => {
-      if (waitingCheckIntervalRef.current) {
-        clearInterval(waitingCheckIntervalRef.current);
-      }
-    };
-  }, [isThinking]);
 
   // Auto-resize textarea when message changes
   useEffect(() => {
