@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { AgentStep, Cell, LogSearchStep, ReasoningStep, ReviewStep } from "../types";
 import AnimatedEllipsis from "./AnimatedEllipsis";
 import FactsSidebar from "./FactsSidebar";
+import { LogSearchStep, ReasoningStep, ReviewStep, AssistantMessage } from "../types";
+import { AgentStep, AgentStreamUpdate } from "@triage/agent";
 
 interface CellViewProps {
-  cell: Cell;
+  message: AssistantMessage;
   isThinking?: boolean;
 }
 
@@ -49,7 +50,7 @@ const CollapsibleStep: React.FC<{
 /**
  * Renders a specific type of step in the Cell
  */
-const renderStep = (step: AgentStep) => {
+const renderUpdate = (step: AgentStreamUpdate) => {
   switch (step.type) {
     case "logSearch":
       return renderLogSearchStep(step);

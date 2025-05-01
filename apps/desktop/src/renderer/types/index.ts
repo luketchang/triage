@@ -5,9 +5,14 @@ import {
   AgentStep,
   AgentStreamUpdate,
   CodePostprocessing,
+  CodePostprocessingStep,
   LogPostprocessing,
+  LogPostprocessingStep,
   LogSearchInput,
   LogSearchInputCore,
+  LogSearchStep,
+  ReasoningStep,
+  ReviewStep,
   TraceSearchInput,
 } from "@triage/agent";
 
@@ -24,15 +29,21 @@ import {
 
 // Re-export imported types
 export type {
+  AgentStep,
+  AgentStreamUpdate,
+  CodePostprocessingStep,
   IntegrationType,
   Log,
+  LogPostprocessingStep,
   LogSearchInput,
   LogSearchInputCore,
+  LogSearchStep,
   LogsWithPagination,
+  ReasoningStep,
+  ReviewStep,
   ServiceLatency,
   Span,
   SpansWithPagination,
-  AgentStreamUpdate as StreamUpdate,
   Trace,
   TracesWithPagination,
 };
