@@ -106,7 +106,7 @@ export class Reviewer {
     const prompt = createPrompt(params);
     logger.info(`Reviewer prompt: ${prompt}`);
 
-    const { fullStream } = streamText({
+    const { fullStream, toolCalls } = streamText({
       model: getModelWrapper(this.llm),
       prompt: prompt,
       tools: {
@@ -118,11 +118,6 @@ export class Reviewer {
     });
 
     let text = "";
-    const requestToolCalls: RequestToolCalls = {
-      type: "toolCalls",
-      toolCalls: [],
-    };
-
     for await (const part of fullStream) {
       if (part.type === "text-delta") {
         text += part.textDelta;
@@ -137,24 +132,17 @@ export class Reviewer {
             content: part.textDelta,
           });
         }
-      } else if (part.type === "tool-call") {
-        if (part.toolName === "logRequest") {
-          requestToolCalls.toolCalls.push({
-            type: "logRequest",
-            request: part.args.request,
-            reasoning: part.args.reasoning,
-          });
-        }
-        // TODO: add cases for other future tools
       }
     }
 
+    const finalizedToolCalls = await toolCalls;
+
     logger.info(`Reviewer response:\n${text}`);
-    logger.info(`Reviewer tool calls:\n${JSON.stringify(requestToolCalls.toolCalls, null, 2)}`);
+    logger.info(`Reviewer tool calls:\n${JSON.stringify(finalizedToolCalls, null, 2)}`);
 
     // Create the appropriate output object based on the type
     let output: ReviewerResponse;
-    if (requestToolCalls.toolCalls.length === 0) {
+    if (finalizedToolCalls.length === 0) {
       // If no tool calls, return the actual streamed text from the model
       // instead of just re-using the original rootCauseAnalysis input
       output = {
@@ -168,12 +156,12 @@ export class Reviewer {
         toolCalls: [],
       };
 
-      for (const toolCall of requestToolCalls.toolCalls) {
-        if (toolCall.type === "logRequest") {
+      for (const toolCall of finalizedToolCalls) {
+        if (toolCall.toolName === "logRequest") {
           output.toolCalls.push({
-            type: "logRequest",
-            request: toolCall.request,
-            reasoning: toolCall.reasoning,
+            type: toolCall.toolName,
+            request: toolCall.args.request,
+            reasoning: toolCall.args.reasoning,
           });
         }
         // TODO: add cases for other future tools

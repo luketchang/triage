@@ -138,7 +138,7 @@ export class Reasoner {
     logger.info(`Reasoning prompt:\n${prompt}`);
 
     // Stream reasoning response and collect text and tool calls
-    const { fullStream } = streamText({
+    const { fullStream, toolCalls } = streamText({
       model: getModelWrapper(this.llm),
       prompt,
       tools: {
@@ -146,15 +146,9 @@ export class Reasoner {
         logRequest: logRequestToolSchema,
       },
       toolChoice: "auto",
-      toolCallStreaming: true,
     });
 
     let text = "";
-     
-    const requestToolCalls: RequestToolCalls = {
-      type: "toolCalls",
-      toolCalls: [],
-    };
     for await (const part of fullStream) {
       if (part.type === "text-delta") {
         text += part.textDelta;
@@ -168,24 +162,17 @@ export class Reasoner {
             content: part.textDelta,
           });
         }
-      } else if (part.type === "tool-call") {
-        if (part.toolName === "logRequest") {
-          requestToolCalls.toolCalls.push({
-            type: "logRequest",
-            request: part.args.request,
-            reasoning: part.args.reasoning,
-          });
-        }
-        // TODO: add cases for other future tools
       }
     }
 
+    const finalizedToolCalls = await toolCalls;
+
     logger.info(`Reasoning response:\n${text}`);
-    logger.info(`Reasoning tool calls:\n${JSON.stringify(requestToolCalls, null, 2)}`);
+    logger.info(`Reasoning tool calls:\n${JSON.stringify(finalizedToolCalls, null, 2)}`);
 
     // Create the appropriate output object based on the type
     let output: ReasoningResponse;
-    if (requestToolCalls.toolCalls.length === 0) {
+    if (finalizedToolCalls.length === 0) {
       output = {
         type: "rootCauseAnalysis",
         rootCause: text,
@@ -195,12 +182,12 @@ export class Reasoner {
         type: "toolCalls",
         toolCalls: [],
       };
-      for (const toolCall of requestToolCalls.toolCalls) {
-        if (toolCall.type === "logRequest") {
+      for (const toolCall of finalizedToolCalls) {
+        if (toolCall.toolName === "logRequest") {
           output.toolCalls.push({
             type: "logRequest",
-            request: toolCall.request,
-            reasoning: toolCall.reasoning,
+            request: toolCall.args.request,
+            reasoning: toolCall.args.reasoning,
           });
         }
         // TODO: add cases for other future tools
