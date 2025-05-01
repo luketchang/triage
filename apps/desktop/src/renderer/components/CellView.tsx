@@ -1,30 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { AgentStep, Cell, LogSearchStep, ReasoningStep, ReviewStep } from "../types";
+import AnimatedEllipsis from "./AnimatedEllipsis";
 
 interface CellViewProps {
   cell: Cell;
   isThinking?: boolean;
 }
-
-// AnimatedEllipsis component that cycles through ., .., ...
-const AnimatedEllipsis = () => {
-  const [dots, setDots] = useState(".");
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots((prev) => {
-        if (prev === ".") return "..";
-        if (prev === "..") return "...";
-        return ".";
-      });
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return <span>{dots}</span>;
-};
 
 const styles = {
   container: {

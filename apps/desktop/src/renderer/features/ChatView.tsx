@@ -1,27 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import AnimatedEllipsis from "../components/AnimatedEllipsis";
 import CellView from "../components/CellView";
 import FactsSidebar from "../components/FactsSidebar";
 import { AssistantChatMessage, ChatMessage, ContextItem } from "../types";
-
-// AnimatedEllipsis component that cycles through ., .., ...
-const AnimatedEllipsis = () => {
-  const [dots, setDots] = useState(".");
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots((prev) => {
-        if (prev === ".") return "..";
-        if (prev === "..") return "...";
-        return ".";
-      });
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return <span>{dots}</span>;
-};
 
 interface ChatViewProps {
   messages: ChatMessage[];
