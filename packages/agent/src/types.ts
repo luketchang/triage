@@ -1,4 +1,5 @@
 import { z, infer as zInfer } from "zod";
+
 const BASIC_REASONING_DESCRIPTION =
   "Intermediate reasoning where you can explain what you see from the given information and what information you need next (if any).";
 
@@ -92,14 +93,7 @@ export interface CodePostprocessingRequest {
 
 export type RequestToolCalls = {
   type: "toolCalls";
-  toolCalls: Array<
-    | SpanRequest
-    | LogRequest
-    | ReasoningRequest
-    | ReviewRequest
-    | LogPostprocessingRequest
-    | CodePostprocessingRequest
-  >;
+  toolCalls: Array<LogRequest>; // TODO: add other tools
 };
 
 export const rootCauseAnalysisSchema = z.object({
@@ -308,7 +302,6 @@ export const codePostprocessingToolSchema = {
 export function stripReasoning<T extends { reasoning: string; type?: string }>(
   input: T
 ): Omit<T, "reasoning"> {
-   
   const { reasoning, ...core } = input;
   return core;
 }

@@ -1,17 +1,17 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
-import { generateText } from "ai";
+import { streamText } from "ai";
+import { v4 as uuidv4 } from "uuid";
 
+import { AgentStreamUpdate } from "..";
 import {
   logRequestToolSchema,
   LogSearchInputCore,
   RequestToolCalls,
   RootCauseAnalysis,
-  spanRequestToolSchema,
 } from "../types";
 
 import { formatFacetValues, formatLogResults } from "./utils";
-
 export type ReviewerResponse = RequestToolCalls | RootCauseAnalysis;
 
 export interface ReviewerParams {
@@ -52,7 +52,7 @@ If you believe additional information is needed to provide a complete root cause
 - logRequest - Get logs, using a query with service names and filters 
 - spanRequest - Get spans/traces, using a query with service names
 
-If you believe the root cause analysis is correct and complete, do not call any tools and just return the original analysis.
+If you believe the root cause analysis is correct and complete, do not call any tools.
 
 <query>
 ${params.query}
@@ -98,32 +98,56 @@ export class Reviewer {
     codeContext: Map<string, string>;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     rootCauseAnalysis: string;
+    parentId: string;
+    onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<ReviewerResponse> {
     logger.info(`Reviewing root cause analysis for query: ${params.query}`);
 
     const prompt = createPrompt(params);
     logger.info(`Reviewer prompt: ${prompt}`);
 
-    const { toolCalls, text } = await generateText({
+    const { fullStream, toolCalls } = streamText({
       model: getModelWrapper(this.llm),
       prompt: prompt,
       tools: {
-        spanRequest: spanRequestToolSchema,
+        // TODO: add other tools
         logRequest: logRequestToolSchema,
       },
       toolChoice: "auto",
+      toolCallStreaming: true,
     });
 
+    let text = "";
+    for await (const part of fullStream) {
+      if (part.type === "text-delta") {
+        text += part.textDelta;
+
+        if (params.onUpdate) {
+          // Always send the text delta with a parent ID for proper rendering
+          params.onUpdate({
+            type: "intermediateUpdate",
+            stepType: "review",
+            id: uuidv4(),
+            parentId: params.parentId,
+            content: part.textDelta,
+          });
+        }
+      }
+    }
+
+    const finalizedToolCalls = await toolCalls;
+
     logger.info(`Reviewer response:\n${text}`);
-    logger.info(`Reviewer tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
+    logger.info(`Reviewer tool calls:\n${JSON.stringify(finalizedToolCalls, null, 2)}`);
 
     // Create the appropriate output object based on the type
     let output: ReviewerResponse;
-    if (toolCalls.length === 0) {
-      // If no tool calls, return the root cause analysis as-is
+    if (finalizedToolCalls.length === 0) {
+      // If no tool calls, return the actual streamed text from the model
+      // instead of just re-using the original rootCauseAnalysis input
       output = {
         type: "rootCauseAnalysis",
-        rootCause: params.rootCauseAnalysis,
+        rootCause: text.trim() || params.rootCauseAnalysis,
       };
     } else {
       // For tool calls, construct the RequestToolCalls object
@@ -132,23 +156,15 @@ export class Reviewer {
         toolCalls: [],
       };
 
-      for (const toolCall of toolCalls) {
-        const toolName = toolCall.toolName as string;
-        if (toolName === "logRequest") {
+      for (const toolCall of finalizedToolCalls) {
+        if (toolCall.toolName === "logRequest") {
           output.toolCalls.push({
-            type: "logRequest",
+            type: toolCall.toolName,
             request: toolCall.args.request,
             reasoning: toolCall.args.reasoning,
           });
-        } else if (toolName === "spanRequest") {
-          output.toolCalls.push({
-            type: "spanRequest",
-            request: toolCall.args.request,
-            reasoning: toolCall.args.reasoning,
-          });
-        } else {
-          throw new Error(`Unexpected tool name: ${toolName}`);
         }
+        // TODO: add cases for other future tools
       }
     }
 

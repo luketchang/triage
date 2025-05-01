@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import TimeRangePicker from "../components/TimeRangePicker";
-import { Artifact, FacetData, UIServiceLatency, UISpan, UITrace } from "../types";
+import { FacetData, UIServiceLatency, UISpan, UITrace } from "../types";
 import { formatDate } from "../utils/formatters";
 
 interface TracesViewProps {
-  selectedArtifact?: Artifact | null;
   selectedTrace: UITrace | null;
   handleTraceSelect: (trace: UITrace | null) => void;
   traces: UITrace[];
@@ -25,7 +24,6 @@ interface TracesViewProps {
 }
 
 const TracesView: React.FC<TracesViewProps> = ({
-  selectedArtifact: _selectedArtifact,
   selectedTrace,
   handleTraceSelect,
   traces,

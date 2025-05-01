@@ -107,7 +107,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
   }, [timeRange]);
 
   // Fetch logs when a log fact is selected
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (selectedLogFact && slideOverOpen) {
       // Only fetch logs and facets on first open
@@ -292,7 +292,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
           <span className="fact-type">LOG</span>
         </div>
         <div className="fact-content">
-          <p>{fact.fact}</p>
+          <p className="fact-text">{fact.fact}</p>
         </div>
         <button className="view-logs-button" onClick={() => handleLogFactClick(fact)}>
           View Logs
@@ -309,9 +309,9 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
           <span className="fact-type">CODE</span>
         </div>
         <div className="fact-content">
-          <p>{fact.fact}</p>
-          <div className="fact-code-path">{fact.filepath}</div>
-          <div className="fact-code-block">
+          <p className="fact-text">{fact.fact}</p>
+          <div className="fact-path">{fact.filepath}</div>
+          <div className="code-block">
             <ReactMarkdown>{`\`\`\`\n${fact.codeBlock}\n\`\`\``}</ReactMarkdown>
           </div>
         </div>
@@ -333,15 +333,9 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         onTimeRangeChange={handleTimeRangeChange}
         onQuerySubmit={handleQuerySubmit}
         onLoadMore={handleLoadMore}
-        selectedArtifact={null}
-        setLogs={setLogs}
-        setIsLoading={setIsLoading}
-        setPageCursor={setPageCursor}
-        setTimeRange={setTimeRange}
         facets={facets}
         selectedFacets={selectedFacets}
         setSelectedFacets={setSelectedFacets}
-        setLogsWithPagination={setLogsWithPagination}
       />
     );
   };
@@ -352,21 +346,19 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
   }
 
   return (
-    <>
-      <div className="facts-sidebar">
-        <div className="facts-sidebar-header">
-          <h2>Supporting Evidence</h2>
-        </div>
-        <div className="facts-sidebar-content">
-          {logFacts.map(renderLogFact)}
-          {codeFacts.map(renderCodeFact)}
-        </div>
+    <div className="facts-sidebar">
+      <div className="facts-header">
+        <h2 className="facts-title">Facts</h2>
+      </div>
+      <div className="facts-content">
+        {logFacts.map(renderLogFact)}
+        {codeFacts.map(renderCodeFact)}
       </div>
 
       <SlideOver isOpen={slideOverOpen} onClose={handleCloseSlideOver}>
         {renderLogsSlideOver()}
       </SlideOver>
-    </>
+    </div>
   );
 };
 

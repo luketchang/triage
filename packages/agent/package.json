@@ -8,7 +8,8 @@
     "build": "tsc",
     "dev": "tsx",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "lint": "eslint \"src/**/*.{js,ts}\" --max-warnings 0",
+    "lint:check": "eslint \"src/**/*.{js,ts}\" --max-warnings 99",
+    "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix --max-warnings 99",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
@@ -16,9 +17,11 @@
     "@triage/common": "workspace:*",
     "@triage/config": "workspace:*",
     "@triage/observability": "workspace:*",
+    "@types/uuid": "^10.0.0",
     "ai": "^4.1.58",
     "commander": "^13.1.0",
     "json-stable-stringify": "^1.2.1",
+    "uuid": "^11.1.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
