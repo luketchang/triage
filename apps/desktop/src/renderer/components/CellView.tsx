@@ -123,11 +123,11 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
   const logPostprocessing = message.stages.find((stage) => stage.type === "logPostprocessing");
   const codePostprocessing = message.stages.find((stage) => stage.type === "codePostprocessing");
 
-  // Determine if we should show facts sidebar
+  // Determine if we should show facts sidebar - only show when there are actually facts
   const shouldShowFactsSidebar =
     !isThinking &&
     message.content &&
-    ((logPostprocessing?.facts.length || 0) > 0 || (codePostprocessing?.facts.length || 0) > 0);
+    ((logPostprocessing?.facts?.length || 0) > 0 || (codePostprocessing?.facts?.length || 0) > 0);
 
   // Set up a time-based check for showing the waiting indicator
   useEffect(() => {
@@ -185,7 +185,7 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
         {message.error && <div className="error-message">{message.error}</div>}
 
         {/* Render final response if present */}
-        {message.content && (
+        {message.content && message.content !== "Thinking..." && (
           <div className="response-content">
             <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>

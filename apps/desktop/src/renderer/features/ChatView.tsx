@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import AnimatedEllipsis from "../components/AnimatedEllipsis";
 import CellView from "../components/CellView";
 import { ChatMessage, ContextItem } from "../types";
 
@@ -384,27 +383,14 @@ const ChatView: React.FC<ChatViewProps> = ({
         </>
       );
     } else {
-      // Handle assistant message
-      return (
-        <>
-          {message.content === "Thinking..." ? (
-            <div className="thinking-message">
-              {message ? (
-                // Render the cell view for detailed progress
-                <CellView message={message} isThinking={isThinking} />
-              ) : (
-                <span className="thinking-text">
-                  Processing{showWaitingIndicator && <AnimatedEllipsis />}
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="message-text">
-              <CellView message={message} isThinking={false} />
-            </div>
-          )}
-        </>
-      );
+      // Handle assistant message - use direct CellView for streaming
+      if (isThinking && message.content === "Thinking...") {
+        // For thinking assistant message, render the CellView without the thinking-message wrapper
+        return <CellView message={message} isThinking={true} />;
+      } else {
+        // For completed assistant message
+        return <CellView message={message} isThinking={false} />;
+      }
     }
   };
 

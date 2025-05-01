@@ -279,6 +279,7 @@ export function useChat() {
           codePostprocessing: response.codePostprocessing || null,
         }));
 
+        // When message is done being constructed, update the state once more
         // Also update the message content to match the cell response
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
@@ -286,7 +287,11 @@ export function useChat() {
               return {
                 ...message,
                 content:
-                  response.content || "I processed your request but got no response content.",
+                  message.content === "Thinking..."
+                    ? response.content
+                    : message.content.includes("Error")
+                      ? message.content
+                      : response.content,
               };
             }
             return message;
