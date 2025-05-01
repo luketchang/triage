@@ -1,7 +1,8 @@
 import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
-import { generateText } from "ai";
+import { generateId, generateText } from "ai";
 
+import { AgentStreamUpdate } from "../../types";
 import {
   LogPostprocessing,
   logPostprocessingToolSchema,
@@ -64,6 +65,8 @@ export class LogPostprocessor {
     logLabelsMap: Map<string, string[]>;
     logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
     answer: string;
+    parentId: string;
+    onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<LogPostprocessing> {
     const prompt = createPrompt(params);
 
@@ -87,6 +90,19 @@ export class LogPostprocessor {
       };
     } else {
       toolCall = ensureSingleToolCall(toolCalls);
+    }
+
+    if (params.onUpdate) {
+      params.onUpdate({
+        type: "intermediateUpdate",
+        step: {
+          type: "logPostprocessing",
+          facts: toolCall.args.facts || [],
+          timestamp: new Date(),
+        },
+        id: generateId(),
+        parentId: params.parentId,
+      });
     }
 
     return {

@@ -5,7 +5,9 @@ import {
   AgentStage,
   AssistantMessage,
   ChatMessage,
+  CodePostprocessingStage,
   ContextItem,
+  LogPostprocessingStage,
   LogSearchStage,
   ReasoningStage,
   ReviewStage,
@@ -130,6 +132,7 @@ export function useChat() {
       let stage = assistantMessage.stages[stepIndex];
 
       // Update the step based on its type
+      // TODO: the typing on the agent stage vs updates is annoying to manually cast
       let updatedStage: AgentStage;
       switch (update.step.type) {
         case "logSearch":
@@ -155,9 +158,19 @@ export function useChat() {
           };
           break;
         case "logPostprocessing":
-        // TODO
+          stage = stage as LogPostprocessingStage;
+          updatedStage = {
+            ...stage,
+            facts: update.step.facts,
+          };
+          break;
         case "codePostprocessing":
-        // TODO
+          stage = stage as CodePostprocessingStage;
+          updatedStage = {
+            ...stage,
+            facts: update.step.facts,
+          };
+          break;
         default:
           // Type assertion to avoid the "never" type error
           console.warn(`Unknown stage type: ${(stage as AgentStage).type}`);

@@ -1,6 +1,7 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
-import { generateText } from "ai";
+import { generateId, generateText } from "ai";
 
+import { AgentStreamUpdate } from "../../types";
 import { CodePostprocessing, codePostprocessingToolSchema } from "../../types/tools";
 import { ensureSingleToolCall } from "../utils";
 
@@ -49,6 +50,8 @@ export class CodePostprocessor {
     codebaseOverview: string;
     codeContext: Map<string, string>;
     answer: string;
+    parentId: string;
+    onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<CodePostprocessing> {
     logger.info(`Code postprocessing for query: ${params.query}`);
 
@@ -73,6 +76,19 @@ export class CodePostprocessor {
       };
     } else {
       toolCall = ensureSingleToolCall(toolCalls);
+    }
+
+    if (params.onUpdate) {
+      params.onUpdate({
+        type: "intermediateUpdate",
+        step: {
+          type: "codePostprocessing",
+          facts: toolCall.args.facts || [],
+          timestamp: new Date(),
+        },
+        id: generateId(),
+        parentId: params.parentId,
+      });
     }
 
     return {

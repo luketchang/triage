@@ -316,6 +316,8 @@ export class TriageAgent {
         logLabelsMap: state.logLabelsMap,
         logContext: state.logContext,
         answer: state.rootCauseAnalysis ?? "",
+        parentId: logPostprocessingId,
+        onUpdate,
       });
 
       logger.info(`Log postprocessing complete with ${response.facts.length} relevant facts`);
@@ -357,6 +359,8 @@ export class TriageAgent {
         codebaseOverview: state.codebaseOverview,
         codeContext: state.codeContext,
         answer: state.rootCauseAnalysis ?? "",
+        parentId: codePostprocessingId,
+        onUpdate,
       });
 
       logger.info(`Code postprocessing complete with ${response.facts.length} relevant facts`);
