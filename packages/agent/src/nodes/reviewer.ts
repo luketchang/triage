@@ -3,14 +3,14 @@ import { LogsWithPagination } from "@triage/observability";
 import { streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import { AgentStreamUpdate } from "..";
 import {
   logRequestToolSchema,
   LogSearchInputCore,
   RequestToolCalls,
   RootCauseAnalysis,
-} from "../types";
+} from "../types/tools";
 
+import { AgentStreamUpdate } from "../types/streaming";
 import { formatFacetValues, formatLogResults } from "./utils";
 export type ReviewerResponse = RequestToolCalls | RootCauseAnalysis;
 
@@ -126,10 +126,13 @@ export class Reviewer {
           // Always send the text delta with a parent ID for proper rendering
           params.onUpdate({
             type: "intermediateUpdate",
-            stepType: "review",
             id: uuidv4(),
             parentId: params.parentId,
-            content: part.textDelta,
+            step: {
+              type: "review",
+              timestamp: new Date(),
+              content: part.textDelta,
+            },
           });
         }
       }

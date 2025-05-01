@@ -253,6 +253,8 @@ export const logPostprocessingFactSchema = logSearchInputSchema
       ),
   });
 
+export type LogPostprocessingFact = zInfer<typeof logPostprocessingFactSchema>;
+
 export const logPostprocessingSchema = z.object({
   facts: z
     .array(logPostprocessingFactSchema)
@@ -283,6 +285,7 @@ export const codePostprocessingFactSchema = z.object({
     ),
 });
 
+export type CodePostprocessingFact = zInfer<typeof codePostprocessingFactSchema>;
 export const codePostprocessingSchema = z.object({
   facts: z
     .array(codePostprocessingFactSchema)

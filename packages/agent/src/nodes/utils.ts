@@ -1,6 +1,6 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
 
-import { LogSearchInput, SpanSearchInput } from "../types";
+import { LogSearchInput, SpanSearchInput } from "../types/tools";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {

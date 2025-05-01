@@ -12,7 +12,7 @@ import {
   TraceQueryParams,
 } from "./types";
 
-import { LogSearchInputCore } from "@triage/agent";
+import { LogSearchInputCore } from "@triage/agent/dist/types/index";
 
 // Define a local version of PostprocessedLogSearchInput to avoid import issues
 export interface PostprocessedLogSearchInput {

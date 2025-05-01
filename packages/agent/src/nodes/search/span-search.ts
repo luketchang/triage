@@ -8,7 +8,7 @@ import {
   spanSearchInputToolSchema,
   stripReasoning,
   TaskComplete,
-} from "../../types";
+} from "../../types/tools";
 import { ensureSingleToolCall, formatFacetValues, formatSpanResults } from "../utils";
 
 export interface SpanSearchAgentResponse {

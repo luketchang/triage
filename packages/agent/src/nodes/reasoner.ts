@@ -10,7 +10,7 @@ import {
   RequestToolCalls,
   RootCauseAnalysis,
   SpanSearchInputCore,
-} from "../types";
+} from "../types/tools";
 
 import { formatFacetValues, formatLogResults, formatSpanResults } from "./utils";
 type ReasoningResponse = RootCauseAnalysis | RequestToolCalls;
@@ -156,10 +156,13 @@ export class Reasoner {
         if (params.onUpdate) {
           params.onUpdate({
             type: "intermediateUpdate",
-            stepType: "reasoning",
             id: uuidv4(),
             parentId: params.parentId,
-            content: part.textDelta,
+            step: {
+              type: "reasoning",
+              timestamp: new Date(),
+              content: part.textDelta,
+            },
           });
         }
       }

@@ -450,9 +450,9 @@ const ChatView: React.FC<ChatViewProps> = ({
               </div>
             ) : (
               <>
-                {messages.map((message) => (
+                {messages.map((message, index) => (
                   <div
-                    key={message.id}
+                    key={index}
                     className={`chat-message ${message.role} ${
                       message.content === "Thinking..." ? "thinking-state" : ""
                     }`}

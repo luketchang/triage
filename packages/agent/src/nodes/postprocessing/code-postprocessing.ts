@@ -1,7 +1,7 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { generateText } from "ai";
 
-import { CodePostprocessing, codePostprocessingToolSchema } from "../../types";
+import { CodePostprocessing, codePostprocessingToolSchema } from "../../types/tools";
 import { ensureSingleToolCall } from "../utils";
 
 function createPrompt(params: {

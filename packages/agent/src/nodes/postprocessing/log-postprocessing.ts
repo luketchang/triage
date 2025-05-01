@@ -2,7 +2,11 @@ import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination } from "@triage/observability";
 import { generateText } from "ai";
 
-import { LogPostprocessing, logPostprocessingToolSchema, LogSearchInputCore } from "../../types";
+import {
+  LogPostprocessing,
+  logPostprocessingToolSchema,
+  LogSearchInputCore,
+} from "../../types/tools";
 import { ensureSingleToolCall, formatFacetValues, formatLogResults } from "../utils";
 
 function createPrompt(params: {

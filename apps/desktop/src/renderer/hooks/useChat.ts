@@ -182,7 +182,6 @@ export function useChat() {
 
     // Create a new user message with attached context items
     const userMessage: ChatMessage = {
-      id: generateId(),
       role: "user",
       content: newMessage,
       contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
@@ -204,18 +203,17 @@ export function useChat() {
     setIsThinking(true);
 
     // Create a unique ID for the assistant message
-    const assistantMessageId = generateId();
+    const cellId = generateId();
 
     // Create initial cell for streaming updates
     const initialCell: Cell = {
-      id: assistantMessageId,
+      id: cellId,
       steps: [],
       response: "",
     };
 
     // Create assistant message with the initial cell
     const assistantMessage: ChatMessage = {
-      id: assistantMessageId,
       role: "assistant",
       content: "Thinking...",
       cell: initialCell,
@@ -229,7 +227,8 @@ export function useChat() {
       // Update the assistant message with the updated cell
       setMessages((prevMessages) =>
         prevMessages.map((message) => {
-          if (message.id === assistantMessageId) {
+          if (message.role === "assistant" && message.cell.id === cellId) {
+            // Return the message now with the updated cell data
             return {
               ...message,
               cell: updatedCell,
@@ -266,7 +265,7 @@ export function useChat() {
         // Also update the message content to match the cell response
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
-            if (message.id === assistantMessageId) {
+            if (message.role === "assistant" && message.cell.id === cellId) {
               return {
                 ...message,
                 content:
@@ -286,7 +285,7 @@ export function useChat() {
         // Also update the message content with the error
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
-            if (message.id === assistantMessageId) {
+            if (message.role === "assistant" && message.cell.id === cellId) {
               return {
                 ...message,
                 content:
@@ -310,7 +309,7 @@ export function useChat() {
       // Also update the message content with the error
       setMessages((prevMessages) =>
         prevMessages.map((message) => {
-          if (message.id === assistantMessageId) {
+          if (message.role === "assistant" && message.cell.id === cellId) {
             return {
               ...message,
               content:

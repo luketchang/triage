@@ -10,7 +10,7 @@ import {
   logSearchInputToolSchema,
   stripReasoning,
   TaskComplete,
-} from "../../types";
+} from "../../types/tools";
 import { ensureSingleToolCall, formatFacetValues, formatLogResults } from "../utils";
 export interface LogSearchAgentResponse {
   newLogContext: Map<LogSearchInputCore, LogsWithPagination | string>;
@@ -290,18 +290,6 @@ export class LogSearchAgent {
           `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`
         );
 
-        // Stream the log search query details if an onUpdate callback is provided
-        // and only once before the fetch
-        if (params.onUpdate) {
-          params.onUpdate({
-            type: "intermediateUpdate",
-            stepType: "logSearch",
-            id: uuidv4(),
-            parentId: params.logSearchId,
-            content: `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`,
-          });
-        }
-
         try {
           logger.info("Fetching logs from observability platform...");
           const logContext = await this.observabilityPlatform.fetchLogs({
@@ -310,6 +298,20 @@ export class LogSearchAgent {
             end: response.end,
             limit: response.limit,
           });
+
+          if (params.onUpdate) {
+            params.onUpdate({
+              type: "intermediateUpdate",
+              id: uuidv4(),
+              parentId: params.logSearchId,
+              step: {
+                type: "logSearch",
+                timestamp: new Date(),
+                input: response,
+                result: logContext,
+              },
+            });
+          }
 
           const strippedResponse = stripReasoning(response);
           const currentQueryFormatted = formatLogResults(new Map([[strippedResponse, logContext]]));

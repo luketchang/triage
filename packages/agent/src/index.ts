@@ -21,6 +21,7 @@ import { SpanSearchAgent } from "./nodes/search/span-search";
 import { formatFacetValues } from "./nodes/utils";
 import type { CodePostprocessing, LogRequest, SpanRequest } from "./types";
 import {
+  AgentStreamUpdate,
   CodePostprocessingRequest,
   LogPostprocessing,
   LogPostprocessingRequest,
@@ -67,31 +68,6 @@ export interface TriageAgentState {
   codePostprocessingResult: CodePostprocessing | null;
   rootCauseAnalysis: string | null;
 }
-
-export type StepType =
-  | "logSearch"
-  | "spanSearch"
-  | "reasoning"
-  | "review"
-  | "logPostprocessing"
-  | "codePostprocessing";
-
-export type HighLevelUpdate = {
-  type: "highLevelUpdate";
-  stepType: StepType;
-  id: string;
-};
-
-export type IntermediateUpdate = {
-  type: "intermediateUpdate";
-  stepType: StepType;
-  parentId: string;
-  id: string;
-  content: string;
-};
-
-// Stream update type for agent
-export type AgentStreamUpdate = HighLevelUpdate | IntermediateUpdate;
 
 export class TriageAgent {
   private reasoningModel: Model;
@@ -644,7 +620,7 @@ async function main(): Promise<void> {
       if (update.type === "highLevelUpdate") {
         logger.info(`HighLevelUpdate: ${update.stepType}`);
       } else if (update.type === "intermediateUpdate") {
-        logger.info(`IntermediateUpdate: ${update.stepType}`, update.content);
+        logger.info(`IntermediateUpdate: ${update.step.type}`);
       }
     },
   });

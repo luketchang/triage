@@ -1,7 +1,7 @@
 // Load environment variables first, before any other imports
 import "./env-loader.js";
 
-import { invokeAgent } from "@triage/agent";
+import { invokeAgent } from "@triage/agent/dist/types/index.js";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 // Fix CommonJS import for electron-updater
 import pkg from "electron-updater";
