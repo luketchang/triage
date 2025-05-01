@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import SearchBar from "../components/SearchBar";
 import TimeRangePicker from "../components/TimeRangePicker";
-import { Artifact, FacetData, Log, LogsWithPagination, TimeRange } from "../types";
+import { FacetData, Log, LogsWithPagination, TimeRange } from "../types";
 import { formatDate } from "../utils/formatters";
 
 interface LogsViewProps {
@@ -14,36 +14,24 @@ interface LogsViewProps {
   isLoading: boolean;
   onQuerySubmit: (query: string) => void;
   onLoadMore: () => void;
-  selectedArtifact?: Artifact | null;
-  setLogs?: (logs: Log[]) => void;
-  setIsLoading?: (isLoading: boolean) => void;
-  setPageCursor?: (cursor: string | undefined) => void;
-  setTimeRange?: (timeRange: TimeRange) => void;
   facets: FacetData[];
   selectedFacets: string[];
   setSelectedFacets: React.Dispatch<React.SetStateAction<string[]>>;
-  setLogsWithPagination?: (logsWithPagination: LogsWithPagination | null) => void;
 }
 
 const LogsView: React.FC<LogsViewProps> = ({
   logs,
   logsWithPagination,
   logQuery,
-  timeRange,
-  isLoading,
   setLogQuery,
+  timeRange,
   onTimeRangeChange,
+  isLoading,
   onQuerySubmit,
   onLoadMore,
-  selectedArtifact,
-  setLogs,
-  setIsLoading,
-  setPageCursor,
-  setTimeRange,
   facets,
   selectedFacets,
   setSelectedFacets,
-  setLogsWithPagination: _setLogsWithPagination,
 }) => {
   // Component-specific state
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
@@ -66,90 +54,6 @@ const LogsView: React.FC<LogsViewProps> = ({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [selectedLog]);
-
-  // Effect to handle the selectedArtifact changes
-  useEffect(() => {
-    if (
-      selectedArtifact &&
-      selectedArtifact.type === "log" &&
-      selectedArtifact.data &&
-      selectedArtifact.data.input
-    ) {
-      const searchInput = selectedArtifact.data.input;
-
-      // Update query through props
-      setLogQuery(searchInput.query);
-
-      // Handle the results if they exist - we want to do this FIRST
-      if (selectedArtifact.data.results) {
-        // For results that are objects (LogsWithPagination)
-        if (
-          typeof selectedArtifact.data.results === "object" &&
-          selectedArtifact.data.results !== null
-        ) {
-          // Update logs directly from the artifact data
-          if (
-            "logs" in selectedArtifact.data.results &&
-            Array.isArray(selectedArtifact.data.results.logs) &&
-            setLogs
-          ) {
-            // Mark as loading while we update everything
-            if (setIsLoading) {
-              setIsLoading(true);
-            }
-
-            // Update logs from the artifact data
-            setLogs(selectedArtifact.data.results.logs);
-
-            // Update cursor for pagination if available
-            if ("pageCursorOrIndicator" in selectedArtifact.data.results && setPageCursor) {
-              setPageCursor(selectedArtifact.data.results.pageCursorOrIndicator);
-            }
-
-            // Now update the time range WITHOUT triggering a new fetch
-            if (searchInput.start && searchInput.end) {
-              // Just update the state directly without triggering a fetch
-              setTimeRange &&
-                setTimeRange({
-                  start: searchInput.start,
-                  end: searchInput.end,
-                });
-            }
-
-            // Mark as loaded when done
-            if (setIsLoading) {
-              setIsLoading(false);
-            }
-
-            // We've handled everything from the artifact data, so return early
-            // to prevent the time range change from triggering a fetch
-            return;
-          }
-        }
-      }
-
-      // Only reach here if we don't have results in the artifact
-      // In this case, we DO want to trigger a fetch with the time range
-      if (searchInput.start && searchInput.end) {
-        const newTimeRange = {
-          start: searchInput.start,
-          end: searchInput.end,
-        };
-        onTimeRangeChange(newTimeRange);
-      } else if (searchInput.pageCursor && setPageCursor) {
-        // Fallback to cursor in the input if results don't have it
-        setPageCursor(searchInput.pageCursor);
-      }
-    }
-  }, [
-    selectedArtifact,
-    setLogQuery,
-    onTimeRangeChange,
-    setLogs,
-    setIsLoading,
-    setPageCursor,
-    setTimeRange,
-  ]);
 
   const handleQuerySubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -349,7 +253,7 @@ const LogsView: React.FC<LogsViewProps> = ({
 
   // Render logs list section
   const renderLogsList = () => (
-    <div className="logs-display">
+    <div className="logs-display" style={{ width: "100%", maxWidth: "100%" }}>
       {isLoading ? (
         <div className="loading-indicator">Loading logs...</div>
       ) : logs.length === 0 ? (
@@ -358,8 +262,8 @@ const LogsView: React.FC<LogsViewProps> = ({
         </div>
       ) : (
         <>
-          <div className="logs-list">
-            <div className="logs-list-header">
+          <div className="logs-list" style={{ width: "100%", maxWidth: "100%" }}>
+            <div className="logs-list-header" style={{ width: "100%", maxWidth: "100%" }}>
               <div className="log-column timestamp-column">Timestamp</div>
               <div className="log-column service-column">Service</div>
               <div className="log-column message-column">Message</div>
@@ -371,12 +275,18 @@ const LogsView: React.FC<LogsViewProps> = ({
                 onClick={() => {
                   handleLogSelect(log);
                 }}
+                style={{ width: "100%", maxWidth: "100%" }}
               >
                 <div className={`log-level-indicator ${log.level}`}></div>
-                <div className="log-entry-content">
+                <div className="log-entry-content" style={{ width: "100%", maxWidth: "100%" }}>
                   <span className="log-timestamp">{formatDate(log.timestamp)}</span>
                   <span className="log-service">{log.service}</span>
-                  <span className="log-message">{log.message}</span>
+                  <span
+                    className="log-message"
+                    style={{ overflow: "hidden", textOverflow: "ellipsis" }}
+                  >
+                    {log.message}
+                  </span>
                 </div>
               </div>
             ))}
@@ -394,18 +304,21 @@ const LogsView: React.FC<LogsViewProps> = ({
   );
 
   return (
-    <div className="logs-tab">
-      <div className="logs-header">
-        <div className="time-range-controls">
+    <div className="logs-tab" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
+      <div
+        className="logs-header"
+        style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }}
+      >
+        <div className="time-range-controls" style={{ width: "100%", maxWidth: "100%" }}>
           <TimeRangePicker initialTimeRange={timeRange} onTimeRangeChange={handleTimeRangeChange} />
         </div>
 
-        <div className="log-query-container">
+        <div className="log-query-container" style={{ width: "100%", maxWidth: "100%" }}>
           <SearchBar query={logQuery} setQuery={setLogQuery} onSubmit={handleQuerySubmit} />
         </div>
       </div>
 
-      <div className="logs-content">
+      <div className="logs-content" style={{ width: "100%", maxWidth: "100%", display: "flex" }}>
         {renderFacetSection()}
         {renderLogsList()}
 
@@ -432,7 +345,9 @@ const LogsView: React.FC<LogsViewProps> = ({
               </div>
               <div className="log-detail">
                 <span className="detail-label">Message:</span>
-                <span className="detail-value">{selectedLog.message}</span>
+                <span className="detail-value" style={{ wordBreak: "break-word" }}>
+                  {selectedLog.message}
+                </span>
               </div>
 
               {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
@@ -441,7 +356,9 @@ const LogsView: React.FC<LogsViewProps> = ({
                   {Object.entries(selectedLog.metadata).map(([key, value]) => (
                     <div key={key} className="log-detail">
                       <span className="detail-label">{key}:</span>
-                      <span className="detail-value">{value}</span>
+                      <span className="detail-value" style={{ wordBreak: "break-word" }}>
+                        {value}
+                      </span>
                     </div>
                   ))}
                 </>
@@ -450,7 +367,7 @@ const LogsView: React.FC<LogsViewProps> = ({
               {selectedLog.attributes && Object.keys(selectedLog.attributes).length > 0 && (
                 <>
                   <h4>Attributes</h4>
-                  <pre className="attributes-json">
+                  <pre className="attributes-json" style={{ maxWidth: "100%", overflow: "auto" }}>
                     {JSON.stringify(selectedLog.attributes, null, 2)}
                   </pre>
                 </>

@@ -1,7 +1,9 @@
 import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination, SpansWithPagination } from "@triage/observability";
 import { streamText } from "ai";
+import { v4 as uuidv4 } from "uuid";
 
+import { AgentStreamUpdate } from "../index";
 import {
   logRequestToolSchema,
   LogSearchInputCore,
@@ -11,7 +13,6 @@ import {
 } from "../types";
 
 import { formatFacetValues, formatLogResults, formatSpanResults } from "./utils";
-
 type ReasoningResponse = RootCauseAnalysis | RequestToolCalls;
 
 export interface ReasoningParams {
@@ -127,6 +128,8 @@ export class Reasoner {
     logLabelsMap: Map<string, string[]>;
     spanLabelsMap: Map<string, string[]>;
     chatHistory: string[];
+    parentId: string;
+    onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${params.query}`);
 
@@ -135,40 +138,41 @@ export class Reasoner {
     logger.info(`Reasoning prompt:\n${prompt}`);
 
     // Stream reasoning response and collect text and tool calls
-    const { fullStream } = streamText({
+    const { fullStream, toolCalls } = streamText({
       model: getModelWrapper(this.llm),
       prompt,
       tools: {
-        // spanRequest: spanRequestToolSchema,
+        // TODO: add other tools
         logRequest: logRequestToolSchema,
       },
       toolChoice: "auto",
-      toolCallStreaming: true,
     });
 
     let text = "";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const toolCalls: Array<{ toolName: string; args: any }> = [];
     for await (const part of fullStream) {
       if (part.type === "text-delta") {
         text += part.textDelta;
-      } else if (part.type === "reasoning") {
-        process.stdout.write(part.textDelta);
-      } else if (part.type === "redacted-reasoning") {
-        process.stdout.write(part.data);
-      } else if (part.type === "reasoning-signature") {
-        process.stdout.write(part.signature);
-      } else if (part.type === "tool-call") {
-        toolCalls.push({ toolName: part.toolName, args: part.args });
+        // If this is root cause analysis (no tool calls), stream text as it's generated
+        if (params.onUpdate) {
+          params.onUpdate({
+            type: "intermediateUpdate",
+            stepType: "reasoning",
+            id: uuidv4(),
+            parentId: params.parentId,
+            content: part.textDelta,
+          });
+        }
       }
     }
 
+    const finalizedToolCalls = await toolCalls;
+
     logger.info(`Reasoning response:\n${text}`);
-    logger.info(`Reasoning tool calls:\n${JSON.stringify(toolCalls, null, 2)}`);
+    logger.info(`Reasoning tool calls:\n${JSON.stringify(finalizedToolCalls, null, 2)}`);
 
     // Create the appropriate output object based on the type
     let output: ReasoningResponse;
-    if (toolCalls.length === 0) {
+    if (finalizedToolCalls.length === 0) {
       output = {
         type: "rootCauseAnalysis",
         rootCause: text,
@@ -178,22 +182,15 @@ export class Reasoner {
         type: "toolCalls",
         toolCalls: [],
       };
-      for (const toolCall of toolCalls) {
+      for (const toolCall of finalizedToolCalls) {
         if (toolCall.toolName === "logRequest") {
           output.toolCalls.push({
             type: "logRequest",
             request: toolCall.args.request,
             reasoning: toolCall.args.reasoning,
           });
-        } else if (toolCall.toolName === "spanRequest") {
-          output.toolCalls.push({
-            type: "spanRequest",
-            request: toolCall.args.request,
-            reasoning: toolCall.args.reasoning,
-          });
-        } else {
-          throw new Error(`Unexpected tool name: ${toolCall.toolName}`);
         }
+        // TODO: add cases for other future tools
       }
     }
 

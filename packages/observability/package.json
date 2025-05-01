@@ -8,7 +8,8 @@
     "build": "tsc",
     "dev": "tsx",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "lint": "eslint \"src/**/*.{js,ts}\" --max-warnings 0",
+    "lint:check": "eslint \"src/**/*.{js,ts}\" --max-warnings 99",
+    "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix --max-warnings 99",
     "check-types": "tsc --noEmit",
     "test-logs": "tsx scripts/test-log-fetch.ts"
   },

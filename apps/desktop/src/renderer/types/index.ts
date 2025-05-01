@@ -1,7 +1,13 @@
 // Types and interfaces for the application
 
 // Import types from packages instead of redefining them
-import { AgentResult, LogSearchInput, LogSearchInputCore, TraceSearchInput } from "@triage/agent";
+import {
+  AgentResult,
+  AgentStreamUpdate,
+  LogSearchInput,
+  LogSearchInputCore,
+  TraceSearchInput,
+} from "@triage/agent";
 
 import {
   IntegrationType,
@@ -25,9 +31,72 @@ export type {
   ServiceLatency,
   Span,
   SpansWithPagination,
+  AgentStreamUpdate as StreamUpdate,
   Trace,
   TracesWithPagination,
 };
+
+// Define the types for the new streaming architecture
+export type AgentStepType =
+  | "logSearch"
+  | "reasoning"
+  | "review"
+  | "logPostprocessing"
+  | "codePostprocessing";
+
+// Base interface for agent steps
+export interface BaseAgentStep {
+  id: string;
+  type: AgentStepType;
+}
+
+// Log search step interface
+export interface LogSearchStep extends BaseAgentStep {
+  type: "logSearch";
+  searches: string[];
+}
+
+// Reasoning step interface
+export interface ReasoningStep extends BaseAgentStep {
+  type: "reasoning";
+  content: string;
+}
+
+// Review step interface
+export interface ReviewStep extends BaseAgentStep {
+  type: "review";
+  content: string;
+}
+
+// Log postprocessing step interface
+export interface LogPostprocessingStep extends BaseAgentStep {
+  type: "logPostprocessing";
+  content: string;
+}
+
+// Code postprocessing step interface
+export interface CodePostprocessingStep extends BaseAgentStep {
+  type: "codePostprocessing";
+  content: string;
+}
+
+// Union type for all agent steps
+export type AgentStep =
+  | LogSearchStep
+  | ReasoningStep
+  | ReviewStep
+  | LogPostprocessingStep
+  | CodePostprocessingStep;
+
+// Cell interface represents a single agent invocation/response
+export interface Cell {
+  id: string;
+  steps: AgentStep[];
+  response: string;
+  error?: string;
+  logPostprocessing?: LogPostprocessing | null;
+  codePostprocessing?: CodePostprocessing | null;
+}
 
 // Define code map type alias
 export type CodeMap = Map<string, string>;
@@ -198,14 +267,20 @@ export interface CodePostprocessing {
 }
 
 // Interface for chat messages
-export interface ChatMessage {
+export type ChatMessage = UserChatMessage | AssistantChatMessage;
+
+export interface UserChatMessage {
+  role: "user";
   id: string;
-  role: "user" | "assistant";
   content: string;
-  artifacts?: Artifact[];
   contextItems?: ContextItem[];
-  logPostprocessing: LogPostprocessing | null;
-  codePostprocessing: CodePostprocessing | null;
+}
+
+export interface AssistantChatMessage {
+  role: "assistant";
+  id: string;
+  content: string;
+  cell: Cell; // Reference to the Cell for assistant messages
 }
 
 // Interface for main content tabs

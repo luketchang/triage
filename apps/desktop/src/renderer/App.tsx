@@ -5,7 +5,7 @@ import "./styles.css";
 // Feature flag for Traces view
 const TRACES_ENABLED = window.env.TRACES_ENABLED;
 
-import { Artifact, ContextItem, LogSearchInputCore, TabType, TraceForAgent } from "./types";
+import { ContextItem, LogSearchInputCore, TabType, TraceForAgent } from "./types";
 import { generateId } from "./utils/formatters";
 
 // Components
@@ -25,7 +25,6 @@ import { useTraces } from "./hooks/useTraces";
 
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>("chat");
-  const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
 
   // Use custom hooks
   const logsState = useLogs({ shouldFetch: activeTab === "logs" });
@@ -76,15 +75,6 @@ function App(): JSX.Element {
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
-  };
-
-  const handleArtifactClick = (artifact: Artifact): void => {
-    setSelectedArtifact(artifact);
-
-    // Automatically switch to the appropriate tab based on artifact type
-    if (artifact.type === "log") {
-      setActiveTab("logs");
-    }
   };
 
   // Add current view context to chat
@@ -176,13 +166,6 @@ function App(): JSX.Element {
             onTimeRangeChange={logsState.handleTimeRangeChange}
             onQuerySubmit={logsState.fetchLogsWithQuery}
             onLoadMore={logsState.handleLoadMoreLogs}
-            selectedArtifact={
-              selectedArtifact && selectedArtifact.type === "log" ? selectedArtifact : null
-            }
-            setLogs={logsState.setLogs}
-            setIsLoading={logsState.setIsLoading}
-            setPageCursor={logsState.setPageCursor}
-            setTimeRange={logsState.setTimeRange}
             facets={logsState.facets}
             selectedFacets={logsState.selectedFacets}
             setSelectedFacets={logsState.setSelectedFacets}
@@ -191,9 +174,6 @@ function App(): JSX.Element {
       case "traces":
         return TRACES_ENABLED ? (
           <TracesView
-            selectedArtifact={
-              selectedArtifact && selectedArtifact.type === "trace" ? selectedArtifact : null
-            }
             selectedTrace={tracesState.selectedTrace}
             handleTraceSelect={tracesState.handleTraceSelect}
             traces={tracesState.traces}
@@ -221,7 +201,7 @@ function App(): JSX.Element {
           </div>
         );
       case "dashboards":
-        return <DashboardsView selectedArtifact={null} />;
+        return <DashboardsView />;
       case "chat":
         return (
           <ChatView
@@ -229,11 +209,10 @@ function App(): JSX.Element {
             newMessage={chatState.newMessage}
             setNewMessage={chatState.setNewMessage}
             sendMessage={chatState.sendMessage}
-            onArtifactClick={handleArtifactClick}
             isThinking={chatState.isThinking}
             contextItems={chatState.contextItems}
             removeContextItem={chatState.removeContextItem}
-            chatMode={chatState.chatMode}
+            initialChatMode={chatState.chatMode}
             toggleChatMode={chatState.toggleChatMode}
           />
         );
@@ -244,11 +223,10 @@ function App(): JSX.Element {
             newMessage={chatState.newMessage}
             setNewMessage={chatState.setNewMessage}
             sendMessage={chatState.sendMessage}
-            onArtifactClick={handleArtifactClick}
             isThinking={chatState.isThinking}
             contextItems={chatState.contextItems}
             removeContextItem={chatState.removeContextItem}
-            chatMode={chatState.chatMode}
+            initialChatMode={chatState.chatMode}
             toggleChatMode={chatState.toggleChatMode}
           />
         );

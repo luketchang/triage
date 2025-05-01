@@ -1,7 +1,9 @@
 import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { LogsWithPagination, ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
+import { v4 as uuidv4 } from "uuid";
 
+import { AgentStreamUpdate } from "../..";
 import {
   LogSearchInput,
   LogSearchInputCore,
@@ -10,7 +12,6 @@ import {
   TaskComplete,
 } from "../../types";
 import { ensureSingleToolCall, formatFacetValues, formatLogResults } from "../utils";
-
 export interface LogSearchAgentResponse {
   newLogContext: Map<LogSearchInputCore, LogsWithPagination | string>;
   summary: string;
@@ -240,12 +241,14 @@ export class LogSearchAgent {
 
   @timer
   async invoke(params: {
+    logSearchId: string;
     query: string;
     logRequest: string;
     logLabelsMap: Map<string, string[]>;
     logResultHistory?: Map<LogSearchInputCore, LogsWithPagination | string>;
     maxIters?: number;
     codebaseOverview: string;
+    onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<LogSearchAgentResponse> {
     // Convert string[] logResultHistory to Map if needed, or create empty map if not provided
     let logResultHistory: Map<LogSearchInputCore, LogsWithPagination | string>;
@@ -286,6 +289,18 @@ export class LogSearchAgent {
         logger.info(
           `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`
         );
+
+        // Stream the log search query details if an onUpdate callback is provided
+        // and only once before the fetch
+        if (params.onUpdate) {
+          params.onUpdate({
+            type: "intermediateUpdate",
+            stepType: "logSearch",
+            id: uuidv4(),
+            parentId: params.logSearchId,
+            content: `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`,
+          });
+        }
 
         try {
           logger.info("Fetching logs from observability platform...");

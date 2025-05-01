@@ -13,6 +13,7 @@ import {
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
+  StreamUpdate,
   Trace,
   TraceQueryParams,
 } from "./types";
@@ -49,6 +50,13 @@ declare global {
           codeContext: Map<string, string>;
         }>
       >;
+
+      /**
+       * Register a callback for agent update events
+       * @param callback Function to call when an agent update is received
+       * @returns Function to remove the event listener
+       */
+      onAgentUpdate: (callback: (update: StreamUpdate) => void) => () => void;
 
       /**
        * Get the current agent configuration

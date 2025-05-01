@@ -6,7 +6,8 @@
     "clean": "turbo clean",
     "clean-tsbuildinfo": "find . -name \"tsconfig.tsbuildinfo\" -delete",
     "dev": "turbo dev",
-    "lint": "turbo lint",
+    "lint:check": "turbo lint:check",
+    "lint:fix": "turbo lint:fix",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "prepare": "husky",
     "lint-staged": "lint-staged",
@@ -17,19 +18,19 @@
   "lint-staged": {
     "apps/api/**/*.{js,ts,tsx}": [
       "prettier --write",
-      "cd apps/api && pnpm run lint"
+      "cd apps/api && pnpm run lint:fix"
     ],
     "packages/ui/**/*.{js,ts,tsx}": [
       "prettier --write",
-      "cd packages/ui && pnpm run lint"
+      "cd packages/ui && pnpm run lint:fix"
     ],
     "apps/web/**/*.{js,ts,tsx}": [
       "prettier --write",
-      "cd apps/web && pnpm run lint"
+      "cd apps/web && pnpm run lint:fix"
     ],
     "apps/desktop/**/*.{js,ts,tsx}": [
       "prettier --write",
-      "cd apps/desktop && pnpm run lint"
+      "cd apps/desktop && pnpm run lint:fix"
     ],
     "*.{json,md}": [
       "prettier --write"
