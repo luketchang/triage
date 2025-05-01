@@ -117,7 +117,6 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
 
-    // Generate a UUID for this high-level tool call
     const logSearchId = uuidv4();
 
     if (onUpdate) {
@@ -166,7 +165,6 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Span Search " + "=".repeat(25));
 
-    // Generate a UUID for this high-level tool call
     const spanSearchId = uuidv4();
 
     if (onUpdate) {
@@ -211,7 +209,6 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
 
-    // Generate a UUID for this high-level tool call
     const reasoningId = uuidv4();
 
     if (onUpdate) {
@@ -270,7 +267,6 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
 
-    // Generate a UUID for this high-level tool call
     const reviewId = uuidv4();
 
     if (onUpdate) {
@@ -328,7 +324,6 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
 
-    // Generate a UUID for this high-level tool call
     const logPostprocessingId = uuidv4();
 
     if (onUpdate) {
@@ -367,7 +362,6 @@ export class TriageAgent {
   ): Promise<Partial<TriageAgentState>> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
 
-    // Generate a UUID for this high-level tool call
     const codePostprocessingId = uuidv4();
 
     if (onUpdate) {
