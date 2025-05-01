@@ -173,6 +173,43 @@ export interface SingleTraceContextItem {
 // Context item type as a discriminated union
 export type ContextItem = LogSearchContextItem | SingleTraceContextItem;
 
+export type AgentStage =
+  | LogSearchStage
+  | ReasoningStage
+  | ReviewStage
+  | LogPostprocessingStage
+  | CodePostprocessingStage;
+
+export interface LogSearchStage {
+  type: "logSearch";
+  id: string;
+  queries: LogSearchPair[];
+}
+
+export interface ReasoningStage {
+  type: "reasoning";
+  id: string;
+  content: string;
+}
+
+export interface ReviewStage {
+  type: "review";
+  id: string;
+  content: string;
+}
+
+export interface LogPostprocessingStage {
+  type: "logPostprocessing";
+  id: string;
+  facts: LogPostprocessingFact[];
+}
+
+export interface CodePostprocessingStage {
+  type: "codePostprocessing";
+  id: string;
+  facts: CodePostprocessingFact[];
+}
+
 // Interface for chat messages
 export type ChatMessage = UserMessage | AssistantMessage;
 
@@ -188,7 +225,7 @@ export interface AssistantMessage {
   id: string;
   role: "assistant";
   timestamp: Date;
-  steps: AgentStep[];
+  stages: AgentStage[];
   content: string;
   error?: string;
 }

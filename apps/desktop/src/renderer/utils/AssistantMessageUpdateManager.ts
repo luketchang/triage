@@ -1,4 +1,4 @@
-import { Cell } from "../types";
+import { AssistantMessage } from "../types";
 
 /**
  * CellUpdateManager
@@ -7,11 +7,11 @@ import { Cell } from "../types";
  * Ensures that all updates (from streaming events) are applied in order, atomically,
  * and immutably. Notifies the UI after each update.
  */
-export class CellUpdateManager {
-  private cell: Cell;
-  private updateQueue: Array<(cell: Cell) => Cell> = [];
+export class AssistantMessageUpdateManager {
+  private message: AssistantMessage;
+  private updateQueue: Array<(message: AssistantMessage) => AssistantMessage> = [];
   private isProcessing = false;
-  private onUpdate: (cell: Cell) => void;
+  private onUpdate: (message: AssistantMessage) => void;
 
   /**
    * Constructor
@@ -19,8 +19,8 @@ export class CellUpdateManager {
    * @param initialCell - The initial cell state
    * @param onUpdate - Callback to be called after each update
    */
-  constructor(initialCell: Cell, onUpdate: (cell: Cell) => void) {
-    this.cell = initialCell;
+  constructor(initialMessage: AssistantMessage, onUpdate: (message: AssistantMessage) => void) {
+    this.message = initialMessage;
     this.onUpdate = onUpdate;
   }
 
@@ -29,8 +29,8 @@ export class CellUpdateManager {
    *
    * @returns The current cell state
    */
-  getCell(): Cell {
-    return this.cell;
+  getMessage(): AssistantMessage {
+    return this.message;
   }
 
   /**
@@ -38,7 +38,7 @@ export class CellUpdateManager {
    *
    * @param updateFn - Function that describes how to update the cell
    */
-  queueUpdate(updateFn: (cell: Cell) => Cell): void {
+  queueUpdate(updateFn: (message: AssistantMessage) => AssistantMessage): void {
     this.updateQueue.push(updateFn);
     this.processQueue();
   }
@@ -58,11 +58,11 @@ export class CellUpdateManager {
     try {
       while (this.updateQueue.length > 0) {
         const updateFn = this.updateQueue.shift()!;
-        this.cell = updateFn(this.cell);
+        this.message = updateFn(this.message);
       }
 
       // Notify listeners of the update
-      this.onUpdate(this.cell);
+      this.onUpdate(this.message);
     } catch (error) {
       console.error("Error processing cell update:", error);
     } finally {

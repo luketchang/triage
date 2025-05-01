@@ -308,7 +308,7 @@ export class LogSearchAgent {
                 type: "logSearch",
                 timestamp: new Date(),
                 input: response,
-                result: logContext,
+                results: logContext,
               },
             });
           }

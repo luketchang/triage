@@ -39,7 +39,7 @@ export interface BaseAgentStep {
 export interface LogSearchStep extends BaseAgentStep {
   type: "logSearch";
   input: LogSearchInputCore;
-  result: LogsWithPagination | string;
+  results: LogsWithPagination | string;
 }
 
 export interface ReasoningStep extends BaseAgentStep {

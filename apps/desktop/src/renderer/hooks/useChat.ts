@@ -1,7 +1,17 @@
+import { HighLevelUpdate, IntermediateUpdate } from "@triage/agent";
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import { AgentStep, Cell, ChatMessage, ContextItem } from "../types";
-import { CellUpdateManager } from "../utils/CellUpdateManager";
+import {
+  AgentStage,
+  AssistantMessage,
+  ChatMessage,
+  ContextItem,
+  LogSearchStage,
+  ReasoningStage,
+  ReviewStage,
+  UserMessage,
+} from "../types";
+import { AssistantMessageUpdateManager } from "../utils/AssistantMessageUpdateManager";
 import { generateId } from "../utils/formatters";
 
 // Define the chat mode type
@@ -14,11 +24,12 @@ export function useChat() {
   const [contextItems, setContextItems] = useState<ContextItem[]>([]);
   const [chatMode, setChatMode] = useState<ChatMode>("agent");
   // Track the current cell manager for active streaming responses
-  const [cellManager, setCellManager] = useState<CellUpdateManager | null>(null);
+  const [assistantMessageManager, setAssistantMessageManager] =
+    useState<AssistantMessageUpdateManager | null>(null);
 
   // Register for agent updates when we have an active cell manager
   useEffect(() => {
-    if (!cellManager) return;
+    if (!assistantMessageManager) return;
 
     // Register for updates and store the cleanup function
     const unregister = api.onAgentUpdate((update) => {
@@ -37,68 +48,64 @@ export function useChat() {
     return () => {
       unregister();
     };
-  }, [cellManager]);
+  }, [assistantMessageManager]);
 
   /**
    * Handle a high-level update from the agent
    * Creates a new step in the cell
    */
-  const handleHighLevelUpdate = (update: {
-    type: "highLevelUpdate";
-    stepType: string;
-    id: string;
-  }) => {
-    if (!cellManager) return;
+  const handleHighLevelUpdate = (update: HighLevelUpdate) => {
+    if (!assistantMessageManager) return;
 
-    cellManager.queueUpdate((cell) => {
-      let newStep: AgentStep;
+    assistantMessageManager.queueUpdate((assistantMessage) => {
+      let newStage: AgentStage;
 
       // Create the appropriate type of step based on stepType
       switch (update.stepType) {
         case "logSearch":
-          newStep = {
+          newStage = {
             id: update.id,
             type: "logSearch",
-            searches: [],
+            queries: [],
           };
           break;
         case "reasoning":
-          newStep = {
+          newStage = {
             id: update.id,
             type: "reasoning",
             content: "",
           };
           break;
         case "review":
-          newStep = {
+          newStage = {
             id: update.id,
             type: "review",
             content: "",
           };
           break;
         case "logPostprocessing":
-          newStep = {
+          newStage = {
             id: update.id,
             type: "logPostprocessing",
-            content: "",
+            facts: [],
           };
           break;
         case "codePostprocessing":
-          newStep = {
+          newStage = {
             id: update.id,
             type: "codePostprocessing",
-            content: "",
+            facts: [],
           };
           break;
         default:
           console.warn(`Unknown step type: ${update.stepType}`);
-          return cell; // Return unchanged cell if we don't recognize the step type
+          return assistantMessage; // Return unchanged cell if we don't recognize the step type
       }
 
       // Add the new step to the cell
       return {
-        ...cell,
-        steps: [...cell.steps, newStep],
+        ...assistantMessage,
+        stages: [...assistantMessage.stages, newStage],
       };
     });
   };
@@ -107,44 +114,44 @@ export function useChat() {
    * Handle an intermediate update from the agent
    * Updates the content of an existing step
    */
-  const handleIntermediateUpdate = (update: {
-    type: "intermediateUpdate";
-    stepType: string;
-    parentId: string;
-    id: string;
-    content: string;
-  }) => {
-    if (!cellManager) return;
+  const handleIntermediateUpdate = (update: IntermediateUpdate) => {
+    if (!assistantMessageManager) return;
 
-    cellManager.queueUpdate((cell) => {
+    assistantMessageManager.queueUpdate((assistantMessage) => {
       // Find the step to update
-      const stepIndex = cell.steps.findIndex((step) => step.id === update.parentId);
+      const stepIndex = assistantMessage.stages.findIndex(
+        (stage: AgentStage) => stage.id === update.parentId
+      );
       if (stepIndex === -1) {
         console.warn(`Step with ID ${update.parentId} not found`);
-        return cell; // Return unchanged cell if step not found
+        return assistantMessage; // Return unchanged cell if step not found
       }
 
-      const step = cell.steps[stepIndex];
+      let stage = assistantMessage.stages[stepIndex];
 
       // Update the step based on its type
-      let updatedStep: AgentStep;
-      switch (step.type) {
+      let updatedStage: AgentStage;
+      switch (update.step.type) {
         case "logSearch":
-          updatedStep = {
-            ...step,
-            searches: [...step.searches, update.content],
+          stage = stage as LogSearchStage;
+          updatedStage = {
+            ...stage,
+            type: "logSearch",
+            queries: [...stage.queries, update.step],
           };
           break;
         case "reasoning":
-          updatedStep = {
-            ...step,
-            content: step.content + update.content,
+          stage = stage as ReasoningStage;
+          updatedStage = {
+            ...stage,
+            content: stage.content + update.step.content,
           };
           break;
         case "review":
-          updatedStep = {
-            ...step,
-            content: step.content + update.content,
+          stage = stage as ReviewStage;
+          updatedStage = {
+            ...stage,
+            content: stage.content + update.step.content,
           };
           break;
         case "logPostprocessing":
@@ -153,18 +160,18 @@ export function useChat() {
         // TODO
         default:
           // Type assertion to avoid the "never" type error
-          console.warn(`Unknown step type: ${(step as AgentStep).type}`);
-          return cell; // Return unchanged cell if unknown step type
+          console.warn(`Unknown stage type: ${(stage as AgentStage).type}`);
+          return assistantMessage; // Return unchanged cell if unknown step type
       }
 
       // Create new steps array with the updated step
-      const updatedSteps = [...cell.steps];
-      updatedSteps[stepIndex] = updatedStep;
+      const updatedStages = [...assistantMessage.stages];
+      updatedStages[stepIndex] = updatedStage;
 
       // Return updated cell
       return {
-        ...cell,
-        steps: updatedSteps,
+        ...assistantMessage,
+        stages: updatedStages,
       };
     });
   };
@@ -181,8 +188,10 @@ export function useChat() {
     if (!newMessage.trim()) return;
 
     // Create a new user message with attached context items
-    const userMessage: ChatMessage = {
+    const userMessage: UserMessage = {
+      id: generateId(),
       role: "user",
+      timestamp: new Date(),
       content: newMessage,
       contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
     };
@@ -202,45 +211,40 @@ export function useChat() {
     // Set thinking state
     setIsThinking(true);
 
-    // Create a unique ID for the assistant message
-    const cellId = generateId();
-
-    // Create initial cell for streaming updates
-    const initialCell: Cell = {
-      id: cellId,
-      steps: [],
-      response: "",
-    };
-
     // Create assistant message with the initial cell
-    const assistantMessage: ChatMessage = {
+    const assistantMessage: AssistantMessage = {
+      id: generateId(),
       role: "assistant",
+      timestamp: new Date(),
       content: "Thinking...",
-      cell: initialCell,
+      stages: [],
     };
 
     // Add the assistant message to the messages array
     setMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
     // Create a CellUpdateManager to handle updates to the cell
-    const manager = new CellUpdateManager(initialCell, (updatedCell) => {
-      // Update the assistant message with the updated cell
-      setMessages((prevMessages) =>
-        prevMessages.map((message) => {
-          if (message.role === "assistant" && message.cell.id === cellId) {
-            // Return the message now with the updated cell data
-            return {
-              ...message,
-              cell: updatedCell,
-            };
-          }
-          return message;
-        })
-      );
-    });
+    const manager = new AssistantMessageUpdateManager(
+      assistantMessage,
+      (updatedAssistantMessage) => {
+        // Update the assistant message with the updated cell
+        setMessages((prevMessages) =>
+          prevMessages.map((message) => {
+            if (message.role === "assistant" && message.id === assistantMessage.id) {
+              // Return the message now with the updated cell data
+              return {
+                ...message,
+                stages: updatedAssistantMessage.stages,
+              };
+            }
+            return message;
+          })
+        );
+      }
+    );
 
     // Store the cell manager
-    setCellManager(manager);
+    setAssistantMessageManager(manager);
 
     try {
       // Determine which API to call based on chat mode
@@ -265,7 +269,7 @@ export function useChat() {
         // Also update the message content to match the cell response
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
-            if (message.role === "assistant" && message.cell.id === cellId) {
+            if (message.role === "assistant" && message.id === assistantMessage.id) {
               return {
                 ...message,
                 content:
@@ -285,7 +289,7 @@ export function useChat() {
         // Also update the message content with the error
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
-            if (message.role === "assistant" && message.cell.id === cellId) {
+            if (message.role === "assistant" && message.id === assistantMessage.id) {
               return {
                 ...message,
                 content:
@@ -309,7 +313,7 @@ export function useChat() {
       // Also update the message content with the error
       setMessages((prevMessages) =>
         prevMessages.map((message) => {
-          if (message.role === "assistant" && message.cell.id === cellId) {
+          if (message.role === "assistant" && message.id === assistantMessage.id) {
             return {
               ...message,
               content:
@@ -323,7 +327,7 @@ export function useChat() {
       // Hide the thinking indicator
       setIsThinking(false);
       // Clear the cell manager
-      setCellManager(null);
+      setAssistantMessageManager(null);
       // Ensure context items are cleared after sending a message
       setContextItems([]);
     }

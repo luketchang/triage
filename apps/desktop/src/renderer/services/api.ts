@@ -2,13 +2,13 @@ import { ApiResponse } from "../electron.d";
 import mockElectronAPI from "../electronApiMock";
 import {
   AgentConfig,
+  AgentStreamUpdate,
   ChatResponse,
   ContextItem,
   FacetData,
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
-  StreamUpdate,
   TraceQueryParams,
 } from "../types";
 
@@ -51,7 +51,7 @@ const isMethodAvailable = (methodName: string) => {
 // Create a wrapper API that will use either the real or mock API
 const api = {
   // Register for agent updates
-  onAgentUpdate: (callback: (update: StreamUpdate) => void) => {
+  onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => {
     if (USE_MOCK_API || !isMethodAvailable("onAgentUpdate")) {
       console.info("Mock onAgentUpdate - no streaming available in mock mode");
       return () => {}; // Return no-op cleanup function
