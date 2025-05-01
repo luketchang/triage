@@ -22,112 +22,6 @@ interface SlideOverProps {
   children: React.ReactNode;
 }
 
-const styles = {
-  factsSidebar: {
-    width: "100%",
-    height: "100%",
-    boxSizing: "border-box" as const,
-    display: "flex",
-    flexDirection: "column" as const,
-  },
-  factsHeader: {
-    padding: "14px 0",
-    borderBottom: "1px solid rgba(255,255,255,0.1)",
-    marginBottom: "20px",
-  },
-  factsTitle: {
-    fontSize: "22px",
-    fontWeight: "600" as const,
-    margin: 0,
-    color: "#fff",
-  },
-  factsContent: {
-    overflowY: "auto" as const,
-    overflowX: "hidden" as const,
-    flex: "1 1 auto",
-    width: "100%",
-    padding: "0 6px 0 0",
-  },
-  factItem: {
-    marginBottom: "28px",
-    padding: "18px",
-    borderRadius: "8px",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    width: "100%",
-    boxSizing: "border-box" as const,
-    overflow: "hidden",
-    wordBreak: "break-word" as const,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-  },
-  logFact: {
-    borderLeft: "5px solid #3498db",
-  },
-  codeFact: {
-    borderLeft: "5px solid #2ecc71",
-  },
-  factHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "14px",
-    paddingBottom: "10px",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
-  },
-  factTitle: {
-    fontSize: "17px",
-    fontWeight: "600" as const,
-    margin: 0,
-    color: "#fff",
-  },
-  factType: {
-    fontSize: "12px",
-    padding: "3px 10px",
-    borderRadius: "4px",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    color: "#ccc",
-  },
-  factContent: {
-    color: "#ddd",
-    fontSize: "14px",
-    lineHeight: "1.6",
-  },
-  factText: {
-    margin: "0 0 14px 0",
-    wordBreak: "break-word" as const,
-  },
-  factPath: {
-    fontSize: "13px",
-    color: "#999",
-    padding: "8px 0",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap" as const,
-    borderTop: "1px solid rgba(255,255,255,0.05)",
-    marginTop: "10px",
-  },
-  codeBlock: {
-    padding: "4px",
-    marginTop: "12px",
-    width: "100%",
-    overflow: "auto",
-    maxHeight: "280px",
-    borderRadius: "6px",
-    backgroundColor: "rgba(0,0,0,0.2)",
-  },
-  viewLogsButton: {
-    marginTop: "18px",
-    padding: "8px 16px",
-    backgroundColor: "rgba(52, 152, 219, 0.2)",
-    color: "#3498db",
-    border: "1px solid #3498db",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "500" as const,
-    transition: "all 0.2s ease",
-  },
-};
-
 const SlideOver: React.FC<SlideOverProps> = ({ isOpen, onClose, children }) => {
   const [isClosing, setIsClosing] = useState(false);
 
@@ -392,26 +286,15 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
 
   const renderLogFact = (fact: LogPostprocessingFact, index: number) => {
     return (
-      <div key={`log-fact-${index}`} style={{ ...styles.factItem, ...styles.logFact }}>
-        <div style={styles.factHeader}>
-          <h3 style={styles.factTitle}>{fact.title}</h3>
-          <span style={styles.factType}>LOG</span>
+      <div key={`log-fact-${index}`} className="fact-item log-fact">
+        <div className="fact-header">
+          <h3 className="fact-title">{fact.title}</h3>
+          <span className="fact-type">LOG</span>
         </div>
-        <div style={styles.factContent}>
-          <p style={styles.factText}>{fact.fact}</p>
+        <div className="fact-content">
+          <p className="fact-text">{fact.fact}</p>
         </div>
-        <button
-          style={styles.viewLogsButton}
-          onClick={() => handleLogFactClick(fact)}
-          onMouseOver={(e) => {
-            const target = e.target as HTMLButtonElement;
-            target.style.backgroundColor = "rgba(52, 152, 219, 0.3)";
-          }}
-          onMouseOut={(e) => {
-            const target = e.target as HTMLButtonElement;
-            target.style.backgroundColor = "rgba(52, 152, 219, 0.2)";
-          }}
-        >
+        <button className="view-logs-button" onClick={() => handleLogFactClick(fact)}>
           View Logs
         </button>
       </div>
@@ -420,15 +303,15 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
 
   const renderCodeFact = (fact: CodePostprocessingFact, index: number) => {
     return (
-      <div key={`code-fact-${index}`} style={{ ...styles.factItem, ...styles.codeFact }}>
-        <div style={styles.factHeader}>
-          <h3 style={styles.factTitle}>{fact.title}</h3>
-          <span style={styles.factType}>CODE</span>
+      <div key={`code-fact-${index}`} className="fact-item code-fact">
+        <div className="fact-header">
+          <h3 className="fact-title">{fact.title}</h3>
+          <span className="fact-type">CODE</span>
         </div>
-        <div style={styles.factContent}>
-          <p style={styles.factText}>{fact.fact}</p>
-          <div style={styles.factPath}>{fact.filepath}</div>
-          <div style={styles.codeBlock}>
+        <div className="fact-content">
+          <p className="fact-text">{fact.fact}</p>
+          <div className="fact-path">{fact.filepath}</div>
+          <div className="code-block">
             <ReactMarkdown>{`\`\`\`\n${fact.codeBlock}\n\`\`\``}</ReactMarkdown>
           </div>
         </div>
@@ -464,11 +347,11 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
   }
 
   return (
-    <div style={styles.factsSidebar}>
-      <div style={styles.factsHeader}>
-        <h2 style={styles.factsTitle}>Facts</h2>
+    <div className="facts-sidebar">
+      <div className="facts-header">
+        <h2 className="facts-title">Facts</h2>
       </div>
-      <div style={styles.factsContent}>
+      <div className="facts-content">
         {logFacts.map(renderLogFact)}
         {codeFacts.map(renderCodeFact)}
       </div>

@@ -2473,3 +2473,252 @@ body {
   max-width: 100%;
   min-width: 300px;
 }
+
+/*****************************************
+ * FactsSidebar Component Styling
+ *****************************************/
+
+.facts-sidebar {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.facts-header {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+}
+
+.facts-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+  color: #fff;
+}
+
+.facts-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1 1 auto;
+  width: 100%;
+  padding: 0 6px 0 0;
+}
+
+.fact-item {
+  margin-bottom: 28px;
+  padding: 18px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.log-fact {
+  border-left: 5px solid #3498db;
+}
+
+.code-fact {
+  border-left: 5px solid #2ecc71;
+}
+
+.fact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.fact-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  color: #fff;
+}
+
+.fact-type {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ccc;
+}
+
+.fact-content {
+  color: #ddd;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.fact-text {
+  margin: 0 0 14px 0;
+  word-break: break-word;
+}
+
+.fact-path {
+  font-size: 13px;
+  color: #999;
+  padding: 8px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 10px;
+}
+
+.code-block {
+  padding: 4px;
+  margin-top: 12px;
+  width: 100%;
+  overflow: auto;
+  max-height: 280px;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.view-logs-button {
+  margin-top: 18px;
+  padding: 8px 16px;
+  background-color: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+  border: 1px solid #3498db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.view-logs-button:hover {
+  background-color: rgba(52, 152, 219, 0.3);
+}
+
+/*****************************************
+ * CellView Component Styling
+ *****************************************/
+
+.cellview-container {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+}
+
+.cellview-container.with-facts {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+  gap: 32px;
+}
+
+.cellview-main-content {
+  flex: 65 1 65%;
+  min-width: 0;
+  width: 100%;
+  overflow: visible;
+}
+
+.facts-sidebar-wrapper {
+  flex: 35 1 35%;
+  min-width: 380px;
+  max-width: 700px;
+  align-self: stretch;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 0 0 32px;
+}
+
+.step-container {
+  margin-bottom: 12px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background-color: transparent;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.step-header {
+  font-weight: bold;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  color: #fff;
+  width: 100%;
+}
+
+.step-header-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.step-icon {
+  margin-right: 8px;
+}
+
+.step-content {
+  white-space: pre-wrap;
+  color: #aaa;
+  font-family: inherit;
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-left: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  word-break: break-word;
+}
+
+.log-search-item {
+  padding: 4px 0;
+  font-family: monospace;
+  color: #aaa;
+  word-break: break-word;
+  width: 100%;
+}
+
+.error-message {
+  color: #ff6b6b;
+  margin-top: 8px;
+  padding: 10px;
+  background-color: rgba(255, 107, 107, 0.1);
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.response-content {
+  margin-top: 16px;
+  padding: 0;
+  background-color: transparent;
+  color: #fff;
+  white-space: pre-wrap;
+  word-break: break-word;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.collapse-icon {
+  font-size: 12px;
+  color: #888;
+}
+
+.waiting-indicator {
+  color: #aaa;
+  font-size: 14px;
+  padding: 12px 0;
+  font-style: italic;
+  width: 100%;
+}

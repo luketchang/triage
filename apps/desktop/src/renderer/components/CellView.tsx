@@ -9,114 +9,6 @@ interface CellViewProps {
   isThinking?: boolean;
 }
 
-const styles = {
-  container: {
-    marginBottom: "16px",
-    display: "flex",
-    flexDirection: "column" as const,
-    width: "100%",
-    maxWidth: "100%",
-  },
-  withFacts: {
-    display: "flex",
-    flexDirection: "row" as const,
-    alignItems: "flex-start",
-    width: "100%",
-    gap: "32px", // Increased gap for better separation
-  },
-  mainContent: {
-    flex: "65 1 65%", // Takes 65% of the available space
-    minWidth: "0",
-    width: "100%",
-    overflow: "visible",
-  },
-  factsSidebar: {
-    flex: "35 1 35%", // Takes 35% of the available space
-    minWidth: "380px", // Adjusted minimum width
-    maxWidth: "700px", // Adjusted maximum width
-    alignSelf: "stretch",
-    borderLeft: "1px solid rgba(255,255,255,0.1)",
-    padding: "0 0 0 32px", // Increased padding
-  },
-  stepContainer: {
-    marginBottom: "12px",
-    borderRadius: "6px",
-    padding: "10px 12px",
-    backgroundColor: "transparent",
-    width: "100%",
-    minWidth: "0",
-    boxSizing: "border-box" as const,
-  },
-  stepHeader: {
-    fontWeight: "bold" as const,
-    marginBottom: "8px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    cursor: "pointer",
-    userSelect: "none" as const,
-    color: "#fff",
-    width: "100%",
-  },
-  stepHeaderContent: {
-    display: "flex",
-    alignItems: "center",
-    flex: 1,
-  },
-  stepIcon: {
-    marginRight: "8px",
-  },
-  stepContent: {
-    whiteSpace: "pre-wrap" as const,
-    color: "#aaa",
-    fontFamily: "inherit",
-    maxHeight: "300px",
-    overflowY: "auto" as const,
-    overflowX: "hidden" as const,
-    paddingLeft: "12px",
-    width: "100%",
-    boxSizing: "border-box" as const,
-    wordBreak: "break-word" as const,
-  },
-  logSearchItem: {
-    padding: "4px 0",
-    fontFamily: "monospace",
-    color: "#aaa",
-    wordBreak: "break-word" as const,
-    width: "100%",
-  },
-  error: {
-    color: "#ff6b6b",
-    marginTop: "8px",
-    padding: "10px",
-    backgroundColor: "rgba(255, 107, 107, 0.1)",
-    borderRadius: "4px",
-    width: "100%",
-    boxSizing: "border-box" as const,
-  },
-  response: {
-    marginTop: "16px",
-    padding: "0",
-    backgroundColor: "transparent",
-    color: "#fff",
-    whiteSpace: "pre-wrap" as const,
-    wordBreak: "break-word" as const,
-    width: "100%",
-    boxSizing: "border-box" as const,
-  },
-  collapseIcon: {
-    fontSize: "12px",
-    color: "#888",
-  },
-  waitingIndicator: {
-    color: "#aaa",
-    fontSize: "14px",
-    padding: "12px 0",
-    fontStyle: "italic",
-    width: "100%",
-  },
-};
-
 /**
  * Collapsible step container component
  */
@@ -135,18 +27,18 @@ const CollapsibleStep: React.FC<{
   });
 
   return (
-    <div style={styles.stepContainer}>
-      <div style={styles.stepHeader} onClick={() => setIsCollapsed(!isCollapsed)}>
-        <div style={styles.stepHeaderContent}>
+    <div className="step-container">
+      <div className="step-header" onClick={() => setIsCollapsed(!isCollapsed)}>
+        <div className="step-header-content">
           <span>{title}</span>
         </div>
-        <span style={styles.collapseIcon}>{isCollapsed ? "▼" : "▲"}</span>
+        <span className="collapse-icon">{isCollapsed ? "▼" : "▲"}</span>
       </div>
       {isCollapsed ? (
         // When collapsed, add a placeholder div to maintain width
         <div style={{ minHeight: "8px", width: "100%" }} />
       ) : (
-        <div style={styles.stepContent} ref={contentRef}>
+        <div className="step-content" ref={contentRef}>
           {children}
         </div>
       )}
@@ -183,7 +75,7 @@ const renderLogSearchStep = (step: LogSearchStep) => (
       <em>Searching logs...</em>
     ) : (
       step.searches.map((search, index) => (
-        <div key={`${step.id}-search-${index}`} style={styles.logSearchItem}>
+        <div key={`${step.id}-search-${index}`} className="log-search-item">
           {search}
         </div>
       ))
@@ -268,13 +160,8 @@ const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
   }, [cell.steps]);
 
   return (
-    <div
-      className={`cellview-container ${shouldShowFactsSidebar ? "with-facts" : ""}`}
-      style={
-        shouldShowFactsSidebar ? { ...styles.container, ...styles.withFacts } : styles.container
-      }
-    >
-      <div className="cellview-main-content" style={styles.mainContent}>
+    <div className={`cellview-container ${shouldShowFactsSidebar ? "with-facts" : ""}`}>
+      <div className="cellview-main-content">
         {/* Render each visible step */}
         {visibleSteps.map((step) => (
           <React.Fragment key={step.id}>{renderStep(step)}</React.Fragment>
@@ -282,17 +169,17 @@ const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
 
         {/* Show waiting indicator if needed */}
         {isThinking && showWaitingIndicator && visibleSteps.length > 0 && !cell.response && (
-          <div style={styles.waitingIndicator}>
+          <div className="waiting-indicator">
             <AnimatedEllipsis />
           </div>
         )}
 
         {/* Render error if present */}
-        {cell.error && <div style={styles.error}>{cell.error}</div>}
+        {cell.error && <div className="error-message">{cell.error}</div>}
 
         {/* Render final response if present */}
         {cell.response && (
-          <div style={styles.response}>
+          <div className="response-content">
             <ReactMarkdown>{cell.response}</ReactMarkdown>
           </div>
         )}
@@ -300,7 +187,7 @@ const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
 
       {/* Render facts sidebar if facts are available */}
       {shouldShowFactsSidebar && (
-        <div className="facts-sidebar-wrapper" style={styles.factsSidebar}>
+        <div className="facts-sidebar-wrapper">
           <FactsSidebar
             logFacts={cell.logPostprocessing?.facts || []}
             codeFacts={cell.codePostprocessing?.facts || []}
