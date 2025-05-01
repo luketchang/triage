@@ -17,7 +17,6 @@ interface LogsViewProps {
   facets: FacetData[];
   selectedFacets: string[];
   setSelectedFacets: React.Dispatch<React.SetStateAction<string[]>>;
-  setLogsWithPagination?: (logsWithPagination: LogsWithPagination | null) => void;
 }
 
 const LogsView: React.FC<LogsViewProps> = ({
@@ -33,7 +32,6 @@ const LogsView: React.FC<LogsViewProps> = ({
   facets,
   selectedFacets,
   setSelectedFacets,
-  setLogsWithPagination,
 }) => {
   // Component-specific state
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);

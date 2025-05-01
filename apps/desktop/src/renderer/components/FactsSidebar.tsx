@@ -336,7 +336,6 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         facets={facets}
         selectedFacets={selectedFacets}
         setSelectedFacets={setSelectedFacets}
-        setLogsWithPagination={setLogsWithPagination}
       />
     );
   };
