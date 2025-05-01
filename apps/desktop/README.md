@@ -52,10 +52,6 @@ OBSERVABILITY_PLATFORM=datadog
 - `pnpm lint`: Lint the codebase
 - `pnpm check-types`: Check TypeScript types
 
-## Building for Production
-
-Run `pnpm build:prod` to build the application for production. The output will be in the `dist` directory.
-
 ## Architecture
 
 The application follows the Electron architecture with three main processes:
