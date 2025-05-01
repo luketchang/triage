@@ -150,6 +150,7 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
         }
       }, 500);
     } else {
+      console.info("Resetting waiting indicator state");
       setShowWaitingIndicator(false);
     }
 
@@ -174,8 +175,8 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
           <React.Fragment key={stage.id}>{renderStage(stage)}</React.Fragment>
         ))}
 
-        {/* Show waiting indicator if needed */}
-        {isThinking && showWaitingIndicator && stages.length > 0 && !message.content && (
+        {/* Show waiting indicator with less restrictive conditions */}
+        {isThinking && showWaitingIndicator && (
           <div className="waiting-indicator">
             <AnimatedEllipsis />
           </div>

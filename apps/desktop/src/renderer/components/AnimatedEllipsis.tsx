@@ -13,7 +13,7 @@ const AnimatedEllipsis = () => {
         if (prev === "..") return "...";
         return ".";
       });
-    }, 500);
+    }, 200);
 
     return () => clearInterval(interval);
   }, []);
