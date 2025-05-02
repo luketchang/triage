@@ -147,14 +147,14 @@ export function useChat() {
           stage = stage as ReasoningStage;
           updatedStage = {
             ...stage,
-            content: stage.content + update.step.content,
+            content: stage.content + update.step.contentChunk,
           };
           break;
         case "review":
           stage = stage as ReviewStage;
           updatedStage = {
             ...stage,
-            content: stage.content + update.step.content,
+            content: stage.content + update.step.contentChunk,
           };
           break;
         case "logPostprocessing":

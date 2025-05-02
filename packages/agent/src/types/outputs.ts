@@ -21,7 +21,7 @@ export type IntermediateUpdate = {
   type: "intermediateUpdate";
   id: string;
   parentId: string;
-  step: AgentStep;
+  step: AgentStreamingStep;
 };
 
 export type AgentStep =
@@ -29,6 +29,14 @@ export type AgentStep =
   | CodeSearchStep
   | ReasoningStep
   | ReviewStep
+  | LogPostprocessingStep
+  | CodePostprocessingStep;
+
+export type AgentStreamingStep =
+  | LogSearchStep
+  | CodeSearchStep
+  | ReasoningPartialStep
+  | ReviewPartialStep
   | LogPostprocessingStep
   | CodePostprocessingStep;
 
@@ -60,10 +68,18 @@ export interface ReasoningStep extends BaseAgentStep {
   content: string;
 }
 
+export type ReasoningPartialStep = Omit<ReasoningStep, "content"> & {
+  contentChunk: string;
+};
+
 export interface ReviewStep extends BaseAgentStep {
   type: "review";
   content: string;
 }
+
+export type ReviewPartialStep = Omit<ReviewStep, "content"> & {
+  contentChunk: string;
+};
 
 export interface LogPostprocessingStep extends BaseAgentStep {
   type: "logPostprocessing";

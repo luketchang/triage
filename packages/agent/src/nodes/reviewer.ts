@@ -118,7 +118,7 @@ export class Reviewer {
             step: {
               type: "review",
               timestamp: new Date(),
-              content: part.textDelta,
+              contentChunk: part.textDelta,
             },
           });
         }

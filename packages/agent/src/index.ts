@@ -6,7 +6,6 @@ import {
   IntegrationType,
   LogsWithPagination,
   ObservabilityPlatform,
-  SpansWithPagination,
 } from "@triage/observability";
 import { Command as CommanderCommand } from "commander";
 import { v4 as uuidv4 } from "uuid";
@@ -35,7 +34,6 @@ import {
   LogSearchInputCore,
   ReasoningRequest,
   ReviewRequest,
-  SpanSearchInputCore,
 } from "./types";
 
 const INITIAL_LOG_REQUEST: LogRequest = {
@@ -313,7 +311,6 @@ export class TriageAgent {
       postProcessingCalls.push({ type: "codePostprocessing" } as CodePostprocessingRequest);
 
       updates.toolCalls = [...state.toolCalls, ...postProcessingCalls];
-      updates.answer = response.content;
     } else if (response.type === "toolCalls") {
       updates.answer = undefined;
       updates.toolCalls = [...state.toolCalls, ...response.toolCalls];
@@ -460,8 +457,6 @@ export interface AgentArgs {
   startDate?: Date;
   endDate?: Date;
   reasonOnly?: boolean;
-  logContext?: Map<LogSearchInputCore, LogsWithPagination | string>;
-  spanContext?: Map<SpanSearchInputCore, SpansWithPagination | string>;
   onUpdate?: (update: AgentStreamUpdate) => void;
 }
 
@@ -489,8 +484,6 @@ export async function invokeAgent({
   startDate = new Date("2025-04-01T21:00:00Z"),
   endDate = new Date("2025-04-01T22:00:00Z"),
   reasonOnly = false,
-  logContext,
-  spanContext,
   onUpdate,
 }: AgentArgs): Promise<AssistantMessage> {
   // If reasonOnly is true, override observabilityFeatures to be empty
@@ -622,9 +615,13 @@ async function main(): Promise<void> {
     endDate,
     onUpdate: (update) => {
       if (update.type === "highLevelUpdate") {
-        logger.info(`HighLevelUpdate: ${update.stepType}`);
+        process.stdout.write(`\nHighLevelUpdate: ${update.stepType}\n`);
       } else if (update.type === "intermediateUpdate") {
-        logger.info(`IntermediateUpdate: ${update.step.type}`);
+        if (update.step.type === "reasoning") {
+          process.stdout.write(`${update.step.contentChunk}\n`);
+        } else if (update.step.type === "review") {
+          process.stdout.write(`${update.step.contentChunk}\n`);
+        }
       }
     },
   });
