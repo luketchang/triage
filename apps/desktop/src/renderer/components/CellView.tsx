@@ -131,26 +131,20 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
 
   // Set up a time-based check for showing the waiting indicator
   useEffect(() => {
-    // Clear any existing interval
     if (waitingCheckIntervalRef.current) {
       clearInterval(waitingCheckIntervalRef.current);
       waitingCheckIntervalRef.current = null;
     }
 
-    // Reset last update time when the cell changes (e.g., new step added)
-    lastUpdateTimeRef.current = Date.now();
-
-    // Only set up the interval if we're in thinking state and have steps
-    if (isThinking && stages.length > 0) {
+    if (isThinking) {
+      lastUpdateTimeRef.current = Date.now();
+      setShowWaitingIndicator(false);
       waitingCheckIntervalRef.current = setInterval(() => {
-        const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
-        if (timeSinceLastUpdate > 1000) {
-          // Show waiting indicator after 1 second of no updates
+        if (Date.now() - lastUpdateTimeRef.current > 1000) {
           setShowWaitingIndicator(true);
         }
       }, 500);
     } else {
-      console.info("Resetting waiting indicator state");
       setShowWaitingIndicator(false);
     }
 
@@ -159,7 +153,7 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
         clearInterval(waitingCheckIntervalRef.current);
       }
     };
-  }, [message, isThinking, stages.length]);
+  }, [isThinking]);
 
   // Update last update time when cell steps change
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 
 /**
  * A component that cycles through ., .., ... with an animation effect

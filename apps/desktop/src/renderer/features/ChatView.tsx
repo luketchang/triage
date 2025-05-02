@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView";
-import { ChatMessage, ContextItem } from "../types";
+import { ChatMessage, ContextItem, AssistantMessage } from "../types";
 
 interface ChatViewProps {
   messages: ChatMessage[];
@@ -351,13 +351,13 @@ const ChatView: React.FC<ChatViewProps> = ({
       );
     } else {
       // Handle assistant message - use direct CellView for streaming
-      if (isThinking && message.content === "Thinking...") {
-        // For thinking assistant message, render the CellView without the thinking-message wrapper
-        return <CellView message={message} isThinking={true} />;
-      } else {
-        // For completed assistant message
-        return <CellView message={message} isThinking={false} />;
+      const asst = message as AssistantMessage;
+      if (isThinking && asst.response === "Thinking...") {
+        // For thinking assistant message, render the CellView without wrapper
+        return <CellView message={asst} isThinking />;
       }
+      // For completed assistant message
+      return <CellView message={asst} isThinking={false} />;
     }
   };
 
@@ -400,9 +400,7 @@ const ChatView: React.FC<ChatViewProps> = ({
                 {messages.map((message, index) => (
                   <div
                     key={index}
-                    className={`chat-message ${message.role} ${
-                      message.content === "Thinking..." ? "thinking-state" : ""
-                    }`}
+                    className={`chat-message ${message.role} ${message.role === "assistant" && (message as AssistantMessage).response === "Thinking..." ? "thinking-state" : ""}`}
                     style={{
                       width: "100%",
                       maxWidth: "100%",
