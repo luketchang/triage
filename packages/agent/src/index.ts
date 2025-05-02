@@ -4,7 +4,6 @@ import { GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common"
 import {
   getObservabilityPlatform,
   IntegrationType,
-  LogsWithPagination,
   ObservabilityPlatform,
 } from "@triage/observability";
 import { Command as CommanderCommand } from "commander";
@@ -18,21 +17,12 @@ import { Reviewer } from "./nodes/reviewer";
 import { CodeSearchAgent } from "./nodes/search/code-search";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { formatFacetValues } from "./nodes/utils";
-import type {
-  AgentStep,
-  ChatMessage,
-  CodePostprocessing,
-  CodeRequest,
-  LogRequest,
-  SpanRequest,
-} from "./types";
+import type { AgentStep, ChatMessage, CodeRequest, LogRequest, SpanRequest } from "./types";
 import {
   AgentStreamUpdate,
   AssistantMessage,
   CodePostprocessingRequest,
-  LogPostprocessing,
   LogPostprocessingRequest,
-  LogSearchInputCore,
   ReasoningRequest,
   ReviewRequest,
 } from "./types";
@@ -240,7 +230,7 @@ export class TriageAgent {
     }
 
     const reasoner = new Reasoner(this.reasoningModel);
-    logger.info(`CHAT HISTORY LENGTH: ${state.chatHistory.length}`);
+    logger.info(`CHAT HISTORY: ${JSON.stringify(state.chatHistory)}`);
     const response = await reasoner.invoke({
       query: state.query,
       chatHistory: state.chatHistory,
@@ -468,18 +458,6 @@ export interface AgentArgs {
   endDate?: Date;
   reasonOnly?: boolean;
   onUpdate?: (update: AgentStreamUpdate) => void;
-}
-
-/**
- * Result of agent invocation
- */
-export interface AgentResult {
-  chatHistory: string[];
-  response: string | null;
-  logPostprocessing: LogPostprocessing | null;
-  codePostprocessing: CodePostprocessing | null;
-  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
-  codeContext: Map<string, string>;
 }
 
 /**

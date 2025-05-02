@@ -8,18 +8,6 @@ import { logRequestToolSchema, RequestToolCalls } from "../types/tools";
 import { formatAgentSteps, formatChatHistory, formatFacetValues } from "./utils";
 type ReasoningResponse = ReasoningStep | RequestToolCalls;
 
-export interface ReasoningParams {
-  query: string;
-  codebaseOverview: string;
-  fileTree: string;
-  logLabelsMap: Map<string, string[]>;
-  spanLabelsMap: Map<string, string[]>;
-  chatHistory: string[];
-  codeContext: Map<string, string>;
-  logContext: Map<string, string>;
-  spanContext: Map<string, string>;
-}
-
 // TODO: some unused params, will fix
 export const createPrompt = ({
   query,

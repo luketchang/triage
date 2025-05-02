@@ -221,9 +221,9 @@ export function convertToAgentChatMessages(
 export function convertToDesktopChatMessages(messages: AgentChatMessage[]): ChatMessage[] {
   return messages.map((message) => {
     if (message.role === "user") {
-      return convertToDesktopUserMessage(message as AgentUserMessage);
+      return convertToDesktopUserMessage(message);
     } else {
-      return convertToDesktopAssistantMessage(message as AgentAssistantMessage);
+      return convertToDesktopAssistantMessage(message);
     }
   });
 }

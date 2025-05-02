@@ -9,17 +9,6 @@ import { formatAgentSteps, formatChatHistory, formatFacetValues } from "./utils"
 
 export type ReviewerResponse = ReviewStep | RequestToolCalls;
 
-export interface ReviewerParams {
-  query: string;
-  codebaseOverview: string;
-  fileTree: string;
-  logLabelsMap: Map<string, string[]>;
-  spanLabelsMap: Map<string, string[]>;
-  chatHistory: string[];
-  codeContext: Map<string, string>;
-  logContext: Map<string, string>;
-}
-
 function createPrompt(params: {
   query: string;
   chatHistory: ChatMessage[];

@@ -7,10 +7,8 @@ import {
   AgentStep,
   AgentStreamUpdate,
   UserMessage as AgentUserMessage,
-  CodePostprocessing,
   CodePostprocessingFact,
   CodePostprocessingStep,
-  LogPostprocessing,
   LogPostprocessingFact,
   LogPostprocessingStep,
   LogSearchInput,
@@ -265,14 +263,4 @@ export interface PostprocessedLogSearchInput extends LogSearchInputCore {
   title?: string;
   reasoning?: string;
   summary?: string;
-}
-
-// Interface for chat API responses
-export interface ChatResponse {
-  success: boolean;
-  content: string;
-  logContext?: Map<LogSearchInputCore, LogsWithPagination | string>;
-  codeContext?: Map<string, string>;
-  logPostprocessing: LogPostprocessing | null;
-  codePostprocessing: CodePostprocessing | null;
 }

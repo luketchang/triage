@@ -182,13 +182,13 @@ export function formatChatHistory(messages: ChatMessage[]): string {
   return messages
     .map((message) => {
       if (message.role === "user") {
-        return `User: ${message.content}`;
+        return `User:\n${message.content}`;
       } else {
         let formattedMessage = "Assistant:";
 
         // Add gathered context if there are steps
         if (message.steps && message.steps.length > 0) {
-          formattedMessage += `\n\nGathered Context:\n${formatAgentSteps(message.steps)}`;
+          formattedMessage += `\nGathered Context:\n${formatAgentSteps(message.steps)}`;
         }
 
         // Add response if it exists

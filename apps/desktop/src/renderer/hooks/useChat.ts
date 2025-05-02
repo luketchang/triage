@@ -198,6 +198,8 @@ export function useChat() {
   const sendMessage = async (): Promise<void> => {
     if (!newMessage.trim()) return;
 
+    let updatedMessages = [...messages];
+
     // Create a new user message with attached context items
     const userMessage: UserMessage = {
       id: generateId(),
@@ -207,6 +209,8 @@ export function useChat() {
       contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
     };
 
+    updatedMessages = [...updatedMessages, userMessage];
+
     // Store context items to attach to message
     const _contextItemsToAttach = [...contextItems]; // TODO: add this back in once we support attaching context
 
@@ -214,7 +218,7 @@ export function useChat() {
     setContextItems([]);
 
     // Update the messages state
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    setMessages(updatedMessages);
 
     // Clear the input field
     setNewMessage("");
@@ -232,7 +236,8 @@ export function useChat() {
     };
 
     // Add the assistant message to the messages array
-    setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+    updatedMessages = [...updatedMessages, assistantMessage];
+    setMessages(updatedMessages);
 
     // Create a CellUpdateManager to handle updates to the cell
     const manager = new CellUpdateManager(assistantMessage, (updatedAssistantMessage) => {
@@ -256,7 +261,10 @@ export function useChat() {
 
     try {
       // Determine which API to call based on chat mode
-      const agentMessage = await api.invokeAgent(newMessage, convertToAgentChatMessages(messages));
+      const agentMessage = await api.invokeAgent(
+        newMessage,
+        convertToAgentChatMessages(updatedMessages)
+      );
 
       if (agentMessage && !agentMessage.error) {
         // Update the cell with the final response

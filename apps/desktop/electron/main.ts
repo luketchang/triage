@@ -92,6 +92,7 @@ function setupIpcHandlers(): void {
     ): Promise<AgentAssistantMessage> => {
       try {
         console.log("Invoking agent with query:", query);
+        console.log("IPC chat history:", chatHistory);
 
         // TODO: Don't extract these from env
         const agentConfig: AgentConfig = {
