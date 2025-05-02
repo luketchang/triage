@@ -122,56 +122,60 @@ export const formatFacetValues = (facetValues: Map<string, Array<string>>): stri
     .join("\n");
 };
 
+export function formatSingleLogSearchStep(step: LogSearchStep): string {
+  const input = step.input;
+  const logsOrError = step.results;
+
+  let formattedContent: string;
+  let pageCursor: string | undefined;
+
+  if (typeof logsOrError === "string") {
+    // It's an error message
+    formattedContent = `Error: ${logsOrError}`;
+    pageCursor = undefined;
+  } else {
+    // It's a log array
+    formattedContent = logsOrError.logs.map((log) => formatSingleLog(log)).join("\n");
+    if (!formattedContent) {
+      formattedContent = "No logs found";
+    }
+    pageCursor = logsOrError.pageCursorOrIndicator;
+  }
+
+  return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
+}
+
+export function formatSingleCodeSearchStep(step: CodeSearchStep): string {
+  const header = `File: ${step.filepath}`;
+  const separator = "-".repeat(header.length);
+  return `${separator}\n${header}\n${separator}\n${step.source}\n`;
+}
+
 export function formatLogSearchSteps(steps: LogSearchStep[]): string {
   return steps
-    .map((step) => {
-      if (step.type === "logSearch") {
-        const input = step.input;
-        const logsOrError = step.results;
-
-        let formattedContent: string;
-        let pageCursor: string | undefined;
-
-        if (typeof logsOrError === "string") {
-          // It's an error message
-          formattedContent = `Error: ${logsOrError}`;
-          pageCursor = undefined;
-        } else {
-          // It's a log array
-          formattedContent = logsOrError.logs.map((log) => formatSingleLog(log)).join("\n");
-          if (!formattedContent) {
-            formattedContent = "No logs found";
-          }
-          pageCursor = logsOrError.pageCursorOrIndicator;
-        }
-
-        return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
-      }
-
-      return "";
-    })
+    .map((step) => formatSingleLogSearchStep(step))
     .filter(Boolean)
     .join("\n\n");
 }
 
 export function formatCodeSearchSteps(steps: CodeSearchStep[]): string {
   return steps
-    .map((step) => {
-      if (step.type === "codeSearch") {
-        const header = `File: ${step.filepath}`;
-        const separator = "-".repeat(header.length);
-        return `${separator}\n${header}\n${separator}\n${step.source}\n`;
-      }
-      return "";
-    })
+    .map((step) => formatSingleCodeSearchStep(step))
     .filter(Boolean)
     .join("\n\n");
 }
 
 export function formatAgentSteps(steps: AgentStep[]): string {
-  // Filter only for log-related steps for now
-  const logSearchSteps = steps.filter((step): step is LogSearchStep => step.type === "logSearch");
-
-  // Format the log search steps using the existing function
-  return formatLogSearchSteps(logSearchSteps);
+  // Format each step in the original order they were provided
+  return steps
+    .map((step) => {
+      if (step.type === "logSearch") {
+        return formatSingleLogSearchStep(step);
+      } else if (step.type === "codeSearch") {
+        return formatSingleCodeSearchStep(step);
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
 }

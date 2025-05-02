@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 
-import { collectSourceCode, GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common";
+import { GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -15,9 +15,17 @@ import { CodePostprocessor } from "./nodes/postprocessing/code-postprocessing";
 import { LogPostprocessor } from "./nodes/postprocessing/log-postprocessing";
 import { Reasoner } from "./nodes/reasoner";
 import { Reviewer } from "./nodes/reviewer";
+import { CodeSearchAgent } from "./nodes/search/code-search";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { formatFacetValues } from "./nodes/utils";
-import type { AgentStep, ChatMessage, CodePostprocessing, LogRequest, SpanRequest } from "./types";
+import type {
+  AgentStep,
+  ChatMessage,
+  CodePostprocessing,
+  CodeRequest,
+  LogRequest,
+  SpanRequest,
+} from "./types";
 import {
   AgentStreamUpdate,
   AssistantMessage,
@@ -36,6 +44,12 @@ const INITIAL_LOG_REQUEST: LogRequest = {
     "fetch logs relevant to the issue/event that will give you a full picture of the issue/event",
   reasoning: "",
 };
+const INITIAL_CODE_REQUEST: CodeRequest = {
+  type: "codeRequest",
+  request:
+    "fetch code relevant to the issue/event that will give you a full picture of the issue/event",
+  reasoning: "",
+};
 const INITIAL_SPAN_REQUEST: SpanRequest = {
   type: "spanRequest",
   request:
@@ -46,8 +60,9 @@ const INITIAL_SPAN_REQUEST: SpanRequest = {
 export interface TriageAgentState {
   firstPass: boolean;
   toolCalls: Array<
-    | SpanRequest
     | LogRequest
+    | CodeRequest
+    | SpanRequest
     | ReasoningRequest
     | ReviewRequest
     | LogPostprocessingRequest
@@ -123,6 +138,44 @@ export class TriageAgent {
 
     return {
       agentSteps: [...state.agentSteps, ...response.newLogSearchSteps],
+      toolCalls: updatedToolCalls,
+    };
+  }
+
+  @timer
+  async processCodeRequest(
+    state: TriageAgentState,
+    request: CodeRequest,
+    onUpdate?: (update: AgentStreamUpdate) => void
+  ): Promise<Partial<TriageAgentState>> {
+    logger.info("\n\n" + "=".repeat(25) + " Code Search " + "=".repeat(25));
+
+    const codeSearchId = uuidv4();
+
+    if (onUpdate) {
+      onUpdate({ type: "highLevelUpdate", id: codeSearchId, stepType: "codeSearch" });
+    }
+
+    const codeSearchAgent = new CodeSearchAgent(this.fastModel);
+    const response = await codeSearchAgent.invoke({
+      query: state.query,
+      codeRequest: request.request,
+      repoPath: state.repoPath,
+      codeSearchId,
+      codeSearchSteps: state.agentSteps.filter((step) => step.type === "codeSearch"),
+      onUpdate,
+    });
+
+    const updatedToolCalls = [...state.toolCalls];
+    if (updatedToolCalls.length === 0) {
+      updatedToolCalls.push({ type: "reasoningRequest" });
+    }
+
+    logger.info(`added ${response.newCodeSearchSteps.length} code search steps`);
+
+    return {
+      agentSteps: [...state.agentSteps, ...response.newCodeSearchSteps],
+      toolCalls: updatedToolCalls,
     };
   }
 
@@ -211,6 +264,7 @@ export class TriageAgent {
       }
 
       updates.agentSteps = [...state.agentSteps, response];
+      updates.answer = response.content;
       updates.toolCalls = [{ type: "reviewRequest" }];
     } else if (response.type === "toolCalls") {
       updates.toolCalls = [...state.toolCalls, ...response.toolCalls];
@@ -261,6 +315,7 @@ export class TriageAgent {
       updates.toolCalls = [...state.toolCalls, ...postProcessingCalls];
       updates.answer = response.content;
     } else if (response.type === "toolCalls") {
+      updates.answer = undefined;
       updates.toolCalls = [...state.toolCalls, ...response.toolCalls];
     }
 
@@ -359,6 +414,8 @@ export class TriageAgent {
       if (nextToolCall) {
         if (nextToolCall.type === "logRequest") {
           stateUpdates = await this.processLogRequest(currentState, nextToolCall, onUpdate);
+        } else if (nextToolCall.type === "codeRequest") {
+          stateUpdates = await this.processCodeRequest(currentState, nextToolCall, onUpdate);
           // } else if (nextToolCall.type === "spanRequest") {
           //   stateUpdates = await this.processSpanRequest(currentState, nextToolCall, onUpdate);
         } else if (nextToolCall.type === "reasoningRequest") {
@@ -460,22 +517,15 @@ export async function invokeAgent({
   // );
   // logger.info(formatFacetValues(spanLabelsMap));
 
-  const codeMap = collectSourceCode(repoPath);
-  const initialAgentSteps: AgentStep[] = Object.entries(codeMap).map(([filepath, source]) => ({
-    type: "codeSearch",
-    timestamp: new Date(),
-    filepath,
-    source,
-  }));
-
   // Load the codebase overview
   const overview = await fs.readFile(codebaseOverviewPath, "utf-8");
 
   const fileTree = loadFileTree(repoPath);
 
   let toolCalls: Array<
-    | SpanRequest
     | LogRequest
+    | CodeRequest
+    | SpanRequest
     | ReasoningRequest
     | LogPostprocessingRequest
     | CodePostprocessingRequest
@@ -488,6 +538,8 @@ export async function invokeAgent({
   if (observabilityFeatures.includes("spans")) {
     toolCalls.push(INITIAL_SPAN_REQUEST);
   }
+
+  toolCalls.push(INITIAL_CODE_REQUEST);
 
   // If no observability features are enabled, start with reasoning
   if (toolCalls.length === 0) {
@@ -504,7 +556,7 @@ export async function invokeAgent({
     logLabelsMap,
     spanLabelsMap: new Map<string, string[]>(),
     chatHistory: [],
-    agentSteps: initialAgentSteps,
+    agentSteps: [],
     answer: "",
   };
 
@@ -548,8 +600,8 @@ async function main(): Promise<void> {
   const { integration, features: observabilityFeatures } = parseArgs();
 
   // Get formatted labels map for time range
-  const startDate = new Date("2025-04-16T21:00:00Z");
-  const endDate = new Date("2025-04-16T23:00:00Z");
+  const startDate = new Date("2025-05-02T22:00:00Z");
+  const endDate = new Date("2025-05-02T23:00:00Z");
 
   const repoPath = "/Users/luketchang/code/ticketing";
 
