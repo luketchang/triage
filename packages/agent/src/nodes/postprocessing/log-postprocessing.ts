@@ -1,20 +1,15 @@
 import { getModelWrapper, logger, Model, timer } from "@triage/common";
-import { LogsWithPagination } from "@triage/observability";
 import { generateId, generateText } from "ai";
 
-import { AgentStreamUpdate } from "../../types";
-import {
-  LogPostprocessing,
-  logPostprocessingToolSchema,
-  LogSearchInputCore,
-} from "../../types/tools";
-import { ensureSingleToolCall, formatFacetValues, formatLogResults } from "../utils";
+import { AgentStreamUpdate, LogPostprocessingStep, LogSearchStep } from "../../types";
+import { logPostprocessingToolSchema } from "../../types/tools";
+import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "../utils";
 
 function createPrompt(params: {
   query: string;
   codebaseOverview: string;
   logLabelsMap: Map<string, string[]>;
-  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
+  logSearchSteps: LogSearchStep[];
   answer: string;
 }): string {
   return `
@@ -46,7 +41,7 @@ function createPrompt(params: {
   </log_labels>
   
   <previous_log_context>
-  ${formatLogResults(params.logContext)}
+  ${formatLogSearchSteps(params.logSearchSteps)}
   </previous_log_context>
   `;
 }
@@ -63,11 +58,11 @@ export class LogPostprocessor {
     query: string;
     codebaseOverview: string;
     logLabelsMap: Map<string, string[]>;
-    logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
+    logSearchSteps: LogSearchStep[];
     answer: string;
     parentId: string;
     onUpdate?: (update: AgentStreamUpdate) => void;
-  }): Promise<LogPostprocessing> {
+  }): Promise<LogPostprocessingStep> {
     const prompt = createPrompt(params);
 
     const { toolCalls } = await generateText({
@@ -106,6 +101,8 @@ export class LogPostprocessor {
     }
 
     return {
+      type: "logPostprocessing",
+      timestamp: new Date(),
       facts: toolCall.args.facts || [],
     };
   }

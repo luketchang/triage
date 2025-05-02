@@ -1,5 +1,6 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
 
+import { AgentStep, CodeSearchStep, LogSearchStep } from "..";
 import { LogSearchInput, SpanSearchInput } from "../types/tools";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
@@ -120,3 +121,57 @@ export const formatFacetValues = (facetValues: Map<string, Array<string>>): stri
     .map(([facet, values]) => `${facet}: ${values.join(", ")}`)
     .join("\n");
 };
+
+export function formatLogSearchSteps(steps: LogSearchStep[]): string {
+  return steps
+    .map((step) => {
+      if (step.type === "logSearch") {
+        const input = step.input;
+        const logsOrError = step.results;
+
+        let formattedContent: string;
+        let pageCursor: string | undefined;
+
+        if (typeof logsOrError === "string") {
+          // It's an error message
+          formattedContent = `Error: ${logsOrError}`;
+          pageCursor = undefined;
+        } else {
+          // It's a log array
+          formattedContent = logsOrError.logs.map((log) => formatSingleLog(log)).join("\n");
+          if (!formattedContent) {
+            formattedContent = "No logs found";
+          }
+          pageCursor = logsOrError.pageCursorOrIndicator;
+        }
+
+        return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
+      }
+
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+export function formatCodeSearchSteps(steps: CodeSearchStep[]): string {
+  return steps
+    .map((step) => {
+      if (step.type === "codeSearch") {
+        const header = `File: ${step.filepath}`;
+        const separator = "-".repeat(header.length);
+        return `${separator}\n${header}\n${separator}\n${step.source}\n`;
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+export function formatAgentSteps(steps: AgentStep[]): string {
+  // Filter only for log-related steps for now
+  const logSearchSteps = steps.filter((step): step is LogSearchStep => step.type === "logSearch");
+
+  // Format the log search steps using the existing function
+  return formatLogSearchSteps(logSearchSteps);
+}

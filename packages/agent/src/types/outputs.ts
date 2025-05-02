@@ -3,7 +3,7 @@ import type { CodePostprocessingFact, LogPostprocessingFact, LogSearchInputCore 
 
 export type AgentStepType =
   | "logSearch"
-  | "spanSearch"
+  | "codeSearch"
   | "reasoning"
   | "review"
   | "logPostprocessing"
@@ -26,6 +26,7 @@ export type IntermediateUpdate = {
 
 export type AgentStep =
   | LogSearchStep
+  | CodeSearchStep
   | ReasoningStep
   | ReviewStep
   | LogPostprocessingStep
@@ -36,10 +37,22 @@ export interface BaseAgentStep {
   timestamp: Date;
 }
 
-export interface LogSearchStep extends BaseAgentStep {
-  type: "logSearch";
+export interface LogSearchPair {
   input: LogSearchInputCore;
   results: LogsWithPagination | string;
+}
+
+export interface CodeSearchPair {
+  filepath: string;
+  source: string;
+}
+
+export interface LogSearchStep extends BaseAgentStep, LogSearchPair {
+  type: "logSearch";
+}
+
+export interface CodeSearchStep extends BaseAgentStep, CodeSearchPair {
+  type: "codeSearch";
 }
 
 export interface ReasoningStep extends BaseAgentStep {
@@ -61,3 +74,17 @@ export interface CodePostprocessingStep extends BaseAgentStep {
   type: "codePostprocessing";
   facts: CodePostprocessingFact[];
 }
+
+export interface AssistantMessage {
+  role: "assistant";
+  steps: AgentStep[];
+  response: string | null;
+  error: string | null;
+}
+
+export interface UserMessage {
+  role: "user";
+  content: string;
+}
+
+export type ChatMessage = UserMessage | AssistantMessage;

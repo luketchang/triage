@@ -1,19 +1,12 @@
-import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
-import { LogsWithPagination, SpansWithPagination } from "@triage/observability";
+import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import { AgentStreamUpdate } from "../index";
-import {
-  logRequestToolSchema,
-  LogSearchInputCore,
-  RequestToolCalls,
-  RootCauseAnalysis,
-  SpanSearchInputCore,
-} from "../types/tools";
+import { AgentStep, AgentStreamUpdate, ReasoningStep } from "../index";
+import { logRequestToolSchema, RequestToolCalls } from "../types/tools";
 
-import { formatFacetValues, formatLogResults, formatSpanResults } from "./utils";
-type ReasoningResponse = RootCauseAnalysis | RequestToolCalls;
+import { formatAgentSteps, formatFacetValues } from "./utils";
+type ReasoningResponse = ReasoningStep | RequestToolCalls;
 
 export interface ReasoningParams {
   query: string;
@@ -27,43 +20,25 @@ export interface ReasoningParams {
   spanContext: Map<string, string>;
 }
 
-export interface ReasoningOutput {
-  chatResponse: string;
-  rootCauseAnalysis: string;
-  logLabelsMap: Map<string, string[]>;
-  spanLabelsMap: Map<string, string[]>;
-  chatHistory: string[];
-  codeContext: Map<string, string>;
-  logContext: Map<string, string | LogsWithPagination>;
-  spanContext: Map<string, string | SpansWithPagination>;
-}
-
 // TODO: some unused params, will fix
 export const createPrompt = ({
   query,
-  repoPath: _repoPath,
+  repoPath,
   codebaseOverview,
-  fileTree: _fileTree,
-  codeContext,
-  logContext,
-  spanContext,
+  fileTree,
   logLabelsMap,
   spanLabelsMap,
-  chatHistory: _chatHistory,
+  agentSteps,
 }: {
   query: string;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
-  codeContext: Map<string, string>;
-  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
-  spanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
   logLabelsMap: Map<string, string[]>;
   spanLabelsMap: Map<string, string[]>;
-  chatHistory: string[];
+  agentSteps: AgentStep[];
 }): string => {
   const formattedLogLabels = formatFacetValues(logLabelsMap);
-  const formattedSpanLabels = formatFacetValues(spanLabelsMap);
 
   const prompt = `
 Given the user query about the potential issue/event, an overview of the codebase, log labels, span labels, and previously gathered log and code context, your task is to come up with a concrete answer to the user query. If the query asks you to diagnose a live issue/failure, your response should attempt to provide a root cause analysis and a concrete/unambiguous code fix if possible. If you do not have enough information to diagnose the issue OR if your hypotheses are hand-wavy and cannot be concretely supported by walking through the sequence of events of the issue/event, output a \`CodeRequest\` or \`SpanRequest\` to gather more context.
@@ -81,6 +56,14 @@ Tips:
 ${query}
 </query>
 
+<repo_path>
+${repoPath}
+</repo_path>
+
+<file_tree>
+${fileTree}
+</file_tree>
+
 <codebase_overview>
 ${codebaseOverview}
 </codebase_overview>
@@ -90,20 +73,12 @@ ${formattedLogLabels}
 </log_labels>
 
 <span_labels>
-${formattedSpanLabels}
+${formatFacetValues(spanLabelsMap)}
 </span_labels>
 
-<code_context>
-${formatCodeMap(codeContext)}
-</code_context>
-
-<log_context>
-${formatLogResults(logContext)}
-</log_context>
-
-<span_context>
-${formatSpanResults(spanContext)}
-</span_context>
+<gathered_context>
+${formatAgentSteps(agentSteps)}
+</gathered_context>
 `;
 
   return prompt;
@@ -122,12 +97,9 @@ export class Reasoner {
     repoPath: string;
     codebaseOverview: string;
     fileTree: string;
-    codeContext: Map<string, string>;
-    logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
-    spanContext: Map<SpanSearchInputCore, SpansWithPagination | string>;
     logLabelsMap: Map<string, string[]>;
     spanLabelsMap: Map<string, string[]>;
-    chatHistory: string[];
+    agentSteps: AgentStep[];
     parentId: string;
     onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<ReasoningResponse> {
@@ -177,8 +149,9 @@ export class Reasoner {
     let output: ReasoningResponse;
     if (finalizedToolCalls.length === 0) {
       output = {
-        type: "rootCauseAnalysis",
-        rootCause: text,
+        type: "reasoning",
+        timestamp: new Date(),
+        content: text,
       };
     } else {
       output = {

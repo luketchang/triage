@@ -1,14 +1,14 @@
-import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
+import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { generateId, generateText } from "ai";
 
-import { AgentStreamUpdate } from "../../types";
-import { CodePostprocessing, codePostprocessingToolSchema } from "../../types/tools";
-import { ensureSingleToolCall } from "../utils";
+import { AgentStreamUpdate, CodePostprocessingStep, CodeSearchStep } from "../../types";
+import { codePostprocessingToolSchema } from "../../types/tools";
+import { ensureSingleToolCall, formatCodeSearchSteps } from "../utils";
 
 function createPrompt(params: {
   query: string;
   codebaseOverview: string;
-  codeContext: Map<string, string>;
+  codeSearchSteps: CodeSearchStep[];
   answer: string;
 }): string {
   return `
@@ -32,7 +32,7 @@ function createPrompt(params: {
   </codebase_overview>
   
   <previous_code_context>
-  ${formatCodeMap(params.codeContext)}
+  ${formatCodeSearchSteps(params.codeSearchSteps)}
   </previous_code_context>
   `;
 }
@@ -48,11 +48,11 @@ export class CodePostprocessor {
   async invoke(params: {
     query: string;
     codebaseOverview: string;
-    codeContext: Map<string, string>;
+    codeSearchSteps: CodeSearchStep[];
     answer: string;
     parentId: string;
     onUpdate?: (update: AgentStreamUpdate) => void;
-  }): Promise<CodePostprocessing> {
+  }): Promise<CodePostprocessingStep> {
     logger.info(`Code postprocessing for query: ${params.query}`);
 
     const prompt = createPrompt(params);
@@ -92,6 +92,8 @@ export class CodePostprocessor {
     }
 
     return {
+      type: "codePostprocessing",
+      timestamp: new Date(),
       facts: toolCall.args.facts || [],
     };
   }

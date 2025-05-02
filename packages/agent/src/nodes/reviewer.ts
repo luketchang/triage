@@ -1,18 +1,13 @@
-import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
-import { LogsWithPagination } from "@triage/observability";
+import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import {
-  logRequestToolSchema,
-  LogSearchInputCore,
-  RequestToolCalls,
-  RootCauseAnalysis,
-} from "../types/tools";
+import { logRequestToolSchema, RequestToolCalls } from "../types/tools";
 
-import { AgentStreamUpdate } from "../types/streaming";
-import { formatFacetValues, formatLogResults } from "./utils";
-export type ReviewerResponse = RequestToolCalls | RootCauseAnalysis;
+import { AgentStep, AgentStreamUpdate, ReviewStep } from "../types/outputs";
+import { formatAgentSteps, formatFacetValues } from "./utils";
+
+export type ReviewerResponse = ReviewStep | RequestToolCalls;
 
 export interface ReviewerParams {
   query: string;
@@ -31,24 +26,22 @@ function createPrompt(params: {
   codebaseOverview: string;
   logLabelsMap: Map<string, string[]>;
   spanLabelsMap: Map<string, string[]>;
-  chatHistory: string[];
-  codeContext: Map<string, string>;
-  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
-  rootCauseAnalysis: string;
+  agentSteps: AgentStep[];
+  answer: string;
 }): string {
   // Format facet maps
   const formattedLogLabels = formatFacetValues(params.logLabelsMap);
   const formattedSpanLabels = formatFacetValues(params.spanLabelsMap);
 
   return `
-Given the user query about the potential issue/event, and the initial 'root cause analysis', your job is to review the analysis for completeness and accuracy.
+Given the user query about the potential issue/event, and the initial answer, your job is to review the answer for completeness and accuracy.
 
-Analyze the root cause analysis for:
-1. Completeness - are there gaps in the explanation? 
+Analyze the answer for:
+1. Completeness - are there gaps in the explanation? is it hand waving?
 2. Accuracy - does this explanation align with the logs/code context? 
 3. Actionability - is the proposed fix clear and a true forward fix?
 
-If you believe additional information is needed to provide a complete root cause analysis, use the following tools:
+If you believe additional information is needed to provide a complete answer, use the following tools:
 - logRequest - Get logs, using a query with service names and filters 
 - spanRequest - Get spans/traces, using a query with service names
 
@@ -66,17 +59,13 @@ ${formattedLogLabels}
 ${formattedSpanLabels}
 </span_labels>
 
-<code_context>
-${formatCodeMap(params.codeContext)}
-</code_context>
+<gathered_context>
+${formatAgentSteps(params.agentSteps)}
+</gathered_context>
 
-<log_context>
-${formatLogResults(params.logContext)}
-</log_context>
-
-<root_cause_analysis>
-${params.rootCauseAnalysis}
-</root_cause_analysis>
+<answer>
+${params.answer}
+</answer>
 `;
 }
 
@@ -94,10 +83,8 @@ export class Reviewer {
     codebaseOverview: string;
     logLabelsMap: Map<string, string[]>;
     spanLabelsMap: Map<string, string[]>;
-    chatHistory: string[];
-    codeContext: Map<string, string>;
-    logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
-    rootCauseAnalysis: string;
+    agentSteps: AgentStep[];
+    answer: string;
     parentId: string;
     onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<ReviewerResponse> {
@@ -146,11 +133,10 @@ export class Reviewer {
     // Create the appropriate output object based on the type
     let output: ReviewerResponse;
     if (finalizedToolCalls.length === 0) {
-      // If no tool calls, return the actual streamed text from the model
-      // instead of just re-using the original rootCauseAnalysis input
       output = {
-        type: "rootCauseAnalysis",
-        rootCause: text.trim() || params.rootCauseAnalysis,
+        type: "review",
+        timestamp: new Date(),
+        content: text,
       };
     } else {
       // For tool calls, construct the RequestToolCalls object

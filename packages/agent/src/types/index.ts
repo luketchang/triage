@@ -1,2 +1,2 @@
-export * from "./streaming";
+export * from "./outputs";
 export * from "./tools";
