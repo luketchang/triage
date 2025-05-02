@@ -36,6 +36,13 @@ export type {
   TracesWithPagination,
 };
 
+// Define API response types with consistent error property
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
 // Define the types for the new streaming architecture
 export type AgentStepType =
   | "logSearch"

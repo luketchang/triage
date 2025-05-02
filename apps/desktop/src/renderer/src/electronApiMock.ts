@@ -1,5 +1,5 @@
-import { ApiResponse } from "./electron.d";
 import {
+  ApiResponse,
   AgentConfig,
   CodePostprocessing,
   ContextItem,

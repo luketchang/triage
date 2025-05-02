@@ -1,7 +1,7 @@
-import { ApiResponse } from "../electron.d";
 import mockElectronAPI from "../electronApiMock";
 import {
   AgentConfig,
+  ApiResponse,
   ChatResponse,
   ContextItem,
   FacetData,

@@ -6,10 +6,10 @@
 // Import types from types.ts - this is the single source of truth for types
 import {
   AgentConfig,
-  CodePostprocessing,
+  AgentMessage,
+  ApiResponse,
   FacetData,
   Log,
-  LogPostprocessing,
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
@@ -17,13 +17,6 @@ import {
   Trace,
   TraceQueryParams,
 } from "./types";
-
-// Define API response types with consistent error property
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 // Augment the Window interface to include our Electron API
 declare global {
@@ -40,16 +33,7 @@ declare global {
         query: string,
         logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null,
         options?: { reasonOnly?: boolean }
-      ) => Promise<
-        ApiResponse<{
-          chatHistory: string[];
-          content: string | null;
-          logPostprocessing: LogPostprocessing | null;
-          codePostprocessing: CodePostprocessing | null;
-          logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
-          codeContext: Map<string, string>;
-        }>
-      >;
+      ) => Promise<ApiResponse<AgentMessage>>;
 
       /**
        * Register a callback for agent update events

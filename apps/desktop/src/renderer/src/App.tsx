@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./electron.d";
+import "../../preload";
 import "./styles.css";
 
 // Feature flag for Traces view

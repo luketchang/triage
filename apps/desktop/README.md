@@ -1,67 +1,62 @@
 # Triage Desktop
 
-A desktop application for the Triage platform, built with Electron, React, and TypeScript.
+An Electron application with React and TypeScript
 
-## Project Structure
+## Project Setup
 
-The project is organized with a clear separation of concerns:
+### Install
 
-```
-apps/desktop/
-├── electron/         # Electron main process code (TypeScript)
-│   └── main.ts       # Main process entry point
-├── preload/          # Preload scripts for Electron (TypeScript)
-│   └── index.ts      # Preload script that exposes a safe API to the renderer
-├── src/              # Application source code
-│   ├── config.ts     # Centralized configuration with environment loading
-│   └── renderer/     # React application for the renderer process
-│       ├── App.tsx   # Main React component
-│       ├── electron.d.ts  # TypeScript definitions for Electron API
-│       ├── main.tsx  # React entry point
-│       └── styles.css # Application styles
-├── dist/             # Build output for the renderer process
-├── dist-electron/    # Build output for the Electron processes
-├── index.html        # HTML entry point
-├── tsconfig.json     # Base TypeScript configuration
-├── tsconfig.electron.json # TypeScript config for Electron main process
-├── tsconfig.preload.json  # TypeScript config for preload scripts
-└── vite.config.ts    # Vite configuration
+```bash
+$ pnpm install
 ```
 
-## Development
+### Development Mode
 
-### Environment Setup
+Run the app in development mode with hot reloading and developer tools:
 
-1. Create a `.env` file in the project root with the necessary environment variables:
-
-```env
-# Required API keys
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
-
-# Optional configuration
-REPO_PATH=/path/to/your/repo
-CODEBASE_OVERVIEW_PATH=/path/to/overview.md
-OBSERVABILITY_PLATFORM=datadog
+```bash
+$ pnpm dev
 ```
 
-### Development Commands
+- Starts Electron with live reload for rapid development.
+- Use this while coding and debugging.
 
-- `pnpm start`: Start the development environment
-- `pnpm build`: Build the application for production
-- `pnpm lint`: Lint the codebase
-- `pnpm check-types`: Check TypeScript types
+### Preview/Production Mode
 
-## Architecture
+Run the app using the built files (no hot reload, simulates production):
 
-The application follows the Electron architecture with three main processes:
+```bash
+$ pnpm start
+```
 
-1. **Main Process** (Electron): Handles the application lifecycle and creates windows
-2. **Renderer Process** (React): Renders the UI and handles user interactions
-3. **Preload Scripts**: Provide a secure bridge between the main and renderer processes
+- Starts Electron in preview mode, serving the built app.
+- Useful for testing the production build before packaging.
 
-All code is written in TypeScript for improved type safety and developer experience.
+### Build & Package
 
-## License
+Build and package the app for your platform:
 
-Internal use only.
+```bash
+# For Windows
+$ pnpm build:win
+
+# For macOS
+$ pnpm build:mac
+
+# For Linux
+$ pnpm build:linux
+```
+
+### Running the Packaged App
+
+After building, find the packaged binary in the `dist/` directory:
+
+- **macOS:** `dist/mac/Triage Desktop.app` (double-click or run with `open dist/mac/Triage\ Desktop.app`)
+- **Windows:** `dist/win-unpacked/Triage Desktop.exe` (double-click or run from Command Prompt)
+- **Linux:** `dist/linux-unpacked/triage-desktop` (run from Terminal)
+
+---
+
+- Use **`pnpm dev`** for development.
+- Use **`pnpm start`** to preview the built app.
+- Use **`pnpm build:<platform>`** and run the binary from `dist/` for the fully-packaged experience.

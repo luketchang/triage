@@ -11,24 +11,23 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 
 // Get directory name in ESM context
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirPath = path.dirname(currentFilePath);
 
-// Find project root by traversing up until we find package.json with workspaces
+// Find project root by traversing up until we find a likely root package.json
 function findProjectRoot(startDir: string): string {
   let currentDir = startDir;
   while (true) {
-    // Check if package.json exists
     const packageJsonPath = path.join(currentDir, "package.json");
     if (fs.existsSync(packageJsonPath)) {
       try {
         const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-        // If it has workspaces, it's likely the root package.json
-        if (packageJson.workspaces) {
+        if (packageJson.pnpm) {
           return currentDir;
         }
-      } catch (e) {
+      } catch (error) {
         // Continue if can't parse package.json
+        console.debug(`Could not parse package.json at ${packageJsonPath}:`, error);
       }
     }
 
@@ -37,14 +36,14 @@ function findProjectRoot(startDir: string): string {
     // If we've reached the root of the filesystem
     if (parentDir === currentDir) {
       // Fallback to a reasonable guess
-      return path.resolve(__dirname, "../../../../");
+      return path.resolve(currentDirPath, "../../../../");
     }
     currentDir = parentDir;
   }
 }
 
 // Find and load .env from project root
-const projectRoot = findProjectRoot(__dirname);
+const projectRoot = findProjectRoot(currentDirPath);
 const envPath = path.join(projectRoot, ".env");
 
 console.log(`Looking for .env file at: ${envPath}`);

@@ -1,24 +1,14 @@
 // Load environment variables first, before any other imports
-import "./env-loader.js";
+import "./env-loader";
 
+import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import { invokeAgent } from "@triage/agent";
-import { app, BrowserWindow, ipcMain, shell } from "electron";
-// Fix CommonJS import for electron-updater
-import pkg from "electron-updater";
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
-const { autoUpdater } = pkg;
-// Import config from @triage/config package
 import { config } from "@triage/config";
-// Import AgentConfig type from local config interface
-import { AgentConfig } from "../src/config.js";
-// Import observability platform functions
 import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
-
-// Get directory name for preload script path
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { autoUpdater } from "electron-updater";
+import { join } from "path";
+import { AgentConfig } from "./config.js";
 
 // Log the configuration to verify it's correctly loaded
 console.log("Using environment configuration:", {
@@ -34,47 +24,6 @@ console.log("Using environment configuration:", {
     username: config.grafana.username ? "Set" : "Not set",
   },
 });
-
-let mainWindow: BrowserWindow | null;
-
-/**
- * Create the main application window
- */
-function createWindow(): void {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    webPreferences: {
-      preload: path.join(__dirname, "../../dist-electron/index.js"),
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
-  });
-
-  // In development, load from dev server
-  if (process.env.NODE_ENV === "development" || process.env.DEBUG_PROD === "true") {
-    mainWindow.loadURL("http://localhost:5174");
-    mainWindow.webContents.openDevTools();
-  } else {
-    // Load the index.html when not in development
-    mainWindow.loadFile(path.join(process.env.DIST || "dist", "index.html"));
-  }
-
-  // Make all links open with the browser, not with the application
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("https:")) shell.openExternal(url);
-    return { action: "deny" };
-  });
-
-  // Auto updater in production
-  if (process.env.NODE_ENV === "production") {
-    autoUpdater.checkForUpdatesAndNotify();
-  }
-
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-  });
-}
 
 /**
  * Set up IPC handlers for communication with the renderer
@@ -112,13 +61,6 @@ function setupIpcHandlers(): void {
           logContext = new Map(serializedLogContext);
         }
 
-        // Send updates to renderer via mainWindow
-        const onUpdate = (update: any) => {
-          if (mainWindow) {
-            mainWindow.webContents.send("agent-update", update);
-          }
-        };
-
         const result = await invokeAgent({
           query,
           repoPath: agentConfig.repoPath,
@@ -129,7 +71,6 @@ function setupIpcHandlers(): void {
           endDate: agentConfig.endDate,
           reasonOnly: finalReasonOnly,
           logContext: logContext,
-          onUpdate: onUpdate,
         });
 
         return {
@@ -342,62 +283,82 @@ function setupIpcHandlers(): void {
 }
 
 /**
- * Helper function to recursively get directory tree
+ * Create the main application window
  */
-async function getDirectoryTree(dirPath: string, basePath: string = ""): Promise<any[]> {
-  const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-  const result: any[] = [];
+function createWindow(): void {
+  const mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    // ...(process.platform === "linux" ? { icon } : {}),
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: false,
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
 
-  for (const entry of entries) {
-    // Skip hidden files and node_modules
-    if (entry.name.startsWith(".") || entry.name === "node_modules") {
-      continue;
-    }
+  mainWindow.on("ready-to-show", () => {
+    mainWindow.show();
+  });
 
-    const relativePath = path.join(basePath, entry.name);
-    const fullPath = path.join(dirPath, entry.name);
+  mainWindow.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url);
+    return { action: "deny" };
+  });
 
-    if (entry.isDirectory()) {
-      // Process directory
-      const children = await getDirectoryTree(fullPath, relativePath);
-      result.push({
-        name: entry.name,
-        path: relativePath,
-        isDirectory: true,
-        children: children,
-      });
-    } else {
-      // Process file
-      result.push({
-        name: entry.name,
-        path: relativePath,
-        isDirectory: false,
-      });
-    }
+  // HMR for renderer base on electron-vite cli.
+  // Load the remote URL for development or the local html file for production.
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
+  } else {
+    mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   }
 
-  return result;
+  // Make all links open with the browser, not with the application
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("https:")) shell.openExternal(url);
+    return { action: "deny" };
+  });
+
+  // Auto updater in production
+  if (process.env.NODE_ENV === "production") {
+    autoUpdater.checkForUpdatesAndNotify();
+  }
 }
 
-/**
- * Initialize the application
- */
-function init(): void {
+// This method will be called when Electron has finished
+// initialization and is ready to create browser windows.
+// Some APIs can only be used after this event occurs.
+app.whenReady().then(() => {
+  // Set app user model id for windows
+  electronApp.setAppUserModelId("com.electron");
+
+  // Default open or close DevTools by F12 in development
+  // and ignore CommandOrControl + R in production.
+  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+  app.on("browser-window-created", (_, window) => {
+    optimizer.watchWindowShortcuts(window);
+  });
+
   setupIpcHandlers();
   createWindow();
-}
 
-// App lifecycle event handlers
-app.whenReady().then(init);
+  app.on("activate", function () {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
 
+// Quit when all windows are closed, except on macOS. There, it's common
+// for applications and their menu bar to stay active until the user quits
+// explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-app.on("activate", () => {
-  if (mainWindow === null) {
-    createWindow();
-  }
-});
+// In this file you can include the rest of your app's specific main process
+// code. You can also put them in separate files and require them here.

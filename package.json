@@ -2,49 +2,40 @@
   "name": "triage",
   "private": true,
   "scripts": {
-    "build": "pnpm clean-tsbuildinfo && turbo clean && turbo build",
-    "clean": "turbo clean",
-    "clean-tsbuildinfo": "find . -name \"tsconfig.tsbuildinfo\" -delete",
-    "dev": "turbo dev",
-    "lint:check": "turbo lint:check",
-    "lint:fix": "turbo lint:fix",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "prepare": "husky",
-    "lint-staged": "lint-staged",
-    "desktop:dev": "cd apps/desktop && pnpm dev",
-    "desktop:electron": "cd apps/desktop && pnpm electron:dev",
-    "desktop:build": "cd apps/desktop && pnpm build"
+    "dev": "concurrently \"turbo dev --filter=!triage-desktop\" \"pnpm -C apps/desktop dev\"",
+    "dev:packages": "turbo dev",
+    "build": "pnpm clean && turbo build",
+    "clean": "turbo clean && pnpm clean:tsbuildinfo",
+    "clean:tsbuildinfo": "find . -name \"tsconfig.tsbuildinfo\" -delete",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "lint": "turbo lint",
+    "prepare": "husky"
   },
   "lint-staged": {
-    "apps/api/**/*.{js,ts,tsx}": [
+    "**/*.{ts,tsx}": [
       "prettier --write",
-      "cd apps/api && pnpm run lint:fix"
+      "turbo lint --filter=...[origin/main]"
     ],
-    "packages/ui/**/*.{js,ts,tsx}": [
-      "prettier --write",
-      "cd packages/ui && pnpm run lint:fix"
-    ],
-    "apps/web/**/*.{js,ts,tsx}": [
-      "prettier --write",
-      "cd apps/web && pnpm run lint:fix"
-    ],
-    "apps/desktop/**/*.{js,ts,tsx}": [
-      "prettier --write",
-      "cd apps/desktop && pnpm run lint:fix"
-    ],
-    "*.{json,md}": [
+    "**/*.{json,md}": [
       "prettier --write"
     ]
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "prettier": "^3.5.0",
     "turbo": "^2.4.2",
     "typescript": "5.7.3"
   },
-  "packageManager": "pnpm@9.0.0",
   "engines": {
-    "node": "^20.18.0"
+    "node": "^20"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
   }
 }
