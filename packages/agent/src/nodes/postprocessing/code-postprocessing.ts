@@ -1,13 +1,14 @@
-import { formatCodeMap, getModelWrapper, logger, Model, timer } from "@triage/common";
-import { generateText } from "ai";
+import { getModelWrapper, logger, Model, timer } from "@triage/common";
+import { generateId, generateText } from "ai";
 
-import { CodePostprocessing, codePostprocessingToolSchema } from "../../types";
-import { ensureSingleToolCall } from "../utils";
+import { AgentStreamUpdate, CodePostprocessingStep, CodeSearchStep } from "../../types";
+import { codePostprocessingToolSchema } from "../../types/tools";
+import { ensureSingleToolCall, formatCodeSearchSteps } from "../utils";
 
 function createPrompt(params: {
   query: string;
   codebaseOverview: string;
-  codeContext: Map<string, string>;
+  codeSearchSteps: CodeSearchStep[];
   answer: string;
 }): string {
   return `
@@ -31,7 +32,7 @@ function createPrompt(params: {
   </codebase_overview>
   
   <previous_code_context>
-  ${formatCodeMap(params.codeContext)}
+  ${formatCodeSearchSteps(params.codeSearchSteps)}
   </previous_code_context>
   `;
 }
@@ -47,9 +48,11 @@ export class CodePostprocessor {
   async invoke(params: {
     query: string;
     codebaseOverview: string;
-    codeContext: Map<string, string>;
+    codeSearchSteps: CodeSearchStep[];
     answer: string;
-  }): Promise<CodePostprocessing> {
+    parentId: string;
+    onUpdate?: (update: AgentStreamUpdate) => void;
+  }): Promise<CodePostprocessingStep> {
     logger.info(`Code postprocessing for query: ${params.query}`);
 
     const prompt = createPrompt(params);
@@ -75,7 +78,22 @@ export class CodePostprocessor {
       toolCall = ensureSingleToolCall(toolCalls);
     }
 
+    if (params.onUpdate) {
+      params.onUpdate({
+        type: "intermediateUpdate",
+        step: {
+          type: "codePostprocessing",
+          facts: toolCall.args.facts || [],
+          timestamp: new Date(),
+        },
+        id: generateId(),
+        parentId: params.parentId,
+      });
+    }
+
     return {
+      type: "codePostprocessing",
+      timestamp: new Date(),
       facts: toolCall.args.facts || [],
     };
   }

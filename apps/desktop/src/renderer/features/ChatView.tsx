@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import AnimatedEllipsis from "../components/AnimatedEllipsis";
 import CellView from "../components/CellView";
-import { ChatMessage, ContextItem } from "../types";
+import { ChatMessage, ContextItem, AssistantMessage } from "../types";
 
 interface ChatViewProps {
   messages: ChatMessage[];
@@ -32,11 +31,6 @@ const ChatView: React.FC<ChatViewProps> = ({
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [chatMode, setChatMode] = useState<"agent" | "manual">(initialChatMode);
-  const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
-
-  // Use refs instead of state for tracking update times to avoid render loops
-  const lastUpdateTimeRef = useRef<number>(Date.now());
-  const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to resize textarea based on content
   const resizeTextarea = useCallback(() => {
@@ -53,34 +47,6 @@ const ChatView: React.FC<ChatViewProps> = ({
       textarea.style.height = `${newHeight}px`;
     }
   }, []);
-
-  // Handle showing the waiting indicator when no updates are received for a while
-  useEffect(() => {
-    // Clear any existing interval
-    if (waitingCheckIntervalRef.current) {
-      clearInterval(waitingCheckIntervalRef.current);
-      waitingCheckIntervalRef.current = null;
-    }
-
-    // Only set up the interval if we're in thinking state
-    if (isThinking) {
-      waitingCheckIntervalRef.current = setInterval(() => {
-        const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
-        if (timeSinceLastUpdate > 3000) {
-          // Show waiting indicator after 3 seconds of no updates
-          setShowWaitingIndicator(true);
-        }
-      }, 1000);
-    } else {
-      setShowWaitingIndicator(false);
-    }
-
-    return () => {
-      if (waitingCheckIntervalRef.current) {
-        clearInterval(waitingCheckIntervalRef.current);
-      }
-    };
-  }, [isThinking]);
 
   // Auto-resize textarea when message changes
   useEffect(() => {
@@ -384,33 +350,14 @@ const ChatView: React.FC<ChatViewProps> = ({
         </>
       );
     } else {
-      // Handle assistant message
-      return (
-        <>
-          {message.content === "Thinking..." ? (
-            <div className="thinking-message">
-              {message.cell ? (
-                // Render the cell view for detailed progress
-                <CellView cell={message.cell} isThinking={isThinking} />
-              ) : (
-                <span className="thinking-text">
-                  Processing{showWaitingIndicator && <AnimatedEllipsis />}
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="message-text">
-              {message.cell ? (
-                // When we have a cell, only render the CellView component
-                <CellView cell={message.cell} isThinking={false} />
-              ) : (
-                // For messages without cells, render the content directly
-                <ReactMarkdown>{message.content}</ReactMarkdown>
-              )}
-            </div>
-          )}
-        </>
-      );
+      // Handle assistant message - use direct CellView for streaming
+      const asst = message as AssistantMessage;
+      if (isThinking && asst.response === "Thinking...") {
+        // For thinking assistant message, render the CellView without wrapper
+        return <CellView message={asst} isThinking />;
+      }
+      // For completed assistant message
+      return <CellView message={asst} isThinking={false} />;
     }
   };
 
@@ -450,12 +397,10 @@ const ChatView: React.FC<ChatViewProps> = ({
               </div>
             ) : (
               <>
-                {messages.map((message) => (
+                {messages.map((message, index) => (
                   <div
-                    key={message.id}
-                    className={`chat-message ${message.role} ${
-                      message.content === "Thinking..." ? "thinking-state" : ""
-                    }`}
+                    key={index}
+                    className={`chat-message ${message.role} ${message.role === "assistant" && (message as AssistantMessage).response === "Thinking..." ? "thinking-state" : ""}`}
                     style={{
                       width: "100%",
                       maxWidth: "100%",

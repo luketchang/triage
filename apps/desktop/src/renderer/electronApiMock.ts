@@ -1,12 +1,10 @@
 import { ApiResponse } from "./electron.d";
 import {
   AgentConfig,
-  CodePostprocessing,
+  AgentMessage,
   ContextItem,
   FacetData,
-  FileTreeNode,
   Log,
-  LogPostprocessing,
   LogQueryParams,
   LogsWithPagination,
   TraceQueryParams,
@@ -69,324 +67,6 @@ const createSampleLogs = (count: number, baseService: string): Log[] => {
   }
 
   return logs;
-};
-
-// Mock file system structure for development
-const mockFileSystem: Record<string, unknown> = {
-  src: {
-    components: {
-      "Button.tsx": `import React from 'react';
-
-interface ButtonProps {
-  children: React.ReactNode;
-  onClick?: () => void;
-  variant?: 'primary' | 'secondary';
-  disabled?: boolean;
-}
-
-export const Button = ({ 
-  children, 
-  onClick, 
-  variant = 'primary',
-  disabled = false 
-}: ButtonProps) => {
-  return (
-    <button 
-      className={\`button \${variant}\`} 
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  );
-};`,
-      "Input.tsx": `import React from 'react';
-
-interface InputProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  type?: 'text' | 'password' | 'email';
-}
-
-export const Input = ({
-  value,
-  onChange,
-  placeholder,
-  type = 'text'
-}: InputProps) => {
-  return (
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="input"
-    />
-  );
-};`,
-    },
-    services: {
-      "api.ts": `// API service for making network requests
-
-/**
- * Fetch data from the API
- * @param url The URL to fetch from
- * @param options Optional fetch options
- * @returns The response data
- */
-export async function fetchData<T>(url: string, options?: RequestInit): Promise<T> {
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      ...options,
-    });
-    
-    if (!response.ok) {
-      throw new Error(\`HTTP error: \${response.status}\`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('API request failed:', error);
-    throw error;
-  }
-}`,
-      "auth.ts": `// Authentication service
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-}
-
-/**
- * Login the user
- * @param username The username
- * @param password The password
- * @returns The user object
- */
-export async function login(username: string, password: string): Promise<User> {
-  // This would normally make a network request
-  return {
-    id: '123',
-    username,
-    email: \`\${username}@example.com\`,
-  };
-}
-
-/**
- * Check if the user is authenticated
- * @returns Whether the user is authenticated
- */
-export function isAuthenticated(): boolean {
-  return localStorage.getItem('auth_token') !== null;
-}`,
-    },
-    utils: {
-      "logger.ts": `// Logging utility
-
-type LogLevel = 'info' | 'warn' | 'error';
-
-class Logger {
-  private prefix: string;
-  
-  constructor(prefix: string = '') {
-    this.prefix = prefix ? \`[\${prefix}] \` : '';
-  }
-  
-  info(message: string, ...args: any[]): void {
-    console.info(\`\${this.prefix}\${message}\`, ...args);
-  }
-  
-  warn(message: string, ...args: any[]): void {
-    console.warn(\`\${this.prefix}\${message}\`, ...args);
-  }
-  
-  error(message: string, ...args: any[]): void {
-    console.error(\`\${this.prefix}\${message}\`, ...args);
-  }
-}
-
-export default new Logger('App');`,
-      "formatters.ts": `// Formatting utilities
-
-/**
- * Format a date
- * @param date The date to format
- * @param format The format to use
- * @returns The formatted date
- */
-export function formatDate(date: Date, format: string = 'yyyy-MM-dd'): string {
-  // Simple implementation
-  const year = date.getFullYear().toString();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  
-  return format
-    .replace('yyyy', year)
-    .replace('MM', month)
-    .replace('dd', day);
-}
-
-/**
- * Format a number as currency
- * @param amount The amount to format
- * @param currency The currency code
- * @returns The formatted currency
- */
-export function formatCurrency(amount: number, currency: string = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(amount);
-}`,
-    },
-    "App.tsx": `import React from 'react';
-import { Button } from './components/Button';
-import { Input } from './components/Input';
-import logger from './utils/logger';
-
-export const App = () => {
-  const [value, setValue] = React.useState('');
-  
-  const handleClick = () => {
-    logger.info('Button clicked with value:', value);
-  };
-  
-  return (
-    <div className="app">
-      <h1>Sample App</h1>
-      <Input
-        value={value}
-        onChange={setValue}
-        placeholder="Type something..."
-      />
-      <Button onClick={handleClick}>
-        Submit
-      </Button>
-    </div>
-  );
-};`,
-    "index.tsx": `import React from 'react';
-import ReactDOM from 'react-dom';
-import { App } from './App';
-import './styles.css';
-
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);`,
-  },
-  "package.json": `{
-  "name": "sample-app",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "lint": "eslint src --ext .ts,.tsx"
-  },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "typescript": "^4.9.5"
-  }
-}`,
-  "tsconfig.json": `{
-  "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx"
-  },
-  "include": ["src"]
-}`,
-  "README.md": `# Sample App
-
-This is a mock repository for testing the file explorer functionality.
-
-## Features
-
-- TypeScript React application
-- Component library
-- Utility functions
-- API services
-
-## Getting Started
-
-\`\`\`bash
-# Install dependencies
-npm install
-
-# Start the development server
-npm start
-\`\`\``,
-};
-
-// Helper function to convert the mock file system to tree nodes
-const convertMockToTreeNodes = (
-  obj: Record<string, unknown>,
-  basePath: string = ""
-): FileTreeNode[] => {
-  return Object.entries(obj).map(([name, value]) => {
-    const path = basePath ? `${basePath}/${name}` : name;
-    const isDirectory = typeof value === "object";
-
-    if (isDirectory) {
-      return {
-        name,
-        path,
-        isDirectory: true,
-        children: convertMockToTreeNodes(value as Record<string, unknown>, path),
-      };
-    } else {
-      return {
-        name,
-        path,
-        isDirectory: false,
-      };
-    }
-  });
-};
-
-// Get content of a mock file
-const getMockFileContent = (filePath: string): string | null => {
-  const parts = filePath.split("/");
-  let current: unknown = mockFileSystem;
-
-  for (const part of parts) {
-    if (!current || typeof current !== "object") {
-      return null;
-    }
-    current = (current as Record<string, unknown>)[part];
-  }
-
-  if (typeof current !== "string") {
-    return null;
-  }
-
-  return current;
 };
 
 // Create mock facet data for logs
@@ -551,80 +231,6 @@ const createSampleTrace = (
   };
 };
 
-// Create mock data
-const createMockData = () => {
-  // Create sample log context
-  const logContext = new Map<LogSearchInputCore, LogsWithPagination | string>();
-
-  // Sample error query
-  const errorQuery: LogSearchInputCore = {
-    query: "level:error service:auth",
-    start: "2023-10-01T00:00:00Z",
-    end: new Date().toISOString(),
-    limit: 100,
-    pageCursor: null,
-    type: "logSearchInput",
-  };
-
-  logContext.set(errorQuery, {
-    logs: createSampleLogs(5, "auth-service"),
-  });
-
-  // Sample performance query
-  const perfQuery: LogSearchInputCore = {
-    query: "level:warn latency:>1000",
-    start: "2023-10-01T00:00:00Z",
-    end: new Date().toISOString(),
-    limit: 100,
-    pageCursor: null,
-    type: "logSearchInput",
-  };
-
-  logContext.set(perfQuery, {
-    logs: createSampleLogs(8, "db-service"),
-  });
-
-  // Create sample code context
-  const codeContext = new Map<string, string>();
-
-  // Sample code snippet
-  codeContext.set(
-    "src/services/auth.ts",
-    `// Authentication service
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-}
-
-/**
- * Login the user
- * @param username The username
- * @param password The password
- * @returns The user object
- */
-export async function login(username: string, password: string): Promise<User> {
-  // This would normally make a network request
-  return {
-    id: '123',
-    username,
-    email: \`\${username}@example.com\`,
-  };
-}
-
-/**
- * Check if the user is authenticated
- * @returns Whether the user is authenticated
- */
-export function isAuthenticated(): boolean {
-  return localStorage.getItem('auth_token') !== null;
-}`
-  );
-
-  return { logContext, codeContext };
-};
-
 /**
  * Mock implementation of the Electron API
  */
@@ -636,7 +242,7 @@ const mockElectronAPI = {
     query: string,
     logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null,
     options?: { reasonOnly?: boolean }
-  ) => {
+  ): Promise<ApiResponse<AgentMessage>> => {
     console.info(
       "MOCK API: invokeAgent called with:",
       query,
@@ -646,10 +252,6 @@ const mockElectronAPI = {
 
     // Simulate delay
     await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Create sample log context for artifacts if not using reasonOnly mode
-    // If logContext is provided, use it, otherwise create mock data
-    const mockData = logContext ? { logContext, codeContext: new Map() } : createMockData();
 
     // Create a much fuller response content with detailed analysis
     const responseContent = `## Root Cause Analysis
@@ -757,26 +359,26 @@ The primary issue appears to be in the authentication middleware where token val
       },
     ];
 
+    // Create step objects with the correct type structure
+    const logPostprocessingStep = {
+      type: "logPostprocessing" as const,
+      timestamp: new Date(),
+      facts: logFacts,
+    };
+
+    const codePostprocessingStep = {
+      type: "codePostprocessing" as const,
+      timestamp: new Date(),
+      facts: codeFacts,
+    };
+
     return {
       success: true,
-      message: "Agent invoked successfully",
       data: {
-        chatHistory: [
-          `You asked: "${query}"`,
-          options?.reasonOnly
-            ? "I analyzed this using Manual mode (reasoning only)"
-            : "I searched logs and analyzed this in Search mode",
-          responseContent,
-        ],
-        content: responseContent,
-        logPostprocessing: {
-          facts: logFacts,
-        } as LogPostprocessing,
-        codePostprocessing: {
-          facts: codeFacts,
-        } as CodePostprocessing,
-        logContext: mockData.logContext,
-        codeContext: mockData.codeContext,
+        role: "assistant",
+        response: responseContent,
+        steps: [logPostprocessingStep, codePostprocessingStep],
+        error: null,
       },
     };
   },
@@ -1038,49 +640,6 @@ The primary issue appears to be in the authentication middleware where token val
   },
 
   /**
-   * Get the file tree structure for a repository path
-   */
-  getFileTree: async (repoPath: string): Promise<ApiResponse<FileTreeNode[]>> => {
-    console.info("Mock getFileTree called with:", repoPath);
-
-    // Simulate processing time
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Convert the mock file system to tree nodes
-    const fileTree = convertMockToTreeNodes(mockFileSystem);
-
-    return {
-      success: true,
-      data: fileTree,
-    };
-  },
-
-  /**
-   * Get the content of a file
-   */
-  getFileContent: async (repoPath: string, filePath: string): Promise<ApiResponse<string>> => {
-    console.info("Mock getFileContent called with:", { repoPath, filePath });
-
-    // Simulate processing time
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    // Get the file content from the mock file system
-    const content = getMockFileContent(filePath);
-
-    if (content !== null) {
-      return {
-        success: true,
-        data: content,
-      };
-    } else {
-      return {
-        success: false,
-        error: `File not found: ${filePath}`,
-      };
-    }
-  },
-
-  /**
    * Mock implementation for agent-based chat
    */
   agentChat: async (message: string, contextItems: ContextItem[]) => {
@@ -1287,115 +846,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
       },
       codePostprocessing: {
         facts: detailedCodeFacts,
-      },
-    };
-  },
-
-  /**
-   * Mock implementation for manual chat
-   */
-  manualChat: async (message: string, contextItems: ContextItem[]) => {
-    console.info("Mock manualChat called with message:", message);
-    console.info("Context items:", contextItems.length);
-
-    // Create a more comprehensive response for manual chat
-    const manualContent = `## Analysis Based on Provided Context
-
-Based on the logs and code snippets you've shared, I can see several issues:
-
-1. The authentication service is consistently failing with JWT validation errors
-2. These errors occur when the application is deployed to the production environment
-3. The auth middleware is using a hardcoded JWT secret rather than loading from environment variables
-4. This is likely causing authentication failures for users trying to access protected endpoints
-
-**Root Cause:** The JWT secret used for token validation in the authentication middleware is hardcoded to a development value ('dev_secret_key') instead of being loaded from environment variables. In production, this is causing token validation to fail since tokens were likely issued with a different secret.
-
-**Recommended Fix:** Update the auth middleware to use the JWT_SECRET environment variable instead of the hardcoded value, and ensure this environment variable is properly set in all environments.`;
-
-    // Create mock log and code context based on what was provided
-    const manualLogContext = new Map<LogSearchInputCore, LogsWithPagination | string>();
-    const manualCodeContext = new Map<string, string>();
-
-    // For manual mode, we don't create new searches but use what was provided in contextItems
-    for (const item of contextItems) {
-      if (item.type === "logSearch") {
-        manualLogContext.set(item.data.input, item.data.results);
-      } else if (item.type === "singleTrace") {
-        // For traces, we'd do something different, but this is just a mock
-        // This would be different for traces but we're simplifying for the mock
-      }
-    }
-
-    // Create log processing facts based on provided context
-    const manualLogFacts = [
-      {
-        title: "Authentication Failures",
-        fact: "Multiple authentication failures with 'Invalid signature' errors in auth service logs",
-        query: 'service:auth level:error message:"Invalid signature"',
-        start: new Date(Date.now() - 86400000).toISOString(),
-        end: new Date().toISOString(),
-        limit: 100,
-        pageCursor: null,
-        type: "logSearchInput",
-      },
-      {
-        title: "Production vs Development",
-        fact: "Error rate is significantly higher in production (15%) compared to development (0.2%)",
-        query: "service:auth environment:production",
-        start: new Date(Date.now() - 86400000).toISOString(),
-        end: new Date().toISOString(),
-        limit: 100,
-        pageCursor: null,
-        type: "logSearchInput",
-      },
-    ];
-
-    // Create code processing facts based on provided context
-    const manualCodeFacts = [
-      {
-        title: "JWT Secret Hardcoding",
-        fact: "Authentication middleware using a hardcoded JWT secret instead of environment variable",
-        filepath: "src/services/auth/middleware/auth.ts",
-        codeBlock: `// Authentication middleware
-export function requireAuth(req, res, next) {
-  const token = req.header('x-auth-token');
-  if (!token) {
-    return res.status(401).json({ msg: 'No token, authorization denied' });
-  }
-
-  try {
-    // ISSUE: Hardcoded secret instead of using environment variable
-    const decoded = jwt.verify(token, 'dev_secret_key');
-    req.user = decoded.user;
-    next();
-  } catch (err) {
-    res.status(401).json({ msg: 'Token is not valid' });
-  }
-}`,
-      },
-      {
-        title: "Environment Configuration",
-        fact: "JWT_SECRET environment variable is defined but not used in the code",
-        filepath: "config/env/.env.production",
-        codeBlock: `# Production Environment Variables
-NODE_ENV=production
-PORT=3000
-DB_URI=mongodb+srv://user:password@cluster.mongodb.net/ticketing
-JWT_SECRET=production_secret_key_123
-# JWT_SECRET is defined here but not used in the code`,
-      },
-    ];
-
-    return {
-      success: true,
-      content: manualContent,
-      logContext: manualLogContext,
-      codeContext: manualCodeContext,
-      logPostprocessing: {
-        facts: manualLogFacts,
-      },
-      codePostprocessing: {
-        facts: manualCodeFacts,
       },
     };
   },

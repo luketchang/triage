@@ -1,20 +1,14 @@
 import { getModelWrapper, logger, Model, timer } from "@triage/common";
-import { LogsWithPagination, ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import { AgentStreamUpdate } from "../..";
-import {
-  LogSearchInput,
-  LogSearchInputCore,
-  logSearchInputToolSchema,
-  stripReasoning,
-  TaskComplete,
-} from "../../types";
-import { ensureSingleToolCall, formatFacetValues, formatLogResults } from "../utils";
+import { AgentStreamUpdate, LogSearchStep } from "../..";
+import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../../types/tools";
+import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "../utils";
+
 export interface LogSearchAgentResponse {
-  newLogContext: Map<LogSearchInputCore, LogsWithPagination | string>;
-  summary: string;
+  newLogSearchSteps: LogSearchStep[];
 }
 
 export type LogSearchResponse = LogSearchInput | TaskComplete;
@@ -28,23 +22,18 @@ You are an expert AI assistant that helps engineers debug production issues by s
 function createLogSearchPrompt(params: {
   query: string;
   logRequest: string;
-  logResultHistory: Map<LogSearchInputCore, LogsWithPagination | string>;
-  logLabelsMap: Map<string, string[]>;
+  previousLogSearchSteps: LogSearchStep[];
   platformSpecificInstructions: string;
-  previousLogQueryResult?: {
-    input: LogSearchInputCore;
-    logs: LogsWithPagination | string;
-  };
+  lastLogSearchStep?: LogSearchStep;
+  logLabelsMap: Map<string, string[]>;
   remainingQueries: number;
   codebaseOverview: string;
 }): string {
   const currentTime = new Date().toISOString();
 
   // Format the previous log query result for display
-  const formattedPreviousResult = params.previousLogQueryResult
-    ? formatLogResults(
-        new Map([[params.previousLogQueryResult.input, params.previousLogQueryResult.logs]])
-      )
+  const formattedLastLogSearchStep = params.lastLogSearchStep
+    ? formatLogSearchSteps([params.lastLogSearchStep])
     : "";
 
   // TODO: consider removing the line about removing all filters
@@ -95,55 +84,16 @@ ${params.platformSpecificInstructions}
 </platform_specific_instructions>
 
 <previous_log_query_result>
-${formattedPreviousResult}
+${formattedLastLogSearchStep}
 </previous_log_query_result>
 
 <log_results_history>
-${formatLogResults(params.logResultHistory)}
+${formatLogSearchSteps(params.previousLogSearchSteps)}
 </log_results_history>
 
 <system_overview>
 ${params.codebaseOverview}
 </system_overview>
-`;
-}
-
-function _createLogSearchSummaryPrompt(params: {
-  query: string;
-  logResults: Map<LogSearchInputCore, LogsWithPagination | string>;
-}): string {
-  const currentTime = new Date().toISOString();
-
-  return `
-Given a set of log queries and the fetched log results, concisely summarize the main findings as they pertain to the provided user query and how we may debug the issue/event. 
-
-Focus on capturing the full sequence of system events from BEFORE, DURING, and AFTER any errors or issues. Look for patterns in the logs that would help understand:
-1. The normal system behavior and message flows between services
-2. Critical events leading up to any errors
-3. The response of the system after errors occurred
-4. How different services interact with each other (especially messaging patterns)
-5. Key transaction/entity IDs that appear across multiple services
-
-Provide a detailed analysis that:
-- Identifies specific entity IDs (order IDs, transaction IDs, message IDs) that are relevant to the issue
-- Traces how these entities moved through different services over time
-- Highlights where errors or unexpected behavior occurred
-- Connects related events across different services
-- Shows the complete lifecycle of important transactions
-
-Your response should be a chronological sequence of significant events observed through the logs that are relevant to the user query, including service interactions, startup sequences, message passing, and error conditions. The response should provide an accurate, objective summary of what the logs show without being speculative.
-
-<current_time>
-${currentTime}
-</current_time>
-
-<query>
-${params.query}
-</query>
-
-<log_results>
-${formatLogResults(params.logResults)}
-</log_results>
 `;
 }
 
@@ -159,12 +109,9 @@ class LogSearch {
   async invoke(params: {
     query: string;
     logRequest: string;
-    logResultHistory: Map<LogSearchInputCore, LogsWithPagination | string>;
+    previousLogSearchSteps: LogSearchStep[];
+    lastLogSearchStep?: LogSearchStep;
     logLabelsMap: Map<string, string[]>;
-    previousLogQueryResult?: {
-      input: LogSearchInputCore;
-      logs: LogsWithPagination | string;
-    };
     remainingQueries: number;
     codebaseOverview: string;
   }): Promise<LogSearchResponse> {
@@ -217,24 +164,14 @@ class LogSearch {
           "Failed to generate query with LLM. Using fallback query to get a broad view of microservices.",
       };
     }
-    // Should never reach here
-    throw new Error("Unexpected exit from LogSearch.invoke");
   }
 }
 
 export class LogSearchAgent {
-  private fastModel: Model;
-  private reasoningModel: Model;
   private observabilityPlatform: ObservabilityPlatform;
   private logSearch: LogSearch;
 
-  constructor(
-    fastModel: Model,
-    reasoningModel: Model,
-    observabilityPlatform: ObservabilityPlatform
-  ) {
-    this.fastModel = fastModel;
-    this.reasoningModel = reasoningModel;
+  constructor(fastModel: Model, observabilityPlatform: ObservabilityPlatform) {
     this.observabilityPlatform = observabilityPlatform;
     this.logSearch = new LogSearch(fastModel, observabilityPlatform);
   }
@@ -245,40 +182,27 @@ export class LogSearchAgent {
     query: string;
     logRequest: string;
     logLabelsMap: Map<string, string[]>;
-    logResultHistory?: Map<LogSearchInputCore, LogsWithPagination | string>;
+    logSearchSteps: LogSearchStep[];
     maxIters?: number;
     codebaseOverview: string;
     onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<LogSearchAgentResponse> {
-    // Convert string[] logResultHistory to Map if needed, or create empty map if not provided
-    let logResultHistory: Map<LogSearchInputCore, LogsWithPagination | string>;
-    if (!params.logResultHistory) {
-      logResultHistory = new Map();
-    } else {
-      logResultHistory = params.logResultHistory;
-    }
-
     // Variable to store the previous query result (initially undefined)
-    let previousLogResult:
-      | { query: LogSearchInputCore; logs: LogsWithPagination | string }
-      | undefined = undefined;
+    let previousLogSearchSteps = params.logSearchSteps;
+    let lastLogSearchStep: LogSearchStep | undefined = undefined;
 
     let response: LogSearchResponse | null = null;
     const maxIters = params.maxIters || MAX_ITERS;
     let currentIter = 0;
 
+    let newLogSearchSteps: LogSearchStep[] = [];
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
-      // Convert previousLogResult to the format expected by LogSearch
-      const previousLogQueryResult = previousLogResult
-        ? { input: previousLogResult.query, logs: previousLogResult.logs }
-        : undefined;
-
       response = await this.logSearch.invoke({
         query: params.query,
         logRequest: params.logRequest,
         logLabelsMap: params.logLabelsMap,
-        logResultHistory: logResultHistory,
-        previousLogQueryResult: previousLogQueryResult,
+        previousLogSearchSteps,
+        lastLogSearchStep,
         remainingQueries: maxIters - currentIter,
         codebaseOverview: params.codebaseOverview,
       });
@@ -290,18 +214,6 @@ export class LogSearchAgent {
           `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`
         );
 
-        // Stream the log search query details if an onUpdate callback is provided
-        // and only once before the fetch
-        if (params.onUpdate) {
-          params.onUpdate({
-            type: "intermediateUpdate",
-            stepType: "logSearch",
-            id: uuidv4(),
-            parentId: params.logSearchId,
-            content: `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`,
-          });
-        }
-
         try {
           logger.info("Fetching logs from observability platform...");
           const logContext = await this.observabilityPlatform.fetchLogs({
@@ -311,42 +223,44 @@ export class LogSearchAgent {
             limit: response.limit,
           });
 
-          const strippedResponse = stripReasoning(response);
-          const currentQueryFormatted = formatLogResults(new Map([[strippedResponse, logContext]]));
+          const step: LogSearchStep = {
+            type: "logSearch",
+            timestamp: new Date(),
+            input: response,
+            results: logContext,
+          };
 
-          logger.info(`Log search results:\n${currentQueryFormatted}`);
-          logger.info(`Log search reasoning:\n${response.reasoning}`);
-
-          // Add previous result to log history if it exists
-          if (previousLogResult) {
-            logResultHistory.set(previousLogResult.query, previousLogResult.logs);
+          if (params.onUpdate) {
+            params.onUpdate({
+              type: "intermediateUpdate",
+              id: uuidv4(),
+              parentId: params.logSearchId,
+              step: step,
+            });
           }
 
-          // Set current result as previous for next iteration (without reasoning)
-          previousLogResult = {
-            query: strippedResponse,
-            logs: logContext,
-          };
+          previousLogSearchSteps.push(step);
+          newLogSearchSteps.push(step);
+          lastLogSearchStep = step;
+
+          const lastLogSearchResultsFormatted = formatLogSearchSteps([lastLogSearchStep]);
+          logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error(`Error executing log search: ${errorMessage}`);
 
           // Store error message in log history (without reasoning)
           if (response) {
-            const strippedResponse = stripReasoning(response);
-            previousLogResult = {
-              query: strippedResponse,
-              logs: errorMessage,
+            lastLogSearchStep = {
+              type: "logSearch",
+              input: response,
+              results: errorMessage,
+              timestamp: new Date(),
             };
           }
         }
       } else {
         logger.info("Log search complete");
-
-        // Add the last query to log history if it exists
-        if (previousLogResult) {
-          logResultHistory.set(previousLogResult.query, previousLogResult.logs);
-        }
       }
     }
 
@@ -354,16 +268,10 @@ export class LogSearchAgent {
       logger.info(
         `Log search reached maximum iterations (${maxIters}). Completing search forcibly.`
       );
-
-      // Add the last query to log history if it exists and wasn't added already
-      if (previousLogResult) {
-        logResultHistory.set(previousLogResult.query, previousLogResult.logs);
-      }
     }
 
     return {
-      newLogContext: logResultHistory,
-      summary: "TODO",
+      newLogSearchSteps,
     };
   }
 }

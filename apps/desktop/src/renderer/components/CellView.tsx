@@ -1,11 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { AgentStep, Cell, LogSearchStep, ReasoningStep, ReviewStep } from "../types";
+import {
+  AgentStage,
+  AssistantMessage,
+  CodePostprocessingStage,
+  LogPostprocessingStage,
+  LogSearchStage,
+  ReasoningStage,
+  ReviewStage,
+} from "../types";
 import AnimatedEllipsis from "./AnimatedEllipsis";
 import FactsSidebar from "./FactsSidebar";
 
 interface CellViewProps {
-  cell: Cell;
+  message: AssistantMessage;
   isThinking?: boolean;
 }
 
@@ -46,58 +54,56 @@ const CollapsibleStep: React.FC<{
   );
 };
 
-/**
- * Renders a specific type of step in the Cell
- */
-const renderStep = (step: AgentStep) => {
-  switch (step.type) {
+const renderStage = (stage: AgentStage) => {
+  switch (stage.type) {
     case "logSearch":
-      return renderLogSearchStep(step);
+      return renderLogSearchStage(stage);
     case "reasoning":
-      return renderReasoningStep(step);
+      return renderReasoningStage(stage);
     case "review":
-      return renderReviewStep(step);
+      return renderReviewStage(stage);
     case "logPostprocessing":
-      return null; // Don't render log postprocessing in UI
+      return renderLogPostprocessingStage(stage);
     case "codePostprocessing":
-      return null; // Don't render code postprocessing in UI
-    default:
-      return null;
+      return renderCodePostprocessingStage(stage);
   }
 };
 
-/**
- * Renders a log search step
- */
-const renderLogSearchStep = (step: LogSearchStep) => (
+const renderLogSearchStage = (stage: LogSearchStage) => (
   <CollapsibleStep title="Log Search">
-    {step.searches.length === 0 ? (
+    {stage.queries.length === 0 ? (
       <em>Searching logs...</em>
     ) : (
-      step.searches.map((search, index) => (
-        <div key={`${step.id}-search-${index}`} className="log-search-item">
-          {search}
+      stage.queries.map((query, index) => (
+        <div key={`${stage.id}-search-${index}`} className="log-search-item">
+          {query.input.query}
         </div>
       ))
     )}
   </CollapsibleStep>
 );
 
-/**
- * Renders a reasoning step
- */
-const renderReasoningStep = (step: ReasoningStep) => (
+const renderReasoningStage = (stage: ReasoningStage) => (
   <CollapsibleStep title="Reasoning">
-    {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Analyzing...</em>}
+    <ReactMarkdown>{stage.content}</ReactMarkdown>
   </CollapsibleStep>
 );
 
-/**
- * Renders a review step
- */
-const renderReviewStep = (step: ReviewStep) => (
+const renderReviewStage = (stage: ReviewStage) => (
   <CollapsibleStep title="Review">
-    {step.content ? <ReactMarkdown>{step.content}</ReactMarkdown> : <em>Reviewing...</em>}
+    <ReactMarkdown>{stage.content}</ReactMarkdown>
+  </CollapsibleStep>
+);
+
+const renderLogPostprocessingStage = (stage: LogPostprocessingStage) => (
+  <CollapsibleStep title="Log Postprocessing">
+    <ReactMarkdown>{stage.facts.map((fact) => fact.fact).join("\n")}</ReactMarkdown>
+  </CollapsibleStep>
+);
+
+const renderCodePostprocessingStage = (stage: CodePostprocessingStage) => (
+  <CollapsibleStep title="Code Postprocessing">
+    <ReactMarkdown>{stage.facts.map((fact) => fact.fact).join("\n")}</ReactMarkdown>
   </CollapsibleStep>
 );
 
@@ -107,38 +113,34 @@ const renderReviewStep = (step: ReviewStep) => (
  * Displays the content of a Cell, including all its steps, the final response,
  * and supporting facts if available.
  */
-const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
+const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
   const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Filter steps to only show the ones that should be visible in the UI
-  const visibleSteps = cell.steps;
+  const stages = message.stages;
+  const logPostprocessing = message.stages.find((stage) => stage.type === "logPostprocessing");
+  const codePostprocessing = message.stages.find((stage) => stage.type === "codePostprocessing");
 
-  // Determine if we should show facts sidebar
+  // Determine if we should show facts sidebar - only show when there are actually facts
   const shouldShowFactsSidebar =
     !isThinking &&
-    cell.response &&
-    ((cell.logPostprocessing?.facts.length || 0) > 0 ||
-      (cell.codePostprocessing?.facts.length || 0) > 0);
+    message.response &&
+    ((logPostprocessing?.facts?.length || 0) > 0 || (codePostprocessing?.facts?.length || 0) > 0);
 
   // Set up a time-based check for showing the waiting indicator
   useEffect(() => {
-    // Clear any existing interval
     if (waitingCheckIntervalRef.current) {
       clearInterval(waitingCheckIntervalRef.current);
       waitingCheckIntervalRef.current = null;
     }
 
-    // Reset last update time when the cell changes (e.g., new step added)
-    lastUpdateTimeRef.current = Date.now();
-
-    // Only set up the interval if we're in thinking state and have steps
-    if (isThinking && cell.steps.length > 0) {
+    if (isThinking) {
+      lastUpdateTimeRef.current = Date.now();
+      setShowWaitingIndicator(false);
       waitingCheckIntervalRef.current = setInterval(() => {
-        const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
-        if (timeSinceLastUpdate > 1000) {
-          // Show waiting indicator after 1 second of no updates
+        if (Date.now() - lastUpdateTimeRef.current > 1000) {
           setShowWaitingIndicator(true);
         }
       }, 500);
@@ -151,36 +153,36 @@ const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
         clearInterval(waitingCheckIntervalRef.current);
       }
     };
-  }, [cell, isThinking, visibleSteps.length]);
+  }, [isThinking]);
 
   // Update last update time when cell steps change
   useEffect(() => {
     lastUpdateTimeRef.current = Date.now();
     setShowWaitingIndicator(false);
-  }, [cell.steps]);
+  }, [stages]);
 
   return (
     <div className={`cellview-container ${shouldShowFactsSidebar ? "with-facts" : ""}`}>
       <div className="cellview-main-content">
         {/* Render each visible step */}
-        {visibleSteps.map((step) => (
-          <React.Fragment key={step.id}>{renderStep(step)}</React.Fragment>
+        {stages.map((stage) => (
+          <React.Fragment key={stage.id}>{renderStage(stage)}</React.Fragment>
         ))}
 
-        {/* Show waiting indicator if needed */}
-        {isThinking && showWaitingIndicator && visibleSteps.length > 0 && !cell.response && (
+        {/* Show waiting indicator with less restrictive conditions */}
+        {isThinking && showWaitingIndicator && (
           <div className="waiting-indicator">
             <AnimatedEllipsis />
           </div>
         )}
 
         {/* Render error if present */}
-        {cell.error && <div className="error-message">{cell.error}</div>}
+        {message.error && <div className="error-message">{message.error}</div>}
 
         {/* Render final response if present */}
-        {cell.response && (
+        {message.response && message.response !== "Thinking..." && (
           <div className="response-content">
-            <ReactMarkdown>{cell.response}</ReactMarkdown>
+            <ReactMarkdown>{message.response}</ReactMarkdown>
           </div>
         )}
       </div>
@@ -189,8 +191,8 @@ const CellView: React.FC<CellViewProps> = ({ cell, isThinking = false }) => {
       {shouldShowFactsSidebar && (
         <div className="facts-sidebar-wrapper">
           <FactsSidebar
-            logFacts={cell.logPostprocessing?.facts || []}
-            codeFacts={cell.codePostprocessing?.facts || []}
+            logFacts={logPostprocessing?.facts || []}
+            codeFacts={codePostprocessing?.facts || []}
           />
         </div>
       )}

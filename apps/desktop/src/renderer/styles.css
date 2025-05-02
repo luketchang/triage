@@ -2355,27 +2355,35 @@ body {
   max-width: 100%;
   min-width: 300px;
   position: relative;
-  height: 600px; /* Fixed height instead of 100% */
+  min-height: 200px;
+  height: auto;
 }
 
 .cellview-container.with-facts {
-  display: block; /* Reset to block instead of flex */
+  display: block;
   width: 100%;
-  height: 600px; /* Fixed height */
+  height: 600px; /* Fixed height when facts are present */
   min-height: 400px;
   position: relative;
 }
 
 .cellview-main-content {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  padding-right: 16px;
+}
+
+/* When facts are present, adjust the main content area */
+.cellview-container.with-facts .cellview-main-content {
   position: absolute;
   top: 0;
   left: 0;
   right: 35%; /* Leave space for facts sidebar */
   bottom: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 16px;
-  box-sizing: border-box;
+  width: auto;
 }
 
 .facts-sidebar-wrapper {
