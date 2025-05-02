@@ -240,10 +240,10 @@ export function useChat() {
       setMessages((prevMessages) =>
         prevMessages.map((message) => {
           if (message.role === "assistant" && message.id === assistantMessage.id) {
-            // Return the message now with the updated cell data
+            // Return the message now with the updated cell data, preserving all properties
             return {
               ...message,
-              stages: updatedAssistantMessage.stages,
+              ...updatedAssistantMessage, // Copy all properties from updatedAssistantMessage
             };
           }
           return message;
@@ -266,41 +266,14 @@ export function useChat() {
             agentMessage.response || "I processed your request but got no response content.",
           stages: convertAgentStepsToStages(agentMessage.steps ?? []),
         }));
-
-        // When message is done being constructed, update the state once more
-        // Also update the message content to match the cell response
-        setMessages((prevMessages) =>
-          prevMessages.map((message) => {
-            if (message.role === "assistant" && message.id === assistantMessage.id) {
-              return {
-                ...message,
-                response: agentMessage.response || message.response,
-                stages: convertAgentStepsToStages(agentMessage.steps ?? []),
-              };
-            }
-            return message;
-          })
-        );
       } else {
         // Handle error response
         manager.queueUpdate((cell) => ({
           ...cell,
+          response:
+            "Sorry, I encountered an error processing your request. Please try again later.",
           error: "Sorry, I encountered an error processing your request. Please try again later.",
         }));
-
-        // Also update the message content with the error
-        setMessages((prevMessages) =>
-          prevMessages.map((message) => {
-            if (message.role === "assistant" && message.id === assistantMessage.id) {
-              return {
-                ...message,
-                content:
-                  "Sorry, I encountered an error processing your request. Please try again later.",
-              };
-            }
-            return message;
-          })
-        );
       }
     } catch (error) {
       // Log the error
@@ -309,22 +282,9 @@ export function useChat() {
       // Update the cell with the error
       manager.queueUpdate((cell) => ({
         ...cell,
+        response: "Sorry, I encountered an error processing your request. Please try again later.",
         error: "Sorry, I encountered an error processing your request. Please try again later.",
       }));
-
-      // Also update the message content with the error
-      setMessages((prevMessages) =>
-        prevMessages.map((message) => {
-          if (message.role === "assistant" && message.id === assistantMessage.id) {
-            return {
-              ...message,
-              content:
-                "Sorry, I encountered an error processing your request. Please try again later.",
-            };
-          }
-          return message;
-        })
-      );
     } finally {
       // Hide the thinking indicator
       setIsThinking(false);
