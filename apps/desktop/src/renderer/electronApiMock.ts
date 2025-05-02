@@ -1,12 +1,11 @@
 import { ApiResponse } from "./electron.d";
 import {
   AgentConfig,
-  CodePostprocessing,
+  AgentMessage,
   ContextItem,
   FacetData,
   FileTreeNode,
   Log,
-  LogPostprocessing,
   LogQueryParams,
   LogsWithPagination,
   TraceQueryParams,
@@ -551,80 +550,6 @@ const createSampleTrace = (
   };
 };
 
-// Create mock data
-const createMockData = () => {
-  // Create sample log context
-  const logContext = new Map<LogSearchInputCore, LogsWithPagination | string>();
-
-  // Sample error query
-  const errorQuery: LogSearchInputCore = {
-    query: "level:error service:auth",
-    start: "2023-10-01T00:00:00Z",
-    end: new Date().toISOString(),
-    limit: 100,
-    pageCursor: null,
-    type: "logSearchInput",
-  };
-
-  logContext.set(errorQuery, {
-    logs: createSampleLogs(5, "auth-service"),
-  });
-
-  // Sample performance query
-  const perfQuery: LogSearchInputCore = {
-    query: "level:warn latency:>1000",
-    start: "2023-10-01T00:00:00Z",
-    end: new Date().toISOString(),
-    limit: 100,
-    pageCursor: null,
-    type: "logSearchInput",
-  };
-
-  logContext.set(perfQuery, {
-    logs: createSampleLogs(8, "db-service"),
-  });
-
-  // Create sample code context
-  const codeContext = new Map<string, string>();
-
-  // Sample code snippet
-  codeContext.set(
-    "src/services/auth.ts",
-    `// Authentication service
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-}
-
-/**
- * Login the user
- * @param username The username
- * @param password The password
- * @returns The user object
- */
-export async function login(username: string, password: string): Promise<User> {
-  // This would normally make a network request
-  return {
-    id: '123',
-    username,
-    email: \`\${username}@example.com\`,
-  };
-}
-
-/**
- * Check if the user is authenticated
- * @returns Whether the user is authenticated
- */
-export function isAuthenticated(): boolean {
-  return localStorage.getItem('auth_token') !== null;
-}`
-  );
-
-  return { logContext, codeContext };
-};
-
 /**
  * Mock implementation of the Electron API
  */
@@ -636,7 +561,7 @@ const mockElectronAPI = {
     query: string,
     logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null,
     options?: { reasonOnly?: boolean }
-  ) => {
+  ): Promise<ApiResponse<AgentMessage>> => {
     console.info(
       "MOCK API: invokeAgent called with:",
       query,
@@ -646,10 +571,6 @@ const mockElectronAPI = {
 
     // Simulate delay
     await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Create sample log context for artifacts if not using reasonOnly mode
-    // If logContext is provided, use it, otherwise create mock data
-    const mockData = logContext ? { logContext, codeContext: new Map() } : createMockData();
 
     // Create a much fuller response content with detailed analysis
     const responseContent = `## Root Cause Analysis
@@ -757,26 +678,26 @@ The primary issue appears to be in the authentication middleware where token val
       },
     ];
 
+    // Create step objects with the correct type structure
+    const logPostprocessingStep = {
+      type: "logPostprocessing" as const,
+      timestamp: new Date(),
+      facts: logFacts,
+    };
+
+    const codePostprocessingStep = {
+      type: "codePostprocessing" as const,
+      timestamp: new Date(),
+      facts: codeFacts,
+    };
+
     return {
       success: true,
-      message: "Agent invoked successfully",
       data: {
-        chatHistory: [
-          `You asked: "${query}"`,
-          options?.reasonOnly
-            ? "I analyzed this using Manual mode (reasoning only)"
-            : "I searched logs and analyzed this in Search mode",
-          responseContent,
-        ],
-        content: responseContent,
-        logPostprocessing: {
-          facts: logFacts,
-        } as LogPostprocessing,
-        codePostprocessing: {
-          facts: codeFacts,
-        } as CodePostprocessing,
-        logContext: mockData.logContext,
-        codeContext: mockData.codeContext,
+        role: "assistant",
+        response: responseContent,
+        steps: [logPostprocessingStep, codePostprocessingStep],
+        error: null,
       },
     };
   },
@@ -1287,115 +1208,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
       },
       codePostprocessing: {
         facts: detailedCodeFacts,
-      },
-    };
-  },
-
-  /**
-   * Mock implementation for manual chat
-   */
-  manualChat: async (message: string, contextItems: ContextItem[]) => {
-    console.info("Mock manualChat called with message:", message);
-    console.info("Context items:", contextItems.length);
-
-    // Create a more comprehensive response for manual chat
-    const manualContent = `## Analysis Based on Provided Context
-
-Based on the logs and code snippets you've shared, I can see several issues:
-
-1. The authentication service is consistently failing with JWT validation errors
-2. These errors occur when the application is deployed to the production environment
-3. The auth middleware is using a hardcoded JWT secret rather than loading from environment variables
-4. This is likely causing authentication failures for users trying to access protected endpoints
-
-**Root Cause:** The JWT secret used for token validation in the authentication middleware is hardcoded to a development value ('dev_secret_key') instead of being loaded from environment variables. In production, this is causing token validation to fail since tokens were likely issued with a different secret.
-
-**Recommended Fix:** Update the auth middleware to use the JWT_SECRET environment variable instead of the hardcoded value, and ensure this environment variable is properly set in all environments.`;
-
-    // Create mock log and code context based on what was provided
-    const manualLogContext = new Map<LogSearchInputCore, LogsWithPagination | string>();
-    const manualCodeContext = new Map<string, string>();
-
-    // For manual mode, we don't create new searches but use what was provided in contextItems
-    for (const item of contextItems) {
-      if (item.type === "logSearch") {
-        manualLogContext.set(item.data.input, item.data.results);
-      } else if (item.type === "singleTrace") {
-        // For traces, we'd do something different, but this is just a mock
-        // This would be different for traces but we're simplifying for the mock
-      }
-    }
-
-    // Create log processing facts based on provided context
-    const manualLogFacts = [
-      {
-        title: "Authentication Failures",
-        fact: "Multiple authentication failures with 'Invalid signature' errors in auth service logs",
-        query: 'service:auth level:error message:"Invalid signature"',
-        start: new Date(Date.now() - 86400000).toISOString(),
-        end: new Date().toISOString(),
-        limit: 100,
-        pageCursor: null,
-        type: "logSearchInput",
-      },
-      {
-        title: "Production vs Development",
-        fact: "Error rate is significantly higher in production (15%) compared to development (0.2%)",
-        query: "service:auth environment:production",
-        start: new Date(Date.now() - 86400000).toISOString(),
-        end: new Date().toISOString(),
-        limit: 100,
-        pageCursor: null,
-        type: "logSearchInput",
-      },
-    ];
-
-    // Create code processing facts based on provided context
-    const manualCodeFacts = [
-      {
-        title: "JWT Secret Hardcoding",
-        fact: "Authentication middleware using a hardcoded JWT secret instead of environment variable",
-        filepath: "src/services/auth/middleware/auth.ts",
-        codeBlock: `// Authentication middleware
-export function requireAuth(req, res, next) {
-  const token = req.header('x-auth-token');
-  if (!token) {
-    return res.status(401).json({ msg: 'No token, authorization denied' });
-  }
-
-  try {
-    // ISSUE: Hardcoded secret instead of using environment variable
-    const decoded = jwt.verify(token, 'dev_secret_key');
-    req.user = decoded.user;
-    next();
-  } catch (err) {
-    res.status(401).json({ msg: 'Token is not valid' });
-  }
-}`,
-      },
-      {
-        title: "Environment Configuration",
-        fact: "JWT_SECRET environment variable is defined but not used in the code",
-        filepath: "config/env/.env.production",
-        codeBlock: `# Production Environment Variables
-NODE_ENV=production
-PORT=3000
-DB_URI=mongodb+srv://user:password@cluster.mongodb.net/ticketing
-JWT_SECRET=production_secret_key_123
-# JWT_SECRET is defined here but not used in the code`,
-      },
-    ];
-
-    return {
-      success: true,
-      content: manualContent,
-      logContext: manualLogContext,
-      codeContext: manualCodeContext,
-      logPostprocessing: {
-        facts: manualLogFacts,
-      },
-      codePostprocessing: {
-        facts: manualCodeFacts,
       },
     };
   },

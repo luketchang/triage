@@ -2,9 +2,9 @@ import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
+import { AgentStep, AgentStreamUpdate, ReviewStep } from "../types/outputs";
 import { logRequestToolSchema, RequestToolCalls } from "../types/tools";
 
-import { AgentStep, AgentStreamUpdate, ReviewStep } from "../types/outputs";
 import { formatAgentSteps, formatFacetValues } from "./utils";
 
 export type ReviewerResponse = ReviewStep | RequestToolCalls;

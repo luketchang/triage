@@ -126,7 +126,7 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
   // Determine if we should show facts sidebar - only show when there are actually facts
   const shouldShowFactsSidebar =
     !isThinking &&
-    message.content &&
+    message.response &&
     ((logPostprocessing?.facts?.length || 0) > 0 || (codePostprocessing?.facts?.length || 0) > 0);
 
   // Set up a time-based check for showing the waiting indicator
@@ -186,9 +186,9 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
         {message.error && <div className="error-message">{message.error}</div>}
 
         {/* Render final response if present */}
-        {message.content && message.content !== "Thinking..." && (
+        {message.response && message.response !== "Thinking..." && (
           <div className="response-content">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+            <ReactMarkdown>{message.response}</ReactMarkdown>
           </div>
         )}
       </div>

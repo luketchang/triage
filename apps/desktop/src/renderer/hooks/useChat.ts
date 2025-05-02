@@ -13,7 +13,7 @@ import {
   ReviewStage,
   UserMessage,
 } from "../types";
-import { AssistantMessageUpdateManager } from "../utils/AssistantMessageUpdateManager";
+import { CellUpdateManager } from "../utils/CellManager";
 import { generateId } from "../utils/formatters";
 
 // Define the chat mode type
@@ -26,12 +26,11 @@ export function useChat() {
   const [contextItems, setContextItems] = useState<ContextItem[]>([]);
   const [chatMode, setChatMode] = useState<ChatMode>("agent");
   // Track the current cell manager for active streaming responses
-  const [assistantMessageManager, setAssistantMessageManager] =
-    useState<AssistantMessageUpdateManager | null>(null);
+  const [cellManager, setCellManager] = useState<CellUpdateManager | null>(null);
 
   // Register for agent updates when we have an active cell manager
   useEffect(() => {
-    if (!assistantMessageManager) return;
+    if (!cellManager) return;
 
     // Register for updates and store the cleanup function
     const unregister = api.onAgentUpdate((update) => {
@@ -50,16 +49,16 @@ export function useChat() {
     return () => {
       unregister();
     };
-  }, [assistantMessageManager]);
+  }, [cellManager]);
 
   /**
    * Handle a high-level update from the agent
    * Creates a new step in the cell
    */
   const handleHighLevelUpdate = (update: HighLevelUpdate) => {
-    if (!assistantMessageManager) return;
+    if (!cellManager) return;
 
-    assistantMessageManager.queueUpdate((assistantMessage) => {
+    cellManager.queueUpdate((assistantMessage) => {
       let newStage: AgentStage;
 
       // Create the appropriate type of step based on stepType
@@ -117,9 +116,9 @@ export function useChat() {
    * Updates the content of an existing step
    */
   const handleIntermediateUpdate = (update: IntermediateUpdate) => {
-    if (!assistantMessageManager) return;
+    if (!cellManager) return;
 
-    assistantMessageManager.queueUpdate((assistantMessage) => {
+    cellManager.queueUpdate((assistantMessage) => {
       // Find the step to update
       const stepIndex = assistantMessage.stages.findIndex(
         (stage: AgentStage) => stage.id === update.parentId
@@ -229,7 +228,7 @@ export function useChat() {
       id: generateId(),
       role: "assistant",
       timestamp: new Date(),
-      content: "Thinking...",
+      response: "Thinking...",
       stages: [],
     };
 
@@ -237,46 +236,39 @@ export function useChat() {
     setMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
     // Create a CellUpdateManager to handle updates to the cell
-    const manager = new AssistantMessageUpdateManager(
-      assistantMessage,
-      (updatedAssistantMessage) => {
-        // Update the assistant message with the updated cell
-        setMessages((prevMessages) =>
-          prevMessages.map((message) => {
-            if (message.role === "assistant" && message.id === assistantMessage.id) {
-              // Return the message now with the updated cell data
-              return {
-                ...message,
-                stages: updatedAssistantMessage.stages,
-              };
-            }
-            return message;
-          })
-        );
-      }
-    );
+    const manager = new CellUpdateManager(assistantMessage, (updatedAssistantMessage) => {
+      // Update the assistant message with the updated cell
+      setMessages((prevMessages) =>
+        prevMessages.map((message) => {
+          if (message.role === "assistant" && message.id === assistantMessage.id) {
+            // Return the message now with the updated cell data
+            return {
+              ...message,
+              stages: updatedAssistantMessage.stages,
+            };
+          }
+          return message;
+        })
+      );
+    });
 
     // Store the cell manager
-    setAssistantMessageManager(manager);
+    setCellManager(manager);
 
     try {
       // Determine which API to call based on chat mode
-      let response;
-      if (chatMode === "agent") {
-        // Call the agent-powered chat API
-        response = await api.agentChat(newMessage, contextItemsToAttach);
-      } else {
-        // Call the manual chat API (no agent)
-        response = await api.manualChat(newMessage, contextItemsToAttach);
-      }
+      const agentMessage = await api.agentChat(newMessage, contextItemsToAttach);
 
-      if (response && response.success) {
+      if (agentMessage && !agentMessage.error) {
         // Update the cell with the final response
         manager.queueUpdate((cell) => ({
           ...cell,
-          response: response.content || "I processed your request but got no response content.",
-          logPostprocessing: response.logPostprocessing || null,
-          codePostprocessing: response.codePostprocessing || null,
+          response:
+            agentMessage.response || "I processed your request but got no response content.",
+          logPostprocessing:
+            agentMessage.steps.find((step) => step.type === "logPostprocessing") || null,
+          codePostprocessing:
+            agentMessage.steps.find((step) => step.type === "codePostprocessing") || null,
         }));
 
         // When message is done being constructed, update the state once more
@@ -286,12 +278,7 @@ export function useChat() {
             if (message.role === "assistant" && message.id === assistantMessage.id) {
               return {
                 ...message,
-                content:
-                  message.content === "Thinking..."
-                    ? response.content
-                    : message.content.includes("Error")
-                      ? message.content
-                      : response.content,
+                response: agentMessage.response || message.response,
               };
             }
             return message;
@@ -345,7 +332,7 @@ export function useChat() {
       // Hide the thinking indicator
       setIsThinking(false);
       // Clear the cell manager
-      setAssistantMessageManager(null);
+      setCellManager(null);
       // Ensure context items are cleared after sending a message
       setContextItems([]);
     }

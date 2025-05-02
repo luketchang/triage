@@ -7,7 +7,7 @@ import { AssistantMessage } from "../types";
  * Ensures that all updates (from streaming events) are applied in order, atomically,
  * and immutably. Notifies the UI after each update.
  */
-export class AssistantMessageUpdateManager {
+export class CellUpdateManager {
   private message: AssistantMessage;
   private updateQueue: Array<(message: AssistantMessage) => AssistantMessage> = [];
   private isProcessing = false;

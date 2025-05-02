@@ -10,6 +10,7 @@ import {
 import { Command as CommanderCommand } from "commander";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
+
 import { CodePostprocessor } from "./nodes/postprocessing/code-postprocessing";
 import { LogPostprocessor } from "./nodes/postprocessing/log-postprocessing";
 import { Reasoner } from "./nodes/reasoner";
@@ -155,12 +156,15 @@ export class TriageAgent {
     }
 
     const codeSearchAgent = new CodeSearchAgent(this.fastModel);
+
+    const codeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
+
     const response = await codeSearchAgent.invoke({
       query: state.query,
       codeRequest: request.request,
       repoPath: state.repoPath,
       codeSearchId,
-      codeSearchSteps: state.agentSteps.filter((step) => step.type === "codeSearch"),
+      codeSearchSteps,
       onUpdate,
     });
 
@@ -333,11 +337,12 @@ export class TriageAgent {
     }
 
     const postprocessor = new LogPostprocessor(this.fastModel);
+    const logSearchSteps = state.agentSteps.filter((step) => step.type === "logSearch");
     const response = await postprocessor.invoke({
       query: state.query,
       codebaseOverview: state.codebaseOverview,
       logLabelsMap: state.logLabelsMap,
-      logSearchSteps: state.agentSteps.filter((step) => step.type === "logSearch"),
+      logSearchSteps,
       answer: state.answer,
       parentId: logPostprocessingId,
       onUpdate,
@@ -368,10 +373,12 @@ export class TriageAgent {
     }
 
     const postprocessor = new CodePostprocessor(this.fastModel);
+
+    const codeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
     const response = await postprocessor.invoke({
       query: state.query,
       codebaseOverview: state.codebaseOverview,
-      codeSearchSteps: state.agentSteps.filter((step) => step.type === "codeSearch"),
+      codeSearchSteps,
       answer: state.answer,
       parentId: codePostprocessingId,
       onUpdate,
@@ -394,7 +401,6 @@ export class TriageAgent {
     const maxIterations = 50;
 
     // Process tool calls from the queue until empty or max iterations reached
-    let agentSteps: AgentStep[] = [];
     while (currentState.toolCalls.length > 0 && iterationCount < maxIterations) {
       // Get the next tool call from the queue
       const [nextToolCall, ...remainingCalls] = currentState.toolCalls;

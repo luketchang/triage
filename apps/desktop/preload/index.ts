@@ -1,4 +1,4 @@
-import { AgentStreamUpdate, LogSearchInputCore } from "@triage/agent/dist/types/index";
+import { AgentStreamUpdate, LogSearchInputCore } from "@triage/agent";
 import { LogsWithPagination } from "@triage/observability";
 import { contextBridge, ipcRenderer } from "electron";
 

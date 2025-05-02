@@ -2,6 +2,7 @@
 
 // Import types from packages instead of redefining them
 import {
+  AssistantMessage as AgentMessage,
   AgentStep,
   AgentStreamUpdate,
   CodePostprocessing,
@@ -31,6 +32,7 @@ import {
 
 // Re-export imported types
 export type {
+  AgentMessage,
   AgentStep,
   AgentStreamUpdate,
   CodePostprocessingFact,
@@ -226,7 +228,7 @@ export interface AssistantMessage {
   role: "assistant";
   timestamp: Date;
   stages: AgentStage[];
-  content: string;
+  response: string;
   error?: string;
 }
 

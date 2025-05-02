@@ -1,4 +1,5 @@
 import type { LogsWithPagination } from "@triage/observability";
+
 import type { CodePostprocessingFact, LogPostprocessingFact, LogSearchInputCore } from "./tools";
 
 export type AgentStepType =
