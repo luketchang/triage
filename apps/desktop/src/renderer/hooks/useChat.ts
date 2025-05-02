@@ -236,6 +236,7 @@ export function useChat() {
     };
 
     // Add the assistant message to the messages array
+    const updatedMessagesForAgent = updatedMessages; // NOTE: we do not want to pass in the "Thinking..." message to the agent so we don't include in chat history passed to agent
     updatedMessages = [...updatedMessages, assistantMessage];
     setMessages(updatedMessages);
 
@@ -263,7 +264,7 @@ export function useChat() {
       // Determine which API to call based on chat mode
       const agentMessage = await api.invokeAgent(
         newMessage,
-        convertToAgentChatMessages(updatedMessages)
+        convertToAgentChatMessages(updatedMessagesForAgent)
       );
 
       if (agentMessage && !agentMessage.error) {

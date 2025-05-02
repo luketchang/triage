@@ -230,7 +230,7 @@ export class TriageAgent {
     }
 
     const reasoner = new Reasoner(this.reasoningModel);
-    logger.info(`CHAT HISTORY: ${JSON.stringify(state.chatHistory)}`);
+    logger.info(`Chat history: ${JSON.stringify(state.chatHistory)}`);
     const response = await reasoner.invoke({
       query: state.query,
       chatHistory: state.chatHistory,
