@@ -240,6 +240,7 @@ export class TriageAgent {
     }
 
     const reasoner = new Reasoner(this.reasoningModel);
+    logger.info(`CHAT HISTORY LENGTH: ${state.chatHistory.length}`);
     const response = await reasoner.invoke({
       query: state.query,
       chatHistory: state.chatHistory,
@@ -603,8 +604,8 @@ async function main(): Promise<void> {
   const { integration, features: observabilityFeatures } = parseArgs();
 
   // Get formatted labels map for time range
-  const startDate = new Date("2025-05-02T22:00:00Z");
-  const endDate = new Date("2025-05-02T23:00:00Z");
+  const startDate = new Date("2025-05-02T02:00:00Z");
+  const endDate = new Date("2025-05-02T03:00:00Z");
 
   const repoPath = "/Users/luketchang/code/ticketing";
 
@@ -614,10 +615,17 @@ async function main(): Promise<void> {
 
   const bug = await fs.readFile(bugPath, "utf-8");
 
+  const chatHistory: ChatMessage[] = [
+    {
+      role: "user",
+      content: bug,
+    },
+  ];
+
   // Use invokeAgent instead of duplicating the logic
   const response = await invokeAgent({
     query: bug,
-    chatHistory: [],
+    chatHistory,
     repoPath,
     codebaseOverviewPath: overviewPath,
     observabilityPlatform: integration,

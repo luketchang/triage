@@ -183,7 +183,7 @@ export function formatChatHistory(messages: ChatMessage[]): string {
     .map((message) => {
       if (message.role === "user") {
         return `User: ${message.content}`;
-      } else if (message.role === "assistant") {
+      } else {
         let formattedMessage = "Assistant:";
 
         // Add gathered context if there are steps
@@ -203,8 +203,6 @@ export function formatChatHistory(messages: ChatMessage[]): string {
 
         return formattedMessage;
       }
-
-      return "";
     })
     .filter(Boolean)
     .join("\n\n");
