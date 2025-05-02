@@ -107,7 +107,15 @@ export class TriageAgent {
 
     const logSearchAgent = new LogSearchAgent(this.fastModel, this.observabilityPlatform);
 
-    const logSearchSteps = state.agentSteps.filter((step) => step.type === "logSearch");
+    // Get logSearch steps from both chatHistory (past interactions) and current agentSteps
+    const historyLogSearchSteps = state.chatHistory.flatMap((msg) => {
+      if (msg.role === "assistant" && "steps" in msg) {
+        return msg.steps.filter((step) => step.type === "logSearch");
+      }
+      return [];
+    });
+    const currentLogSearchSteps = state.agentSteps.filter((step) => step.type === "logSearch");
+    const logSearchSteps = [...historyLogSearchSteps, ...currentLogSearchSteps];
 
     const response = await logSearchAgent.invoke({
       logSearchId,
@@ -147,7 +155,15 @@ export class TriageAgent {
 
     const codeSearchAgent = new CodeSearchAgent(this.fastModel);
 
-    const codeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
+    // Get codeSearch steps from both chatHistory (past interactions) and current agentSteps
+    const historyCodeSearchSteps = state.chatHistory.flatMap((msg) => {
+      if (msg.role === "assistant" && "steps" in msg) {
+        return msg.steps.filter((step) => step.type === "codeSearch");
+      }
+      return [];
+    });
+    const currentCodeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
+    const codeSearchSteps = [...historyCodeSearchSteps, ...currentCodeSearchSteps];
 
     const response = await codeSearchAgent.invoke({
       query: state.query,
