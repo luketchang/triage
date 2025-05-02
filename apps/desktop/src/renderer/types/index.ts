@@ -122,6 +122,11 @@ export interface LogSearchPair {
   results: LogsWithPagination | string;
 }
 
+export interface CodeSearchPair {
+  filepath: string;
+  code: string;
+}
+
 // Similar to LogSearchPair, but for traces
 export interface TraceSearchPair {
   input: TraceSearchInput;
@@ -190,6 +195,12 @@ export interface LogSearchStage {
   type: "logSearch";
   id: string;
   queries: LogSearchPair[];
+}
+
+export interface CodeSearchStage {
+  type: "codeSearch";
+  id: string;
+  retrievedCode: CodeSearchPair[];
 }
 
 export interface ReasoningStage {
