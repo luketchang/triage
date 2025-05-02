@@ -242,6 +242,7 @@ export class TriageAgent {
     const reasoner = new Reasoner(this.reasoningModel);
     const response = await reasoner.invoke({
       query: state.query,
+      chatHistory: state.chatHistory,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
@@ -291,6 +292,7 @@ export class TriageAgent {
     const reviewer = new Reviewer(this.reasoningModel);
     const response = await reviewer.invoke({
       query: state.query,
+      chatHistory: state.chatHistory,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       logLabelsMap: state.logLabelsMap,
@@ -556,7 +558,7 @@ export async function invokeAgent({
     fileTree,
     logLabelsMap,
     spanLabelsMap: new Map<string, string[]>(),
-    chatHistory: [],
+    chatHistory,
     agentSteps: [],
     answer: "",
   };

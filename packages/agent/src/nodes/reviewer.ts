@@ -2,10 +2,10 @@ import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import { AgentStep, AgentStreamUpdate, ReviewStep } from "../types/message";
+import { AgentStep, AgentStreamUpdate, ChatMessage, ReviewStep } from "../types/message";
 import { logRequestToolSchema, RequestToolCalls } from "../types/tools";
 
-import { formatAgentSteps, formatFacetValues } from "./utils";
+import { formatAgentSteps, formatChatHistory, formatFacetValues } from "./utils";
 
 export type ReviewerResponse = ReviewStep | RequestToolCalls;
 
@@ -22,6 +22,7 @@ export interface ReviewerParams {
 
 function createPrompt(params: {
   query: string;
+  chatHistory: ChatMessage[];
   repoPath: string;
   codebaseOverview: string;
   logLabelsMap: Map<string, string[]>;
@@ -59,9 +60,13 @@ ${formattedLogLabels}
 ${formattedSpanLabels}
 </span_labels>
 
-<gathered_context>
+<chat_history>
+${formatChatHistory(params.chatHistory)}
+</chat_history>
+
+<current_gathered_context>
 ${formatAgentSteps(params.agentSteps)}
-</gathered_context>
+</current_gathered_context>
 
 <answer>
 ${params.answer}
@@ -79,6 +84,7 @@ export class Reviewer {
   @timer
   async invoke(params: {
     query: string;
+    chatHistory: ChatMessage[];
     repoPath: string;
     codebaseOverview: string;
     logLabelsMap: Map<string, string[]>;
