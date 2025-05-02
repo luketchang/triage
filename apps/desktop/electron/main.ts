@@ -128,7 +128,6 @@ function setupIpcHandlers(): void {
           startDate: agentConfig.startDate,
           endDate: agentConfig.endDate,
           reasonOnly: finalReasonOnly,
-          logContext: logContext,
           onUpdate: onUpdate,
         });
 

@@ -6,10 +6,9 @@
 // Import types from types.ts - this is the single source of truth for types
 import {
   AgentConfig,
-  CodePostprocessing,
+  AgentMessage,
   FacetData,
   Log,
-  LogPostprocessing,
   LogQueryParams,
   LogSearchInputCore,
   LogsWithPagination,
@@ -40,16 +39,7 @@ declare global {
         query: string,
         logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null,
         options?: { reasonOnly?: boolean }
-      ) => Promise<
-        ApiResponse<{
-          chatHistory: string[];
-          content: string | null;
-          logPostprocessing: LogPostprocessing | null;
-          codePostprocessing: CodePostprocessing | null;
-          logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
-          codeContext: Map<string, string>;
-        }>
-      >;
+      ) => Promise<ApiResponse<AgentMessage>>;
 
       /**
        * Register a callback for agent update events

@@ -1,6 +1,7 @@
+import { HighLevelUpdate, IntermediateUpdate } from "@triage/agent";
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import { AgentStep, Cell, ChatMessage, ContextItem } from "../types";
+import { AgentStage, AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
 import { CellUpdateManager } from "../utils/CellUpdateManager";
 import { generateId } from "../utils/formatters";
 
@@ -43,62 +44,58 @@ export function useChat() {
    * Handle a high-level update from the agent
    * Creates a new step in the cell
    */
-  const handleHighLevelUpdate = (update: {
-    type: "highLevelUpdate";
-    stepType: string;
-    id: string;
-  }) => {
+  const handleHighLevelUpdate = (update: HighLevelUpdate) => {
     if (!cellManager) return;
 
-    cellManager.queueUpdate((cell) => {
-      let newStep: AgentStep;
+    cellManager.queueUpdate((assistantMessage) => {
+      let newStage: AgentStage;
 
       // Create the appropriate type of step based on stepType
       switch (update.stepType) {
         case "logSearch":
-          newStep = {
+          newStage = {
             id: update.id,
             type: "logSearch",
-            searches: [],
+            queries: [],
           };
           break;
         case "reasoning":
-          newStep = {
+          newStage = {
             id: update.id,
             type: "reasoning",
             content: "",
           };
           break;
         case "review":
-          newStep = {
+          newStage = {
             id: update.id,
             type: "review",
             content: "",
           };
           break;
         case "logPostprocessing":
-          newStep = {
+          newStage = {
             id: update.id,
             type: "logPostprocessing",
-            content: "",
+            facts: [],
           };
           break;
         case "codePostprocessing":
-          newStep = {
+          newStage = {
             id: update.id,
             type: "codePostprocessing",
-            content: "",
+            facts: [],
           };
           break;
         default:
           console.warn(`Unknown step type: ${update.stepType}`);
-          return cell; // Return unchanged cell if we don't recognize the step type
+          return assistantMessage; // Return unchanged cell if we don't recognize the step type
       }
 
       // Add the new step to the cell
       return {
-        ...cell,
-        steps: [...cell.steps, newStep],
+        ...assistantMessage,
+        stages: [...assistantMessage.stages, newStage],
       };
     });
   };
@@ -107,64 +104,89 @@ export function useChat() {
    * Handle an intermediate update from the agent
    * Updates the content of an existing step
    */
-  const handleIntermediateUpdate = (update: {
-    type: "intermediateUpdate";
-    stepType: string;
-    parentId: string;
-    id: string;
-    content: string;
-  }) => {
+  const handleIntermediateUpdate = (update: IntermediateUpdate) => {
     if (!cellManager) return;
 
-    cellManager.queueUpdate((cell) => {
+    cellManager.queueUpdate((assistantMessage) => {
       // Find the step to update
-      const stepIndex = cell.steps.findIndex((step) => step.id === update.parentId);
+      const stepIndex = assistantMessage.stages.findIndex(
+        (stage: AgentStage) => stage.id === update.parentId
+      );
       if (stepIndex === -1) {
         console.warn(`Step with ID ${update.parentId} not found`);
-        return cell; // Return unchanged cell if step not found
+        return assistantMessage; // Return unchanged cell if step not found
       }
 
-      const step = cell.steps[stepIndex];
+      let stage = assistantMessage.stages[stepIndex];
 
-      // Update the step based on its type
-      let updatedStep: AgentStep;
-      switch (step.type) {
-        case "logSearch":
-          updatedStep = {
-            ...step,
-            searches: [...step.searches, update.content],
+      // Update the step based on its type using a type guard helper
+      let updatedStage: AgentStage;
+
+      // Helper types and assertion
+      type StageOf<T extends AgentStage["type"]> = Extract<AgentStage, { type: T }>;
+      function assertStageType<T extends AgentStage["type"]>(
+        stage: AgentStage,
+        type: T
+      ): asserts stage is StageOf<T> {
+        if (stage.type !== type) {
+          throw new Error(`Expected stage.type to be ${type}, got ${stage.type}`);
+        }
+      }
+
+      switch (update.step.type) {
+        case "logSearch": {
+          assertStageType(stage, "logSearch");
+          updatedStage = {
+            ...stage,
+            queries: [...stage.queries, update.step],
           };
           break;
-        case "reasoning":
-          updatedStep = {
-            ...step,
-            content: step.content + update.content,
+        }
+        case "reasoning": {
+          assertStageType(stage, "reasoning");
+          updatedStage = {
+            ...stage,
+            content: stage.content + update.step.contentChunk,
           };
           break;
-        case "review":
-          updatedStep = {
-            ...step,
-            content: step.content + update.content,
+        }
+        case "review": {
+          assertStageType(stage, "review");
+          updatedStage = {
+            ...stage,
+            content: stage.content + update.step.contentChunk,
           };
           break;
-        case "logPostprocessing":
-        // TODO
-        case "codePostprocessing":
-        // TODO
+        }
+        case "logPostprocessing": {
+          assertStageType(stage, "logPostprocessing");
+          updatedStage = {
+            ...stage,
+            facts: update.step.facts,
+          };
+          break;
+        }
+        case "codePostprocessing": {
+          assertStageType(stage, "codePostprocessing");
+          updatedStage = {
+            ...stage,
+            facts: update.step.facts,
+          };
+          break;
+        }
         default:
-          // Type assertion to avoid the "never" type error
-          console.warn(`Unknown step type: ${(step as AgentStep).type}`);
-          return cell; // Return unchanged cell if unknown step type
+          console.warn(`Unknown stage type: ${(stage as AgentStage).type}`);
+          return assistantMessage; // Return unchanged cell if unknown step type
       }
 
       // Create new steps array with the updated step
-      const updatedSteps = [...cell.steps];
-      updatedSteps[stepIndex] = updatedStep;
+      const updatedStages = [...assistantMessage.stages];
+      updatedStages[stepIndex] = updatedStage;
 
       // Return updated cell
       return {
-        ...cell,
-        steps: updatedSteps,
+        ...assistantMessage,
+        stages: updatedStages,
       };
     });
   };
@@ -181,9 +203,10 @@ export function useChat() {
     if (!newMessage.trim()) return;
 
     // Create a new user message with attached context items
-    const userMessage: ChatMessage = {
+    const userMessage: UserMessage = {
       id: generateId(),
       role: "user",
+      timestamp: new Date(),
       content: newMessage,
       contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
     };
@@ -203,36 +226,28 @@ export function useChat() {
     // Set thinking state
     setIsThinking(true);
 
-    // Create a unique ID for the assistant message
-    const assistantMessageId = generateId();
-
-    // Create initial cell for streaming updates
-    const initialCell: Cell = {
-      id: assistantMessageId,
-      steps: [],
-      response: "",
-    };
-
     // Create assistant message with the initial cell
-    const assistantMessage: ChatMessage = {
-      id: assistantMessageId,
+    const assistantMessage: AssistantMessage = {
+      id: generateId(),
       role: "assistant",
-      content: "Thinking...",
-      cell: initialCell,
+      timestamp: new Date(),
+      response: "Thinking...",
+      stages: [],
     };
 
     // Add the assistant message to the messages array
     setMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
     // Create a CellUpdateManager to handle updates to the cell
-    const manager = new CellUpdateManager(initialCell, (updatedCell) => {
+    const manager = new CellUpdateManager(assistantMessage, (updatedAssistantMessage) => {
       // Update the assistant message with the updated cell
       setMessages((prevMessages) =>
         prevMessages.map((message) => {
-          if (message.id === assistantMessageId) {
+          if (message.role === "assistant" && message.id === assistantMessage.id) {
+            // Return the message now with the updated cell data
             return {
               ...message,
-              cell: updatedCell,
+              stages: updatedAssistantMessage.stages,
             };
           }
           return message;
@@ -245,32 +260,28 @@ export function useChat() {
 
     try {
       // Determine which API to call based on chat mode
-      let response;
-      if (chatMode === "agent") {
-        // Call the agent-powered chat API
-        response = await api.agentChat(newMessage, contextItemsToAttach);
-      } else {
-        // Call the manual chat API (no agent)
-        response = await api.manualChat(newMessage, contextItemsToAttach);
-      }
+      const agentMessage = await api.agentChat(newMessage, contextItemsToAttach);
 
-      if (response && response.success) {
+      if (agentMessage && !agentMessage.error) {
         // Update the cell with the final response
         manager.queueUpdate((cell) => ({
           ...cell,
-          response: response.content || "I processed your request but got no response content.",
-          logPostprocessing: response.logPostprocessing || null,
-          codePostprocessing: response.codePostprocessing || null,
+          response:
+            agentMessage.response || "I processed your request but got no response content.",
+          logPostprocessing:
+            agentMessage.steps.find((step) => step.type === "logPostprocessing") || null,
+          codePostprocessing:
+            agentMessage.steps.find((step) => step.type === "codePostprocessing") || null,
         }));
 
+        // When message is done being constructed, update the state once more
         // Also update the message content to match the cell response
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
-            if (message.id === assistantMessageId) {
+            if (message.role === "assistant" && message.id === assistantMessage.id) {
               return {
                 ...message,
-                content:
-                  response.content || "I processed your request but got no response content.",
+                response: agentMessage.response || message.response,
               };
             }
             return message;
@@ -286,7 +297,7 @@ export function useChat() {
         // Also update the message content with the error
         setMessages((prevMessages) =>
           prevMessages.map((message) => {
-            if (message.id === assistantMessageId) {
+            if (message.role === "assistant" && message.id === assistantMessage.id) {
               return {
                 ...message,
                 content:
@@ -310,7 +321,7 @@ export function useChat() {
       // Also update the message content with the error
       setMessages((prevMessages) =>
         prevMessages.map((message) => {
-          if (message.id === assistantMessageId) {
+          if (message.role === "assistant" && message.id === assistantMessage.id) {
             return {
               ...message,
               content:
