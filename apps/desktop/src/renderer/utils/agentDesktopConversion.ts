@@ -32,8 +32,8 @@ export function assertStageType<T extends AgentStage["type"]>(
  * @param steps Array of AgentStep objects from the agent
  * @returns Array of AgentStage objects to be used in the UI
  */
-export function convertAgentStepsToStages(steps: AgentStep[]): AgentStage[] {
-  if (!steps.length) return [];
+export function convertAgentStepsToStages(steps?: AgentStep[] | null): AgentStage[] {
+  if (!Array.isArray(steps) || !steps.length) return [];
 
   const stages: AgentStage[] = [];
   let currentStageType: AgentStepType | null = null;
@@ -172,7 +172,7 @@ export function convertToDesktopAssistantMessage(message: AgentAssistantMessage)
     id: generateId(),
     role: "assistant",
     timestamp: new Date(),
-    stages: convertAgentStepsToStages(message.steps),
+    stages: convertAgentStepsToStages(message.steps ?? []),
     response: message.response || "",
     error: message.error || undefined,
   };

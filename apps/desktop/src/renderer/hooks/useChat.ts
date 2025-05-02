@@ -264,7 +264,7 @@ export function useChat() {
           ...cell,
           response:
             agentMessage.response || "I processed your request but got no response content.",
-          stages: convertAgentStepsToStages(agentMessage.steps),
+          stages: convertAgentStepsToStages(agentMessage.steps ?? []),
         }));
 
         // When message is done being constructed, update the state once more
@@ -275,7 +275,7 @@ export function useChat() {
               return {
                 ...message,
                 response: agentMessage.response || message.response,
-                stages: convertAgentStepsToStages(agentMessage.steps),
+                stages: convertAgentStepsToStages(agentMessage.steps ?? []),
               };
             }
             return message;
