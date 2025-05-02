@@ -2,7 +2,7 @@ import { HighLevelUpdate, IntermediateUpdate } from "@triage/agent";
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import { AgentStage, AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
-import { CellUpdateManager } from "../utils/CellManager";
+import { CellUpdateManager } from "../utils/CellUpdateManager";
 import { generateId } from "../utils/formatters";
 
 // Define the chat mode type
