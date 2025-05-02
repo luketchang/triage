@@ -1,18 +1,7 @@
 import { HighLevelUpdate, IntermediateUpdate } from "@triage/agent";
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import {
-  AgentStage,
-  AssistantMessage,
-  ChatMessage,
-  CodePostprocessingStage,
-  ContextItem,
-  LogPostprocessingStage,
-  LogSearchStage,
-  ReasoningStage,
-  ReviewStage,
-  UserMessage,
-} from "../types";
+import { AgentStage, AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
 import { CellUpdateManager } from "../utils/CellManager";
 import { generateId } from "../utils/formatters";
 
@@ -130,48 +119,62 @@ export function useChat() {
 
       let stage = assistantMessage.stages[stepIndex];
 
-      // Update the step based on its type
-      // TODO: the typing on the agent stage vs updates is annoying to manually cast
+      // Update the step based on its type using a type guard helper
       let updatedStage: AgentStage;
+
+      // Helper types and assertion
+      type StageOf<T extends AgentStage["type"]> = Extract<AgentStage, { type: T }>;
+      function assertStageType<T extends AgentStage["type"]>(
+        stage: AgentStage,
+        type: T
+      ): asserts stage is StageOf<T> {
+        if (stage.type !== type) {
+          throw new Error(`Expected stage.type to be ${type}, got ${stage.type}`);
+        }
+      }
+
       switch (update.step.type) {
-        case "logSearch":
-          stage = stage as LogSearchStage;
+        case "logSearch": {
+          assertStageType(stage, "logSearch");
           updatedStage = {
             ...stage,
-            type: "logSearch",
             queries: [...stage.queries, update.step],
           };
           break;
-        case "reasoning":
-          stage = stage as ReasoningStage;
+        }
+        case "reasoning": {
+          assertStageType(stage, "reasoning");
           updatedStage = {
             ...stage,
             content: stage.content + update.step.contentChunk,
           };
           break;
-        case "review":
-          stage = stage as ReviewStage;
+        }
+        case "review": {
+          assertStageType(stage, "review");
           updatedStage = {
             ...stage,
             content: stage.content + update.step.contentChunk,
           };
           break;
-        case "logPostprocessing":
-          stage = stage as LogPostprocessingStage;
+        }
+        case "logPostprocessing": {
+          assertStageType(stage, "logPostprocessing");
           updatedStage = {
             ...stage,
             facts: update.step.facts,
           };
           break;
-        case "codePostprocessing":
-          stage = stage as CodePostprocessingStage;
+        }
+        case "codePostprocessing": {
+          assertStageType(stage, "codePostprocessing");
           updatedStage = {
             ...stage,
             facts: update.step.facts,
           };
           break;
+        }
         default:
-          // Type assertion to avoid the "never" type error
           console.warn(`Unknown stage type: ${(stage as AgentStage).type}`);
           return assistantMessage; // Return unchanged cell if unknown step type
       }
