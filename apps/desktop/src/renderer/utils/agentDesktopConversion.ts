@@ -134,6 +134,70 @@ export function convertAgentStepsToStages(steps?: AgentStep[] | null): AgentStag
 }
 
 /**
+ * Converts an array of AgentStage objects back into an array of AgentStep objects
+ * This is the inverse operation of convertAgentStepsToStages
+ *
+ * @param stages Array of AgentStage objects from the UI
+ * @returns Array of AgentStep objects to be used by the agent
+ */
+export function convertAgentStagesToSteps(stages?: AgentStage[] | null): AgentStep[] {
+  if (!Array.isArray(stages) || !stages.length) return [];
+
+  const steps: AgentStep[] = [];
+
+  for (const stage of stages) {
+    switch (stage.type) {
+      case "logSearch":
+        // For logSearch, each query in the stage becomes a separate logSearch step
+        stage.queries.forEach((query) => {
+          steps.push({
+            type: "logSearch",
+            timestamp: new Date(),
+            input: query.input,
+            results: query.results,
+          });
+        });
+        break;
+      case "reasoning":
+        // For reasoning, create a single reasoning step
+        steps.push({
+          type: "reasoning",
+          timestamp: new Date(),
+          content: stage.content,
+        });
+        break;
+      case "review":
+        // For review, create a single review step
+        steps.push({
+          type: "review",
+          timestamp: new Date(),
+          content: stage.content,
+        });
+        break;
+      case "logPostprocessing":
+        // For logPostprocessing, create a single logPostprocessing step
+        steps.push({
+          type: "logPostprocessing",
+          timestamp: new Date(),
+          facts: stage.facts,
+        });
+        break;
+      case "codePostprocessing":
+        // For codePostprocessing, create a single codePostprocessing step
+        steps.push({
+          type: "codePostprocessing",
+          timestamp: new Date(),
+          facts: stage.facts,
+        });
+        break;
+      // Handle any other stage types in the future
+    }
+  }
+
+  return steps;
+}
+
+/**
  * Converts a desktop AssistantMessage to an agent AssistantMessage
  *
  * @param message Desktop AssistantMessage
@@ -142,7 +206,7 @@ export function convertAgentStepsToStages(steps?: AgentStep[] | null): AgentStag
 export function convertToAgentAssistantMessage(message: AssistantMessage): AgentAssistantMessage {
   return {
     role: "assistant",
-    steps: [], // Desktop message doesn't store the original steps, only the processed stages
+    steps: convertAgentStagesToSteps(message.stages), // Convert stages back to steps
     response: message.response || null,
     error: message.error || null,
   };
