@@ -57,23 +57,7 @@ const api = {
     if (USE_MOCK_API || !isMethodAvailable("invokeAgent")) {
       return mockElectronAPI.invokeAgent(query, chatHistory, options);
     } else {
-      // The real electronAPI.invokeAgent returns an ApiResponse object
-      const response = await window.electronAPI.invokeAgent(query, chatHistory, options);
-
-      // Check if we got a wrapped response (with success & data properties)
-      // This handles the case where the real API returns an ApiResponse
-      if (response && typeof response === "object" && "success" in response && "data" in response) {
-        // It's an ApiResponse
-        const apiResponse = response as ApiResponse<AgentAssistantMessage>;
-        if (apiResponse.success && apiResponse.data) {
-          return apiResponse.data;
-        }
-        // If not successful, throw an error
-        throw new Error(apiResponse.error || "Unknown error from agent");
-      }
-
-      // If it's not a wrapped response, it's already an AgentAssistantMessage
-      return response;
+      return window.electronAPI.invokeAgent(query, chatHistory, options);
     }
   },
 

@@ -15,6 +15,7 @@ import { config } from "@triage/config";
 import { AgentConfig } from "../src/config.js";
 // Import observability platform functions
 import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
+import { AgentAssistantMessage } from "../src/renderer/types/index.js";
 
 // Get directory name for preload script path
 const __filename = fileURLToPath(import.meta.url);
@@ -88,7 +89,7 @@ function setupIpcHandlers(): void {
       query: string,
       chatHistory: AgentChatMessage[],
       options?: { reasonOnly?: boolean }
-    ) => {
+    ): Promise<AgentAssistantMessage> => {
       try {
         console.log("Invoking agent with query:", query);
 
@@ -126,16 +127,10 @@ function setupIpcHandlers(): void {
           onUpdate: onUpdate,
         });
 
-        return {
-          success: true,
-          data: result,
-        };
+        return result;
       } catch (error) {
         console.error("Error invoking agent:", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        };
+        throw error;
       }
     }
   );
