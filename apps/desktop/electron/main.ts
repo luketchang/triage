@@ -1,7 +1,7 @@
 // Load environment variables first, before any other imports
 import "./env-loader.js";
 
-import { invokeAgent } from "@triage/agent";
+import { ChatMessage as AgentChatMessage, invokeAgent } from "@triage/agent";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 // Fix CommonJS import for electron-updater
 import pkg from "electron-updater";
@@ -86,7 +86,7 @@ function setupIpcHandlers(): void {
     async (
       _event: any,
       query: string,
-      serializedLogContext: any = null,
+      chatHistory: AgentChatMessage[],
       options?: { reasonOnly?: boolean }
     ) => {
       try {
@@ -106,12 +106,6 @@ function setupIpcHandlers(): void {
         // Get reasonOnly flag from options
         const finalReasonOnly = options?.reasonOnly === true;
 
-        // Convert serialized format back to Map if needed
-        let logContext: Map<any, any> | undefined = undefined;
-        if (serializedLogContext && Array.isArray(serializedLogContext)) {
-          logContext = new Map(serializedLogContext);
-        }
-
         // Send updates to renderer via mainWindow
         const onUpdate = (update: any) => {
           if (mainWindow) {
@@ -121,6 +115,7 @@ function setupIpcHandlers(): void {
 
         const result = await invokeAgent({
           query,
+          chatHistory,
           repoPath: agentConfig.repoPath,
           codebaseOverviewPath: agentConfig.codebaseOverviewPath,
           observabilityPlatform: agentConfig.observabilityPlatform,

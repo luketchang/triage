@@ -2,6 +2,11 @@ import { HighLevelUpdate, IntermediateUpdate } from "@triage/agent";
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import { AgentStage, AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
+import {
+  assertStageType,
+  convertAgentStepsToStages,
+  convertToAgentChatMessages,
+} from "../utils/agentDesktopConversion";
 import { CellUpdateManager } from "../utils/CellUpdateManager";
 import { generateId } from "../utils/formatters";
 
@@ -123,15 +128,6 @@ export function useChat() {
       let updatedStage: AgentStage;
 
       // Helper types and assertion
-      type StageOf<T extends AgentStage["type"]> = Extract<AgentStage, { type: T }>;
-      function assertStageType<T extends AgentStage["type"]>(
-        stage: AgentStage,
-        type: T
-      ): asserts stage is StageOf<T> {
-        if (stage.type !== type) {
-          throw new Error(`Expected stage.type to be ${type}, got ${stage.type}`);
-        }
-      }
 
       switch (update.step.type) {
         case "logSearch": {
@@ -212,7 +208,7 @@ export function useChat() {
     };
 
     // Store context items to attach to message
-    const contextItemsToAttach = [...contextItems];
+    const _contextItemsToAttach = [...contextItems]; // TODO: add this back in once we support attaching context
 
     // Clear context items immediately after creating the message
     setContextItems([]);
@@ -260,7 +256,7 @@ export function useChat() {
 
     try {
       // Determine which API to call based on chat mode
-      const agentMessage = await api.agentChat(newMessage, contextItemsToAttach);
+      const agentMessage = await api.invokeAgent(newMessage, convertToAgentChatMessages(messages));
 
       if (agentMessage && !agentMessage.error) {
         // Update the cell with the final response
@@ -268,10 +264,7 @@ export function useChat() {
           ...cell,
           response:
             agentMessage.response || "I processed your request but got no response content.",
-          logPostprocessing:
-            agentMessage.steps.find((step) => step.type === "logPostprocessing") || null,
-          codePostprocessing:
-            agentMessage.steps.find((step) => step.type === "codePostprocessing") || null,
+          stages: convertAgentStepsToStages(agentMessage.steps),
         }));
 
         // When message is done being constructed, update the state once more
@@ -282,6 +275,7 @@ export function useChat() {
               return {
                 ...message,
                 response: agentMessage.response || message.response,
+                stages: convertAgentStepsToStages(agentMessage.steps),
               };
             }
             return message;

@@ -2,9 +2,11 @@
 
 // Import types from packages instead of redefining them
 import {
-  AssistantMessage as AgentMessage,
+  AssistantMessage as AgentAssistantMessage,
+  ChatMessage as AgentChatMessage,
   AgentStep,
   AgentStreamUpdate,
+  UserMessage as AgentUserMessage,
   CodePostprocessing,
   CodePostprocessingFact,
   CodePostprocessingStep,
@@ -32,9 +34,11 @@ import {
 
 // Re-export imported types
 export type {
-  AgentMessage,
+  AgentAssistantMessage,
+  AgentChatMessage,
   AgentStep,
   AgentStreamUpdate,
+  AgentUserMessage,
   CodePostprocessingFact,
   CodePostprocessingStep,
   IntegrationType,

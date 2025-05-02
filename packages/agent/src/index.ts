@@ -456,6 +456,7 @@ export class TriageAgent {
  */
 export interface AgentArgs {
   query: string;
+  chatHistory: ChatMessage[];
   repoPath: string;
   codebaseOverviewPath: string;
   observabilityPlatform?: string;
@@ -483,6 +484,7 @@ export interface AgentResult {
  */
 export async function invokeAgent({
   query,
+  chatHistory,
   repoPath,
   codebaseOverviewPath,
   observabilityPlatform: platformType = "grafana",
@@ -613,6 +615,7 @@ async function main(): Promise<void> {
   // Use invokeAgent instead of duplicating the logic
   const response = await invokeAgent({
     query: bug,
+    chatHistory: [],
     repoPath,
     codebaseOverviewPath: overviewPath,
     observabilityPlatform: integration,
