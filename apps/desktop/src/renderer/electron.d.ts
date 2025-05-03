@@ -5,13 +5,12 @@
 
 // Import types from types.ts - this is the single source of truth for types
 import {
+  AgentAssistantMessage,
+  AgentChatMessage,
   AgentConfig,
-  AgentMessage,
   FacetData,
   Log,
   LogQueryParams,
-  LogSearchInputCore,
-  LogsWithPagination,
   StreamUpdate,
   Trace,
   TraceQueryParams,
@@ -31,15 +30,15 @@ declare global {
       /**
        * Invoke the agent with a query and return the result
        * @param query The query to send to the agent
-       * @param logContext Optional map of log search inputs to their results
+       * @param chatHistory The chat history to send to the agent
        * @param options Optional configuration options for the agent
        * @returns Promise with the agent response
        */
       invokeAgent: (
         query: string,
-        logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null,
+        chatHistory: AgentChatMessage[],
         options?: { reasonOnly?: boolean }
-      ) => Promise<ApiResponse<AgentMessage>>;
+      ) => Promise<AgentAssistantMessage>;
 
       /**
        * Register a callback for agent update events

@@ -119,15 +119,16 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
   const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Filter steps to only show the ones that should be visible in the UI
-  const stages = message.stages;
-  const logPostprocessing = message.stages.find((stage) => stage.type === "logPostprocessing");
-  const codePostprocessing = message.stages.find((stage) => stage.type === "codePostprocessing");
+  const stages = message.stages || [];
+  const logPostprocessingStage = stages.find((stage) => stage.type === "logPostprocessing");
+  const codePostprocessingStage = stages.find((stage) => stage.type === "codePostprocessing");
 
   // Determine if we should show facts sidebar - only show when there are actually facts
   const shouldShowFactsSidebar =
     !isThinking &&
     message.response &&
-    ((logPostprocessing?.facts?.length || 0) > 0 || (codePostprocessing?.facts?.length || 0) > 0);
+    ((logPostprocessingStage?.facts?.length || 0) > 0 ||
+      (codePostprocessingStage?.facts?.length || 0) > 0);
 
   // Set up a time-based check for showing the waiting indicator
   useEffect(() => {
@@ -182,7 +183,7 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
         {/* Render final response if present */}
         {message.response && message.response !== "Thinking..." && (
           <div className="response-content">
-            <ReactMarkdown>{message.response}</ReactMarkdown>
+            <ReactMarkdown>{message.response || ""}</ReactMarkdown>
           </div>
         )}
       </div>
@@ -191,8 +192,8 @@ const CellView: React.FC<CellViewProps> = ({ message, isThinking = false }) => {
       {shouldShowFactsSidebar && (
         <div className="facts-sidebar-wrapper">
           <FactsSidebar
-            logFacts={logPostprocessing?.facts || []}
-            codeFacts={codePostprocessing?.facts || []}
+            logFacts={logPostprocessingStage?.facts || []}
+            codeFacts={codePostprocessingStage?.facts || []}
           />
         </div>
       )}

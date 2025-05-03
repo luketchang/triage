@@ -4,7 +4,6 @@ import { GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common"
 import {
   getObservabilityPlatform,
   IntegrationType,
-  LogsWithPagination,
   ObservabilityPlatform,
 } from "@triage/observability";
 import { Command as CommanderCommand } from "commander";
@@ -18,21 +17,12 @@ import { Reviewer } from "./nodes/reviewer";
 import { CodeSearchAgent } from "./nodes/search/code-search";
 import { LogSearchAgent } from "./nodes/search/log-search";
 import { formatFacetValues } from "./nodes/utils";
-import type {
-  AgentStep,
-  ChatMessage,
-  CodePostprocessing,
-  CodeRequest,
-  LogRequest,
-  SpanRequest,
-} from "./types";
+import type { AgentStep, ChatMessage, CodeRequest, LogRequest, SpanRequest } from "./types";
 import {
   AgentStreamUpdate,
   AssistantMessage,
   CodePostprocessingRequest,
-  LogPostprocessing,
   LogPostprocessingRequest,
-  LogSearchInputCore,
   ReasoningRequest,
   ReviewRequest,
 } from "./types";
@@ -117,7 +107,15 @@ export class TriageAgent {
 
     const logSearchAgent = new LogSearchAgent(this.fastModel, this.observabilityPlatform);
 
-    const logSearchSteps = state.agentSteps.filter((step) => step.type === "logSearch");
+    // Get logSearch steps from both chatHistory (past interactions) and current agentSteps
+    const historyLogSearchSteps = state.chatHistory.flatMap((msg) => {
+      if (msg.role === "assistant" && "steps" in msg) {
+        return msg.steps.filter((step) => step.type === "logSearch");
+      }
+      return [];
+    });
+    const currentLogSearchSteps = state.agentSteps.filter((step) => step.type === "logSearch");
+    const logSearchSteps = [...historyLogSearchSteps, ...currentLogSearchSteps];
 
     const response = await logSearchAgent.invoke({
       logSearchId,
@@ -157,7 +155,15 @@ export class TriageAgent {
 
     const codeSearchAgent = new CodeSearchAgent(this.fastModel);
 
-    const codeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
+    // Get codeSearch steps from both chatHistory (past interactions) and current agentSteps
+    const historyCodeSearchSteps = state.chatHistory.flatMap((msg) => {
+      if (msg.role === "assistant" && "steps" in msg) {
+        return msg.steps.filter((step) => step.type === "codeSearch");
+      }
+      return [];
+    });
+    const currentCodeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
+    const codeSearchSteps = [...historyCodeSearchSteps, ...currentCodeSearchSteps];
 
     const response = await codeSearchAgent.invoke({
       query: state.query,
@@ -240,8 +246,10 @@ export class TriageAgent {
     }
 
     const reasoner = new Reasoner(this.reasoningModel);
+    logger.info(`Chat history: ${JSON.stringify(state.chatHistory)}`);
     const response = await reasoner.invoke({
       query: state.query,
+      chatHistory: state.chatHistory,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       fileTree: state.fileTree,
@@ -291,6 +299,7 @@ export class TriageAgent {
     const reviewer = new Reviewer(this.reasoningModel);
     const response = await reviewer.invoke({
       query: state.query,
+      chatHistory: state.chatHistory,
       repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       logLabelsMap: state.logLabelsMap,
@@ -456,6 +465,7 @@ export class TriageAgent {
  */
 export interface AgentArgs {
   query: string;
+  chatHistory: ChatMessage[];
   repoPath: string;
   codebaseOverviewPath: string;
   observabilityPlatform?: string;
@@ -467,22 +477,11 @@ export interface AgentArgs {
 }
 
 /**
- * Result of agent invocation
- */
-export interface AgentResult {
-  chatHistory: string[];
-  response: string | null;
-  logPostprocessing: LogPostprocessing | null;
-  codePostprocessing: CodePostprocessing | null;
-  logContext: Map<LogSearchInputCore, LogsWithPagination | string>;
-  codeContext: Map<string, string>;
-}
-
-/**
  * Invokes the agent with the given parameters
  */
 export async function invokeAgent({
   query,
+  chatHistory,
   repoPath,
   codebaseOverviewPath,
   observabilityPlatform: platformType = "grafana",
@@ -554,7 +553,7 @@ export async function invokeAgent({
     fileTree,
     logLabelsMap,
     spanLabelsMap: new Map<string, string[]>(),
-    chatHistory: [],
+    chatHistory,
     agentSteps: [],
     answer: "",
   };
@@ -599,8 +598,8 @@ async function main(): Promise<void> {
   const { integration, features: observabilityFeatures } = parseArgs();
 
   // Get formatted labels map for time range
-  const startDate = new Date("2025-05-02T22:00:00Z");
-  const endDate = new Date("2025-05-02T23:00:00Z");
+  const startDate = new Date("2025-05-02T02:00:00Z");
+  const endDate = new Date("2025-05-02T03:00:00Z");
 
   const repoPath = "/Users/luketchang/code/ticketing";
 
@@ -610,9 +609,17 @@ async function main(): Promise<void> {
 
   const bug = await fs.readFile(bugPath, "utf-8");
 
+  const chatHistory: ChatMessage[] = [
+    {
+      role: "user",
+      content: bug,
+    },
+  ];
+
   // Use invokeAgent instead of duplicating the logic
   const response = await invokeAgent({
     query: bug,
+    chatHistory,
     repoPath,
     codebaseOverviewPath: overviewPath,
     observabilityPlatform: integration,

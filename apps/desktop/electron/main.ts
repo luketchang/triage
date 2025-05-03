@@ -1,7 +1,7 @@
 // Load environment variables first, before any other imports
 import "./env-loader.js";
 
-import { invokeAgent } from "@triage/agent";
+import { ChatMessage as AgentChatMessage, invokeAgent } from "@triage/agent";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 // Fix CommonJS import for electron-updater
 import pkg from "electron-updater";
@@ -15,6 +15,7 @@ import { config } from "@triage/config";
 import { AgentConfig } from "../src/config.js";
 // Import observability platform functions
 import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
+import { AgentAssistantMessage } from "../src/renderer/types/index.js";
 
 // Get directory name for preload script path
 const __filename = fileURLToPath(import.meta.url);
@@ -86,11 +87,12 @@ function setupIpcHandlers(): void {
     async (
       _event: any,
       query: string,
-      serializedLogContext: any = null,
+      chatHistory: AgentChatMessage[],
       options?: { reasonOnly?: boolean }
-    ) => {
+    ): Promise<AgentAssistantMessage> => {
       try {
         console.log("Invoking agent with query:", query);
+        console.log("IPC chat history:", chatHistory);
 
         // TODO: Don't extract these from env
         const agentConfig: AgentConfig = {
@@ -106,12 +108,6 @@ function setupIpcHandlers(): void {
         // Get reasonOnly flag from options
         const finalReasonOnly = options?.reasonOnly === true;
 
-        // Convert serialized format back to Map if needed
-        let logContext: Map<any, any> | undefined = undefined;
-        if (serializedLogContext && Array.isArray(serializedLogContext)) {
-          logContext = new Map(serializedLogContext);
-        }
-
         // Send updates to renderer via mainWindow
         const onUpdate = (update: any) => {
           if (mainWindow) {
@@ -121,6 +117,7 @@ function setupIpcHandlers(): void {
 
         const result = await invokeAgent({
           query,
+          chatHistory,
           repoPath: agentConfig.repoPath,
           codebaseOverviewPath: agentConfig.codebaseOverviewPath,
           observabilityPlatform: agentConfig.observabilityPlatform,
@@ -131,16 +128,10 @@ function setupIpcHandlers(): void {
           onUpdate: onUpdate,
         });
 
-        return {
-          success: true,
-          data: result,
-        };
+        return result;
       } catch (error) {
         console.error("Error invoking agent:", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        };
+        throw error;
       }
     }
   );
