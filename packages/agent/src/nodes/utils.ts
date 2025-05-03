@@ -1,6 +1,6 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
 
-import { AgentStep, CodeSearchStep, LogSearchStep } from "..";
+import { AgentStep, ChatMessage, CodeSearchStep, LogSearchStep } from "..";
 import { LogSearchInput, SpanSearchInput } from "../types/tools";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
@@ -18,12 +18,6 @@ export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: 
   }
 
   return toolCall;
-}
-
-export function formatChatHistory(chatHistory: string[]): string {
-  return chatHistory.length > 0
-    ? "\n\n" + chatHistory.map((entry, i) => `${i + 1}. ${entry}`).join("\n\n")
-    : "No previous context gathered.";
 }
 
 export function formatLogQuery(logQuery: Partial<LogSearchInput>): string {
@@ -175,6 +169,40 @@ export function formatAgentSteps(steps: AgentStep[]): string {
         return formatSingleCodeSearchStep(step);
       }
       return "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+export function formatChatHistory(messages: ChatMessage[]): string {
+  if (!messages || messages.length === 0) {
+    return "No conversation history.";
+  }
+
+  return messages
+    .map((message) => {
+      if (message.role === "user") {
+        return `User:\n${message.content}`;
+      } else {
+        let formattedMessage = "Assistant:";
+
+        // Add gathered context if there are steps
+        if (message.steps && message.steps.length > 0) {
+          formattedMessage += `\nGathered Context:\n${formatAgentSteps(message.steps)}`;
+        }
+
+        // Add response if it exists
+        if (message.response) {
+          formattedMessage += `\n\nResponse: ${message.response}`;
+        }
+
+        // Add error if it exists
+        if (message.error) {
+          formattedMessage += `\n\nError: ${message.error}`;
+        }
+
+        return formattedMessage;
+      }
     })
     .filter(Boolean)
     .join("\n\n");

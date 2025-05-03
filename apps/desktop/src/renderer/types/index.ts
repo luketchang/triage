@@ -2,13 +2,13 @@
 
 // Import types from packages instead of redefining them
 import {
-  AssistantMessage as AgentMessage,
+  AssistantMessage as AgentAssistantMessage,
+  ChatMessage as AgentChatMessage,
   AgentStep,
   AgentStreamUpdate,
-  CodePostprocessing,
+  UserMessage as AgentUserMessage,
   CodePostprocessingFact,
   CodePostprocessingStep,
-  LogPostprocessing,
   LogPostprocessingFact,
   LogPostprocessingStep,
   LogSearchInput,
@@ -32,9 +32,11 @@ import {
 
 // Re-export imported types
 export type {
-  AgentMessage,
+  AgentAssistantMessage,
+  AgentChatMessage,
   AgentStep,
   AgentStreamUpdate,
+  AgentUserMessage,
   CodePostprocessingFact,
   CodePostprocessingStep,
   IntegrationType,
@@ -118,6 +120,11 @@ export interface LogSearchPair {
   results: LogsWithPagination | string;
 }
 
+export interface CodeSearchPair {
+  filepath: string;
+  code: string;
+}
+
 // Similar to LogSearchPair, but for traces
 export interface TraceSearchPair {
   input: TraceSearchInput;
@@ -188,6 +195,12 @@ export interface LogSearchStage {
   queries: LogSearchPair[];
 }
 
+export interface CodeSearchStage {
+  type: "codeSearch";
+  id: string;
+  retrievedCode: CodeSearchPair[];
+}
+
 export interface ReasoningStage {
   type: "reasoning";
   id: string;
@@ -250,14 +263,4 @@ export interface PostprocessedLogSearchInput extends LogSearchInputCore {
   title?: string;
   reasoning?: string;
   summary?: string;
-}
-
-// Interface for chat API responses
-export interface ChatResponse {
-  success: boolean;
-  content: string;
-  logContext?: Map<LogSearchInputCore, LogsWithPagination | string>;
-  codeContext?: Map<string, string>;
-  logPostprocessing: LogPostprocessing | null;
-  codePostprocessing: CodePostprocessing | null;
 }

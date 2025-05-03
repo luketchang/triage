@@ -1,2 +1,2 @@
-export * from "./outputs";
+export * from "./message";
 export * from "./tools";

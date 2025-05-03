@@ -2,27 +2,16 @@ import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import { AgentStep, AgentStreamUpdate, ReasoningStep } from "../index";
+import { AgentStep, AgentStreamUpdate, ChatMessage, ReasoningStep } from "../index";
 import { logRequestToolSchema, RequestToolCalls } from "../types/tools";
 
-import { formatAgentSteps, formatFacetValues } from "./utils";
+import { formatAgentSteps, formatChatHistory, formatFacetValues } from "./utils";
 type ReasoningResponse = ReasoningStep | RequestToolCalls;
-
-export interface ReasoningParams {
-  query: string;
-  codebaseOverview: string;
-  fileTree: string;
-  logLabelsMap: Map<string, string[]>;
-  spanLabelsMap: Map<string, string[]>;
-  chatHistory: string[];
-  codeContext: Map<string, string>;
-  logContext: Map<string, string>;
-  spanContext: Map<string, string>;
-}
 
 // TODO: some unused params, will fix
 export const createPrompt = ({
   query,
+  chatHistory,
   repoPath,
   codebaseOverview,
   fileTree,
@@ -31,6 +20,7 @@ export const createPrompt = ({
   agentSteps,
 }: {
   query: string;
+  chatHistory: ChatMessage[];
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
@@ -74,9 +64,13 @@ ${formatFacetValues(logLabelsMap)}
 ${formatFacetValues(spanLabelsMap)}
 </span_labels>
 
-<gathered_context>
+<chat_history>
+${formatChatHistory(chatHistory)}
+</chat_history>
+
+<current_gathered_context>
 ${formatAgentSteps(agentSteps)}
-</gathered_context>
+</current_gathered_context>
 `;
 
   return prompt;
@@ -92,6 +86,7 @@ export class Reasoner {
   @timer
   async invoke(params: {
     query: string;
+    chatHistory: ChatMessage[];
     repoPath: string;
     codebaseOverview: string;
     fileTree: string;

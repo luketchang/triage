@@ -2,6 +2,11 @@ import { HighLevelUpdate, IntermediateUpdate } from "@triage/agent";
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import { AgentStage, AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
+import {
+  assertStageType,
+  convertAgentStepsToStages,
+  convertToAgentChatMessages,
+} from "../utils/agentDesktopConversion";
 import { CellUpdateManager } from "../utils/CellUpdateManager";
 import { generateId } from "../utils/formatters";
 
@@ -123,15 +128,6 @@ export function useChat() {
       let updatedStage: AgentStage;
 
       // Helper types and assertion
-      type StageOf<T extends AgentStage["type"]> = Extract<AgentStage, { type: T }>;
-      function assertStageType<T extends AgentStage["type"]>(
-        stage: AgentStage,
-        type: T
-      ): asserts stage is StageOf<T> {
-        if (stage.type !== type) {
-          throw new Error(`Expected stage.type to be ${type}, got ${stage.type}`);
-        }
-      }
 
       switch (update.step.type) {
         case "logSearch": {
@@ -202,6 +198,8 @@ export function useChat() {
   const sendMessage = async (): Promise<void> => {
     if (!newMessage.trim()) return;
 
+    let updatedMessages = [...messages];
+
     // Create a new user message with attached context items
     const userMessage: UserMessage = {
       id: generateId(),
@@ -211,14 +209,16 @@ export function useChat() {
       contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
     };
 
+    updatedMessages = [...updatedMessages, userMessage];
+
     // Store context items to attach to message
-    const contextItemsToAttach = [...contextItems];
+    const _contextItemsToAttach = [...contextItems]; // TODO: add this back in once we support attaching context
 
     // Clear context items immediately after creating the message
     setContextItems([]);
 
     // Update the messages state
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    setMessages(updatedMessages);
 
     // Clear the input field
     setNewMessage("");
@@ -236,7 +236,9 @@ export function useChat() {
     };
 
     // Add the assistant message to the messages array
-    setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+    const updatedMessagesForAgent = updatedMessages; // NOTE: we do not want to pass in the "Thinking..." message to the agent so we don't include in chat history passed to agent
+    updatedMessages = [...updatedMessages, assistantMessage];
+    setMessages(updatedMessages);
 
     // Create a CellUpdateManager to handle updates to the cell
     const manager = new CellUpdateManager(assistantMessage, (updatedAssistantMessage) => {
@@ -244,10 +246,10 @@ export function useChat() {
       setMessages((prevMessages) =>
         prevMessages.map((message) => {
           if (message.role === "assistant" && message.id === assistantMessage.id) {
-            // Return the message now with the updated cell data
+            // Return the message now with the updated cell data, preserving all properties
             return {
               ...message,
-              stages: updatedAssistantMessage.stages,
+              ...updatedAssistantMessage, // Copy all properties from updatedAssistantMessage
             };
           }
           return message;
@@ -260,7 +262,10 @@ export function useChat() {
 
     try {
       // Determine which API to call based on chat mode
-      const agentMessage = await api.agentChat(newMessage, contextItemsToAttach);
+      const agentMessage = await api.invokeAgent(
+        newMessage,
+        convertToAgentChatMessages(updatedMessagesForAgent)
+      );
 
       if (agentMessage && !agentMessage.error) {
         // Update the cell with the final response
@@ -268,45 +273,16 @@ export function useChat() {
           ...cell,
           response:
             agentMessage.response || "I processed your request but got no response content.",
-          logPostprocessing:
-            agentMessage.steps.find((step) => step.type === "logPostprocessing") || null,
-          codePostprocessing:
-            agentMessage.steps.find((step) => step.type === "codePostprocessing") || null,
+          stages: convertAgentStepsToStages(agentMessage.steps ?? []),
         }));
-
-        // When message is done being constructed, update the state once more
-        // Also update the message content to match the cell response
-        setMessages((prevMessages) =>
-          prevMessages.map((message) => {
-            if (message.role === "assistant" && message.id === assistantMessage.id) {
-              return {
-                ...message,
-                response: agentMessage.response || message.response,
-              };
-            }
-            return message;
-          })
-        );
       } else {
         // Handle error response
         manager.queueUpdate((cell) => ({
           ...cell,
+          response:
+            "Sorry, I encountered an error processing your request. Please try again later.",
           error: "Sorry, I encountered an error processing your request. Please try again later.",
         }));
-
-        // Also update the message content with the error
-        setMessages((prevMessages) =>
-          prevMessages.map((message) => {
-            if (message.role === "assistant" && message.id === assistantMessage.id) {
-              return {
-                ...message,
-                content:
-                  "Sorry, I encountered an error processing your request. Please try again later.",
-              };
-            }
-            return message;
-          })
-        );
       }
     } catch (error) {
       // Log the error
@@ -315,22 +291,9 @@ export function useChat() {
       // Update the cell with the error
       manager.queueUpdate((cell) => ({
         ...cell,
+        response: "Sorry, I encountered an error processing your request. Please try again later.",
         error: "Sorry, I encountered an error processing your request. Please try again later.",
       }));
-
-      // Also update the message content with the error
-      setMessages((prevMessages) =>
-        prevMessages.map((message) => {
-          if (message.role === "assistant" && message.id === assistantMessage.id) {
-            return {
-              ...message,
-              content:
-                "Sorry, I encountered an error processing your request. Please try again later.",
-            };
-          }
-          return message;
-        })
-      );
     } finally {
       // Hide the thinking indicator
       setIsThinking(false);

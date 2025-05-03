@@ -1,27 +1,17 @@
 import { ApiResponse } from "../electron.d";
 import mockElectronAPI from "../electronApiMock";
 import {
+  AgentAssistantMessage,
+  AgentChatMessage,
   AgentConfig,
-  AgentMessage,
   AgentStreamUpdate,
-  ContextItem,
   FacetData,
   LogQueryParams,
-  LogSearchInputCore,
-  LogsWithPagination,
   TraceQueryParams,
 } from "../types";
 
 // Get mock API setting from environment
 const USE_MOCK_API = window.env.USE_MOCK_API;
-
-// Helper function to create an error response
-const createErrorResponse = (errorMessage: string): AgentMessage => ({
-  role: "assistant",
-  response: null,
-  steps: [],
-  error: errorMessage,
-});
 
 // Helper function to check if electron API exists and has specific methods
 const isElectronAPIAvailable = () => {
@@ -61,24 +51,13 @@ const api = {
 
   invokeAgent: async (
     query: string,
-    logContext: Map<LogSearchInputCore, LogsWithPagination | string> | null = null,
+    chatHistory: AgentChatMessage[],
     options?: { reasonOnly?: boolean }
-  ) => {
+  ): Promise<AgentAssistantMessage> => {
     if (USE_MOCK_API || !isMethodAvailable("invokeAgent")) {
-      console.info(
-        "Using mock invokeAgent",
-        logContext ? "with logContext" : "without logContext",
-        options
-      );
-      return mockElectronAPI.invokeAgent(query, logContext, options);
+      return mockElectronAPI.invokeAgent(query, chatHistory, options);
     } else {
-      console.info(
-        "Using real electronAPI.invokeAgent",
-        logContext ? "with logContext" : "without logContext",
-        options
-      );
-
-      return window.electronAPI.invokeAgent(query, logContext, options);
+      return window.electronAPI.invokeAgent(query, chatHistory, options);
     }
   },
 
@@ -189,41 +168,6 @@ const api = {
         console.error("Error in getSpansFacetValues:", error);
         return []; // Return empty array on error
       }
-    }
-  },
-
-  agentChat: async (message: string, contextItems: ContextItem[]): Promise<AgentMessage> => {
-    // For now, we'll use the invokeAgent method and adapt the response
-    console.info("Using agentChat with context items:", contextItems.length);
-
-    // Aggregate logContext from contextItems
-    const logContext: Map<LogSearchInputCore, LogsWithPagination | string> = new Map();
-
-    // Iterate through contextItems to extract log context
-    contextItems.forEach((item) => {
-      if (item.type === "logSearch") {
-        // Extract the input and results from LogSearchPair
-        const { input, results } = item.data;
-        // Add to the map
-        logContext.set(input, results);
-      }
-    });
-
-    try {
-      // Invoke the agent with the user's query and logContext
-      const agentResponse = await api.invokeAgent(message, logContext.size > 0 ? logContext : null);
-
-      if (!agentResponse.success || !agentResponse.data) {
-        return createErrorResponse("Failed to process your request");
-      }
-
-      // Extract data from the response
-      const data = agentResponse.data;
-
-      return data;
-    } catch (error) {
-      console.error("Error in agentChat:", error);
-      return createErrorResponse("An error occurred while processing your request");
     }
   },
 };
