@@ -16,10 +16,12 @@ import { AgentConfig } from "../src/config.js";
 import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 import { AgentAssistantMessage } from "../src/renderer/types/index.js";
 // Import chat handlers directly
+import { fileURLToPath } from "url";
 import { cleanupChatHandlers, setupChatHandlers } from "./chat-handlers.js";
 
-// Use consistent path for preload
-const DIST_ELECTRON = path.join(process.cwd(), "dist-electron");
+// Get directory name for preload script path
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Log the configuration to verify it's correctly loaded
 console.log("Using environment configuration:", {
@@ -46,7 +48,7 @@ function createWindow(): void {
     width: 1280,
     height: 800,
     webPreferences: {
-      preload: path.join(DIST_ELECTRON, "index.js"),
+      preload: path.join(__dirname, "../../dist-electron/preload/index.js"),
       nodeIntegration: false,
       contextIsolation: true,
     },

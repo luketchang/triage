@@ -4,7 +4,7 @@ import { AssistantMessage, UserMessage } from "../src/renderer/types";
 
 // Store the environment values we're exposing for logging
 const tracesEnabled = process.env.TRACES_ENABLED === "true";
-const useMockApi = process.env.USE_MOCK_API === "true";
+const useMockApi = false;
 
 /**
  * Expose environment variables to the renderer process
@@ -104,6 +104,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * Clear the current chat
    */
   clearChat: () => ipcRenderer.invoke("chat:clear"),
+
+  /**
+   * Get database statistics for diagnostic purposes
+   */
+  getDatabaseStats: () => ipcRenderer.invoke("chat:get-db-stats"),
 });
 
 /**

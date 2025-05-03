@@ -22,6 +22,7 @@ const isElectronAPIAvailable = () => {
   console.info("[API DEBUG] Is electronAPI available:", available);
   if (available) {
     console.info("[API DEBUG] electronAPI methods:", Object.keys(window.electronAPI));
+    // This won't show non-enumerable properties, which is fine
   }
   return available;
 };
@@ -31,11 +32,40 @@ const isMethodAvailable = (methodName: string) => {
   let methodAvailable = false;
 
   if (electronAvailable) {
-    methodAvailable =
-      typeof window.electronAPI[methodName as keyof typeof window.electronAPI] === "function";
-    console.info(`[API DEBUG] Is method '${methodName}' available:`, methodAvailable);
+    if (window.electronAPI) {
+      try {
+        // Try direct method access first
+        methodAvailable =
+          typeof window.electronAPI[methodName as keyof typeof window.electronAPI] === "function";
+        console.info(
+          `[API DEBUG] Method '${methodName}' exists as direct property:`,
+          methodAvailable
+        );
+
+        // If it's not a function directly, check non-enumerable properties
+        if (!methodAvailable) {
+          // Try with Object.getOwnPropertyNames
+          const allProps = Object.getOwnPropertyNames(window.electronAPI);
+          const exists = allProps.includes(methodName);
+          console.info(`[API DEBUG] Method '${methodName}' exists as property name:`, exists);
+
+          if (exists) {
+            methodAvailable =
+              typeof window.electronAPI[methodName as keyof typeof window.electronAPI] ===
+              "function";
+            console.info(
+              `[API DEBUG] Non-enumerable property '${methodName}' is a function:`,
+              methodAvailable
+            );
+          }
+        }
+      } catch (err) {
+        console.error(`[API DEBUG] Error checking method '${methodName}':`, err);
+      }
+    }
   }
 
+  console.info(`[API DEBUG] Final result - Is method '${methodName}' available:`, methodAvailable);
   return electronAvailable && methodAvailable;
 };
 
@@ -220,6 +250,18 @@ const api = {
     } else {
       console.info("Using real electronAPI.clearChat");
       return window.electronAPI.clearChat();
+    }
+  },
+
+  getDatabaseStats: async (): Promise<any> => {
+    console.info("[API DEBUG] getDatabaseStats called");
+
+    if (USE_MOCK_API || !isMethodAvailable("getDatabaseStats")) {
+      console.info("Mock getDatabaseStats - not implemented in mock mode");
+      return { error: "Mock mode" };
+    } else {
+      console.info("Using real electronAPI.getDatabaseStats");
+      return window.electronAPI.getDatabaseStats();
     }
   },
 };

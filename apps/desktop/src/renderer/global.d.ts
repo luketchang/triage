@@ -28,6 +28,35 @@ declare global {
       USE_MOCK_API: boolean;
     };
   }
+
+  interface ElectronAPI {
+    // Agent methods
+    invokeAgent: (
+      query: string,
+      chatHistory: any[],
+      options?: { reasonOnly?: boolean }
+    ) => Promise<any>;
+    onAgentUpdate: (callback: (update: any) => void) => () => void;
+    getAgentConfig: () => Promise<any>;
+    updateAgentConfig: (newConfig: any) => Promise<any>;
+
+    // Observability methods
+    fetchLogs: (params: any) => Promise<any>;
+    getLogsFacetValues: (start: string, end: string) => Promise<any>;
+    fetchTraces: (params: any) => Promise<any>;
+    getSpansFacetValues: (start: string, end: string) => Promise<any>;
+
+    // File system methods
+    getFileTree?: (path: string) => Promise<any>;
+    getFileContent?: (path: string) => Promise<any>;
+
+    // Chat persistence methods
+    saveUserMessage: (message: any) => Promise<number | null>;
+    saveAssistantMessage: (message: any) => Promise<number | null>;
+    loadChatMessages: () => Promise<any[]>;
+    clearChat: () => Promise<boolean>;
+    getDatabaseStats: () => Promise<any>;
+  }
 }
 
 // This export is needed to make this a module
