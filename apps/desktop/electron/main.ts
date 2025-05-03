@@ -7,7 +7,6 @@ import { app, BrowserWindow, ipcMain, shell } from "electron";
 import pkg from "electron-updater";
 import * as fs from "fs";
 import * as path from "path";
-import { fileURLToPath } from "url";
 const { autoUpdater } = pkg;
 // Import config from @triage/config package
 import { config } from "@triage/config";
@@ -16,10 +15,11 @@ import { AgentConfig } from "../src/config.js";
 // Import observability platform functions
 import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 import { AgentAssistantMessage } from "../src/renderer/types/index.js";
+// Import chat handlers
+import { cleanupChatHandlers, setupChatHandlers } from "../src/electron/handlers/chat-handlers";
 
-// Get directory name for preload script path
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Use consistent path for preload
+const DIST_ELECTRON = path.join(process.cwd(), "dist-electron");
 
 // Log the configuration to verify it's correctly loaded
 console.log("Using environment configuration:", {
@@ -46,7 +46,7 @@ function createWindow(): void {
     width: 1280,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, "../../dist-electron/index.js"),
+      preload: path.join(DIST_ELECTRON, "index.js"),
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -374,6 +374,7 @@ async function getDirectoryTree(dirPath: string, basePath: string = ""): Promise
  */
 function init(): void {
   setupIpcHandlers();
+  setupChatHandlers(); // Set up chat handlers
   createWindow();
 }
 
@@ -390,4 +391,9 @@ app.on("activate", () => {
   if (mainWindow === null) {
     createWindow();
   }
+});
+
+// Clean up handlers when app quits
+app.on("quit", () => {
+  cleanupChatHandlers();
 });

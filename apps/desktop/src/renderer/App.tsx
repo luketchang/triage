@@ -206,6 +206,7 @@ function App(): JSX.Element {
         return (
           <ChatView
             messages={chatState.messages}
+            setMessages={chatState.setMessages}
             newMessage={chatState.newMessage}
             setNewMessage={chatState.setNewMessage}
             sendMessage={chatState.sendMessage}
@@ -214,12 +215,14 @@ function App(): JSX.Element {
             removeContextItem={chatState.removeContextItem}
             initialChatMode={chatState.chatMode}
             toggleChatMode={chatState.toggleChatMode}
+            clearChat={chatState.clearChat}
           />
         );
       default:
         return (
           <ChatView
             messages={chatState.messages}
+            setMessages={chatState.setMessages}
             newMessage={chatState.newMessage}
             setNewMessage={chatState.setNewMessage}
             sendMessage={chatState.sendMessage}
@@ -228,6 +231,7 @@ function App(): JSX.Element {
             removeContextItem={chatState.removeContextItem}
             initialChatMode={chatState.chatMode}
             toggleChatMode={chatState.toggleChatMode}
+            clearChat={chatState.clearChat}
           />
         );
     }

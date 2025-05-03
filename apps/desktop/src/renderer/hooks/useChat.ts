@@ -22,6 +22,45 @@ export function useChat() {
   // Track the current cell manager for active streaming responses
   const [cellManager, setCellManager] = useState<CellUpdateManager | null>(null);
 
+  // Load saved messages when the hook initializes
+  useEffect(() => {
+    const loadSavedMessages = async () => {
+      try {
+        // Type assertion is necessary because TypeScript doesn't know about the new methods
+        const api = window.electronAPI as any;
+        const savedMessages = await api.loadChatMessages();
+        if (savedMessages && savedMessages.length > 0) {
+          setMessages(savedMessages);
+        }
+      } catch (error) {
+        console.error("Error loading saved messages:", error);
+      }
+    };
+
+    loadSavedMessages();
+  }, []);
+
+  // Watch for new assistant messages and save them
+  useEffect(() => {
+    // Look for the most recent assistant message that might need saving
+    const assistantMessages = messages.filter(
+      (msg) => msg.role === "assistant"
+    ) as AssistantMessage[];
+
+    if (assistantMessages.length > 0) {
+      const latestMessage = assistantMessages[assistantMessages.length - 1];
+
+      // Don't save "Thinking..." messages
+      if (latestMessage.response !== "Thinking...") {
+        // Save to database using type assertion
+        const api = window.electronAPI as any;
+        api
+          .saveAssistantMessage(latestMessage)
+          .catch((err: Error) => console.error("Error saving assistant message:", err));
+      }
+    }
+  }, [messages]);
+
   // Register for agent updates when we have an active cell manager
   useEffect(() => {
     if (!cellManager) return;
@@ -195,6 +234,19 @@ export function useChat() {
     setContextItems((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const clearChat = async (): Promise<void> => {
+    try {
+      // Use type assertion for the electronAPI call
+      const api = window.electronAPI as any;
+      const success = await api.clearChat();
+      if (success) {
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error("Error clearing chat:", error);
+    }
+  };
+
   const sendMessage = async (): Promise<void> => {
     if (!newMessage.trim()) return;
 
@@ -219,6 +271,15 @@ export function useChat() {
 
     // Update the messages state
     setMessages(updatedMessages);
+
+    // Save the user message to database
+    try {
+      // Type assertion is necessary because TypeScript doesn't know about the new methods
+      const api = window.electronAPI as any;
+      await api.saveUserMessage(userMessage);
+    } catch (error) {
+      console.error("Error saving user message:", error);
+    }
 
     // Clear the input field
     setNewMessage("");
@@ -308,12 +369,14 @@ export function useChat() {
     newMessage,
     setNewMessage,
     messages,
-    sendMessage,
+    setMessages,
     isThinking,
     contextItems,
     setContextItems,
+    sendMessage,
     removeContextItem,
     chatMode,
     toggleChatMode,
+    clearChat,
   };
 }

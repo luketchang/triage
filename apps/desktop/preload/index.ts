@@ -1,5 +1,6 @@
 import { AgentStreamUpdate, ChatMessage } from "@triage/agent";
 import { contextBridge, ipcRenderer } from "electron";
+import { AssistantMessage, UserMessage } from "../src/renderer/types";
 
 // Store the environment values we're exposing for logging
 const tracesEnabled = process.env.TRACES_ENABLED === "true";
@@ -94,6 +95,29 @@ contextBridge.exposeInMainWorld("electronAPI", {
    */
   getFileContent: (repoPath: string, filePath: string) =>
     ipcRenderer.invoke("get-file-content", repoPath, filePath),
+
+  /**
+   * Save a user message to the database
+   * @param message The user message to save
+   */
+  saveUserMessage: (message: UserMessage) => ipcRenderer.invoke("chat:save-user-message", message),
+
+  /**
+   * Save an assistant message to the database
+   * @param message The assistant message to save
+   */
+  saveAssistantMessage: (message: AssistantMessage) =>
+    ipcRenderer.invoke("chat:save-assistant-message", message),
+
+  /**
+   * Load all messages from the current chat
+   */
+  loadChatMessages: () => ipcRenderer.invoke("chat:get-messages"),
+
+  /**
+   * Clear the current chat
+   */
+  clearChat: () => ipcRenderer.invoke("chat:clear"),
 });
 
 /**

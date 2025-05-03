@@ -1,10 +1,30 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView";
-import { ChatMessage, ContextItem, AssistantMessage } from "../types";
+import { AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
+
+// Add this import for type checking
+declare global {
+  interface Window {
+    electronAPI: {
+      saveUserMessage: (message: UserMessage) => Promise<number | null>;
+      saveAssistantMessage: (message: AssistantMessage) => Promise<number | null>;
+      loadChatMessages: () => Promise<ChatMessage[]>;
+      clearChat: () => Promise<boolean>;
+      // other API methods...
+      [key: string]: any;
+    };
+  }
+}
+
+// Generate a unique ID for new messages
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 11);
+}
 
 interface ChatViewProps {
   messages: ChatMessage[];
+  setMessages: (messages: ChatMessage[]) => void;
   newMessage: string;
   setNewMessage: (message: string) => void;
   sendMessage: () => Promise<void>;
@@ -13,10 +33,12 @@ interface ChatViewProps {
   removeContextItem?: (id: string) => void;
   initialChatMode?: "agent" | "manual";
   toggleChatMode?: () => void;
+  clearChat?: () => Promise<void>;
 }
 
 const ChatView: React.FC<ChatViewProps> = ({
   messages,
+  setMessages,
   newMessage,
   setNewMessage,
   sendMessage,
@@ -25,12 +47,29 @@ const ChatView: React.FC<ChatViewProps> = ({
   removeContextItem,
   initialChatMode = "agent",
   toggleChatMode,
+  clearChat,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hoveredContextId, setHoveredContextId] = useState<string | null>(null);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [chatMode, setChatMode] = useState<"agent" | "manual">(initialChatMode);
+
+  // Load saved messages when component mounts
+  useEffect(() => {
+    const loadSavedMessages = async () => {
+      try {
+        const savedMessages = await window.electronAPI.loadChatMessages();
+        if (savedMessages && savedMessages.length > 0) {
+          setMessages(savedMessages);
+        }
+      } catch (error) {
+        console.error("Error loading saved messages:", error);
+      }
+    };
+
+    loadSavedMessages();
+  }, [setMessages]);
 
   // Function to resize textarea based on content
   const resizeTextarea = useCallback(() => {
@@ -128,7 +167,7 @@ const ChatView: React.FC<ChatViewProps> = ({
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       if (newMessage.trim()) {
-        sendMessage();
+        handleSendMessage();
       }
     }
   };
@@ -152,8 +191,44 @@ const ChatView: React.FC<ChatViewProps> = ({
     setModeMenuOpen(false);
   };
 
-  // Wrapper for sendMessage to ensure textarea is reset
+  // Use the provided clearChat function if available, otherwise use local implementation
+  const handleClearChat = async () => {
+    if (clearChat) {
+      await clearChat();
+    } else {
+      try {
+        const api = window.electronAPI as any;
+        const success = await api.clearChat();
+        if (success) {
+          setMessages([]);
+        }
+      } catch (error) {
+        console.error("Error clearing chat:", error);
+      }
+    }
+  };
+
+  // Enhanced send message function to save messages
   const handleSendMessage = async () => {
+    // Create a new user message
+    const userMessage: UserMessage = {
+      id: generateId(),
+      role: "user",
+      timestamp: new Date(),
+      content: newMessage,
+      contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
+    };
+
+    // Add to UI state
+    setMessages([...messages, userMessage]);
+
+    // Save to database
+    await window.electronAPI.saveUserMessage(userMessage);
+
+    // Clear input
+    setNewMessage("");
+
+    // Call the original send function to generate response
     await sendMessage();
 
     // Force reset textarea height after sending
@@ -165,13 +240,32 @@ const ChatView: React.FC<ChatViewProps> = ({
       }, 50);
     }
 
-    // Ensure context items are cleared even if there's an issue with the hook's clearing
+    // Ensure context items are cleared
     if (contextItems.length > 0 && removeContextItem) {
-      // Create a copy to avoid modification during iteration
       const itemsToRemove = [...contextItems];
       itemsToRemove.forEach((item) => removeContextItem(item.id));
     }
   };
+
+  // Watch for new assistant messages and save them
+  useEffect(() => {
+    // Look for the most recent assistant message that might need saving
+    const assistantMessages = messages.filter(
+      (msg) => msg.role === "assistant"
+    ) as AssistantMessage[];
+
+    if (assistantMessages.length > 0) {
+      const latestMessage = assistantMessages[assistantMessages.length - 1];
+
+      // Don't save "Thinking..." messages
+      if (latestMessage.response !== "Thinking...") {
+        // Save to database
+        window.electronAPI
+          .saveAssistantMessage(latestMessage)
+          .catch((err: Error) => console.error("Error saving assistant message:", err));
+      }
+    }
+  }, [messages]);
 
   // Format timestamp range in a compact way
   const formatTimeRange = (start: string, end: string): string => {
@@ -374,6 +468,27 @@ const ChatView: React.FC<ChatViewProps> = ({
           height: "100%",
         }}
       >
+        {/* Add Clear Chat Button */}
+        <div
+          className="chat-controls"
+          style={{ padding: "8px", display: "flex", justifyContent: "flex-end" }}
+        >
+          <button
+            onClick={handleClearChat}
+            className="clear-chat-button"
+            style={{
+              backgroundColor: "#f44336",
+              color: "white",
+              border: "none",
+              padding: "6px 12px",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            Clear Chat
+          </button>
+        </div>
+
         <div
           className="chat-messages-container"
           style={{
