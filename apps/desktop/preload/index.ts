@@ -4,7 +4,7 @@ import { AssistantMessage, UserMessage } from "../src/renderer/types";
 
 // Store the environment values we're exposing for logging
 const tracesEnabled = process.env.TRACES_ENABLED === "true";
-const useMockApi = false;
+const useMockApi = process.env.USE_MOCK_API === "true";
 
 /**
  * Expose environment variables to the renderer process

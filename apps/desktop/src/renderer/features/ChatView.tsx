@@ -4,20 +4,6 @@ import CellView from "../components/CellView";
 import api from "../services/api";
 import { AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
 
-// Add this import for type checking
-declare global {
-  interface Window {
-    electronAPI: {
-      saveUserMessage: (message: UserMessage) => Promise<number | null>;
-      saveAssistantMessage: (message: AssistantMessage) => Promise<number | null>;
-      loadChatMessages: () => Promise<ChatMessage[]>;
-      clearChat: () => Promise<boolean>;
-      // other API methods...
-      [key: string]: any;
-    };
-  }
-}
-
 // Generate a unique ID for new messages
 function generateId(): string {
   return Math.random().toString(36).substring(2, 11);
@@ -215,9 +201,6 @@ const ChatView: React.FC<ChatViewProps> = ({
     // Add to UI state
     setMessages([...messages, userMessage]);
 
-    // Save to database
-    await api.saveUserMessage(userMessage);
-
     // Clear input
     setNewMessage("");
 
@@ -239,26 +222,6 @@ const ChatView: React.FC<ChatViewProps> = ({
       itemsToRemove.forEach((item) => removeContextItem(item.id));
     }
   };
-
-  // Watch for new assistant messages and save them
-  useEffect(() => {
-    // Look for the most recent assistant message that might need saving
-    const assistantMessages = messages.filter(
-      (msg) => msg.role === "assistant"
-    ) as AssistantMessage[];
-
-    if (assistantMessages.length > 0) {
-      const latestMessage = assistantMessages[assistantMessages.length - 1];
-
-      // Don't save "Thinking..." messages
-      if (latestMessage.response !== "Thinking...") {
-        // Save to database
-        api
-          .saveAssistantMessage(latestMessage)
-          .catch((err: Error) => console.error("Error saving assistant message:", err));
-      }
-    }
-  }, [messages]);
 
   // Format timestamp range in a compact way
   const formatTimeRange = (start: string, end: string): string => {

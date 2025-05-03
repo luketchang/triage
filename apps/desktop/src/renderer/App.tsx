@@ -9,7 +9,6 @@ import { ContextItem, LogSearchInputCore, TabType, TraceForAgent } from "./types
 import { generateId } from "./utils/formatters";
 
 // Components
-import DbDebug from "./components/DbDebug";
 import NavigationSidebar from "./components/NavigationSidebar";
 
 // Feature Views
@@ -249,9 +248,6 @@ function App(): JSX.Element {
 
       {/* Main Content Area */}
       <div className="main-content-wrapper">{renderMainContent()}</div>
-
-      {/* DB Debug Component */}
-      <DbDebug />
     </div>
   );
 }

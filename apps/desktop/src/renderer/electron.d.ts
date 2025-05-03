@@ -128,6 +128,12 @@ declare global {
        * @returns Promise with success status
        */
       clearChat: () => Promise<boolean>;
+
+      /**
+       * Get database stats
+       * @returns Promise with database stats
+       */
+      getDatabaseStats: () => Promise<any>;
     };
   }
 }

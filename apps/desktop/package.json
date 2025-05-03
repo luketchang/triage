@@ -2,7 +2,6 @@
   "name": "triage-desktop",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
   "scripts": {
     "dev": "vite",
     "start": "pnpm run compile && vite & (wait-on http://localhost:5174 && cross-env electron dist-electron/electron/main.js)",
