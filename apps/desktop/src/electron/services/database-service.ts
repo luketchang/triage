@@ -1,5 +1,5 @@
 import BetterSqlite3 from "better-sqlite3";
-import { app } from "electron";
+import fs from "fs";
 import { Kysely, SqliteDialect, sql } from "kysely";
 import path from "path";
 import {
@@ -17,8 +17,12 @@ export class DatabaseService {
   private initialized = false;
 
   constructor() {
-    const userDataPath = app.getPath("userData");
-    const dbPath = path.join(userDataPath, "triage-chats.db");
+    // Create db directory in root if it doesn't exist
+    const dbDir = path.join(process.cwd(), "db");
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    const dbPath = path.join(dbDir, "triage-chats.db");
 
     try {
       // Create and store the SQLite database instance
