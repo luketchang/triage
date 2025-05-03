@@ -26,8 +26,8 @@ import {
   LogPostprocessingRequest,
   LogSearchInputCore,
   ReasoningRequest,
-  ReviewRequest,
   SpanSearchInputCore,
+  ToolCall,
 } from "./types";
 
 const INITIAL_LOG_REQUEST: LogRequest = {
@@ -45,14 +45,7 @@ const INITIAL_SPAN_REQUEST: SpanRequest = {
 
 export interface TriageAgentState {
   firstPass: boolean;
-  toolCalls: Array<
-    | SpanRequest
-    | LogRequest
-    | ReasoningRequest
-    | ReviewRequest
-    | LogPostprocessingRequest
-    | CodePostprocessingRequest
-  >;
+  toolCalls: ToolCall[];
   query: string;
   repoPath: string;
   codebaseOverview: string;
@@ -300,9 +293,9 @@ export class TriageAgent {
       logger.info("Reviewer confirmed root cause analysis");
 
       // Add log and code post-processing requests to the queue
-      const postProcessingCalls = [];
+      const postProcessingCalls: Array<ToolCall> = [];
       if (this.observabilityFeatures.includes("logs")) {
-        postProcessingCalls.push({ type: "logPostprocessing" } as LogPostprocessingRequest);
+        postProcessingCalls.push({ type: "logPostprocessing" });
       }
       postProcessingCalls.push({ type: "codePostprocessing" } as CodePostprocessingRequest);
 

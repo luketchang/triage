@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    // Recommended by https://moonrepo.dev/docs/guides/javascript/typescript-project-refs#tsconfigoptionsjson
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,  // not what's recommended, but this fixes apps/desktop/src/main/index.ts not finding workspace package dist JS files
+    "incremental": true,
+    "noEmitOnError": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "lib": ["es2022", "DOM", "DOM.Iterable"],
+    // We use NodeNext for compatibility with Node.js and browser environments
+    "module": "NodeNext",
+    "moduleDetection": "force",
+    "moduleResolution": "NodeNext",
+    "noUncheckedIndexedAccess": false,
+    "resolveJsonModule": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": false,
+    "target": "ES2022",
+    "baseUrl": ".",
+    "paths": {
+      "@triage/*": ["packages/*/src"]
+    }
+  }
+} 

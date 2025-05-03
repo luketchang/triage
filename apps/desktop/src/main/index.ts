@@ -6,7 +6,7 @@ import { invokeAgent } from "@triage/agent";
 import { config } from "@triage/config";
 import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
-import { autoUpdater } from "electron-updater";
+import electronUpdater from "electron-updater";
 import { join } from "path";
 import { AgentConfig } from "./config.js";
 
@@ -323,7 +323,7 @@ function createWindow(): void {
 
   // Auto updater in production
   if (process.env.NODE_ENV === "production") {
-    autoUpdater.checkForUpdatesAndNotify();
+    electronUpdater.autoUpdater.checkForUpdatesAndNotify();
   }
 }
 

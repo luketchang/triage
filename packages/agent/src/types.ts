@@ -310,3 +310,11 @@ export function normalizeForKey<T extends { type: string }>(input: T): Omit<T, "
   const { type, ...core } = input;
   return core;
 }
+
+export type ToolCall =
+  | SpanRequest
+  | LogRequest
+  | ReasoningRequest
+  | ReviewRequest
+  | LogPostprocessingRequest
+  | CodePostprocessingRequest;

@@ -15,6 +15,7 @@ import {
   LogsWithPagination,
   ServiceLatency,
   Span,
+  SpanError,
   SpansWithPagination,
   Trace,
   TracesWithPagination,
@@ -30,6 +31,7 @@ export type {
   LogsWithPagination,
   ServiceLatency,
   Span,
+  SpanError,
   SpansWithPagination,
   AgentStreamUpdate as StreamUpdate,
   Trace,
@@ -123,6 +125,20 @@ export interface UIServiceLatency extends ServiceLatency {
 // Define a UI-enhanced version of Trace with visual properties
 export interface UITrace extends Omit<Trace, "serviceBreakdown"> {
   serviceBreakdown: UIServiceLatency[]; // Override with UI-enhanced service latency
+}
+
+// Define UI-enhanced version of Span for the UI components
+export interface UISpan {
+  id: string;
+  service: string;
+  operation: string;
+  resource: string;
+  start: string | Date;
+  end: string | Date;
+  duration: number;
+  children?: UISpan[];
+  error?: SpanError;
+  tags?: Record<string, string>;
 }
 
 // Define a version of Trace for agent consumption without serviceBreakdown

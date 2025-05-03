@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../components/TimeRangePicker";
 import api from "../services/api";
-import { FacetData, Span, TimeRange, Trace, TraceQueryParams, UITrace } from "../types";
+import { FacetData, TimeRange, Trace, TraceQueryParams, UISpan, UITrace } from "../types";
+import { convertSpanHierarchy } from "../utils/traceUtils";
 
 // Mock data for service colors
 const TRACE_COLORS = [
@@ -30,7 +31,7 @@ export function useTraces(options: UseTracesOptions = {}) {
   });
   const [pageCursor, setPageCursor] = useState<string | undefined>(undefined);
   const [selectedTrace, setSelectedTrace] = useState<UITrace | null>(null);
-  const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
+  const [selectedSpan, setSelectedSpan] = useState<UISpan | null>(null);
   const [facets, setFacets] = useState<FacetData[]>([]);
   const [selectedFacets, setSelectedFacets] = useState<string[]>([
     "service",
@@ -144,15 +145,15 @@ export function useTraces(options: UseTracesOptions = {}) {
   const handleTraceSelect = (trace: UITrace | null) => {
     setSelectedTrace(trace);
     if (trace) {
-      // Cast the DisplaySpan to Span since they're structurally compatible for our needs
-      setSelectedSpan(trace.displayTrace.rootSpan as unknown as Span);
+      // Convert DisplaySpan to UISpan
+      setSelectedSpan(convertSpanHierarchy(trace.displayTrace.rootSpan));
     } else {
       setSelectedSpan(null);
     }
   };
 
   // Handle span selection
-  const handleSpanSelect = (span: Span) => {
+  const handleSpanSelect = (span: UISpan) => {
     setSelectedSpan(span);
   };
 

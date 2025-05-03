@@ -4,7 +4,6 @@
  * This module loads environment variables from the .env file
  * before @triage/config or any other modules are imported.
  */
-
 import * as dotenv from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
@@ -42,9 +41,13 @@ function findProjectRoot(startDir: string): string {
   }
 }
 
+process.exit(1);
 // Find and load .env from project root
 const projectRoot = findProjectRoot(currentDirPath);
 const envPath = path.join(projectRoot, ".env");
+
+console.log(`Project root: ${projectRoot}`);
+console.log(`Current dir: ${currentDirPath}`);
 
 console.log(`Looking for .env file at: ${envPath}`);
 

@@ -56,7 +56,7 @@ const TracesView: React.FC<TracesViewProps> = ({
     }
 
     // Tokenize the query
-    let remaining = query.trim();
+    const remaining = query.trim();
 
     // Find facet:value pairs using a simplified approach
     const facetValuePattern = /([a-zA-Z0-9_.-]+):((?:\([^)]+\)|[^\s]+))/g;
