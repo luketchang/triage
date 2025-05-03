@@ -2,9 +2,10 @@
   "name": "@triage/config",
   "version": "0.1.0",
   "private": true,
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "outDir": "dist",
   "scripts": {
-    "dev": "tsx",
+    "dev": "tsc --watch",
     "build": "tsc",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "lint:check": "eslint \"src/**/*.{js,ts}\" --max-warnings 99",

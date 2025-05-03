@@ -2,10 +2,11 @@
   "name": "@triage/observability",
   "version": "0.1.0",
   "private": true,
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "outDir": "dist",
   "scripts": {
+    "dev": "tsc --watch",
     "build": "tsc",
-    "dev": "tsx",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "lint:check": "eslint \"src/**/*.{js,ts}\" --max-warnings 99",
     "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix --max-warnings 99",
