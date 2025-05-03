@@ -15,8 +15,8 @@ import { AgentConfig } from "../src/config.js";
 // Import observability platform functions
 import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 import { AgentAssistantMessage } from "../src/renderer/types/index.js";
-// Import chat handlers
-import { cleanupChatHandlers, setupChatHandlers } from "../src/electron/handlers/chat-handlers";
+// Import chat handlers directly
+import { cleanupChatHandlers, setupChatHandlers } from "./chat-handlers.js";
 
 // Use consistent path for preload
 const DIST_ELECTRON = path.join(process.cwd(), "dist-electron");

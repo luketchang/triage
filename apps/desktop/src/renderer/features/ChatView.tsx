@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView";
+import api from "../services/api";
 import { AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
 
 // Add this import for type checking
@@ -59,7 +60,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   useEffect(() => {
     const loadSavedMessages = async () => {
       try {
-        const savedMessages = await window.electronAPI.loadChatMessages();
+        const savedMessages = await api.loadChatMessages();
         if (savedMessages && savedMessages.length > 0) {
           setMessages(savedMessages);
         }
@@ -191,20 +192,12 @@ const ChatView: React.FC<ChatViewProps> = ({
     setModeMenuOpen(false);
   };
 
-  // Use the provided clearChat function if available, otherwise use local implementation
+  // Use the provided clearChat function if available, otherwise fallback
   const handleClearChat = async () => {
     if (clearChat) {
       await clearChat();
     } else {
-      try {
-        const api = window.electronAPI as any;
-        const success = await api.clearChat();
-        if (success) {
-          setMessages([]);
-        }
-      } catch (error) {
-        console.error("Error clearing chat:", error);
-      }
+      console.error("clearChat function not provided to ChatView component");
     }
   };
 
@@ -223,7 +216,7 @@ const ChatView: React.FC<ChatViewProps> = ({
     setMessages([...messages, userMessage]);
 
     // Save to database
-    await window.electronAPI.saveUserMessage(userMessage);
+    await api.saveUserMessage(userMessage);
 
     // Clear input
     setNewMessage("");
@@ -260,7 +253,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       // Don't save "Thinking..." messages
       if (latestMessage.response !== "Thinking...") {
         // Save to database
-        window.electronAPI
+        api
           .saveAssistantMessage(latestMessage)
           .catch((err: Error) => console.error("Error saving assistant message:", err));
       }

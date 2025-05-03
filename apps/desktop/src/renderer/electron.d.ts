@@ -8,12 +8,15 @@ import {
   AgentAssistantMessage,
   AgentChatMessage,
   AgentConfig,
+  AssistantMessage,
+  ChatMessage,
   FacetData,
   Log,
   LogQueryParams,
   StreamUpdate,
   Trace,
   TraceQueryParams,
+  UserMessage,
 } from "./types";
 
 // Define API response types with consistent error property
@@ -99,6 +102,32 @@ declare global {
        * @returns Promise with the fetched facet values
        */
       getSpansFacetValues: (start: string, end: string) => Promise<ApiResponse<FacetData[]>>;
+
+      /**
+       * Save a user message to the database
+       * @param message The user message to save
+       * @returns Promise with the saved message ID or null if failed
+       */
+      saveUserMessage: (message: UserMessage) => Promise<number | null>;
+
+      /**
+       * Save an assistant message to the database
+       * @param message The assistant message to save
+       * @returns Promise with the saved message ID or null if failed
+       */
+      saveAssistantMessage: (message: AssistantMessage) => Promise<number | null>;
+
+      /**
+       * Load all messages from the current chat
+       * @returns Promise with an array of chat messages
+       */
+      loadChatMessages: () => Promise<ChatMessage[]>;
+
+      /**
+       * Clear the current chat from database and memory
+       * @returns Promise with success status
+       */
+      clearChat: () => Promise<boolean>;
     };
   }
 }

@@ -1,8 +1,8 @@
 ## Build and Test Commands
 
 - Root: `pnpm build`, `pnpm lint`, `pnpm dev`, `pnpm format`
-- API: `cd apps/api && pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm check-types`
-- Web: `cd apps/web && pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm check-types`
+- API: `cd apps/api && pnpm dev`, `pnpm build`, `pnpm lint:fix`,
+- Web: `cd apps/web && pnpm dev`, `pnpm build`, `pnpm lint:fix`,
 - Single component test: Not configured yet (add when tests are implemented)
 
 ## Code Style Guidelines

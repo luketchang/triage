@@ -83,20 +83,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-spans-facet-values", start, end),
 
   /**
-   * Get the file tree structure for a repository path
-   * @param repoPath Path to the repository
-   */
-  getFileTree: (repoPath: string) => ipcRenderer.invoke("get-file-tree", repoPath),
-
-  /**
-   * Get the content of a file
-   * @param repoPath Base repository path
-   * @param filePath Relative file path within repository
-   */
-  getFileContent: (repoPath: string, filePath: string) =>
-    ipcRenderer.invoke("get-file-content", repoPath, filePath),
-
-  /**
    * Save a user message to the database
    * @param message The user message to save
    */

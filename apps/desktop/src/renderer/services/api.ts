@@ -5,9 +5,12 @@ import {
   AgentChatMessage,
   AgentConfig,
   AgentStreamUpdate,
+  AssistantMessage,
+  ChatMessage,
   FacetData,
   LogQueryParams,
   TraceQueryParams,
+  UserMessage,
 } from "../types";
 
 // Get mock API setting from environment
@@ -168,6 +171,55 @@ const api = {
         console.error("Error in getSpansFacetValues:", error);
         return []; // Return empty array on error
       }
+    }
+  },
+
+  // Chat persistence methods
+  saveUserMessage: async (message: UserMessage): Promise<number | null> => {
+    console.info("[API DEBUG] saveUserMessage called");
+
+    if (USE_MOCK_API || !isMethodAvailable("saveUserMessage")) {
+      console.info("Mock saveUserMessage - not implemented in mock mode");
+      return null;
+    } else {
+      console.info("Using real electronAPI.saveUserMessage");
+      return window.electronAPI.saveUserMessage(message);
+    }
+  },
+
+  saveAssistantMessage: async (message: AssistantMessage): Promise<number | null> => {
+    console.info("[API DEBUG] saveAssistantMessage called");
+
+    if (USE_MOCK_API || !isMethodAvailable("saveAssistantMessage")) {
+      console.info("Mock saveAssistantMessage - not implemented in mock mode");
+      return null;
+    } else {
+      console.info("Using real electronAPI.saveAssistantMessage");
+      return window.electronAPI.saveAssistantMessage(message);
+    }
+  },
+
+  loadChatMessages: async (): Promise<ChatMessage[]> => {
+    console.info("[API DEBUG] loadChatMessages called");
+
+    if (USE_MOCK_API || !isMethodAvailable("loadChatMessages")) {
+      console.info("Mock loadChatMessages - not implemented in mock mode");
+      return [];
+    } else {
+      console.info("Using real electronAPI.loadChatMessages");
+      return window.electronAPI.loadChatMessages();
+    }
+  },
+
+  clearChat: async (): Promise<boolean> => {
+    console.info("[API DEBUG] clearChat called");
+
+    if (USE_MOCK_API || !isMethodAvailable("clearChat")) {
+      console.info("Mock clearChat - not implemented in mock mode");
+      return false;
+    } else {
+      console.info("Using real electronAPI.clearChat");
+      return window.electronAPI.clearChat();
     }
   },
 };

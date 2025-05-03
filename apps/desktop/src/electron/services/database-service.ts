@@ -13,64 +13,81 @@ import { Database } from "../db/schema";
 
 export class DatabaseService {
   private db: Kysely<Database>;
+  private sqliteDb: BetterSqlite3.Database;
   private initialized = false;
 
   constructor() {
     const userDataPath = app.getPath("userData");
     const dbPath = path.join(userDataPath, "triage-chats.db");
 
-    const dialect = new SqliteDialect({
-      database: new BetterSqlite3(dbPath, {
+    try {
+      // Create and store the SQLite database instance
+      this.sqliteDb = new BetterSqlite3(dbPath, {
         verbose: process.env.NODE_ENV === "development" ? console.log : undefined,
-      }),
-    });
+      });
 
-    this.db = new Kysely<Database>({ dialect });
-    this.initialize();
+      // Set pragmas directly on the SQLite instance
+      this.sqliteDb.pragma("foreign_keys = ON");
+      this.sqliteDb.pragma("journal_mode = WAL");
+
+      // Create the Kysely instance with the SQLite dialect
+      const dialect = new SqliteDialect({
+        database: this.sqliteDb,
+      });
+
+      this.db = new Kysely<Database>({ dialect });
+      this.initialize();
+    } catch (error) {
+      console.error("Error initializing database:", error);
+      throw error;
+    }
   }
 
   private async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    // Enable foreign keys and WAL journal mode using native statement execution
-    const db = (this.db.getExecutor().adapter as any).database as BetterSqlite3.Database;
-    db.pragma("foreign_keys = ON");
-    db.pragma("journal_mode = WAL");
+    try {
+      // Create tables if they don't exist
+      await this.db.schema
+        .createTable("chats")
+        .ifNotExists()
+        .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
+        .addColumn("created_at", "text", (col) =>
+          // Use a simpler approach for default timestamp
+          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
+        )
+        .execute();
 
-    // Create tables if they don't exist
-    await this.db.schema
-      .createTable("chats")
-      .ifNotExists()
-      .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
-      .addColumn("created_at", "text", (col) => col.defaultTo(sql`datetime('now')`).notNull())
-      .execute();
+      await this.db.schema
+        .createTable("user_messages")
+        .ifNotExists()
+        .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
+        .addColumn("chat_id", "integer", (col) =>
+          col.notNull().references("chats.id").onDelete("cascade")
+        )
+        .addColumn("timestamp", "text", (col) => col.notNull())
+        .addColumn("content", "text", (col) => col.notNull())
+        .addColumn("context_items", "text")
+        .execute();
 
-    await this.db.schema
-      .createTable("user_messages")
-      .ifNotExists()
-      .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
-      .addColumn("chat_id", "integer", (col) =>
-        col.notNull().references("chats.id").onDelete("cascade")
-      )
-      .addColumn("timestamp", "text", (col) => col.notNull())
-      .addColumn("content", "text", (col) => col.notNull())
-      .addColumn("context_items", "text")
-      .execute();
+      await this.db.schema
+        .createTable("assistant_messages")
+        .ifNotExists()
+        .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
+        .addColumn("chat_id", "integer", (col) =>
+          col.notNull().references("chats.id").onDelete("cascade")
+        )
+        .addColumn("timestamp", "text", (col) => col.notNull())
+        .addColumn("response", "text", (col) => col.notNull())
+        .addColumn("stages", "text", (col) => col.notNull())
+        .addColumn("error", "text")
+        .execute();
 
-    await this.db.schema
-      .createTable("assistant_messages")
-      .ifNotExists()
-      .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
-      .addColumn("chat_id", "integer", (col) =>
-        col.notNull().references("chats.id").onDelete("cascade")
-      )
-      .addColumn("timestamp", "text", (col) => col.notNull())
-      .addColumn("response", "text", (col) => col.notNull())
-      .addColumn("stages", "text", (col) => col.notNull())
-      .addColumn("error", "text")
-      .execute();
-
-    this.initialized = true;
+      this.initialized = true;
+    } catch (error) {
+      console.error("Error creating database tables:", error);
+      throw error;
+    }
   }
 
   async createChat(): Promise<number> {
@@ -167,6 +184,13 @@ export class DatabaseService {
   }
 
   async destroy(): Promise<void> {
-    await this.db.destroy();
+    try {
+      await this.db.destroy();
+      if (this.sqliteDb) {
+        this.sqliteDb.close();
+      }
+    } catch (error) {
+      console.error("Error destroying database connection:", error);
+    }
   }
 }

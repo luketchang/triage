@@ -26,8 +26,6 @@ export function useChat() {
   useEffect(() => {
     const loadSavedMessages = async () => {
       try {
-        // Type assertion is necessary because TypeScript doesn't know about the new methods
-        const api = window.electronAPI as any;
         const savedMessages = await api.loadChatMessages();
         if (savedMessages && savedMessages.length > 0) {
           setMessages(savedMessages);
@@ -52,8 +50,7 @@ export function useChat() {
 
       // Don't save "Thinking..." messages
       if (latestMessage.response !== "Thinking...") {
-        // Save to database using type assertion
-        const api = window.electronAPI as any;
+        // Save to database using the API service
         api
           .saveAssistantMessage(latestMessage)
           .catch((err: Error) => console.error("Error saving assistant message:", err));
@@ -236,8 +233,6 @@ export function useChat() {
 
   const clearChat = async (): Promise<void> => {
     try {
-      // Use type assertion for the electronAPI call
-      const api = window.electronAPI as any;
       const success = await api.clearChat();
       if (success) {
         setMessages([]);
@@ -272,10 +267,8 @@ export function useChat() {
     // Update the messages state
     setMessages(updatedMessages);
 
-    // Save the user message to database
+    // Save the user message to database using the API service
     try {
-      // Type assertion is necessary because TypeScript doesn't know about the new methods
-      const api = window.electronAPI as any;
       await api.saveUserMessage(userMessage);
     } catch (error) {
       console.error("Error saving user message:", error);
