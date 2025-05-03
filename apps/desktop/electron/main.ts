@@ -11,10 +11,10 @@ import { config } from "@triage/config";
 // Import all handlers from the handlers directory
 import {
   cleanupAgentHandlers,
-  cleanupChatHandlers,
+  cleanupDbHandlers,
   cleanupObservabilityHandlers,
   setupAgentHandlers,
-  setupChatHandlers,
+  setupDbHandlers,
   setupObservabilityHandlers,
 } from "./handlers/index.js";
 
@@ -88,7 +88,7 @@ function init(): void {
   } else {
     console.error("Failed to initialize agent handlers: mainWindow is null");
   }
-  setupChatHandlers();
+  setupDbHandlers();
   setupObservabilityHandlers();
 }
 
@@ -109,7 +109,7 @@ app.on("activate", () => {
 
 // Clean up handlers when app quits
 app.on("quit", () => {
-  cleanupChatHandlers();
+  cleanupDbHandlers();
   cleanupAgentHandlers();
   cleanupObservabilityHandlers();
 });

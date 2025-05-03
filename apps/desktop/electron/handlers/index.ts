@@ -4,7 +4,7 @@
  */
 
 export { cleanupAgentHandlers, setupAgentHandlers } from "./agent-handlers.js";
-export { cleanupChatHandlers, setupChatHandlers } from "./chat-handlers.js";
+export { cleanupDbHandlers, setupDbHandlers } from "./db-handlers.js";
 export {
   cleanupObservabilityHandlers,
   setupObservabilityHandlers,

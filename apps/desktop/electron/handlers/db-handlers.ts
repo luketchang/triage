@@ -8,7 +8,7 @@ let dbService: DatabaseService | null = null;
 /**
  * Set up all IPC handlers related to chat functionality
  */
-export function setupChatHandlers(): void {
+export function setupDbHandlers(): void {
   console.log("Setting up chat handlers...");
 
   // Initialize database service
@@ -96,7 +96,7 @@ export function setupChatHandlers(): void {
 /**
  * Clean up resources used by chat handlers
  */
-export function cleanupChatHandlers(): void {
+export function cleanupDbHandlers(): void {
   console.log("Cleaning up chat handlers...");
   if (dbService) {
     dbService.destroy();
