@@ -11,20 +11,13 @@ import {
   AssistantMessage,
   ChatMessage,
   FacetData,
-  Log,
   LogQueryParams,
+  LogsWithPagination,
   StreamUpdate,
-  Trace,
   TraceQueryParams,
+  TracesWithPagination,
   UserMessage,
 } from "./types";
-
-// Define API response types with consistent error property
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 // Augment the Window interface to include our Electron API
 declare global {
@@ -68,12 +61,7 @@ declare global {
        * @param params Query parameters for fetching logs
        * @returns Promise with the fetched logs
        */
-      fetchLogs: (params: LogQueryParams) => Promise<
-        ApiResponse<{
-          logs: Log[];
-          pageCursorOrIndicator?: string;
-        }>
-      >;
+      fetchLogs: (params: LogQueryParams) => Promise<LogsWithPagination>;
 
       /**
        * Get log facet values for a given time range
@@ -81,19 +69,14 @@ declare global {
        * @param end End date of the time range
        * @returns Promise with the fetched facet values
        */
-      getLogsFacetValues: (start: string, end: string) => Promise<ApiResponse<FacetData[]>>;
+      getLogsFacetValues: (start: string, end: string) => Promise<FacetData[]>;
 
       /**
        * Fetch traces based on query parameters
        * @param params Query parameters for fetching traces
        * @returns Promise with the fetched traces
        */
-      fetchTraces: (params: TraceQueryParams) => Promise<
-        ApiResponse<{
-          traces: Trace[];
-          pageCursorOrIndicator?: string;
-        }>
-      >;
+      fetchTraces: (params: TraceQueryParams) => Promise<TracesWithPagination>;
 
       /**
        * Get span facet values for a given time range
@@ -101,7 +84,7 @@ declare global {
        * @param end End date of the time range
        * @returns Promise with the fetched facet values
        */
-      getSpansFacetValues: (start: string, end: string) => Promise<ApiResponse<FacetData[]>>;
+      getSpansFacetValues: (start: string, end: string) => Promise<FacetData[]>;
 
       /**
        * Save a user message to the database

@@ -1,4 +1,3 @@
-import { ApiResponse } from "../electron.d";
 import mockElectronAPI from "../electronApiMock";
 import {
   AgentAssistantMessage,
@@ -128,10 +127,7 @@ const api = {
     }
   },
 
-  getLogsFacetValues: async (
-    start: string,
-    end: string
-  ): Promise<ApiResponse<FacetData[]> | FacetData[]> => {
+  getLogsFacetValues: async (start: string, end: string): Promise<FacetData[]> => {
     console.info("[API DEBUG] getLogsFacetValues called with:", { start, end });
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getLogsFacetValues");
     console.info("[API DEBUG] Using mock implementation:", shouldUseMock);
@@ -173,10 +169,7 @@ const api = {
     }
   },
 
-  getSpansFacetValues: async (
-    start: string,
-    end: string
-  ): Promise<ApiResponse<FacetData[]> | FacetData[]> => {
+  getSpansFacetValues: async (start: string, end: string): Promise<FacetData[]> => {
     console.info("[API DEBUG] getSpansFacetValues called with:", { start, end });
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getSpansFacetValues");
     console.info("[API DEBUG] Using mock implementation:", shouldUseMock);

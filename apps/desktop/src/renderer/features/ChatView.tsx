@@ -3,11 +3,7 @@ import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView";
 import api from "../services/api";
 import { AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
-
-// Generate a unique ID for new messages
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 11);
-}
+import { generateId } from "../utils/formatters";
 
 interface ChatViewProps {
   messages: ChatMessage[];

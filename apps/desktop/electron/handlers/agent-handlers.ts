@@ -1,7 +1,11 @@
-import { ChatMessage as AgentChatMessage, invokeAgent } from "@triage/agent";
+import {} from "@triage/agent";
 import { BrowserWindow, ipcMain } from "electron";
 import { AgentConfig } from "../../src/config.js";
-import { AgentAssistantMessage } from "../../src/renderer/types/index.js";
+import {
+  AgentAssistantMessage,
+  AgentChatMessage,
+  invokeAgent,
+} from "../../src/renderer/types/index.js";
 
 let mainWindow: BrowserWindow | null = null;
 
