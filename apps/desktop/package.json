@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate:sqlite",
-    "db:migrate": "ts-node ./scripts/db-migrate.ts"
+    "db:migrate": "electron ./scripts/db-migrate-electron.js",
+    "postinstall": "node ./scripts/fix-better-sqlite3.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

@@ -46,64 +46,11 @@ export class DatabaseService {
     if (this.initialized) return;
 
     try {
-      // Check if the database file exists and has tables
-      const hasTables = this.checkIfTablesExist();
-
-      if (hasTables) {
-        this.initialized = true;
-        return;
-      }
-
-      // Create tables using direct SQL statements
-      this.createTables();
-
       this.initialized = true;
-      console.info("DatabaseService: Tables created successfully");
     } catch (error) {
-      console.error("Error creating database tables:", error);
+      console.error("Error initializing database:", error);
       throw error;
     }
-  }
-
-  private checkIfTablesExist(): boolean {
-    try {
-      // Check if the chats table exists
-      const result = this.sqliteDb
-        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='chats'")
-        .get();
-      return !!result;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  private createTables(): void {
-    // Use raw SQL to create tables
-    this.sqliteDb.exec(`
-      CREATE TABLE IF NOT EXISTS chats (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-      
-      CREATE TABLE IF NOT EXISTS user_messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        chat_id INTEGER NOT NULL,
-        timestamp TEXT NOT NULL,
-        content TEXT NOT NULL,
-        context_items TEXT,
-        FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
-      );
-      
-      CREATE TABLE IF NOT EXISTS assistant_messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        chat_id INTEGER NOT NULL,
-        timestamp TEXT NOT NULL,
-        response TEXT NOT NULL,
-        stages TEXT NOT NULL,
-        error TEXT,
-        FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
-      );
-    `);
   }
 
   async createChat(): Promise<number> {
