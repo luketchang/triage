@@ -1,14 +1,16 @@
 import BetterSqlite3 from "better-sqlite3";
+import { desc, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 import fs from "fs";
-import { Kysely, SqliteDialect, sql } from "kysely";
 import path from "path";
-import { Database } from "./interfaces.js";
+import * as schema from "./schema.js";
+import { AssistantMessage, UserMessage } from "./schema.js";
 
 /**
  * Service for interacting with the SQLite database for chat persistence
  */
 export class DatabaseService {
-  private db: Kysely<Database>;
+  private db: ReturnType<typeof drizzle>;
   private sqliteDb: BetterSqlite3.Database;
   private initialized = false;
   private dbPath: string;
@@ -27,20 +29,24 @@ export class DatabaseService {
 
     try {
       // Create and store the SQLite database instance
-      this.sqliteDb = new BetterSqlite3(this.dbPath, {
-        verbose: process.env.NODE_ENV === "development" ? console.info : undefined,
-      });
+      try {
+        this.sqliteDb = new BetterSqlite3(this.dbPath, {
+          verbose: process.env.NODE_ENV === "development" ? console.info : undefined,
+        });
+      } catch (err) {
+        console.error("Failed to initialize better-sqlite3:", err);
+        console.error("If you're seeing native module errors, try:");
+        console.error("1. Run 'pnpm remove better-sqlite3 && pnpm add better-sqlite3@11.9.1'");
+        console.error("2. Make sure better-sqlite3 is compatible with your Electron version");
+        throw err;
+      }
 
       // Set pragmas directly on the SQLite instance
       this.sqliteDb.pragma("foreign_keys = ON");
       this.sqliteDb.pragma("journal_mode = WAL");
 
-      // Create the Kysely instance with the SQLite dialect
-      const dialect = new SqliteDialect({
-        database: this.sqliteDb,
-      });
-
-      this.db = new Kysely<Database>({ dialect });
+      // Create the Drizzle instance with our schema
+      this.db = drizzle(this.sqliteDb, { schema });
       this.initialize();
     } catch (error) {
       console.error("Error initializing database:", error);
@@ -52,41 +58,18 @@ export class DatabaseService {
     if (this.initialized) return;
 
     try {
-      // Create tables if they don't exist
-      await this.db.schema
-        .createTable("chats")
-        .ifNotExists()
-        .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
-        .addColumn("created_at", "text", (col) =>
-          // Use a simpler approach for default timestamp
-          col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
-        )
-        .execute();
+      // Check if the database file exists and has tables
+      const hasTables = this.checkIfTablesExist();
 
-      await this.db.schema
-        .createTable("user_messages")
-        .ifNotExists()
-        .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
-        .addColumn("chat_id", "integer", (col) =>
-          col.notNull().references("chats.id").onDelete("cascade")
-        )
-        .addColumn("timestamp", "text", (col) => col.notNull())
-        .addColumn("content", "text", (col) => col.notNull())
-        .addColumn("context_items", "text")
-        .execute();
+      if (hasTables) {
+        console.info("Tables already exist, skipping initialization");
+        this.initialized = true;
+        return;
+      }
 
-      await this.db.schema
-        .createTable("assistant_messages")
-        .ifNotExists()
-        .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
-        .addColumn("chat_id", "integer", (col) =>
-          col.notNull().references("chats.id").onDelete("cascade")
-        )
-        .addColumn("timestamp", "text", (col) => col.notNull())
-        .addColumn("response", "text", (col) => col.notNull())
-        .addColumn("stages", "text", (col) => col.notNull())
-        .addColumn("error", "text")
-        .execute();
+      // Create tables directly since we're not using migrations yet
+      console.info("Creating tables directly");
+      this.createTablesDirectly();
 
       this.initialized = true;
       console.info("DatabaseService: Tables created successfully");
@@ -96,17 +79,58 @@ export class DatabaseService {
     }
   }
 
+  private checkIfTablesExist(): boolean {
+    try {
+      // Check if the chats table exists
+      const result = this.sqliteDb
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='chats'")
+        .get();
+      return !!result;
+    } catch (error) {
+      console.error("Error checking if tables exist:", error);
+      return false;
+    }
+  }
+
+  private createTablesDirectly(): void {
+    this.sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS chats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE TABLE IF NOT EXISTS user_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chat_id INTEGER NOT NULL,
+        timestamp TEXT NOT NULL,
+        content TEXT NOT NULL,
+        context_items TEXT,
+        FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+      );
+      
+      CREATE TABLE IF NOT EXISTS assistant_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chat_id INTEGER NOT NULL,
+        timestamp TEXT NOT NULL,
+        response TEXT NOT NULL,
+        stages TEXT NOT NULL,
+        error TEXT,
+        FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+      );
+    `);
+  }
+
   async createChat(): Promise<number> {
     console.info("DatabaseService: Creating new chat");
     try {
-      const result = await this.db
-        .insertInto("chats")
-        .defaultValues()
-        .returning("id")
-        .executeTakeFirstOrThrow();
+      const result = await this.db.insert(schema.chats).values({}).returning();
 
-      console.info("DatabaseService: Created chat with ID:", result.id);
-      return result.id;
+      if (!result.length) {
+        throw new Error("Failed to create chat - no ID returned");
+      }
+
+      console.info("DatabaseService: Created chat with ID:", result[0].id);
+      return result[0].id;
     } catch (error) {
       console.error("Error creating chat:", error);
       throw error;
@@ -116,14 +140,13 @@ export class DatabaseService {
   async getLatestChatId(): Promise<number | null> {
     try {
       const result = await this.db
-        .selectFrom("chats")
-        .select("id")
-        .orderBy("id", "desc")
-        .limit(1)
-        .executeTakeFirst();
+        .select({ id: schema.chats.id })
+        .from(schema.chats)
+        .orderBy(desc(schema.chats.id))
+        .limit(1);
 
-      console.info("DatabaseService: Latest chat ID:", result?.id || "none");
-      return result?.id || null;
+      console.info("DatabaseService: Latest chat ID:", result[0]?.id || "none");
+      return result[0]?.id || null;
     } catch (error) {
       console.error("Error getting latest chat ID:", error);
       return null;
@@ -134,18 +157,21 @@ export class DatabaseService {
     console.info("DatabaseService: Saving user message for chat ID:", chatId);
     try {
       const result = await this.db
-        .insertInto("user_messages")
+        .insert(schema.userMessages)
         .values({
-          chat_id: chatId,
+          chatId,
           timestamp: message.timestamp.toISOString(),
           content: message.content,
-          context_items: message.contextItems ? JSON.stringify(message.contextItems) : null,
-        } as any)
-        .returning("id")
-        .executeTakeFirstOrThrow();
+          contextItems: message.contextItems ? JSON.stringify(message.contextItems) : null,
+        })
+        .returning();
 
-      console.info("DatabaseService: Saved user message with ID:", result.id);
-      return result.id;
+      if (!result.length) {
+        throw new Error("Failed to save user message - no ID returned");
+      }
+
+      console.info("DatabaseService: Saved user message with ID:", result[0].id);
+      return result[0].id;
     } catch (error) {
       console.error("Error saving user message:", error);
       throw error;
@@ -156,19 +182,22 @@ export class DatabaseService {
     console.info("DatabaseService: Saving assistant message for chat ID:", chatId);
     try {
       const result = await this.db
-        .insertInto("assistant_messages")
+        .insert(schema.assistantMessages)
         .values({
-          chat_id: chatId,
+          chatId,
           timestamp: message.timestamp.toISOString(),
           response: message.response,
           stages: JSON.stringify(message.stages),
           error: message.error || null,
-        } as any)
-        .returning("id")
-        .executeTakeFirstOrThrow();
+        })
+        .returning();
 
-      console.info("DatabaseService: Saved assistant message with ID:", result.id);
-      return result.id;
+      if (!result.length) {
+        throw new Error("Failed to save assistant message - no ID returned");
+      }
+
+      console.info("DatabaseService: Saved assistant message with ID:", result[0].id);
+      return result[0].id;
     } catch (error) {
       console.error("Error saving assistant message:", error);
       throw error;
@@ -176,47 +205,49 @@ export class DatabaseService {
   }
 
   async getChatMessages(chatId: number): Promise<any[]> {
-    const userMessages = await this.db
-      .selectFrom("user_messages")
-      .select(["id", "timestamp", "content", "context_items"])
-      .where("chat_id", "=", chatId)
-      .execute();
+    try {
+      const userMessages = await this.db
+        .select()
+        .from(schema.userMessages)
+        .where(eq(schema.userMessages.chatId, chatId));
 
-    const assistantMessages = await this.db
-      .selectFrom("assistant_messages")
-      .select(["id", "timestamp", "response", "stages", "error"])
-      .where("chat_id", "=", chatId)
-      .execute();
+      const assistantMessages = await this.db
+        .select()
+        .from(schema.assistantMessages)
+        .where(eq(schema.assistantMessages.chatId, chatId));
 
-    const messages = [
-      ...userMessages.map((row) => ({
-        id: row.id.toString(),
-        role: "user",
-        timestamp: new Date(row.timestamp),
-        content: row.content,
-        contextItems: row.context_items ? JSON.parse(row.context_items) : undefined,
-      })),
-      ...assistantMessages.map((row) => ({
-        id: row.id.toString(),
-        role: "assistant",
-        timestamp: new Date(row.timestamp),
-        response: row.response,
-        stages: JSON.parse(row.stages),
-        error: row.error || undefined,
-      })),
-    ];
+      const messages = [
+        ...userMessages.map((row: UserMessage) => ({
+          id: row.id.toString(),
+          role: "user",
+          timestamp: new Date(row.timestamp),
+          content: row.content,
+          contextItems: row.contextItems ? JSON.parse(row.contextItems) : undefined,
+        })),
+        ...assistantMessages.map((row: AssistantMessage) => ({
+          id: row.id.toString(),
+          role: "assistant",
+          timestamp: new Date(row.timestamp),
+          response: row.response,
+          stages: JSON.parse(row.stages),
+          error: row.error || undefined,
+        })),
+      ];
 
-    // Sort by timestamp
-    return messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      // Sort by timestamp
+      return messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    } catch (error) {
+      console.error("Error getting chat messages:", error);
+      return [];
+    }
   }
 
   async clearChat(chatId: number): Promise<void> {
-    await this.db.deleteFrom("chats").where("id", "=", chatId).execute();
+    await this.db.delete(schema.chats).where(eq(schema.chats.id, chatId));
   }
 
   async destroy(): Promise<void> {
     try {
-      await this.db.destroy();
       if (this.sqliteDb) {
         this.sqliteDb.close();
       }
