@@ -252,18 +252,6 @@ const api = {
       return window.electronAPI.clearChat();
     }
   },
-
-  getDatabaseStats: async (): Promise<any> => {
-    console.info("[API DEBUG] getDatabaseStats called");
-
-    if (USE_MOCK_API || !isMethodAvailable("getDatabaseStats")) {
-      console.info("Mock getDatabaseStats - not implemented in mock mode");
-      return { error: "Mock mode" };
-    } else {
-      console.info("Using real electronAPI.getDatabaseStats");
-      return window.electronAPI.getDatabaseStats();
-    }
-  },
 };
 
 export default api;

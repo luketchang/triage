@@ -104,11 +104,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * Clear the current chat
    */
   clearChat: () => ipcRenderer.invoke("chat:clear"),
-
-  /**
-   * Get database statistics for diagnostic purposes
-   */
-  getDatabaseStats: () => ipcRenderer.invoke("chat:get-db-stats"),
 });
 
 /**
@@ -132,8 +127,8 @@ function domReady(condition: DocumentReadyState[] = ["complete", "interactive"])
 
 // Perform any initialization logic when DOM is ready
 domReady().then(() => {
-  console.log("Preload script initialized");
-  console.log("Environment variables exposed:", {
+  console.info("Preload script initialized");
+  console.info("Environment variables exposed:", {
     TRACES_ENABLED: tracesEnabled,
     USE_MOCK_API: useMockApi,
   });

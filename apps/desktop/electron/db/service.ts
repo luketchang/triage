@@ -15,19 +15,20 @@ export class DatabaseService {
 
   constructor() {
     // Create db directory in root if it doesn't exist
+    // TODO: likely want to change this later to not store in repo dir
     const dbDir = path.join(process.cwd(), "db");
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }
     this.dbPath = path.join(dbDir, "triage-chats.db");
 
-    console.log("DatabaseService: Initializing with database path:", this.dbPath);
-    console.log("Current working directory:", process.cwd());
+    console.info("DatabaseService: Initializing with database path:", this.dbPath);
+    console.info("Current working directory:", process.cwd());
 
     try {
       // Create and store the SQLite database instance
       this.sqliteDb = new BetterSqlite3(this.dbPath, {
-        verbose: process.env.NODE_ENV === "development" ? console.log : undefined,
+        verbose: process.env.NODE_ENV === "development" ? console.info : undefined,
       });
 
       // Set pragmas directly on the SQLite instance
@@ -88,7 +89,7 @@ export class DatabaseService {
         .execute();
 
       this.initialized = true;
-      console.log("DatabaseService: Tables created successfully");
+      console.info("DatabaseService: Tables created successfully");
     } catch (error) {
       console.error("Error creating database tables:", error);
       throw error;
@@ -96,7 +97,7 @@ export class DatabaseService {
   }
 
   async createChat(): Promise<number> {
-    console.log("DatabaseService: Creating new chat");
+    console.info("DatabaseService: Creating new chat");
     try {
       const result = await this.db
         .insertInto("chats")
@@ -104,7 +105,7 @@ export class DatabaseService {
         .returning("id")
         .executeTakeFirstOrThrow();
 
-      console.log("DatabaseService: Created chat with ID:", result.id);
+      console.info("DatabaseService: Created chat with ID:", result.id);
       return result.id;
     } catch (error) {
       console.error("Error creating chat:", error);
@@ -121,7 +122,7 @@ export class DatabaseService {
         .limit(1)
         .executeTakeFirst();
 
-      console.log("DatabaseService: Latest chat ID:", result?.id || "none");
+      console.info("DatabaseService: Latest chat ID:", result?.id || "none");
       return result?.id || null;
     } catch (error) {
       console.error("Error getting latest chat ID:", error);
@@ -130,7 +131,7 @@ export class DatabaseService {
   }
 
   async saveUserMessage(message: any, chatId: number): Promise<number> {
-    console.log("DatabaseService: Saving user message for chat ID:", chatId);
+    console.info("DatabaseService: Saving user message for chat ID:", chatId);
     try {
       const result = await this.db
         .insertInto("user_messages")
@@ -143,7 +144,7 @@ export class DatabaseService {
         .returning("id")
         .executeTakeFirstOrThrow();
 
-      console.log("DatabaseService: Saved user message with ID:", result.id);
+      console.info("DatabaseService: Saved user message with ID:", result.id);
       return result.id;
     } catch (error) {
       console.error("Error saving user message:", error);
@@ -152,7 +153,7 @@ export class DatabaseService {
   }
 
   async saveAssistantMessage(message: any, chatId: number): Promise<number> {
-    console.log("DatabaseService: Saving assistant message for chat ID:", chatId);
+    console.info("DatabaseService: Saving assistant message for chat ID:", chatId);
     try {
       const result = await this.db
         .insertInto("assistant_messages")
@@ -166,7 +167,7 @@ export class DatabaseService {
         .returning("id")
         .executeTakeFirstOrThrow();
 
-      console.log("DatabaseService: Saved assistant message with ID:", result.id);
+      console.info("DatabaseService: Saved assistant message with ID:", result.id);
       return result.id;
     } catch (error) {
       console.error("Error saving assistant message:", error);
@@ -221,45 +222,6 @@ export class DatabaseService {
       }
     } catch (error) {
       console.error("Error destroying database connection:", error);
-    }
-  }
-
-  async getDatabaseStats(): Promise<{
-    dbPath: string;
-    chatsCount: number;
-    userMessagesCount: number;
-    assistantMessagesCount: number;
-  }> {
-    try {
-      const chatsCount = await this.db
-        .selectFrom("chats")
-        .select(sql`count(*)`.as("count"))
-        .executeTakeFirstOrThrow();
-
-      const userMessagesCount = await this.db
-        .selectFrom("user_messages")
-        .select(sql`count(*)`.as("count"))
-        .executeTakeFirstOrThrow();
-
-      const assistantMessagesCount = await this.db
-        .selectFrom("assistant_messages")
-        .select(sql`count(*)`.as("count"))
-        .executeTakeFirstOrThrow();
-
-      return {
-        dbPath: this.dbPath,
-        chatsCount: Number(chatsCount.count),
-        userMessagesCount: Number(userMessagesCount.count),
-        assistantMessagesCount: Number(assistantMessagesCount.count),
-      };
-    } catch (error) {
-      console.error("Error getting database stats:", error);
-      return {
-        dbPath: this.dbPath,
-        chatsCount: -1,
-        userMessagesCount: -1,
-        assistantMessagesCount: -1,
-      };
     }
   }
 }

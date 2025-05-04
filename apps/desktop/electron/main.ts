@@ -19,7 +19,7 @@ import {
 } from "./handlers/index.js";
 
 // Log the configuration to verify it's correctly loaded
-console.log("Using environment configuration:", {
+console.info("Using environment configuration:", {
   NODE_ENV: config.env,
   openaiApiKey: config.openaiApiKey ? "Set" : "Not set",
   anthropicApiKey: config.anthropicApiKey ? "Set" : "Not set",

@@ -5,12 +5,12 @@ import { ipcMain } from "electron";
  * Set up all IPC handlers related to observability (logs, traces)
  */
 export function setupObservabilityHandlers(): void {
-  console.log("Setting up observability handlers...");
+  console.info("Setting up observability handlers...");
 
   // Fetch logs based on query parameters
   ipcMain.handle("fetch-logs", async (_event: any, params: any) => {
     try {
-      console.log("Fetching logs with params:", params);
+      console.info("Fetching logs with params:", params);
 
       // Get the configured observability platform
       const platformType =
@@ -44,7 +44,7 @@ export function setupObservabilityHandlers(): void {
   // Get log facet values for a given time range
   ipcMain.handle("get-logs-facet-values", async (_event: any, start: string, end: string) => {
     try {
-      console.log("Getting log facet values for time range:", { start, end });
+      console.info("Getting log facet values for time range:", { start, end });
 
       // Get the configured observability platform
       const platformType =
@@ -79,7 +79,7 @@ export function setupObservabilityHandlers(): void {
   // Fetch traces based on query parameters
   ipcMain.handle("fetch-traces", async (_event: any, params: any) => {
     try {
-      console.log("Fetching traces with params:", params);
+      console.info("Fetching traces with params:", params);
 
       // Get the configured observability platform
       const platformType =
@@ -113,7 +113,7 @@ export function setupObservabilityHandlers(): void {
   // Get span facet values for a given time range
   ipcMain.handle("get-spans-facet-values", async (_event: any, start: string, end: string) => {
     try {
-      console.log("Getting span facet values for time range:", { start, end });
+      console.info("Getting span facet values for time range:", { start, end });
 
       // Get the configured observability platform
       const platformType =
@@ -145,7 +145,7 @@ export function setupObservabilityHandlers(): void {
     }
   });
 
-  console.log("All observability handlers registered.");
+  console.info("All observability handlers registered.");
 }
 
 /**
@@ -153,5 +153,5 @@ export function setupObservabilityHandlers(): void {
  */
 export function cleanupObservabilityHandlers(): void {
   // No specific cleanup needed currently
-  console.log("Observability handlers cleanup complete.");
+  console.info("Observability handlers cleanup complete.");
 }

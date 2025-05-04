@@ -10,7 +10,7 @@ let mainWindow: BrowserWindow | null = null;
  * @param window The main browser window for sending updates
  */
 export function setupAgentHandlers(window: BrowserWindow): void {
-  console.log("Setting up agent handlers...");
+  console.info("Setting up agent handlers...");
   mainWindow = window;
 
   // Handle agent invocation
@@ -23,8 +23,8 @@ export function setupAgentHandlers(window: BrowserWindow): void {
       options?: { reasonOnly?: boolean }
     ): Promise<AgentAssistantMessage> => {
       try {
-        console.log("Invoking agent with query:", query);
-        console.log("IPC chat history:", chatHistory);
+        console.info("Invoking agent with query:", query);
+        console.info("IPC chat history:", chatHistory);
 
         // TODO: Don't extract these from env
         const agentConfig: AgentConfig = {
@@ -124,7 +124,7 @@ export function setupAgentHandlers(window: BrowserWindow): void {
     }
   );
 
-  console.log("All agent handlers registered.");
+  console.info("All agent handlers registered.");
 }
 
 /**
@@ -132,5 +132,5 @@ export function setupAgentHandlers(window: BrowserWindow): void {
  */
 export function cleanupAgentHandlers(): void {
   mainWindow = null;
-  console.log("Agent handlers cleanup complete.");
+  console.info("Agent handlers cleanup complete.");
 }

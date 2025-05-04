@@ -33,29 +33,30 @@ declare global {
     // Agent methods
     invokeAgent: (
       query: string,
-      chatHistory: any[],
+      chatHistory: import("./types").ChatMessage[],
       options?: { reasonOnly?: boolean }
-    ) => Promise<any>;
-    onAgentUpdate: (callback: (update: any) => void) => () => void;
-    getAgentConfig: () => Promise<any>;
-    updateAgentConfig: (newConfig: any) => Promise<any>;
+    ) => Promise<import("./types").ChatMessage>;
+    onAgentUpdate: (callback: (update: import("./types").AgentStreamUpdate) => void) => () => void;
+    getAgentConfig: () => Promise<import("./types").AgentConfig>;
+    updateAgentConfig: (
+      newConfig: import("./types").AgentConfig
+    ) => Promise<import("./types").AgentConfig>;
 
     // Observability methods
-    fetchLogs: (params: any) => Promise<any>;
-    getLogsFacetValues: (start: string, end: string) => Promise<any>;
-    fetchTraces: (params: any) => Promise<any>;
-    getSpansFacetValues: (start: string, end: string) => Promise<any>;
-
-    // File system methods
-    getFileTree?: (path: string) => Promise<any>;
-    getFileContent?: (path: string) => Promise<any>;
+    fetchLogs: (
+      params: import("./types").LogQueryParams
+    ) => Promise<import("./types").LogsWithPagination>;
+    getLogsFacetValues: (start: string, end: string) => Promise<import("./types").FacetData[]>;
+    fetchTraces: (
+      params: import("./types").TraceQueryParams
+    ) => Promise<import("./types").TracesWithPagination>;
+    getSpansFacetValues: (start: string, end: string) => Promise<import("./types").FacetData[]>;
 
     // Chat persistence methods
-    saveUserMessage: (message: any) => Promise<number | null>;
-    saveAssistantMessage: (message: any) => Promise<number | null>;
-    loadChatMessages: () => Promise<any[]>;
+    saveUserMessage: (message: import("./types").UserMessage) => Promise<number | null>;
+    saveAssistantMessage: (message: import("./types").AssistantMessage) => Promise<number | null>;
+    loadChatMessages: () => Promise<import("./types").ChatMessage[]>;
     clearChat: () => Promise<boolean>;
-    getDatabaseStats: () => Promise<any>;
   }
 }
 

@@ -47,7 +47,7 @@ function findProjectRoot(startDir: string): string {
 const projectRoot = findProjectRoot(__dirname);
 const envPath = path.join(projectRoot, ".env");
 
-console.log(`Looking for .env file at: ${envPath}`);
+console.info(`Looking for .env file at: ${envPath}`);
 
 if (fs.existsSync(envPath)) {
   const result = dotenv.config({ path: envPath });
@@ -58,7 +58,7 @@ if (fs.existsSync(envPath)) {
   }
 
   // Log that environment variables were loaded
-  console.log(`Environment variables loaded from: ${envPath}`);
+  console.info(`Environment variables loaded from: ${envPath}`);
 } else {
   console.error(`Error: .env file not found at: ${envPath}`);
   // Try to create an empty .env file
@@ -67,8 +67,8 @@ if (fs.existsSync(envPath)) {
       envPath,
       "# Environment variables\n# Add your API keys here\nOPENAI_API_KEY=\nANTHROPIC_API_KEY=\n"
     );
-    console.log(`Created an empty .env file at: ${envPath}`);
-    console.log("Please add your API keys to the .env file and restart the app.");
+    console.info(`Created an empty .env file at: ${envPath}`);
+    console.info("Please add your API keys to the .env file and restart the app.");
   } catch (error) {
     console.error(`Could not create .env file: ${error}`);
   }

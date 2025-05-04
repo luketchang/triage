@@ -133,7 +133,7 @@ declare global {
        * Get database stats
        * @returns Promise with database stats
        */
-      getDatabaseStats: () => Promise<any>;
+      getDatabaseStats: () => Promise<DatabaseStats>;
     };
   }
 }
