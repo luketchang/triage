@@ -1,4 +1,16 @@
 // This file provides type definitions for modules without their own type definitions
+import type {
+  AgentConfig,
+  AgentStreamUpdate,
+  AssistantMessage,
+  ChatMessage,
+  FacetData,
+  LogQueryParams,
+  LogsWithPagination,
+  TraceQueryParams,
+  TracesWithPagination,
+  UserMessage,
+} from "./types";
 
 // Allow importing components, features, etc. without type errors
 declare module "*/components/*";
@@ -33,29 +45,23 @@ declare global {
     // Agent methods
     invokeAgent: (
       query: string,
-      chatHistory: import("./types").ChatMessage[],
+      chatHistory: ChatMessage[],
       options?: { reasonOnly?: boolean }
-    ) => Promise<import("./types").ChatMessage>;
-    onAgentUpdate: (callback: (update: import("./types").AgentStreamUpdate) => void) => () => void;
-    getAgentConfig: () => Promise<import("./types").AgentConfig>;
-    updateAgentConfig: (
-      newConfig: import("./types").AgentConfig
-    ) => Promise<import("./types").AgentConfig>;
+    ) => Promise<ChatMessage>;
+    onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => () => void;
+    getAgentConfig: () => Promise<AgentConfig>;
+    updateAgentConfig: (newConfig: AgentConfig) => Promise<AgentConfig>;
 
     // Observability methods
-    fetchLogs: (
-      params: import("./types").LogQueryParams
-    ) => Promise<import("./types").LogsWithPagination>;
-    getLogsFacetValues: (start: string, end: string) => Promise<import("./types").FacetData[]>;
-    fetchTraces: (
-      params: import("./types").TraceQueryParams
-    ) => Promise<import("./types").TracesWithPagination>;
-    getSpansFacetValues: (start: string, end: string) => Promise<import("./types").FacetData[]>;
+    fetchLogs: (params: LogQueryParams) => Promise<LogsWithPagination>;
+    getLogsFacetValues: (start: string, end: string) => Promise<FacetData[]>;
+    fetchTraces: (params: TraceQueryParams) => Promise<TracesWithPagination>;
+    getSpansFacetValues: (start: string, end: string) => Promise<FacetData[]>;
 
     // Chat persistence methods
-    saveUserMessage: (message: import("./types").UserMessage) => Promise<number | null>;
-    saveAssistantMessage: (message: import("./types").AssistantMessage) => Promise<number | null>;
-    loadChatMessages: () => Promise<import("./types").ChatMessage[]>;
+    saveUserMessage: (message: UserMessage) => Promise<number | null>;
+    saveAssistantMessage: (message: AssistantMessage) => Promise<number | null>;
+    loadChatMessages: () => Promise<ChatMessage[]>;
     clearChat: () => Promise<boolean>;
   }
 }

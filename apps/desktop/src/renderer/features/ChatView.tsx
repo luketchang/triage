@@ -5,7 +5,6 @@ import { AssistantMessage, ChatMessage, ContextItem } from "../types";
 
 interface ChatViewProps {
   messages: ChatMessage[];
-  setMessages: (messages: ChatMessage[]) => void;
   newMessage: string;
   setNewMessage: (message: string) => void;
   sendMessage: () => Promise<void>;
@@ -19,7 +18,6 @@ interface ChatViewProps {
 
 const ChatView: React.FC<ChatViewProps> = ({
   messages,
-  setMessages,
   newMessage,
   setNewMessage,
   sendMessage,

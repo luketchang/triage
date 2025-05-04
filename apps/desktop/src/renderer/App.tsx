@@ -206,7 +206,6 @@ function App(): JSX.Element {
         return (
           <ChatView
             messages={chatState.messages}
-            setMessages={chatState.setMessages}
             newMessage={chatState.newMessage}
             setNewMessage={chatState.setNewMessage}
             sendMessage={chatState.sendMessage}
@@ -222,7 +221,6 @@ function App(): JSX.Element {
         return (
           <ChatView
             messages={chatState.messages}
-            setMessages={chatState.setMessages}
             newMessage={chatState.newMessage}
             setNewMessage={chatState.setNewMessage}
             sendMessage={chatState.sendMessage}
