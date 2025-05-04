@@ -31,40 +31,11 @@ const isMethodAvailable = (methodName: string) => {
   let methodAvailable = false;
 
   if (electronAvailable) {
-    if (window.electronAPI) {
-      try {
-        // Try direct method access first
-        methodAvailable =
-          typeof window.electronAPI[methodName as keyof typeof window.electronAPI] === "function";
-        console.info(
-          `[API DEBUG] Method '${methodName}' exists as direct property:`,
-          methodAvailable
-        );
-
-        // If it's not a function directly, check non-enumerable properties
-        if (!methodAvailable) {
-          // Try with Object.getOwnPropertyNames
-          const allProps = Object.getOwnPropertyNames(window.electronAPI);
-          const exists = allProps.includes(methodName);
-          console.info(`[API DEBUG] Method '${methodName}' exists as property name:`, exists);
-
-          if (exists) {
-            methodAvailable =
-              typeof window.electronAPI[methodName as keyof typeof window.electronAPI] ===
-              "function";
-            console.info(
-              `[API DEBUG] Non-enumerable property '${methodName}' is a function:`,
-              methodAvailable
-            );
-          }
-        }
-      } catch (err) {
-        console.error(`[API DEBUG] Error checking method '${methodName}':`, err);
-      }
-    }
+    methodAvailable =
+      typeof window.electronAPI[methodName as keyof typeof window.electronAPI] === "function";
+    console.info(`[API DEBUG] Is method '${methodName}' available:`, methodAvailable);
   }
 
-  console.info(`[API DEBUG] Final result - Is method '${methodName}' available:`, methodAvailable);
   return electronAvailable && methodAvailable;
 };
 
