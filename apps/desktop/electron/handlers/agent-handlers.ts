@@ -19,7 +19,7 @@ export function setupAgentHandlers(window: BrowserWindow): void {
 
   // Handle agent invocation
   ipcMain.handle(
-    "invoke-agent",
+    "agent:invoke-agent",
     async (
       _event: any,
       query: string,
@@ -47,7 +47,7 @@ export function setupAgentHandlers(window: BrowserWindow): void {
         // Send updates to renderer via mainWindow
         const onUpdate = (update: any) => {
           if (mainWindow) {
-            mainWindow.webContents.send("agent-update", update);
+            mainWindow.webContents.send("agent:agent-update", update);
           }
         };
 
@@ -73,7 +73,7 @@ export function setupAgentHandlers(window: BrowserWindow): void {
   );
 
   // Get the current agent configuration
-  ipcMain.handle("get-agent-config", async (): Promise<AgentConfig> => {
+  ipcMain.handle("agent:get-agent-config", async (): Promise<AgentConfig> => {
     return {
       repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
       codebaseOverviewPath:
@@ -90,7 +90,7 @@ export function setupAgentHandlers(window: BrowserWindow): void {
 
   // Update the agent configuration
   ipcMain.handle(
-    "update-agent-config",
+    "agent:update-agent-config",
     async (_event: any, newConfig: Partial<AgentConfig>): Promise<AgentConfig> => {
       // Store updated values in process.env for future access
       if (newConfig.repoPath) {

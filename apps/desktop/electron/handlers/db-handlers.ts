@@ -16,9 +16,9 @@ export function setupDbHandlers(): void {
 
   // Save user message
   ipcMain.handle(
-    "chat:save-user-message",
+    "db:save-user-message",
     async (_, message: UserMessage): Promise<number | null> => {
-      console.info("IPC: chat:save-user-message called with:", message);
+      console.info("IPC: db:save-user-message called with:", message);
       if (!dbService) return null;
 
       // Get or create chat ID
@@ -37,9 +37,9 @@ export function setupDbHandlers(): void {
 
   // Save assistant message
   ipcMain.handle(
-    "chat:save-assistant-message",
+    "db:save-assistant-message",
     async (_, message: AssistantMessage): Promise<number | null> => {
-      console.info("IPC: chat:save-assistant-message called");
+      console.info("IPC: db:save-assistant-message called");
       if (!dbService) return null;
 
       // Get chat ID
@@ -54,8 +54,8 @@ export function setupDbHandlers(): void {
   );
 
   // Get chat messages
-  ipcMain.handle("chat:get-messages", async (): Promise<ChatMessage[]> => {
-    console.info("IPC: chat:get-messages called");
+  ipcMain.handle("db:get-messages", async (): Promise<ChatMessage[]> => {
+    console.info("IPC: db:get-messages called");
     if (!dbService) return [];
 
     // Get the latest chat ID
@@ -69,8 +69,8 @@ export function setupDbHandlers(): void {
   });
 
   // Clear current chat
-  ipcMain.handle("chat:clear", async (): Promise<boolean> => {
-    console.info("IPC: chat:clear called");
+  ipcMain.handle("db:clear-messages", async (): Promise<boolean> => {
+    console.info("IPC: db:clear-messages called");
     if (!dbService) return false;
 
     const chatId = await dbService.getLatestChatId();

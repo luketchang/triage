@@ -17,7 +17,7 @@ export function setupObservabilityHandlers(): void {
 
   // Fetch logs based on query parameters
   ipcMain.handle(
-    "fetch-logs",
+    "observability:fetch-logs",
     async (_event: any, params: LogQueryParams): Promise<LogsWithPagination> => {
       try {
         console.info("Fetching logs with params:", params);
@@ -48,7 +48,7 @@ export function setupObservabilityHandlers(): void {
 
   // Get log facet values for a given time range
   ipcMain.handle(
-    "get-logs-facet-values",
+    "observability:get-logs-facet-values",
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
         console.info("Getting log facet values for time range:", { start, end });
@@ -80,7 +80,7 @@ export function setupObservabilityHandlers(): void {
 
   // Fetch traces based on query parameters
   ipcMain.handle(
-    "fetch-traces",
+    "observability:fetch-traces",
     async (_event: any, params: TraceQueryParams): Promise<TracesWithPagination> => {
       try {
         console.info("Fetching traces with params:", params);
@@ -111,7 +111,7 @@ export function setupObservabilityHandlers(): void {
 
   // Get span facet values for a given time range
   ipcMain.handle(
-    "get-spans-facet-values",
+    "observability:get-spans-facet-values",
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
         console.info("Getting span facet values for time range:", { start, end });
