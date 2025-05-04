@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView";
-import api from "../services/api";
-import { AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
-import { generateId } from "../utils/formatters";
+import { AssistantMessage, ChatMessage, ContextItem } from "../types";
 
 interface ChatViewProps {
   messages: ChatMessage[];
@@ -38,22 +36,6 @@ const ChatView: React.FC<ChatViewProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [chatMode, setChatMode] = useState<"agent" | "manual">(initialChatMode);
 
-  // Load saved messages when component mounts
-  useEffect(() => {
-    const loadSavedMessages = async () => {
-      try {
-        const savedMessages = await api.loadChatMessages();
-        if (savedMessages && savedMessages.length > 0) {
-          setMessages(savedMessages);
-        }
-      } catch (error) {
-        console.error("Error loading saved messages:", error);
-      }
-    };
-
-    loadSavedMessages();
-  }, [setMessages]);
-
   // Function to resize textarea based on content
   const resizeTextarea = useCallback(() => {
     const textarea = textareaRef.current;
@@ -77,8 +59,8 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   // Update local mode when chatMode prop changes
   useEffect(() => {
-    setChatMode(chatMode);
-  }, [chatMode]);
+    setChatMode(initialChatMode);
+  }, [initialChatMode]);
 
   // Auto-focus the textarea when the chat view is selected or when thinking state changes
   useEffect(() => {
@@ -183,24 +165,11 @@ const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
-  // Enhanced send message function to save messages
+  // Send message function that uses the hook's provided sendMessage
   const handleSendMessage = async () => {
-    // Create a new user message
-    const userMessage: UserMessage = {
-      id: generateId(),
-      role: "user",
-      timestamp: new Date(),
-      content: newMessage,
-      contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
-    };
+    if (!newMessage.trim()) return;
 
-    // Add to UI state
-    setMessages([...messages, userMessage]);
-
-    // Clear input
-    setNewMessage("");
-
-    // Call the original send function to generate response
+    // Call the original send function from the hook to handle message creation and sending
     await sendMessage();
 
     // Force reset textarea height after sending
@@ -210,12 +179,6 @@ const ChatView: React.FC<ChatViewProps> = ({
           textareaRef.current.style.height = "28px";
         }
       }, 50);
-    }
-
-    // Ensure context items are cleared
-    if (contextItems.length > 0 && removeContextItem) {
-      const itemsToRemove = [...contextItems];
-      itemsToRemove.forEach((item) => removeContextItem(item.id));
     }
   };
 
