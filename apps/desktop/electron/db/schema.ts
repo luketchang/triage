@@ -1,3 +1,4 @@
+import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
@@ -31,14 +32,14 @@ export const assistantMessages = sqliteTable("assistant_messages", {
 });
 
 // Define types from schema for use in the application
-export type Chat = typeof chats.$inferSelect;
-export type NewChat = typeof chats.$inferInsert;
+export type Chat = InferSelectModel<typeof chats>;
+export type NewChat = InferInsertModel<typeof chats>;
 
-export type UserMessage = typeof userMessages.$inferSelect;
-export type NewUserMessage = typeof userMessages.$inferInsert;
+export type UserMessage = InferSelectModel<typeof userMessages>;
+export type NewUserMessage = InferInsertModel<typeof userMessages>;
 
-export type AssistantMessage = typeof assistantMessages.$inferSelect;
-export type NewAssistantMessage = typeof assistantMessages.$inferInsert;
+export type AssistantMessage = InferSelectModel<typeof assistantMessages>;
+export type NewAssistantMessage = InferInsertModel<typeof assistantMessages>;
 
 // Export schema for migrations
 export const schema = { chats, userMessages, assistantMessages };

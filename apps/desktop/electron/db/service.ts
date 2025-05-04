@@ -1,6 +1,6 @@
 import BetterSqlite3 from "better-sqlite3";
 import { desc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
 import fs from "fs";
 import path from "path";
 import * as schema from "./schema.js";
@@ -10,14 +10,13 @@ import { AssistantMessage, UserMessage } from "./schema.js";
  * Service for interacting with the SQLite database for chat persistence
  */
 export class DatabaseService {
-  private db: ReturnType<typeof drizzle>;
+  private db: BetterSQLite3Database<typeof schema>;
   private sqliteDb: BetterSqlite3.Database;
   private initialized = false;
   private dbPath: string;
 
   constructor() {
     // Create db directory in root if it doesn't exist
-    // TODO: likely want to change this later to not store in repo dir
     const dbDir = path.join(process.cwd(), "db");
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
@@ -25,21 +24,10 @@ export class DatabaseService {
     this.dbPath = path.join(dbDir, "triage-chats.db");
 
     console.info("DatabaseService: Initializing with database path:", this.dbPath);
-    console.info("Current working directory:", process.cwd());
 
     try {
       // Create and store the SQLite database instance
-      try {
-        this.sqliteDb = new BetterSqlite3(this.dbPath, {
-          verbose: process.env.NODE_ENV === "development" ? console.info : undefined,
-        });
-      } catch (err) {
-        console.error("Failed to initialize better-sqlite3:", err);
-        console.error("If you're seeing native module errors, try:");
-        console.error("1. Run 'pnpm remove better-sqlite3 && pnpm add better-sqlite3@11.9.1'");
-        console.error("2. Make sure better-sqlite3 is compatible with your Electron version");
-        throw err;
-      }
+      this.sqliteDb = new BetterSqlite3(this.dbPath);
 
       // Set pragmas directly on the SQLite instance
       this.sqliteDb.pragma("foreign_keys = ON");
@@ -62,14 +50,12 @@ export class DatabaseService {
       const hasTables = this.checkIfTablesExist();
 
       if (hasTables) {
-        console.info("Tables already exist, skipping initialization");
         this.initialized = true;
         return;
       }
 
-      // Create tables directly since we're not using migrations yet
-      console.info("Creating tables directly");
-      this.createTablesDirectly();
+      // Create tables using direct SQL statements
+      this.createTables();
 
       this.initialized = true;
       console.info("DatabaseService: Tables created successfully");
@@ -87,12 +73,12 @@ export class DatabaseService {
         .get();
       return !!result;
     } catch (error) {
-      console.error("Error checking if tables exist:", error);
       return false;
     }
   }
 
-  private createTablesDirectly(): void {
+  private createTables(): void {
+    // Use raw SQL to create tables
     this.sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS chats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,8 +115,9 @@ export class DatabaseService {
         throw new Error("Failed to create chat - no ID returned");
       }
 
-      console.info("DatabaseService: Created chat with ID:", result[0].id);
-      return result[0].id;
+      // TODO: do not use !
+      console.info("DatabaseService: Created chat with ID:", result[0]!.id);
+      return result[0]!.id;
     } catch (error) {
       console.error("Error creating chat:", error);
       throw error;
@@ -170,8 +157,9 @@ export class DatabaseService {
         throw new Error("Failed to save user message - no ID returned");
       }
 
-      console.info("DatabaseService: Saved user message with ID:", result[0].id);
-      return result[0].id;
+      // TODO: do not use !
+      console.info("DatabaseService: Saved user message with ID:", result[0]!.id);
+      return result[0]!.id;
     } catch (error) {
       console.error("Error saving user message:", error);
       throw error;
@@ -196,8 +184,9 @@ export class DatabaseService {
         throw new Error("Failed to save assistant message - no ID returned");
       }
 
-      console.info("DatabaseService: Saved assistant message with ID:", result[0].id);
-      return result[0].id;
+      // TODO: do not use !
+      console.info("DatabaseService: Saved assistant message with ID:", result[0]!.id);
+      return result[0]!.id;
     } catch (error) {
       console.error("Error saving assistant message:", error);
       throw error;
