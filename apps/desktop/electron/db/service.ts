@@ -58,11 +58,10 @@ export class DatabaseService {
     try {
       const result = await this.db.insert(schema.chats).values({}).returning();
 
-      if (!result.length) {
+      if (!result.length || result.length === 0) {
         throw new Error("Failed to create chat - no ID returned");
       }
 
-      // TODO: do not use !
       console.info("DatabaseService: Created chat with ID:", result[0]!.id);
       return result[0]!.id;
     } catch (error) {
@@ -100,11 +99,10 @@ export class DatabaseService {
         })
         .returning();
 
-      if (!result.length) {
+      if (!result.length || result.length === 0) {
         throw new Error("Failed to save user message - no ID returned");
       }
 
-      // TODO: do not use !
       console.info("DatabaseService: Saved user message with ID:", result[0]!.id);
       return result[0]!.id;
     } catch (error) {
@@ -127,11 +125,10 @@ export class DatabaseService {
         })
         .returning();
 
-      if (!result.length) {
+      if (!result.length || result.length === 0) {
         throw new Error("Failed to save assistant message - no ID returned");
       }
 
-      // TODO: do not use !
       console.info("DatabaseService: Saved assistant message with ID:", result[0]!.id);
       return result[0]!.id;
     } catch (error) {
