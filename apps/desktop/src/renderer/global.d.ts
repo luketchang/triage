@@ -1,4 +1,16 @@
 // This file provides type definitions for modules without their own type definitions
+import type {
+  AgentConfig,
+  AgentStreamUpdate,
+  AssistantMessage,
+  ChatMessage,
+  FacetData,
+  LogQueryParams,
+  LogsWithPagination,
+  TraceQueryParams,
+  TracesWithPagination,
+  UserMessage,
+} from "./types";
 
 // Allow importing components, features, etc. without type errors
 declare module "*/components/*";
@@ -27,6 +39,30 @@ declare global {
       TRACES_ENABLED: boolean;
       USE_MOCK_API: boolean;
     };
+  }
+
+  interface ElectronAPI {
+    // Agent methods
+    invokeAgent: (
+      query: string,
+      chatHistory: ChatMessage[],
+      options?: { reasonOnly?: boolean }
+    ) => Promise<ChatMessage>;
+    onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => () => void;
+    getAgentConfig: () => Promise<AgentConfig>;
+    updateAgentConfig: (newConfig: AgentConfig) => Promise<AgentConfig>;
+
+    // Observability methods
+    fetchLogs: (params: LogQueryParams) => Promise<LogsWithPagination>;
+    getLogsFacetValues: (start: string, end: string) => Promise<FacetData[]>;
+    fetchTraces: (params: TraceQueryParams) => Promise<TracesWithPagination>;
+    getSpansFacetValues: (start: string, end: string) => Promise<FacetData[]>;
+
+    // Chat persistence methods
+    saveUserMessage: (message: UserMessage) => Promise<number | null>;
+    saveAssistantMessage: (message: AssistantMessage) => Promise<number | null>;
+    loadChatMessages: () => Promise<ChatMessage[]>;
+    clearChat: () => Promise<boolean>;
   }
 }
 

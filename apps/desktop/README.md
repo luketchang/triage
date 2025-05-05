@@ -21,6 +21,10 @@ apps/desktop/
 │       └── styles.css # Application styles
 ├── dist/             # Build output for the renderer process
 ├── dist-electron/    # Build output for the Electron processes
+├── drizzle/          # Database migration files
+├── scripts/          # Utility scripts
+│   └── db-migrate-electron.js # Database migration script
+├── drizzle.config.ts # Drizzle ORM configuration
 ├── index.html        # HTML entry point
 ├── tsconfig.json     # Base TypeScript configuration
 ├── tsconfig.electron.json # TypeScript config for Electron main process
@@ -51,6 +55,41 @@ OBSERVABILITY_PLATFORM=datadog
 - `pnpm build`: Build the application for production
 - `pnpm lint`: Lint the codebase
 - `pnpm check-types`: Check TypeScript types
+
+## Database Migrations
+
+The application uses SQLite with Drizzle ORM for data persistence. Database schema is defined in `electron/db/schema.ts`.
+
+### Managing Migrations
+
+- **Generate migrations**: After changing the schema, generate migration files:
+
+  ```bash
+  pnpm db:generate
+  ```
+
+  This creates SQL migration files in the `drizzle` directory.
+
+- **Apply migrations**: Run migrations to update the database schema:
+
+  ```bash
+  pnpm db:migrate
+  ```
+
+  This uses `ts-node` to execute the migration script directly from TypeScript.
+
+- **Migration workflow**:
+  1. Modify the schema in `electron/db/schema.ts`
+  2. Run `pnpm db:generate` to create migration files
+  3. Review the generated SQL in `drizzle/` directory
+  4. Run `pnpm db:migrate` to apply changes
+  5. Restart the application to use the updated schema
+
+The database file is stored in `db/triage-chats.db` relative to the application working directory.
+
+## Building for Production
+
+Run `pnpm build:prod` to build the application for production. The output will be in the `dist` directory.
 
 ## Architecture
 

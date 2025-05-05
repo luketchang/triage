@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView";
-import { ChatMessage, ContextItem, AssistantMessage } from "../types";
+import { AssistantMessage, ChatMessage, ContextItem } from "../types";
 
 interface ChatViewProps {
   messages: ChatMessage[];
@@ -13,6 +13,7 @@ interface ChatViewProps {
   removeContextItem?: (id: string) => void;
   initialChatMode?: "agent" | "manual";
   toggleChatMode?: () => void;
+  clearChat?: () => Promise<void>;
 }
 
 const ChatView: React.FC<ChatViewProps> = ({
@@ -25,6 +26,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   removeContextItem,
   initialChatMode = "agent",
   toggleChatMode,
+  clearChat,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hoveredContextId, setHoveredContextId] = useState<string | null>(null);
@@ -55,8 +57,8 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   // Update local mode when chatMode prop changes
   useEffect(() => {
-    setChatMode(chatMode);
-  }, [chatMode]);
+    setChatMode(initialChatMode);
+  }, [initialChatMode]);
 
   // Auto-focus the textarea when the chat view is selected or when thinking state changes
   useEffect(() => {
@@ -128,7 +130,7 @@ const ChatView: React.FC<ChatViewProps> = ({
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       if (newMessage.trim()) {
-        sendMessage();
+        handleSendMessage();
       }
     }
   };
@@ -152,8 +154,20 @@ const ChatView: React.FC<ChatViewProps> = ({
     setModeMenuOpen(false);
   };
 
-  // Wrapper for sendMessage to ensure textarea is reset
+  // Use the provided clearChat function if available, otherwise fallback
+  const handleClearChat = async () => {
+    if (clearChat) {
+      await clearChat();
+    } else {
+      console.error("clearChat function not provided to ChatView component");
+    }
+  };
+
+  // Send message function that uses the hook's provided sendMessage
   const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+
+    // Call the original send function from the hook to handle message creation and sending
     await sendMessage();
 
     // Force reset textarea height after sending
@@ -163,13 +177,6 @@ const ChatView: React.FC<ChatViewProps> = ({
           textareaRef.current.style.height = "28px";
         }
       }, 50);
-    }
-
-    // Ensure context items are cleared even if there's an issue with the hook's clearing
-    if (contextItems.length > 0 && removeContextItem) {
-      // Create a copy to avoid modification during iteration
-      const itemsToRemove = [...contextItems];
-      itemsToRemove.forEach((item) => removeContextItem(item.id));
     }
   };
 
@@ -374,6 +381,27 @@ const ChatView: React.FC<ChatViewProps> = ({
           height: "100%",
         }}
       >
+        {/* Add Clear Chat Button */}
+        <div
+          className="chat-controls"
+          style={{ padding: "8px", display: "flex", justifyContent: "flex-end" }}
+        >
+          <button
+            onClick={handleClearChat}
+            className="clear-chat-button"
+            style={{
+              backgroundColor: "#f44336",
+              color: "white",
+              border: "none",
+              padding: "6px 12px",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            Clear Chat
+          </button>
+        </div>
+
         <div
           className="chat-messages-container"
           style={{

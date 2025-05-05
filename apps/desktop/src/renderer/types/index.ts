@@ -20,7 +20,6 @@ import {
 } from "@triage/agent";
 
 import {
-  IntegrationType,
   Log,
   LogsWithPagination,
   ServiceLatency,
@@ -39,7 +38,6 @@ export type {
   AgentUserMessage,
   CodePostprocessingFact,
   CodePostprocessingStep,
-  IntegrationType,
   Log,
   LogPostprocessingFact,
   LogPostprocessingStep,
@@ -55,6 +53,9 @@ export type {
   Trace,
   TracesWithPagination,
 };
+
+export { invokeAgent } from "@triage/agent";
+export { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 
 // Define code map type alias
 export type CodeMap = Map<string, string>;

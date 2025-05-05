@@ -19,7 +19,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "types": ["vite/client", "node", "better-sqlite3"]
   },
   "include": ["src", "vite-env.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]

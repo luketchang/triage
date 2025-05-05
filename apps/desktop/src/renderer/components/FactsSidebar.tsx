@@ -83,15 +83,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
       try {
         const response = await api.getLogsFacetValues(timeRange.start, timeRange.end);
 
-        if (
-          response &&
-          "data" in response &&
-          response.success &&
-          response.data &&
-          response.data.length > 0
-        ) {
-          setFacets(response.data);
-        } else if (Array.isArray(response) && response.length > 0) {
+        if (response && response.length > 0) {
           setFacets(response);
         } else {
           console.info("No valid facet data received, using empty array");
@@ -144,13 +136,13 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         pageCursor: fact.pageCursor || undefined,
       });
 
-      if (response.success && response.data) {
-        setLogs(response.data.logs);
+      if (response.logs) {
+        setLogs(response.logs);
         setLogsWithPagination({
-          logs: response.data.logs,
-          pageCursorOrIndicator: response.data.pageCursorOrIndicator,
+          logs: response.logs,
+          pageCursorOrIndicator: response.pageCursorOrIndicator,
         });
-        setPageCursor(response.data.pageCursorOrIndicator);
+        setPageCursor(response.pageCursorOrIndicator);
       } else {
         console.error("Error fetching logs:", response);
         setLogs([]);
@@ -190,13 +182,13 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         pageCursor: undefined, // Reset pagination on new query
       });
 
-      if (response.success && response.data) {
-        setLogs(response.data.logs);
+      if (response.logs) {
+        setLogs(response.logs);
         setLogsWithPagination({
-          logs: response.data.logs,
-          pageCursorOrIndicator: response.data.pageCursorOrIndicator,
+          logs: response.logs,
+          pageCursorOrIndicator: response.pageCursorOrIndicator,
         });
-        setPageCursor(response.data.pageCursorOrIndicator);
+        setPageCursor(response.pageCursorOrIndicator);
       } else {
         console.error("Error fetching logs:", response);
       }
@@ -222,13 +214,13 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
         pageCursor: pageCursor,
       });
 
-      if (response.success && response.data) {
-        setLogs([...logs, ...response.data.logs]);
+      if (response.logs) {
+        setLogs([...logs, ...response.logs]);
         setLogsWithPagination({
-          logs: [...logs, ...response.data.logs],
-          pageCursorOrIndicator: response.data.pageCursorOrIndicator,
+          logs: [...logs, ...response.logs],
+          pageCursorOrIndicator: response.pageCursorOrIndicator,
         });
-        setPageCursor(response.data.pageCursorOrIndicator);
+        setPageCursor(response.pageCursorOrIndicator);
       } else {
         console.error("Error fetching more logs:", response);
       }
@@ -258,13 +250,13 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
             pageCursor: undefined, // Reset pagination on time range change
           })
           .then((response) => {
-            if (response.success && response.data) {
-              setLogs(response.data.logs);
+            if (response.logs) {
+              setLogs(response.logs);
               setLogsWithPagination({
-                logs: response.data.logs,
-                pageCursorOrIndicator: response.data.pageCursorOrIndicator,
+                logs: response.logs,
+                pageCursorOrIndicator: response.pageCursorOrIndicator,
               });
-              setPageCursor(response.data.pageCursorOrIndicator);
+              setPageCursor(response.pageCursorOrIndicator);
             } else {
               console.error("Error fetching logs:", response);
             }

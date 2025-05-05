@@ -45,3 +45,5 @@ yarn-error.log*
 .ipynb_checkpoints
 
 repos/*/source-code/*
+
+*.db*
