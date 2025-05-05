@@ -1,7 +1,7 @@
 import {
   AgentAssistantMessage,
   AgentChatMessage,
-  AgentConfig,
+  AppConfig,
   FacetData,
   Log,
   LogQueryParams,
@@ -374,11 +374,12 @@ The primary issue appears to be in the authentication middleware where token val
   /**
    * Get the current agent configuration
    */
-  getAgentConfig: async (): Promise<AgentConfig> => {
-    console.info("Mock getAgentConfig called");
+  getAppConfig: async (): Promise<AppConfig> => {
+    console.info("Mock getAppConfig called");
 
     return {
       repoPath: "/Users/luketchang/code/ticketing",
+      githubRepoBaseUrl: "https://github.com/luketchang/ticketing",
       codebaseOverviewPath: "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
       observabilityPlatform: "datadog",
       observabilityFeatures: ["logs"],
@@ -388,12 +389,12 @@ The primary issue appears to be in the authentication middleware where token val
   },
 
   /**
-   * Update the agent configuration
+   * Update the application configuration
    */
-  updateAgentConfig: async (newConfig: Partial<AgentConfig>): Promise<AgentConfig> => {
-    console.info("Mock updateAgentConfig called with:", newConfig);
+  updateAppConfig: async (newConfig: Partial<AppConfig>): Promise<AppConfig> => {
+    console.info("Mock updateAppConfig called with:", newConfig);
 
-    const currentConfig = await mockElectronAPI.getAgentConfig();
+    const currentConfig = await mockElectronAPI.getAppConfig();
     return {
       ...currentConfig,
       ...newConfig,

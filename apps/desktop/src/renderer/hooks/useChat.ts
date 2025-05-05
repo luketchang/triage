@@ -352,18 +352,28 @@ export function useChat() {
           ...cell,
           response:
             "Sorry, I encountered an error processing your request. Please try again later.",
-          error: "Sorry, I encountered an error processing your request. Please try again later.",
+          error:
+            agentMessage?.error ||
+            "Sorry, I encountered an error processing your request. Please try again later.",
         }));
       }
     } catch (error) {
       // Log the error
       console.error("Error in chat API call:", error);
 
+      // Get a proper string representation of the error
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null
+            ? JSON.stringify(error)
+            : String(error);
+
       // Update the cell with the error
       manager.queueUpdate((cell) => ({
         ...cell,
         response: "Sorry, I encountered an error processing your request. Please try again later.",
-        error: "Sorry, I encountered an error processing your request. Please try again later.",
+        error: errorMessage,
       }));
     } finally {
       // Hide the thinking indicator

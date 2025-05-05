@@ -1,7 +1,7 @@
 // This file provides type definitions for modules without their own type definitions
 import type {
-  AgentConfig,
   AgentStreamUpdate,
+  AppConfig,
   AssistantMessage,
   ChatMessage,
   FacetData,
@@ -49,8 +49,8 @@ declare global {
       options?: { reasonOnly?: boolean }
     ) => Promise<ChatMessage>;
     onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => () => void;
-    getAgentConfig: () => Promise<AgentConfig>;
-    updateAgentConfig: (newConfig: AgentConfig) => Promise<AgentConfig>;
+    getAppConfig: () => Promise<AppConfig>;
+    updateAppConfig: (newConfig: AppConfig) => Promise<AppConfig>;
 
     // Observability methods
     fetchLogs: (params: LogQueryParams) => Promise<LogsWithPagination>;

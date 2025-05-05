@@ -23,6 +23,9 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useLogs } from "./hooks/useLogs";
 import { useTraces } from "./hooks/useTraces";
 
+// Context Provider
+import { AppConfigProvider } from "./context/AppConfigContext";
+
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>("chat");
 
@@ -236,17 +239,19 @@ function App(): JSX.Element {
   };
 
   return (
-    <div className="app-container observability-layout">
-      {/* Vertical Navigation Sidebar */}
-      <NavigationSidebar
-        activeTab={activeTab}
-        handleTabChange={handleTabChange}
-        contextItemsCount={chatState.contextItems.length}
-      />
+    <AppConfigProvider>
+      <div className="app-container observability-layout">
+        {/* Vertical Navigation Sidebar */}
+        <NavigationSidebar
+          activeTab={activeTab}
+          handleTabChange={handleTabChange}
+          contextItemsCount={chatState.contextItems.length}
+        />
 
-      {/* Main Content Area */}
-      <div className="main-content-wrapper">{renderMainContent()}</div>
-    </div>
+        {/* Main Content Area */}
+        <div className="main-content-wrapper">{renderMainContent()}</div>
+      </div>
+    </AppConfigProvider>
   );
 }
 
