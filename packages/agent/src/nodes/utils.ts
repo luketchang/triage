@@ -139,10 +139,28 @@ export function formatSingleLogSearchStep(step: LogSearchStep): string {
   return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
 }
 
-export function formatSingleCodeSearchStep(step: CodeSearchStep): string {
+export function formatSingleCodeSearchStep(
+  step: CodeSearchStep,
+  options: {
+    lineNumbers?: boolean;
+  } = {}
+): string {
   const header = `File: ${step.filepath}`;
   const separator = "-".repeat(header.length);
-  return `${separator}\n${header}\n${separator}\n${step.source}\n`;
+
+  let source = step.source;
+  if (options.lineNumbers) {
+    const lines = source.split("\n");
+    const maxLineNumberWidth = String(lines.length).length;
+    source = lines
+      .map((line, index) => {
+        const lineNumber = String(index + 1).padStart(maxLineNumberWidth, " ");
+        return `${lineNumber} | ${line}`;
+      })
+      .join("\n");
+  }
+
+  return `${separator}\n${header}\n${separator}\n${source}\n`;
 }
 
 export function formatLogSearchSteps(steps: LogSearchStep[]): string {
@@ -152,9 +170,12 @@ export function formatLogSearchSteps(steps: LogSearchStep[]): string {
     .join("\n\n");
 }
 
-export function formatCodeSearchSteps(steps: CodeSearchStep[]): string {
+export function formatCodeSearchSteps(
+  steps: CodeSearchStep[],
+  options: { lineNumbers?: boolean } = {}
+): string {
   return steps
-    .map((step) => formatSingleCodeSearchStep(step))
+    .map((step) => formatSingleCodeSearchStep(step, options))
     .filter(Boolean)
     .join("\n\n");
 }
