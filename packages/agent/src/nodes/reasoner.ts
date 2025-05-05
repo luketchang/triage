@@ -114,23 +114,28 @@ export class Reasoner {
     });
 
     let text = "";
-    for await (const part of fullStream) {
-      if (part.type === "text-delta") {
-        text += part.textDelta;
-        // If this is root cause analysis (no tool calls), stream text as it's generated
-        if (params.onUpdate) {
-          params.onUpdate({
-            type: "intermediateUpdate",
-            id: uuidv4(),
-            parentId: params.parentId,
-            step: {
-              type: "reasoning",
-              timestamp: new Date(),
-              contentChunk: part.textDelta,
-            },
-          });
+    try {
+      for await (const part of fullStream) {
+        if (part.type === "text-delta") {
+          text += part.textDelta;
+          // If this is root cause analysis (no tool calls), stream text as it's generated
+          if (params.onUpdate) {
+            params.onUpdate({
+              type: "intermediateUpdate",
+              id: uuidv4(),
+              parentId: params.parentId,
+              step: {
+                type: "reasoning",
+                timestamp: new Date(),
+                contentChunk: part.textDelta,
+              },
+            });
+          }
         }
       }
+    } catch (error) {
+      logger.error(`Error during reasoning: ${error}`);
+      throw error;
     }
 
     const finalizedToolCalls = await toolCalls;
