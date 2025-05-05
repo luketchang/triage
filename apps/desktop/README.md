@@ -23,7 +23,7 @@ apps/desktop/
 ├── dist-electron/    # Build output for the Electron processes
 ├── drizzle/          # Database migration files
 ├── scripts/          # Utility scripts
-│   └── db-migrate.ts # Database migration script
+│   └── db-migrate-electron.js # Database migration script
 ├── drizzle.config.ts # Drizzle ORM configuration
 ├── index.html        # HTML entry point
 ├── tsconfig.json     # Base TypeScript configuration
