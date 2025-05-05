@@ -21,7 +21,10 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
       const elements = codeFacts.map((fact, index) => {
         // Generate GitHub URL for the code fact
         const relativeFilePath = normalizeFilePath(fact.filepath, config.repoPath);
-        const githubUrl = filepathToGitHubUrl(config.githubRepoBaseUrl, relativeFilePath);
+        const githubUrl = filepathToGitHubUrl(config.githubRepoBaseUrl, relativeFilePath, {
+          startLine: fact.startLine,
+          endLine: fact.endLine,
+        });
 
         return (
           <div key={`code-fact-${index}`} className="fact-item code-fact">
