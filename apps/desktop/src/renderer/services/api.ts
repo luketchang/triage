@@ -69,7 +69,7 @@ const api = {
       console.info("Using mock getAppConfig");
       return mockElectronAPI.getAppConfig();
     } else {
-      console.info("Using real electronAPI.getAppConfig");
+      console.info("Using real electronAPI.getAppConfig (config:get-app-config)");
       return window.electronAPI.getAppConfig();
     }
   },
@@ -79,7 +79,7 @@ const api = {
       console.info("Using mock updateAppConfig");
       return mockElectronAPI.updateAppConfig(newConfig);
     } else {
-      console.info("Using real electronAPI.updateAppConfig");
+      console.info("Using real electronAPI.updateAppConfig (config:update-app-config)");
       return window.electronAPI.updateAppConfig(newConfig);
     }
   },

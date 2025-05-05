@@ -11,9 +11,11 @@ import { config } from "@triage/config";
 // Import all handlers from the handlers directory
 import {
   cleanupAgentHandlers,
+  cleanupConfigHandlers,
   cleanupDbHandlers,
   cleanupObservabilityHandlers,
   setupAgentHandlers,
+  setupConfigHandlers,
   setupDbHandlers,
   setupObservabilityHandlers,
 } from "./handlers/index.js";
@@ -90,6 +92,7 @@ function init(): void {
   }
   setupDbHandlers();
   setupObservabilityHandlers();
+  setupConfigHandlers();
 }
 
 // App lifecycle event handlers
@@ -112,4 +115,5 @@ app.on("quit", () => {
   cleanupDbHandlers();
   cleanupAgentHandlers();
   cleanupObservabilityHandlers();
+  cleanupConfigHandlers();
 });

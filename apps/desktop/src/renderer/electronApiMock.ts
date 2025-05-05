@@ -389,7 +389,7 @@ The primary issue appears to be in the authentication middleware where token val
   },
 
   /**
-   * Update the agent configuration
+   * Update the application configuration
    */
   updateAppConfig: async (newConfig: Partial<AppConfig>): Promise<AppConfig> => {
     console.info("Mock updateAppConfig called with:", newConfig);
