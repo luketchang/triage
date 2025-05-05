@@ -386,6 +386,7 @@ export class TriageAgent {
     const codeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
     const response = await postprocessor.invoke({
       query: state.query,
+      repoPath: state.repoPath,
       codebaseOverview: state.codebaseOverview,
       codeSearchSteps,
       answer: state.answer,

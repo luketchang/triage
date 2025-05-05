@@ -277,7 +277,7 @@ export const codePostprocessingFactSchema = z.object({
     .describe(
       "A fact derived from the code search result that supports the answer and some context on why it is relevant."
     ),
-  filepath: z.string().describe("The absolute file path of the code block that supports the fact"),
+  filepath: z.string().describe("The relative file path of the code block that supports the fact"),
   codeBlock: z
     .string()
     .describe(
