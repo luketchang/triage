@@ -1,13 +1,15 @@
-import { ApiResponse } from "../electron.d";
 import mockElectronAPI from "../electronApiMock";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
   AgentConfig,
   AgentStreamUpdate,
+  AssistantMessage,
+  ChatMessage,
   FacetData,
   LogQueryParams,
   TraceQueryParams,
+  UserMessage,
 } from "../types";
 
 // Get mock API setting from environment
@@ -19,6 +21,7 @@ const isElectronAPIAvailable = () => {
   console.info("[API DEBUG] Is electronAPI available:", available);
   if (available) {
     console.info("[API DEBUG] electronAPI methods:", Object.keys(window.electronAPI));
+    // This won't show non-enumerable properties, which is fine
   }
   return available;
 };
@@ -95,10 +98,7 @@ const api = {
     }
   },
 
-  getLogsFacetValues: async (
-    start: string,
-    end: string
-  ): Promise<ApiResponse<FacetData[]> | FacetData[]> => {
+  getLogsFacetValues: async (start: string, end: string): Promise<FacetData[]> => {
     console.info("[API DEBUG] getLogsFacetValues called with:", { start, end });
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getLogsFacetValues");
     console.info("[API DEBUG] Using mock implementation:", shouldUseMock);
@@ -140,10 +140,7 @@ const api = {
     }
   },
 
-  getSpansFacetValues: async (
-    start: string,
-    end: string
-  ): Promise<ApiResponse<FacetData[]> | FacetData[]> => {
+  getSpansFacetValues: async (start: string, end: string): Promise<FacetData[]> => {
     console.info("[API DEBUG] getSpansFacetValues called with:", { start, end });
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("getSpansFacetValues");
     console.info("[API DEBUG] Using mock implementation:", shouldUseMock);
@@ -168,6 +165,55 @@ const api = {
         console.error("Error in getSpansFacetValues:", error);
         return []; // Return empty array on error
       }
+    }
+  },
+
+  // Chat persistence methods
+  saveUserMessage: async (message: UserMessage): Promise<number | null> => {
+    console.info("[API DEBUG] saveUserMessage called");
+
+    if (USE_MOCK_API || !isMethodAvailable("saveUserMessage")) {
+      console.info("Mock saveUserMessage - not implemented in mock mode");
+      return null;
+    } else {
+      console.info("Using real electronAPI.saveUserMessage");
+      return window.electronAPI.saveUserMessage(message);
+    }
+  },
+
+  saveAssistantMessage: async (message: AssistantMessage): Promise<number | null> => {
+    console.info("[API DEBUG] saveAssistantMessage called");
+
+    if (USE_MOCK_API || !isMethodAvailable("saveAssistantMessage")) {
+      console.info("Mock saveAssistantMessage - not implemented in mock mode");
+      return null;
+    } else {
+      console.info("Using real electronAPI.saveAssistantMessage");
+      return window.electronAPI.saveAssistantMessage(message);
+    }
+  },
+
+  loadChatMessages: async (): Promise<ChatMessage[]> => {
+    console.info("[API DEBUG] loadChatMessages called");
+
+    if (USE_MOCK_API || !isMethodAvailable("loadChatMessages")) {
+      console.info("Mock loadChatMessages - not implemented in mock mode");
+      return [];
+    } else {
+      console.info("Using real electronAPI.loadChatMessages");
+      return window.electronAPI.loadChatMessages();
+    }
+  },
+
+  clearChat: async (): Promise<boolean> => {
+    console.info("[API DEBUG] clearChat called");
+
+    if (USE_MOCK_API || !isMethodAvailable("clearChat")) {
+      console.info("Mock clearChat - not implemented in mock mode");
+      return false;
+    } else {
+      console.info("Using real electronAPI.clearChat");
+      return window.electronAPI.clearChat();
     }
   },
 };

@@ -1,5 +1,6 @@
 import { AgentStreamUpdate, ChatMessage } from "@triage/agent";
 import { contextBridge, ipcRenderer } from "electron";
+import { AssistantMessage, UserMessage } from "../src/renderer/types";
 
 // Store the environment values we're exposing for logging
 const tracesEnabled = process.env.TRACES_ENABLED === "true";
@@ -25,7 +26,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param options Optional configuration options for the agent
    */
   invokeAgent: (query: string, chatHistory: ChatMessage[], options?: { reasonOnly?: boolean }) => {
-    return ipcRenderer.invoke("invoke-agent", query, chatHistory, options);
+    return ipcRenderer.invoke("agent:invoke-agent", query, chatHistory, options);
   },
 
   /**
@@ -35,29 +36,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, update: AgentStreamUpdate) =>
       callback(update);
-    ipcRenderer.on("agent-update", listener);
+    ipcRenderer.on("agent:agent-update", listener);
     // Return a function to remove the listener when no longer needed
     return () => {
-      ipcRenderer.removeListener("agent-update", listener);
+      ipcRenderer.removeListener("agent:agent-update", listener);
     };
   },
 
   /**
    * Get the current agent configuration
    */
-  getAgentConfig: () => ipcRenderer.invoke("get-agent-config"),
+  getAgentConfig: () => ipcRenderer.invoke("agent:get-agent-config"),
 
   /**
    * Update the agent configuration
    * @param newConfig The new configuration to set
    */
-  updateAgentConfig: (newConfig: unknown) => ipcRenderer.invoke("update-agent-config", newConfig),
+  updateAgentConfig: (newConfig: unknown) =>
+    ipcRenderer.invoke("agent:update-agent-config", newConfig),
 
   /**
    * Fetch logs based on query parameters
    * @param params Query parameters for fetching logs
    */
-  fetchLogs: (params: unknown) => ipcRenderer.invoke("fetch-logs", params),
+  fetchLogs: (params: unknown) => ipcRenderer.invoke("observability:fetch-logs", params),
 
   /**
    * Get log facet values for a given time range
@@ -65,13 +67,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param end End date of the time range
    */
   getLogsFacetValues: (start: string, end: string) =>
-    ipcRenderer.invoke("get-logs-facet-values", start, end),
+    ipcRenderer.invoke("observability:get-logs-facet-values", start, end),
 
   /**
    * Fetch traces based on query parameters
    * @param params Query parameters for fetching traces
    */
-  fetchTraces: (params: unknown) => ipcRenderer.invoke("fetch-traces", params),
+  fetchTraces: (params: unknown) => ipcRenderer.invoke("observability:fetch-traces", params),
 
   /**
    * Get span facet values for a given time range
@@ -79,21 +81,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param end End date of the time range
    */
   getSpansFacetValues: (start: string, end: string) =>
-    ipcRenderer.invoke("get-spans-facet-values", start, end),
+    ipcRenderer.invoke("observability:get-spans-facet-values", start, end),
 
   /**
-   * Get the file tree structure for a repository path
-   * @param repoPath Path to the repository
+   * Save a user message to the database
+   * @param message The user message to save
    */
-  getFileTree: (repoPath: string) => ipcRenderer.invoke("get-file-tree", repoPath),
+  saveUserMessage: (message: UserMessage) => ipcRenderer.invoke("db:save-user-message", message),
 
   /**
-   * Get the content of a file
-   * @param repoPath Base repository path
-   * @param filePath Relative file path within repository
+   * Save an assistant message to the database
+   * @param message The assistant message to save
    */
-  getFileContent: (repoPath: string, filePath: string) =>
-    ipcRenderer.invoke("get-file-content", repoPath, filePath),
+  saveAssistantMessage: (message: AssistantMessage) =>
+    ipcRenderer.invoke("db:save-assistant-message", message),
+
+  /**
+   * Load all messages from the current chat
+   */
+  loadChatMessages: () => ipcRenderer.invoke("db:get-messages"),
+
+  /**
+   * Clear the current chat
+   */
+  clearChat: () => ipcRenderer.invoke("db:clear-messages"),
 });
 
 /**
@@ -117,8 +128,8 @@ function domReady(condition: DocumentReadyState[] = ["complete", "interactive"])
 
 // Perform any initialization logic when DOM is ready
 domReady().then(() => {
-  console.log("Preload script initialized");
-  console.log("Environment variables exposed:", {
+  console.info("Preload script initialized");
+  console.info("Environment variables exposed:", {
     TRACES_ENABLED: tracesEnabled,
     USE_MOCK_API: useMockApi,
   });

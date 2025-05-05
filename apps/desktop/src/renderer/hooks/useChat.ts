@@ -1,5 +1,5 @@
 import { HighLevelUpdate, IntermediateUpdate } from "@triage/agent";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../services/api";
 import { AgentStage, AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
 import {
@@ -21,6 +21,57 @@ export function useChat() {
   const [chatMode, setChatMode] = useState<ChatMode>("agent");
   // Track the current cell manager for active streaming responses
   const [cellManager, setCellManager] = useState<CellUpdateManager | null>(null);
+  // Track message IDs that have already been saved to prevent duplicates
+  const savedMessageIds = useRef<Set<string>>(new Set());
+
+  // Load saved messages when the hook initializes
+  useEffect(() => {
+    const loadSavedMessages = async () => {
+      try {
+        const savedMessages = await api.loadChatMessages();
+        if (savedMessages && savedMessages.length > 0) {
+          setMessages(savedMessages);
+          // Add all loaded message IDs to savedMessageIds
+          savedMessages.forEach((msg) => savedMessageIds.current.add(msg.id));
+        }
+      } catch (error) {
+        console.error("Error loading saved messages:", error);
+      }
+    };
+
+    loadSavedMessages();
+  }, []);
+
+  // Watch for new assistant messages and save them
+  useEffect(() => {
+    // Look for the most recent assistant message that might need saving
+    const assistantMessages = messages.filter(
+      (msg) => msg.role === "assistant"
+    ) as AssistantMessage[];
+
+    if (assistantMessages.length > 0) {
+      const latestMessage = assistantMessages[assistantMessages.length - 1];
+
+      // Don't save "Thinking..." messages and don't save messages that have already been saved
+      // Only save messages when we're not in the thinking state (message is complete)
+      if (
+        latestMessage.response !== "Thinking..." &&
+        !savedMessageIds.current.has(latestMessage.id) &&
+        !isThinking
+      ) {
+        // Mark as saved before the API call to prevent race conditions
+        savedMessageIds.current.add(latestMessage.id);
+        console.info(`Saving assistant message with ID: ${latestMessage.id}`);
+
+        // Save to database using the API service
+        api.saveAssistantMessage(latestMessage).catch((err: Error) => {
+          console.error("Error saving assistant message:", err);
+          // Optional: Could remove from savedMessageIds if save fails to retry later
+          // savedMessageIds.current.delete(latestMessage.id);
+        });
+      }
+    }
+  }, [messages, isThinking]); // Include isThinking in dependencies
 
   // Register for agent updates when we have an active cell manager
   useEffect(() => {
@@ -195,6 +246,19 @@ export function useChat() {
     setContextItems((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const clearChat = async (): Promise<void> => {
+    try {
+      const success = await api.clearChat();
+      if (success) {
+        setMessages([]);
+        // Clear saved message IDs when clearing chat
+        savedMessageIds.current.clear();
+      }
+    } catch (error) {
+      console.error("Error clearing chat:", error);
+    }
+  };
+
   const sendMessage = async (): Promise<void> => {
     if (!newMessage.trim()) return;
 
@@ -219,6 +283,13 @@ export function useChat() {
 
     // Update the messages state
     setMessages(updatedMessages);
+
+    // Save the user message to database using the API service
+    try {
+      await api.saveUserMessage(userMessage);
+    } catch (error) {
+      console.error("Error saving user message:", error);
+    }
 
     // Clear the input field
     setNewMessage("");
@@ -308,12 +379,14 @@ export function useChat() {
     newMessage,
     setNewMessage,
     messages,
-    sendMessage,
+    setMessages,
     isThinking,
     contextItems,
     setContextItems,
+    sendMessage,
     removeContextItem,
     chatMode,
     toggleChatMode,
+    clearChat,
   };
 }

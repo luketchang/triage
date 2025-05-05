@@ -214,6 +214,7 @@ function App(): JSX.Element {
             removeContextItem={chatState.removeContextItem}
             initialChatMode={chatState.chatMode}
             toggleChatMode={chatState.toggleChatMode}
+            clearChat={chatState.clearChat}
           />
         );
       default:
@@ -228,6 +229,7 @@ function App(): JSX.Element {
             removeContextItem={chatState.removeContextItem}
             initialChatMode={chatState.chatMode}
             toggleChatMode={chatState.toggleChatMode}
+            clearChat={chatState.clearChat}
           />
         );
     }

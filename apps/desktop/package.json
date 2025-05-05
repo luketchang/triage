@@ -12,7 +12,10 @@
     "lint:fix": "eslint src --ext ts,tsx --fix --max-warnings 99",
     "check-types": "tsc --noEmit",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate:sqlite",
+    "db:migrate": "electron ./scripts/db-migrate-electron.js",
+    "postinstall": "node ./scripts/fix-better-sqlite3.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -24,8 +27,12 @@
     "@triage/common": "workspace:*",
     "@triage/config": "workspace:*",
     "@triage/observability": "workspace:*",
+    "better-sqlite3": "11.9.1",
     "dotenv": "^16.4.7",
+    "drizzle-kit": "^0.20.0",
+    "drizzle-orm": "^0.29.0",
     "electron-updater": "^6.6.2",
+    "kysely": "^0.28.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
@@ -33,13 +40,18 @@
     "react-split-pane": "^0.1.92"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "^4.2.1",
     "cross-env": "^7.0.3",
     "electron": "^35.1.0",
     "electron-builder": "^24.9.1",
+    "electron-rebuild": "^3.2.9",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "prebuild-install": "^7.1.3",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "vite": "^5.1.0",
     "wait-on": "^7.2.0"

@@ -1,4 +1,3 @@
-import { ApiResponse } from "./electron.d";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
@@ -6,7 +5,9 @@ import {
   FacetData,
   Log,
   LogQueryParams,
+  LogsWithPagination,
   TraceQueryParams,
+  TracesWithPagination,
 } from "./types";
 
 // Define a local version of PostprocessedLogSearchInput to avoid import issues
@@ -402,14 +403,7 @@ The primary issue appears to be in the authentication middleware where token val
   /**
    * Fetch logs based on query parameters
    */
-  fetchLogs: async (
-    params: LogQueryParams
-  ): Promise<
-    ApiResponse<{
-      logs: Log[];
-      pageCursorOrIndicator?: string;
-    }>
-  > => {
+  fetchLogs: async (params: LogQueryParams): Promise<LogsWithPagination> => {
     console.info("Mock fetchLogs called with:", params);
 
     // Simulate processing time
@@ -530,12 +524,9 @@ The primary issue appears to be in the authentication middleware where token val
     const paginatedLogs = filteredLogs.slice(0, params.limit);
 
     return {
-      success: true,
-      data: {
-        logs: paginatedLogs,
-        pageCursorOrIndicator:
-          filteredLogs.length > params.limit ? `cursor-${Date.now()}` : undefined,
-      },
+      logs: paginatedLogs,
+      pageCursorOrIndicator:
+        filteredLogs.length > params.limit ? `cursor-${Date.now()}` : undefined,
     };
   },
 
@@ -544,23 +535,20 @@ The primary issue appears to be in the authentication middleware where token val
    * Note: This already returns FacetData[] format which matches the expected
    * format after Map<string, string[]> is converted in the main process
    */
-  getLogsFacetValues: async (start: string, end: string): Promise<ApiResponse<FacetData[]>> => {
+  getLogsFacetValues: async (start: string, end: string): Promise<FacetData[]> => {
     console.info("Mock getLogsFacetValues called with:", { start, end });
 
     // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // Always return mock facet data with success: true
-    return {
-      success: true,
-      data: createMockFacets(),
-    };
+    // Always return mock facet data
+    return createMockFacets();
   },
 
   /**
    * Fetch traces based on query parameters
    */
-  fetchTraces: async (params: TraceQueryParams) => {
+  fetchTraces: async (params: TraceQueryParams): Promise<TracesWithPagination> => {
     console.info("Mock fetchTraces called with:", params);
 
     // Simulate processing time
@@ -601,29 +589,23 @@ The primary issue appears to be in the authentication middleware where token val
     const paginatedTraces = filteredTraces.slice(0, params.limit);
 
     return {
-      success: true,
-      data: {
-        traces: paginatedTraces,
-        pageCursorOrIndicator:
-          filteredTraces.length > params.limit ? `cursor-${Date.now()}` : undefined,
-      },
+      traces: paginatedTraces,
+      pageCursorOrIndicator:
+        filteredTraces.length > params.limit ? `cursor-${Date.now()}` : undefined,
     };
   },
 
   /**
    * Get facet values for spans
    */
-  getSpansFacetValues: async (start: string, end: string): Promise<ApiResponse<FacetData[]>> => {
+  getSpansFacetValues: async (start: string, end: string): Promise<FacetData[]> => {
     console.info("Mock getSpansFacetValues called with:", { start, end });
 
     // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // Always return mock facet data with success: true
-    return {
-      success: true,
-      data: createMockSpanFacets(),
-    };
+    // Always return mock facet data
+    return createMockSpanFacets();
   },
 };
 
