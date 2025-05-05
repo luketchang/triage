@@ -278,11 +278,8 @@ export const codePostprocessingFactSchema = z.object({
       "A fact derived from the code search result that supports the answer and some context on why it is relevant."
     ),
   filepath: z.string().describe("The relative file path of the code block that supports the fact"),
-  codeBlock: z
-    .string()
-    .describe(
-      "A block of code that supports the fact. This should be a snippet from the filepath."
-    ),
+  startLine: z.number().describe("The start line of the code block that supports the fact"),
+  endLine: z.number().describe("The end line of the code block that supports the fact"),
 });
 
 export type CodePostprocessingFact = zInfer<typeof codePostprocessingFactSchema>;

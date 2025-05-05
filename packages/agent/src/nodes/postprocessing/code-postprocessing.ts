@@ -37,7 +37,7 @@ function createPrompt(params: {
   </repo_path>
   
   <previous_code_context>
-  ${formatCodeSearchSteps(params.codeSearchSteps)}
+  ${formatCodeSearchSteps(params.codeSearchSteps, { lineNumbers: true })}
   </previous_code_context>
   `;
 }
@@ -62,6 +62,8 @@ export class CodePostprocessor {
     logger.info(`Code postprocessing for query: ${params.query}`);
 
     const prompt = createPrompt(params);
+
+    logger.info(`Code postprocessing prompt:\n${prompt}`);
 
     const { toolCalls } = await generateText({
       model: getModelWrapper(this.llm),
