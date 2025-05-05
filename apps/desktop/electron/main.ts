@@ -1,40 +1,21 @@
-// Load environment variables first, before any other imports
-import "./env-loader.js";
-
 import { ChatMessage as AgentChatMessage, invokeAgent } from "@triage/agent";
+import { initAppConfig } from "@triage/config";
+import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
-// Fix CommonJS import for electron-updater
-import pkg from "electron-updater";
+import electronUpdater from "electron-updater";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-const { autoUpdater } = pkg;
-// Import config from @triage/config package
-import { config } from "@triage/config";
-// Import AgentConfig type from local config interface
-import { AgentConfig } from "../src/config.js";
-// Import observability platform functions
-import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
-import { AgentAssistantMessage } from "../src/renderer/types/index.js";
+import { AgentAssistantMessage, AgentConfig } from "../src/renderer/types/index.js";
+// Set app name so user data is stored in the right place
+app.setName("Triage");
+
+// Load environment variables first, before any other imports
+initAppConfig();
 
 // Get directory name for preload script path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Log the configuration to verify it's correctly loaded
-console.log("Using environment configuration:", {
-  NODE_ENV: config.env,
-  openaiApiKey: config.openaiApiKey ? "Set" : "Not set",
-  anthropicApiKey: config.anthropicApiKey ? "Set" : "Not set",
-  datadog: {
-    apiKey: config.datadog.apiKey ? "Set" : "Not set",
-    appKey: config.datadog.appKey ? "Set" : "Not set",
-  },
-  grafana: {
-    baseUrl: config.grafana.baseUrl,
-    username: config.grafana.username ? "Set" : "Not set",
-  },
-});
 
 let mainWindow: BrowserWindow | null;
 
@@ -69,7 +50,7 @@ function createWindow(): void {
 
   // Auto updater in production
   if (process.env.NODE_ENV === "production") {
-    autoUpdater.checkForUpdatesAndNotify();
+    electronUpdater.autoUpdater.checkForUpdatesAndNotify();
   }
 
   mainWindow.on("closed", () => {
@@ -94,20 +75,6 @@ function setupIpcHandlers(): void {
         console.log("Invoking agent with query:", query);
         console.log("IPC chat history:", chatHistory);
 
-        // TODO: Don't extract these from env
-        const agentConfig: AgentConfig = {
-          repoPath: process.env.REPO_PATH!,
-          codebaseOverviewPath: process.env.CODEBASE_OVERVIEW_PATH!,
-          observabilityPlatform: process.env.OBSERVABILITY_PLATFORM!,
-          observabilityFeatures: process.env.OBSERVABILITY_FEATURES!.split(","),
-          // TODO: These should be loaded based on time range extracted from query
-          startDate: new Date(process.env.START_DATE!),
-          endDate: new Date(process.env.END_DATE!),
-        };
-
-        // Get reasonOnly flag from options
-        const finalReasonOnly = options?.reasonOnly === true;
-
         // Send updates to renderer via mainWindow
         const onUpdate = (update: any) => {
           if (mainWindow) {
@@ -118,14 +85,14 @@ function setupIpcHandlers(): void {
         const result = await invokeAgent({
           query,
           chatHistory,
-          repoPath: agentConfig.repoPath,
-          codebaseOverviewPath: agentConfig.codebaseOverviewPath,
-          observabilityPlatform: agentConfig.observabilityPlatform,
-          observabilityFeatures: agentConfig.observabilityFeatures,
-          startDate: agentConfig.startDate,
-          endDate: agentConfig.endDate,
-          reasonOnly: finalReasonOnly,
-          onUpdate: onUpdate,
+          repoPath: process.env.REPO_PATH!,
+          codebaseOverviewPath: process.env.CODEBASE_OVERVIEW_PATH!,
+          observabilityPlatform: process.env.OBSERVABILITY_PLATFORM!,
+          observabilityFeatures: process.env.OBSERVABILITY_FEATURES!.split(","),
+          startDate: new Date(process.env.START_DATE!),
+          endDate: new Date(process.env.END_DATE!),
+          reasonOnly: options?.reasonOnly === true,
+          onUpdate,
         });
 
         return result;

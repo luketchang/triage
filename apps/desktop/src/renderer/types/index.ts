@@ -81,11 +81,17 @@ export type TraceForAgent = Omit<Trace, "serviceBreakdown">;
 
 // Define the AgentConfig interface - specific to desktop app
 export interface AgentConfig {
+  /** Path to the repository to analyze */
   repoPath: string;
+  /** Path to the codebase overview file */
   codebaseOverviewPath: string;
+  /** Observability platform to use (grafana or datadog) */
   observabilityPlatform: string;
+  /** Observability features to enable */
   observabilityFeatures: string[];
+  /** Start date for the time range */
   startDate: Date;
+  /** End date for the time range */
   endDate: Date;
 }
 
