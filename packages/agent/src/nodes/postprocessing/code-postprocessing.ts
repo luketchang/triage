@@ -7,6 +7,7 @@ import { ensureSingleToolCall, formatCodeSearchSteps } from "../utils";
 
 function createPrompt(params: {
   query: string;
+  repoPath: string;
   codebaseOverview: string;
   codeSearchSteps: CodeSearchStep[];
   answer: string;
@@ -30,6 +31,10 @@ function createPrompt(params: {
   <codebase_overview>
   ${params.codebaseOverview}
   </codebase_overview>
+
+  <repo_path>
+  ${params.repoPath}
+  </repo_path>
   
   <previous_code_context>
   ${formatCodeSearchSteps(params.codeSearchSteps)}
@@ -47,6 +52,7 @@ export class CodePostprocessor {
   @timer
   async invoke(params: {
     query: string;
+    repoPath: string;
     codebaseOverview: string;
     codeSearchSteps: CodeSearchStep[];
     answer: string;

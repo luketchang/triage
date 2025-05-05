@@ -3,7 +3,7 @@ import { CodePostprocessingFact, LogPostprocessingFact } from "../types";
 import { filepathToGitHubUrl } from "../utils/facts/code";
 import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs";
 
-const GITHUB_REPO_BASE_URL = "https://github.com/luketchang/triage";
+const GITHUB_REPO_BASE_URL = "https://github.com/luketchang/ticketing";
 
 interface FactsSidebarProps {
   logFacts: LogPostprocessingFact[];
