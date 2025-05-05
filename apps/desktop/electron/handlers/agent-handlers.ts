@@ -1,6 +1,6 @@
 import {} from "@triage/agent";
 import { BrowserWindow, ipcMain } from "electron";
-import { AgentConfig } from "../../src/config.js";
+import { AppConfig } from "../../src/config.js";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
@@ -31,8 +31,9 @@ export function setupAgentHandlers(window: BrowserWindow): void {
         console.info("IPC chat history:", chatHistory);
 
         // TODO: Don't extract these from env
-        const agentConfig: AgentConfig = {
+        const appConfig: AppConfig = {
           repoPath: process.env.REPO_PATH!,
+          githubRepoBaseUrl: process.env.GITHUB_REPO_BASE_URL!,
           codebaseOverviewPath: process.env.CODEBASE_OVERVIEW_PATH!,
           observabilityPlatform: process.env.OBSERVABILITY_PLATFORM!,
           observabilityFeatures: process.env.OBSERVABILITY_FEATURES!.split(","),
@@ -54,12 +55,12 @@ export function setupAgentHandlers(window: BrowserWindow): void {
         const result = await invokeAgent({
           query,
           chatHistory,
-          repoPath: agentConfig.repoPath,
-          codebaseOverviewPath: agentConfig.codebaseOverviewPath,
-          observabilityPlatform: agentConfig.observabilityPlatform,
-          observabilityFeatures: agentConfig.observabilityFeatures,
-          startDate: agentConfig.startDate,
-          endDate: agentConfig.endDate,
+          repoPath: appConfig.repoPath,
+          codebaseOverviewPath: appConfig.codebaseOverviewPath,
+          observabilityPlatform: appConfig.observabilityPlatform,
+          observabilityFeatures: appConfig.observabilityFeatures,
+          startDate: appConfig.startDate,
+          endDate: appConfig.endDate,
           reasonOnly: finalReasonOnly,
           onUpdate: onUpdate,
         });
@@ -73,9 +74,11 @@ export function setupAgentHandlers(window: BrowserWindow): void {
   );
 
   // Get the current agent configuration
-  ipcMain.handle("agent:get-agent-config", async (): Promise<AgentConfig> => {
+  ipcMain.handle("agent:get-app-config", async (): Promise<AppConfig> => {
     return {
       repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
+      githubRepoBaseUrl:
+        process.env.GITHUB_REPO_BASE_URL || "https://github.com/luketchang/ticketing",
       codebaseOverviewPath:
         process.env.CODEBASE_OVERVIEW_PATH ||
         "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
@@ -90,8 +93,8 @@ export function setupAgentHandlers(window: BrowserWindow): void {
 
   // Update the agent configuration
   ipcMain.handle(
-    "agent:update-agent-config",
-    async (_event: any, newConfig: Partial<AgentConfig>): Promise<AgentConfig> => {
+    "agent:update-app-config",
+    async (_event: any, newConfig: Partial<AppConfig>): Promise<AppConfig> => {
       // Store updated values in process.env for future access
       if (newConfig.repoPath) {
         process.env.REPO_PATH = newConfig.repoPath;
@@ -115,6 +118,8 @@ export function setupAgentHandlers(window: BrowserWindow): void {
       // Return the updated configuration
       return {
         repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
+        githubRepoBaseUrl:
+          process.env.GITHUB_REPO_BASE_URL || "https://github.com/luketchang/ticketing",
         codebaseOverviewPath:
           process.env.CODEBASE_OVERVIEW_PATH ||
           "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",

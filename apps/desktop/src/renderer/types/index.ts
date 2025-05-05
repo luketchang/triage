@@ -80,9 +80,10 @@ export interface UITrace extends Omit<Trace, "serviceBreakdown"> {
 // Define a version of Trace for agent consumption without serviceBreakdown
 export type TraceForAgent = Omit<Trace, "serviceBreakdown">;
 
-// Define the AgentConfig interface - specific to desktop app
-export interface AgentConfig {
+// Define the AppConfig interface - specific to desktop app
+export interface AppConfig {
   repoPath: string;
+  githubRepoBaseUrl: string;
   codebaseOverviewPath: string;
   observabilityPlatform: string;
   observabilityFeatures: string[];

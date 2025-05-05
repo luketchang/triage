@@ -12,9 +12,12 @@
 /**
  * Configuration for the agent
  */
-export interface AgentConfig {
+export interface AppConfig {
   /** Path to the repository to analyze */
   repoPath: string;
+
+  /** Base URL for the GitHub repository */
+  githubRepoBaseUrl: string;
 
   /** Path to the codebase overview file */
   codebaseOverviewPath: string;
@@ -35,8 +38,9 @@ export interface AgentConfig {
 /**
  * Default configuration for the agent
  */
-export const defaultConfig: AgentConfig = {
+export const defaultConfig: AppConfig = {
   repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
+  githubRepoBaseUrl: process.env.GITHUB_REPO_BASE_URL || "https://github.com/luketchang/ticketing",
   codebaseOverviewPath:
     process.env.CODEBASE_OVERVIEW_PATH ||
     "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",

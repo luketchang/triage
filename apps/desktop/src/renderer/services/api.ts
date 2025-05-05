@@ -2,8 +2,8 @@ import mockElectronAPI from "../electronApiMock";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
-  AgentConfig,
   AgentStreamUpdate,
+  AppConfig,
   AssistantMessage,
   ChatMessage,
   FacetData,
@@ -64,23 +64,23 @@ const api = {
     }
   },
 
-  getAgentConfig: async () => {
-    if (USE_MOCK_API || !isMethodAvailable("getAgentConfig")) {
-      console.info("Using mock getAgentConfig");
-      return mockElectronAPI.getAgentConfig();
+  getAppConfig: async () => {
+    if (USE_MOCK_API || !isMethodAvailable("getAppConfig")) {
+      console.info("Using mock getAppConfig");
+      return mockElectronAPI.getAppConfig();
     } else {
-      console.info("Using real electronAPI.getAgentConfig");
-      return window.electronAPI.getAgentConfig();
+      console.info("Using real electronAPI.getAppConfig");
+      return window.electronAPI.getAppConfig();
     }
   },
 
-  updateAgentConfig: async (newConfig: Partial<AgentConfig>) => {
-    if (USE_MOCK_API || !isMethodAvailable("updateAgentConfig")) {
-      console.info("Using mock updateAgentConfig");
-      return mockElectronAPI.updateAgentConfig(newConfig);
+  updateAppConfig: async (newConfig: Partial<AppConfig>) => {
+    if (USE_MOCK_API || !isMethodAvailable("updateAppConfig")) {
+      console.info("Using mock updateAppConfig");
+      return mockElectronAPI.updateAppConfig(newConfig);
     } else {
-      console.info("Using real electronAPI.updateAgentConfig");
-      return window.electronAPI.updateAgentConfig(newConfig);
+      console.info("Using real electronAPI.updateAppConfig");
+      return window.electronAPI.updateAppConfig(newConfig);
     }
   },
 

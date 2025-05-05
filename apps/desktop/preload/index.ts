@@ -46,14 +46,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /**
    * Get the current agent configuration
    */
-  getAgentConfig: () => ipcRenderer.invoke("agent:get-agent-config"),
+  getAppConfig: () => ipcRenderer.invoke("agent:get-app-config"),
 
   /**
    * Update the agent configuration
    * @param newConfig The new configuration to set
    */
-  updateAgentConfig: (newConfig: unknown) =>
-    ipcRenderer.invoke("agent:update-agent-config", newConfig),
+  updateAppConfig: (newConfig: unknown) => ipcRenderer.invoke("agent:update-app-config", newConfig),
 
   /**
    * Fetch logs based on query parameters

@@ -7,7 +7,7 @@
 import {
   AgentAssistantMessage,
   AgentChatMessage,
-  AgentConfig,
+  AppConfig,
   AssistantMessage,
   ChatMessage,
   FacetData,
@@ -47,14 +47,14 @@ declare global {
        * Get the current agent configuration
        * @returns Promise with the current agent configuration
        */
-      getAgentConfig: () => Promise<AgentConfig>;
+      getAppConfig: () => Promise<AppConfig>;
 
       /**
        * Update the agent configuration
        * @param config Partial configuration to merge with existing config
        * @returns Promise with the updated agent configuration
        */
-      updateAgentConfig: (config: Partial<AgentConfig>) => Promise<AgentConfig>;
+      updateAppConfig: (config: Partial<AppConfig>) => Promise<AppConfig>;
 
       /**
        * Fetch logs based on query parameters
