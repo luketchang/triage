@@ -76,6 +76,26 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     this.password = config.grafana.password;
   }
 
+  addKeywordsToQuery(query: string, keywords: string[]): string {
+    if (!keywords || keywords.length === 0) {
+      return query;
+    }
+
+    // Escape special characters in keywords
+    const escapedKeywords = keywords.map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+    // For LogQL, we need to add the keywords using the |= operator
+    // with a regex that checks for any of the keywords
+    // If the query already contains pipe operators, append our new condition
+    if (escapedKeywords.length === 1) {
+      return `${query} |= "${escapedKeywords[0]}"`;
+    } else {
+      // For multiple keywords, create an OR condition using regex alternation
+      const keywordPattern = escapedKeywords.join("|");
+      return `${query} |~ "(?i)(${keywordPattern})"`;
+    }
+  }
+
   getSpanSearchQueryInstructions(): string {
     throw new Error("getSpanSearchQueryInstructions is not implemented for Grafana platform");
   }

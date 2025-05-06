@@ -106,6 +106,31 @@ export class DatadogPlatform implements ObservabilityPlatform {
     this.spansApiInstance = new v2.SpansApi(this.configuration);
   }
 
+  addKeywordsToQuery(query: string, keywords: string[]): string {
+    if (!keywords || keywords.length === 0) {
+      return query;
+    }
+
+    // Escape quotes in keywords
+    const escapedKeywords = keywords.map((kw) => kw.replace(/"/g, '\\"'));
+
+    // Create Datadog search syntax for keywords
+    // In Datadog, we use quoted terms with OR between them
+    const keywordClause = escapedKeywords.map((kw) => `"${kw}"`).join(" OR ");
+
+    // If there are multiple keywords, wrap them in parentheses
+    const formattedKeywords = escapedKeywords.length > 1 ? `(${keywordClause})` : keywordClause;
+
+    // Add the keyword clause to the query
+    // If the query is empty or just "*", replace it with the keywords
+    if (!query || query.trim() === "*") {
+      return formattedKeywords;
+    }
+
+    // Otherwise, append the keywords with OR
+    return `${query} OR ${formattedKeywords}`;
+  }
+
   getSpanSearchQueryInstructions(): string {
     return DATADOG_SPAN_SEARCH_INSTRUCTIONS;
   }
