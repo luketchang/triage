@@ -173,7 +173,7 @@ export function useChat() {
         return assistantMessage; // Return unchanged cell if step not found
       }
 
-      let stage = assistantMessage.stages[stepIndex];
+      const stage = assistantMessage.stages[stepIndex];
 
       // Update the step based on its type using a type guard helper
       let updatedStage: AgentStage;
@@ -276,7 +276,7 @@ export function useChat() {
     updatedMessages = [...updatedMessages, userMessage];
 
     // Store context items to attach to message
-    const _contextItemsToAttach = [...contextItems]; // TODO: add this back in once we support attaching context
+    // const _contextItemsToAttach = [...contextItems]; // TODO: add this back in once we support attaching context
 
     // Clear context items immediately after creating the message
     setContextItems([]);

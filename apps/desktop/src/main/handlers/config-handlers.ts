@@ -1,5 +1,5 @@
+import { AppConfig } from "@renderer/config";
 import { ipcMain } from "electron";
-import { AppConfig } from "../../src/renderer/src/config.js";
 
 /**
  * Set up all IPC handlers related to configuration
