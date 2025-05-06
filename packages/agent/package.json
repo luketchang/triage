@@ -10,7 +10,8 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "lint:check": "eslint \"src/**/*.{js,ts}\" --max-warnings 99",
     "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix --max-warnings 99",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "generate-overview": "tsx src/bin/generate-codebase-overview.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",
@@ -20,6 +21,7 @@
     "@types/uuid": "^10.0.0",
     "ai": "^4.1.58",
     "commander": "^13.1.0",
+    "dotenv": "^16.4.7",
     "json-stable-stringify": "^1.2.1",
     "uuid": "^11.1.0",
     "zod": "^3.24.2"
