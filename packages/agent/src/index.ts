@@ -345,11 +345,10 @@ export class TriageAgent {
       onUpdate({ type: "highLevelUpdate", id: logPostprocessingId, stepType: "logPostprocessing" });
     }
 
-    const postprocessor = new LogPostprocessor(this.fastModel);
+    const postprocessor = new LogPostprocessor(this.fastModel, this.observabilityPlatform);
     const logSearchSteps = state.agentSteps.filter((step) => step.type === "logSearch");
     const response = await postprocessor.invoke({
       query: state.query,
-      codebaseOverview: state.codebaseOverview,
       logLabelsMap: state.logLabelsMap,
       logSearchSteps,
       answer: state.answer,

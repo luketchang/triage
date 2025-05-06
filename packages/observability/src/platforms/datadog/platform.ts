@@ -47,8 +47,9 @@ Use Datadog Log Search Syntax to search for logs.
   - service:<service_name> AND *:"<keyword in attributes>"
   - service:<service_name> AND status:error
 
-## Tips
-- Excluding the service attribute, when using attribute filters, use *:"<keyword>" instead of a specific attribute like <attribute>:"<keyword>" ()
+## Rules
+- Excluding the service attribute, when using attribute filters, use *:"<keyword>" instead of a specific attribute like <attribute>:"<keyword>"
+- If you are going to use an attribute filter, always use the * key. Attribute filters with specific words for the key (first term before the colon) are NOT allowed.
 
 ## Best practices (examples):
 - GOOD: (service:orders OR service:payments) AND (*:"67ec59004bb8930018a81adc" OR *:"67ec59004bb8930018a81def")
@@ -103,6 +104,31 @@ export class DatadogPlatform implements ObservabilityPlatform {
     // Create API clients
     this.logsApiInstance = new v2.LogsApi(this.configuration);
     this.spansApiInstance = new v2.SpansApi(this.configuration);
+  }
+
+  addKeywordsToQuery(query: string, keywords: string[]): string {
+    if (!keywords || keywords.length === 0) {
+      return query;
+    }
+
+    // Escape quotes in keywords
+    const escapedKeywords = keywords.map((kw) => kw.replace(/"/g, '\\"'));
+
+    // Create Datadog search syntax for keywords
+    // In Datadog, we use quoted terms with OR between them
+    const keywordClause = escapedKeywords.map((kw) => `"${kw}"`).join(" OR ");
+
+    // If there are multiple keywords, wrap them in parentheses
+    const formattedKeywords = escapedKeywords.length > 1 ? `(${keywordClause})` : keywordClause;
+
+    // Add the keyword clause to the query
+    // If the query is empty or just "*", replace it with the keywords
+    if (!query || query.trim() === "*") {
+      return formattedKeywords;
+    }
+
+    // Otherwise, append the keywords with OR
+    return `${query} OR ${formattedKeywords}`;
   }
 
   getSpanSearchQueryInstructions(): string {
