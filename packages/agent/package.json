@@ -26,6 +26,7 @@
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",
     "json-stable-stringify": "^1.2.1",
+    "repomix": "^0.3.4",
     "uuid": "^11.1.0",
     "zod": "^3.24.2"
   },
@@ -35,5 +36,10 @@
     "eslint": "^9.20.0",
     "tsx": "^4.15.0",
     "typescript": "5.7.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "unicorn-magic": "0.2.0"
+    }
   }
 }
