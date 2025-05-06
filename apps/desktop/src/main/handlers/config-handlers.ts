@@ -1,5 +1,5 @@
+import { AppConfig } from "@triage/config";
 import { ipcMain } from "electron";
-import { AppConfig } from "../../renderer/src/config.js";
 
 /**
  * Set up all IPC handlers related to configuration

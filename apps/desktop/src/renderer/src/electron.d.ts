@@ -4,10 +4,10 @@
  */
 
 // Import types from types.ts - this is the single source of truth for types
+import { AppConfig } from "@triage/config";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
-  AppConfig,
   AssistantMessage,
   ChatMessage,
   FacetData,

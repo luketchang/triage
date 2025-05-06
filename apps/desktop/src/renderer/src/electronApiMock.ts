@@ -1,7 +1,7 @@
+import { AppConfig } from "@triage/config";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
-  AppConfig,
   FacetData,
   Log,
   LogQueryParams,

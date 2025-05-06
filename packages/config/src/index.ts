@@ -1,5 +1,32 @@
 import { z } from "zod";
 
+export interface AppConfig {
+  /** Path to the repository to analyze */
+  repoPath: string;
+
+  /** Base URL for the GitHub repository */
+  githubRepoBaseUrl: string;
+
+  /** Path to the codebase overview file */
+  codebaseOverviewPath: string;
+
+  datadogConfig?: DatadogConfig;
+
+  grafanaConfig?: GrafanaConfig;
+}
+
+interface DatadogConfig {
+  apiKey: string;
+  appKey: string;
+  site: string;
+}
+
+interface GrafanaConfig {
+  baseUrl: string;
+  username: string;
+  password: string;
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["production", "development", "test"]).default("development"),
   OPENAI_API_KEY: z.string(),

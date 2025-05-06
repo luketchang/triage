@@ -1,5 +1,5 @@
+import { AppConfig } from "@triage/config";
 import React, { createContext, ReactNode, useEffect, useState } from "react";
-import { AppConfig } from "../config.js";
 import api from "../services/api.js";
 
 type AppConfigContextType = {
