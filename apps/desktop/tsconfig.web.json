@@ -1,0 +1,18 @@
+{
+  "extends": ["../../tsconfig.options.json", "@electron-toolkit/tsconfig/tsconfig.web.json"],
+  "include": ["src/renderer/src/env.d.ts", "src/renderer/src/**/*", "src/renderer/src/**/*.tsx"],
+  "compilerOptions": {
+    "composite": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@renderer/*": ["src/renderer/src/*"]
+    }
+  },
+  "references": [
+    { "path": "../../packages/agent" },
+    { "path": "../../packages/common" },
+    { "path": "../../packages/config" },
+    { "path": "../../packages/observability" }
+  ]
+}
