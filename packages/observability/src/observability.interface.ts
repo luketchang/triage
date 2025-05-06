@@ -26,6 +26,13 @@ export interface ObservabilityPlatform {
   getLogSearchQueryInstructions(): string;
 
   /**
+   * Add keywords to a query
+   * @param keywords - Keywords to add to the query
+   * @returns Query with keywords added
+   */
+  addKeywordsToQuery(query: string, keywords: string[]): string;
+
+  /**
    * Get a map of labels to their corresponding values for the given time range
    * @param start - Start time in ISO format
    * @param end - End time in ISO format

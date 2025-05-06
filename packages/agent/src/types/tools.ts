@@ -240,6 +240,34 @@ export const codeSearchInputToolSchema = {
   parameters: codeSearchInputSchema,
 };
 
+// The intermediate type the LLM outputs, later used to augment original query
+export const logPostprocessingFactOutputSchema = logSearchInputSchema
+  .omit({
+    reasoning: true,
+    start: true,
+    end: true,
+    query: true,
+  })
+  .extend({
+    title: z.string().describe("A concise title summarizing the fact"),
+    fact: z
+      .string()
+      .describe(
+        "A fact derived from the log search result that supports the answer and some context on why it is relevant."
+      ),
+    query: z.string().describe("The original log search query from the previous log context"),
+    start: z.string().describe("The narrowed in start time in ISO 8601 format"),
+    end: z.string().describe("The narrowed in end time in ISO 8601 format"),
+    highlightKeywords: z
+      .array(z.string())
+      .describe(
+        "Keywords to highlight logs that support the fact. The should match the content of the log lines that support the fact even if the keywords themselves are generic.  They are matchers on the right logs and should not be attributes filters."
+      ),
+  });
+
+export type LogPostprocessingFactOutput = zInfer<typeof logPostprocessingFactOutputSchema>;
+
+// The final type we actually return to UI
 export const logPostprocessingFactSchema = logSearchInputSchema
   .omit({
     reasoning: true,
@@ -257,7 +285,7 @@ export type LogPostprocessingFact = zInfer<typeof logPostprocessingFactSchema>;
 
 export const logPostprocessingSchema = z.object({
   facts: z
-    .array(logPostprocessingFactSchema)
+    .array(logPostprocessingFactOutputSchema)
     .describe(
       "An array of facts along with the log query for citation. Note this returned type MUST BE an array containing one or more fact types. It should contain at most 8 facts."
     ),
