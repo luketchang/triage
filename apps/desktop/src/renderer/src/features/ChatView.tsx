@@ -193,7 +193,6 @@ const ChatView: React.FC<ChatViewProps> = ({
 
       // Different days
       return `${startDate.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} - ${endDate.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_e) {
       return "Invalid time range";
     }
