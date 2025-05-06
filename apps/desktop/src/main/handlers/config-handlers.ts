@@ -16,8 +16,6 @@ export function setupConfigHandlers(): void {
       codebaseOverviewPath:
         process.env.CODEBASE_OVERVIEW_PATH ||
         "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-      startDate: new Date(process.env.START_DATE || "2025-04-16T21:00:00Z"),
-      endDate: new Date(process.env.END_DATE || "2025-04-16T23:59:59Z"),
     };
   });
 
@@ -32,12 +30,6 @@ export function setupConfigHandlers(): void {
       if (newConfig.codebaseOverviewPath) {
         process.env.CODEBASE_OVERVIEW_PATH = newConfig.codebaseOverviewPath;
       }
-      if (newConfig.startDate) {
-        process.env.START_DATE = newConfig.startDate.toISOString();
-      }
-      if (newConfig.endDate) {
-        process.env.END_DATE = newConfig.endDate.toISOString();
-      }
 
       // Return the updated configuration
       return {
@@ -47,8 +39,6 @@ export function setupConfigHandlers(): void {
         codebaseOverviewPath:
           process.env.CODEBASE_OVERVIEW_PATH ||
           "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-        startDate: new Date(process.env.START_DATE || "2025-04-16T21:00:00Z"),
-        endDate: new Date(process.env.END_DATE || "2025-04-16T23:59:59Z"),
       };
     }
   );
