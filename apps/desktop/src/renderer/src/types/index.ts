@@ -95,13 +95,6 @@ export interface UISpan {
   tags?: Record<string, string>;
 }
 
-// Define the AppConfig interface - specific to desktop app
-export interface AppConfig {
-  repoPath: string;
-  githubRepoBaseUrl: string;
-  codebaseOverviewPath: string;
-}
-
 // Define facet data type
 export interface FacetData {
   name: string;

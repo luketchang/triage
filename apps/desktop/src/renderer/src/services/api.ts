@@ -1,9 +1,9 @@
+import { AppConfig } from "@triage/config";
 import mockElectronAPI from "../electronApiMock.js";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
   AgentStreamUpdate,
-  AppConfig,
   AssistantMessage,
   ChatMessage,
   FacetData,

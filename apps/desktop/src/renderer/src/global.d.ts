@@ -1,7 +1,7 @@
 // This file provides type definitions for modules without their own type definitions
+import { AppConfig } from "@triage/config";
 import type {
   AgentStreamUpdate,
-  AppConfig,
   AssistantMessage,
   ChatMessage,
   FacetData,
