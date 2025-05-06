@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 
-import { GeminiModel, loadFileTree, logger, Model, OpenAIModel, timer } from "@triage/common";
+import { GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common";
 import {
   getObservabilityPlatform,
   IntegrationType,
@@ -566,7 +566,7 @@ export async function invokeAgent({
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
   const fastModel = GeminiModel.GEMINI_2_5_FLASH;
-  const postprocessingModel = OpenAIModel.O4_MINI;
+  const postprocessingModel = GeminiModel.GEMINI_2_5_FLASH;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 

@@ -28,10 +28,10 @@ function createPrompt(params: {
 
   Tips:
   - Use the log search queries in the previous log context section as a starting place for formatting your own log search queries. Your queries should be the exact same as the previous log search queries EXCEPT they can make two types of modifications:
-    - You may edit the time range parameters to zoom in on the most relevant set of logs
-    - You may add additional message-content-only filters (i.e. not attributes filters, but just keywords in the log message content). These filters should only be additive (e.g. | or OR clauses) and should not reduce the result set of the original query.
+    - You should narrow the time range to zoom in on the most relevant set of logs
+    - You may add additional message-content filters (i.e. not attributes filters, but just keywords in the log message content). These filters should only be additive (e.g. | or OR clauses) and should not reduce the result set of the original query (i.e. should not use && or AND clauses).
   - Bias towards using queries that include multiple services. We want to see full sequence of events across the relevant services not just a single service isolated.
-  - DO NOT change anything about the search parameters except for the time range and the additive message-content-only filters.
+  - DO NOT change anything about the search parameters except narrow the time range and add additive message-content filters.
   - Strictly follow the platform specific instructions provided below for guidance on the DOs and DONTs of writing log search queries.
   
   <query>

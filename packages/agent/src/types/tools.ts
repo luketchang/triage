@@ -243,6 +243,8 @@ export const codeSearchInputToolSchema = {
 export const logPostprocessingFactSchema = logSearchInputSchema
   .omit({
     reasoning: true,
+    start: true,
+    end: true,
   })
   .extend({
     title: z.string().describe("A concise title summarizing the fact"),
@@ -251,6 +253,8 @@ export const logPostprocessingFactSchema = logSearchInputSchema
       .describe(
         "A fact derived from the log search result that supports the answer and some context on why it is relevant."
       ),
+    start: z.string().describe("The narrowed in start time in ISO 8601 format"),
+    end: z.string().describe("The narrowed in end time in ISO 8601 format"),
   });
 
 export type LogPostprocessingFact = zInfer<typeof logPostprocessingFactSchema>;
