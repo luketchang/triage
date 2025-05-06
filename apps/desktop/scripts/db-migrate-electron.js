@@ -1,9 +1,9 @@
-const path = require("path");
-const fs = require("fs");
-const { app } = require("electron");
-const BetterSqlite3 = require("better-sqlite3");
-const { drizzle } = require("drizzle-orm/better-sqlite3");
-const { migrate } = require("drizzle-orm/better-sqlite3/migrator");
+import BetterSqlite3 from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { app } from "electron";
+import fs from "fs";
+import path from "path";
 
 async function runMigrations() {
   console.info("🔄 Running migrations...");
@@ -17,8 +17,8 @@ async function runMigrations() {
   sqlite.pragma("journal_mode = WAL");
   const db = drizzle(sqlite);
 
-  await migrate(db, {
-    migrationsFolder: path.join(__dirname, "..", "drizzle"),
+  migrate(db, {
+    migrationsFolder: path.join(path.dirname(new URL(import.meta.url).pathname), "..", "drizzle"),
   });
 
   console.info("✅ Migrations complete.");
