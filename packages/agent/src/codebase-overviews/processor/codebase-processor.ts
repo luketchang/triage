@@ -42,7 +42,7 @@ export class CodebaseProcessor {
   }
 
   /**
-   * Identify service directories using LLM
+   * Identify top level directories using LLM
    */
   private async identifyTopLevel(repoPath: string, repoFileTree: string[]): Promise<string[]> {
     const treeStr = generateTreeString(repoFileTree);
