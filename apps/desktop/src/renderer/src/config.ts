@@ -25,12 +25,6 @@ export interface AppConfig {
   datadogConfig?: DatadogConfig;
 
   grafanaConfig?: GrafanaConfig;
-
-  /** Start date for the time range */
-  startDate: Date;
-
-  /** End date for the time range */
-  endDate: Date;
 }
 
 interface DatadogConfig {

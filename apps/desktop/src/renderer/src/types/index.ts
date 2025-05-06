@@ -100,10 +100,6 @@ export interface AppConfig {
   repoPath: string;
   githubRepoBaseUrl: string;
   codebaseOverviewPath: string;
-  observabilityPlatform: string;
-  observabilityFeatures: string[];
-  startDate: Date;
-  endDate: Date;
 }
 
 // Define facet data type

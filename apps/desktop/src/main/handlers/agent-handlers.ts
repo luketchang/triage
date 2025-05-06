@@ -34,9 +34,6 @@ export function setupAgentHandlers(window: BrowserWindow): void {
           repoPath: process.env.REPO_PATH!,
           githubRepoBaseUrl: process.env.GITHUB_REPO_BASE_URL!,
           codebaseOverviewPath: process.env.CODEBASE_OVERVIEW_PATH!,
-          // TODO: These should be loaded based on time range extracted from query
-          startDate: new Date(process.env.START_DATE!),
-          endDate: new Date(process.env.END_DATE!),
         };
 
         // Send updates to renderer via mainWindow
@@ -51,10 +48,12 @@ export function setupAgentHandlers(window: BrowserWindow): void {
           chatHistory,
           repoPath: appConfig.repoPath,
           codebaseOverviewPath: appConfig.codebaseOverviewPath,
+          // TODO: Hardcode these here until we implement proper handling
+          // for them (and expose them in the UI)
           observabilityPlatform: "datadog",
           observabilityFeatures: ["logs"],
-          startDate: appConfig.startDate,
-          endDate: appConfig.endDate,
+          startDate: new Date("2025-04-16T21:00:00Z"),
+          endDate: new Date("2025-04-16T23:59:59Z"),
           reasonOnly: options?.reasonOnly === true,
           onUpdate: onUpdate,
         });
