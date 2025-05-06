@@ -25,5 +25,5 @@ pnpm lint
 To run the desktop app:
 
 ```sh
-pnpm --filter triage-desktop start
+pnpm --filter triage-desktop dev
 ```
