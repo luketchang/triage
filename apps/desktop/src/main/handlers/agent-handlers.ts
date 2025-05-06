@@ -30,20 +30,14 @@ export function setupAgentHandlers(window: BrowserWindow): void {
         console.info("Invoking agent with query:", query);
         console.info("IPC chat history:", chatHistory);
 
-        // TODO: Don't extract these from env
         const appConfig: AppConfig = {
           repoPath: process.env.REPO_PATH!,
           githubRepoBaseUrl: process.env.GITHUB_REPO_BASE_URL!,
           codebaseOverviewPath: process.env.CODEBASE_OVERVIEW_PATH!,
-          observabilityPlatform: process.env.OBSERVABILITY_PLATFORM!,
-          observabilityFeatures: process.env.OBSERVABILITY_FEATURES!.split(","),
           // TODO: These should be loaded based on time range extracted from query
           startDate: new Date(process.env.START_DATE!),
           endDate: new Date(process.env.END_DATE!),
         };
-
-        // Get reasonOnly flag from options
-        const finalReasonOnly = options?.reasonOnly === true;
 
         // Send updates to renderer via mainWindow
         const onUpdate = (update: any) => {
@@ -57,11 +51,11 @@ export function setupAgentHandlers(window: BrowserWindow): void {
           chatHistory,
           repoPath: appConfig.repoPath,
           codebaseOverviewPath: appConfig.codebaseOverviewPath,
-          observabilityPlatform: appConfig.observabilityPlatform,
-          observabilityFeatures: appConfig.observabilityFeatures,
+          observabilityPlatform: "datadog",
+          observabilityFeatures: ["logs"],
           startDate: appConfig.startDate,
           endDate: appConfig.endDate,
-          reasonOnly: finalReasonOnly,
+          reasonOnly: options?.reasonOnly === true,
           onUpdate: onUpdate,
         });
 

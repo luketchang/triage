@@ -22,15 +22,25 @@ export interface AppConfig {
   /** Path to the codebase overview file */
   codebaseOverviewPath: string;
 
-  /** Observability platform to use (grafana or datadog) */
-  observabilityPlatform: string;
+  datadogConfig?: DatadogConfig;
 
-  /** Observability features to enable */
-  observabilityFeatures: string[];
+  grafanaConfig?: GrafanaConfig;
 
   /** Start date for the time range */
   startDate: Date;
 
   /** End date for the time range */
   endDate: Date;
+}
+
+interface DatadogConfig {
+  apiKey: string;
+  appKey: string;
+  site: string;
+}
+
+interface GrafanaConfig {
+  baseUrl: string;
+  username: string;
+  password: string;
 }
