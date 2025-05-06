@@ -1,8 +1,8 @@
-import { is } from "@electron-toolkit/utils";
+import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import { config } from "@triage/config";
 import { app, BrowserWindow, shell } from "electron";
-import pkg from "electron-updater";
-import * as path from "path";
+import electronUpdater from "electron-updater";
+import path from "path";
 import {
   cleanupAgentHandlers,
   cleanupConfigHandlers,
@@ -13,7 +13,6 @@ import {
   setupDbHandlers,
   setupObservabilityHandlers,
 } from "./handlers/index";
-const { autoUpdater } = pkg;
 
 // Log the configuration to verify it's correctly loaded
 console.info("Using environment configuration:", {
@@ -30,21 +29,30 @@ console.info("Using environment configuration:", {
   },
 });
 
-let mainWindow: BrowserWindow | null;
-
 /**
  * Create the main application window
  */
-function createWindow(): void {
-  mainWindow = new BrowserWindow({
+function createWindow(): BrowserWindow {
+  const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    show: false,
+    // ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      // TODO: double check if this is correct
-      preload: path.resolve(process.cwd(), "dist-electron/preload/index.js"),
+      preload: path.join(__dirname, "../preload/index.js"),
+      sandbox: false,
       nodeIntegration: false,
       contextIsolation: true,
     },
+  });
+
+  mainWindow.on("ready-to-show", () => {
+    mainWindow.show();
+  });
+
+  mainWindow.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url);
+    return { action: "deny" };
   });
 
   // HMR for renderer base on electron-vite cli.
@@ -63,44 +71,47 @@ function createWindow(): void {
 
   // Auto updater in production
   if (process.env.NODE_ENV === "production") {
-    autoUpdater.checkForUpdatesAndNotify();
+    electronUpdater.autoUpdater.checkForUpdatesAndNotify();
   }
 
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-  });
+  return mainWindow;
 }
 
-/**
- * Initialize the application
- */
-function init(): void {
-  // Create window first
-  createWindow();
+// This method will be called when Electron has finished
+// initialization and is ready to create browser windows.
+// Some APIs can only be used after this event occurs.
+app.whenReady().then(() => {
+  // Set app user model id for windows
+  electronApp.setAppUserModelId("com.electron");
+
+  // Default open or close DevTools by F12 in development
+  // and ignore CommandOrControl + R in production.
+  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+  app.on("browser-window-created", (_, window) => {
+    optimizer.watchWindowShortcuts(window);
+  });
+
+  const mainWindow = createWindow();
 
   // Now set up all IPC handlers, with mainWindow available
-  if (mainWindow) {
-    setupAgentHandlers(mainWindow);
-  } else {
-    console.error("Failed to initialize agent handlers: mainWindow is null");
-  }
+  setupAgentHandlers(mainWindow);
   setupDbHandlers();
   setupObservabilityHandlers();
   setupConfigHandlers();
-}
 
-// App lifecycle event handlers
-app.whenReady().then(init);
+  app.on("activate", function () {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
 
+// Quit when all windows are closed, except on macOS. There, it's common
+// for applications and their menu bar to stay active until the user quits
+// explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
-  }
-});
-
-app.on("activate", () => {
-  if (mainWindow === null) {
-    createWindow();
   }
 });
 
@@ -111,3 +122,6 @@ app.on("quit", () => {
   cleanupObservabilityHandlers();
   cleanupConfigHandlers();
 });
+
+// In this file you can include the rest of your app's specific main process
+// code. You can also put them in separate files and require them here.

@@ -14,6 +14,19 @@ export default defineConfig({
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
+    // preload script must output cjs, so we need this override since output format is esm by default
+    build: {
+      minify: false,
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, "src/preload/index.ts"),
+        },
+        output: {
+          format: "cjs",
+          entryFileNames: "[name].js",
+        },
+      },
+    },
     // TODO: should we really be importing renderer code in backend?
     resolve: {
       alias: {
