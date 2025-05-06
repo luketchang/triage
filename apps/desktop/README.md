@@ -1,106 +1,62 @@
 # Triage Desktop
 
-A desktop application for the Triage platform, built with Electron, React, and TypeScript.
+An Electron application with React and TypeScript
 
-## Project Structure
+## Project Setup
 
-The project is organized with a clear separation of concerns:
+### Install
 
-```
-apps/desktop/
-├── electron/         # Electron main process code (TypeScript)
-│   └── main.ts       # Main process entry point
-├── preload/          # Preload scripts for Electron (TypeScript)
-│   └── index.ts      # Preload script that exposes a safe API to the renderer
-├── src/              # Application source code
-│   ├── config.ts     # Centralized configuration with environment loading
-│   └── renderer/     # React application for the renderer process
-│       ├── App.tsx   # Main React component
-│       ├── electron.d.ts  # TypeScript definitions for Electron API
-│       ├── main.tsx  # React entry point
-│       └── styles.css # Application styles
-├── dist/             # Build output for the renderer process
-├── dist-electron/    # Build output for the Electron processes
-├── drizzle/          # Database migration files
-├── scripts/          # Utility scripts
-│   └── db-migrate-electron.js # Database migration script
-├── drizzle.config.ts # Drizzle ORM configuration
-├── index.html        # HTML entry point
-├── tsconfig.json     # Base TypeScript configuration
-├── tsconfig.electron.json # TypeScript config for Electron main process
-├── tsconfig.preload.json  # TypeScript config for preload scripts
-└── vite.config.ts    # Vite configuration
+```bash
+$ pnpm install
 ```
 
-## Development
+### Development Mode
 
-### Environment Setup
+Run the app in development mode with hot reloading and developer tools:
 
-1. Create a `.env` file in the project root with the necessary environment variables:
-
-```env
-# Required API keys
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
-
-# Optional configuration
-REPO_PATH=/path/to/your/repo
-CODEBASE_OVERVIEW_PATH=/path/to/overview.md
-OBSERVABILITY_PLATFORM=datadog
+```bash
+$ pnpm dev
 ```
 
-### Development Commands
+- Starts Electron with live reload for rapid development.
+- Use this while coding and debugging.
 
-- `pnpm start`: Start the development environment
-- `pnpm build`: Build the application for production
-- `pnpm lint`: Lint the codebase
-- `pnpm check-types`: Check TypeScript types
+### Preview/Production Mode
 
-## Database Migrations
+Run the app using the built files (no hot reload, simulates production):
 
-The application uses SQLite with Drizzle ORM for data persistence. Database schema is defined in `electron/db/schema.ts`.
+```bash
+$ pnpm start
+```
 
-### Managing Migrations
+- Starts Electron in preview mode, serving the built app.
+- Useful for testing the production build before packaging.
 
-- **Generate migrations**: After changing the schema, generate migration files:
+### Build & Package
 
-  ```bash
-  pnpm db:generate
-  ```
+Build and package the app for your platform:
 
-  This creates SQL migration files in the `drizzle` directory.
+```bash
+# For Windows
+$ pnpm build:win
 
-- **Apply migrations**: Run migrations to update the database schema:
+# For macOS
+$ pnpm build:mac
 
-  ```bash
-  pnpm db:migrate
-  ```
+# For Linux
+$ pnpm build:linux
+```
 
-  This uses `ts-node` to execute the migration script directly from TypeScript.
+### Running the Packaged App
 
-- **Migration workflow**:
-  1. Modify the schema in `electron/db/schema.ts`
-  2. Run `pnpm db:generate` to create migration files
-  3. Review the generated SQL in `drizzle/` directory
-  4. Run `pnpm db:migrate` to apply changes
-  5. Restart the application to use the updated schema
+After building, find the packaged binary in the `dist/` directory:
 
-The database file is stored in `db/triage-chats.db` relative to the application working directory.
+- **macOS:** `dist/mac/Triage Desktop.app` (double-click or run with `open dist/mac/Triage\ Desktop.app`)
+- **Windows:** `dist/win-unpacked/Triage Desktop.exe` (double-click or run from Command Prompt)
+- **Linux:** `dist/linux-unpacked/triage-desktop` (run from Terminal)
 
-## Building for Production
+---
 
-Run `pnpm build:prod` to build the application for production. The output will be in the `dist` directory.
-
-## Architecture
-
-The application follows the Electron architecture with three main processes:
-
-1. **Main Process** (Electron): Handles the application lifecycle and creates windows
-2. **Renderer Process** (React): Renders the UI and handles user interactions
-3. **Preload Scripts**: Provide a secure bridge between the main and renderer processes
-
-All code is written in TypeScript for improved type safety and developer experience.
-
-## License
-
-Internal use only.
+- Use **`pnpm dev`** for development.
+- Use **`pnpm start`** to preview the built app.
+- Use **`pnpm build:<platform>`** and run the binary from `dist/` for the fully-packaged experience.
