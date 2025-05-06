@@ -1,5 +1,4 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
-import { config } from "@triage/config";
 import { app, BrowserWindow, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
@@ -13,21 +12,6 @@ import {
   setupDbHandlers,
   setupObservabilityHandlers,
 } from "./handlers/index.js";
-
-// Log the configuration to verify it's correctly loaded
-console.info("Using environment configuration:", {
-  NODE_ENV: config.env,
-  openaiApiKey: config.openaiApiKey ? "Set" : "Not set",
-  anthropicApiKey: config.anthropicApiKey ? "Set" : "Not set",
-  datadog: {
-    apiKey: config.datadog.apiKey ? "Set" : "Not set",
-    appKey: config.datadog.appKey ? "Set" : "Not set",
-  },
-  grafana: {
-    baseUrl: config.grafana.baseUrl,
-    username: config.grafana.username ? "Set" : "Not set",
-  },
-});
 
 /**
  * Create the main application window

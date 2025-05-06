@@ -22,7 +22,7 @@ function getLogger(): winston.Logger {
     format: winston.format.combine(
       // Use built-in error formatting to capture stack traces
       winston.format.errors({ stack: true }),
-      winston.format.label({ label: config.processLabel }),
+      winston.format.label({ label: "triage" }),
       winston.format.timestamp({
         format: "YYYY-MM-DD HH:mm:ss",
       }),
