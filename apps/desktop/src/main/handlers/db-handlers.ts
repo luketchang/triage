@@ -1,5 +1,5 @@
+import { AssistantMessage, ChatMessage, UserMessage } from "@renderer/types";
 import { ipcMain } from "electron";
-import { AssistantMessage, ChatMessage, UserMessage } from "../../src/renderer/src/types/index.js";
 import { DatabaseService } from "../db/service.js";
 
 // Single instance of database service

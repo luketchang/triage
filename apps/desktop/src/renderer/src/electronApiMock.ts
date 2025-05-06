@@ -44,29 +44,6 @@ const createLogEntry = (
   metadata,
 });
 
-// Create sample logs with varying timestamps
-const _createSampleLogs = (count: number, baseService: string): Log[] => {
-  const levels = ["info", "warn", "error", "debug"];
-  const logs: Log[] = [];
-
-  for (let i = 0; i < count; i++) {
-    logs.push(
-      createLogEntry(
-        new Date(Date.now() - Math.floor(Math.random() * 3600000)).toISOString(),
-        `Sample ${levels[i % levels.length]} message #${i + 1} for ${baseService}`,
-        baseService,
-        levels[i % levels.length],
-        {
-          requestId: `req-${Math.random().toString(36).substring(2, 10)}`,
-          userId: `user-${Math.floor(Math.random() * 1000)}`,
-        }
-      )
-    );
-  }
-
-  return logs;
-};
-
 // Create mock facet data for logs
 const createMockFacets = () => {
   return [
