@@ -2,61 +2,41 @@
 
 An Electron application with React and TypeScript
 
-## Project Setup
+## Development Commands
 
-### Install
+- `pnpm install`: Install dependencies
+- `pnpm dev`: Run the app in development mode with hot reloading and developer tools. Use while coding and debugging
+- `pnpm start`: Run the app using the built files (no hot reload, simulates production). Use for testing the production build before packaging
+- `pnpm build:<platform>`: Build the app for production. The binary will be packaged in the `dist/` directory:
+  - **macOS:** `dist/mac/Triage Desktop.app` (double-click or run with `open dist/mac/Triage\ Desktop.app`)
+  - **Windows:** `dist/win-unpacked/Triage Desktop.exe` (double-click or run from Command Prompt)
+  - **Linux:** `dist/linux-unpacked/triage-desktop` (run from Terminal)
 
-```bash
-$ pnpm install
-```
+## Database Migrations
 
-### Development Mode
+The application uses SQLite with Drizzle ORM for data persistence. Database schema is defined in `electron/db/schema.ts`.
 
-Run the app in development mode with hot reloading and developer tools:
+- **Generate migrations**: After changing the schema, generate migration files:
 
-```bash
-$ pnpm dev
-```
+  ```bash
+  pnpm db:generate
+  ```
 
-- Starts Electron with live reload for rapid development.
-- Use this while coding and debugging.
+  This creates SQL migration files in the `drizzle` directory.
 
-### Preview/Production Mode
+- **Apply migrations**: Run migrations to update the database schema:
 
-Run the app using the built files (no hot reload, simulates production):
+  ```bash
+  pnpm db:migrate
+  ```
 
-```bash
-$ pnpm start
-```
+  This uses `ts-node` to execute the migration script directly from TypeScript.
 
-- Starts Electron in preview mode, serving the built app.
-- Useful for testing the production build before packaging.
+- **Migration workflow**:
+  1. Modify the schema in `electron/db/schema.ts`
+  2. Run `pnpm db:generate` to create migration files
+  3. Review the generated SQL in `drizzle/` directory
+  4. Run `pnpm db:migrate` to apply changes
+  5. Restart the application to use the updated schema
 
-### Build & Package
-
-Build and package the app for your platform:
-
-```bash
-# For Windows
-$ pnpm build:win
-
-# For macOS
-$ pnpm build:mac
-
-# For Linux
-$ pnpm build:linux
-```
-
-### Running the Packaged App
-
-After building, find the packaged binary in the `dist/` directory:
-
-- **macOS:** `dist/mac/Triage Desktop.app` (double-click or run with `open dist/mac/Triage\ Desktop.app`)
-- **Windows:** `dist/win-unpacked/Triage Desktop.exe` (double-click or run from Command Prompt)
-- **Linux:** `dist/linux-unpacked/triage-desktop` (run from Terminal)
-
----
-
-- Use **`pnpm dev`** for development.
-- Use **`pnpm start`** to preview the built app.
-- Use **`pnpm build:<platform>`** and run the binary from `dist/` for the fully-packaged experience.
+The database file is stored in `db/triage-chats.db` relative to the application working directory.
