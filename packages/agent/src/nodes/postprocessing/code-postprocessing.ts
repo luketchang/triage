@@ -72,6 +72,7 @@ export class CodePostprocessor {
         codePostprocessing: codePostprocessingToolSchema,
       },
       toolChoice: "required",
+      temperature: 1,
     });
 
     let toolCall;

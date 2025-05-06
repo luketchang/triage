@@ -386,7 +386,7 @@ export class TriageAgent {
       });
     }
 
-    const postprocessor = new CodePostprocessor(this.fastModel);
+    const postprocessor = new CodePostprocessor(this.postprocessingModel);
 
     const codeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
     const response = await postprocessor.invoke({
@@ -566,7 +566,7 @@ export async function invokeAgent({
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
   const fastModel = GeminiModel.GEMINI_2_5_FLASH;
-  const postprocessingModel = OpenAIModel.GPT_4_1_MINI;
+  const postprocessingModel = OpenAIModel.O4_MINI;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 

@@ -88,6 +88,7 @@ export class LogPostprocessor {
         logPostprocessing: logPostprocessingToolSchema,
       },
       toolChoice: "required",
+      temperature: 1,
     });
 
     // If multiple tool calls are returned (on accident), we will just merge them
