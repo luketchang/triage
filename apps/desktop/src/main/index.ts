@@ -40,8 +40,7 @@ function createWindow(): void {
     width: 1280,
     height: 800,
     webPreferences: {
-      // TODO: double check if this is correct
-      preload: path.resolve(process.cwd(), "dist-electron/preload/index.js"),
+      preload: path.join(app.getAppPath(), "out/preload/index.cjs"),
       nodeIntegration: false,
       contextIsolation: true,
     },
