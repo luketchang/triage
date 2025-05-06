@@ -14,6 +14,7 @@ export default defineConfig({
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
+    // preload script must output cjs, so we need this override since output format is esm by default
     build: {
       minify: false,
       rollupOptions: {
