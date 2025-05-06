@@ -1,6 +1,6 @@
 import { AgentStreamUpdate, ChatMessage } from "@triage/agent";
 import { contextBridge, ipcRenderer } from "electron";
-import { AssistantMessage, UserMessage } from "../src/renderer/types";
+import { AssistantMessage, UserMessage } from "../src/renderer/src/types";
 
 // Store the environment values we're exposing for logging
 const tracesEnabled = process.env.TRACES_ENABLED === "true";

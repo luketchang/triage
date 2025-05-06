@@ -7,7 +7,7 @@ import {
   LogsWithPagination,
   TraceQueryParams,
   TracesWithPagination,
-} from "../../src/renderer/types/index.js";
+} from "../../src/renderer/src/types/index.js";
 
 /**
  * Set up all IPC handlers related to observability (logs, traces)

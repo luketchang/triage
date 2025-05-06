@@ -1,5 +1,5 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState } from "react";
-import { AppConfig } from "../../config";
+import { AppConfig } from "../config";
 import api from "../services/api";
 
 type AppConfigContextType = {

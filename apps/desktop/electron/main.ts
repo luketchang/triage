@@ -1,14 +1,8 @@
-// Load environment variables first, before any other imports
-import "./env-loader.js";
-
+import { is } from "@electron-toolkit/utils";
+import { config } from "@triage/config";
 import { app, BrowserWindow, shell } from "electron";
-// Fix CommonJS import for electron-updater
 import pkg from "electron-updater";
 import * as path from "path";
-const { autoUpdater } = pkg;
-// Import config from @triage/config package
-import { config } from "@triage/config";
-// Import all handlers from the handlers directory
 import {
   cleanupAgentHandlers,
   cleanupConfigHandlers,
@@ -19,6 +13,7 @@ import {
   setupDbHandlers,
   setupObservabilityHandlers,
 } from "./handlers/index.js";
+const { autoUpdater } = pkg;
 
 // Log the configuration to verify it's correctly loaded
 console.info("Using environment configuration:", {
@@ -52,13 +47,12 @@ function createWindow(): void {
     },
   });
 
-  // In development, load from dev server
-  if (process.env.NODE_ENV === "development" || process.env.DEBUG_PROD === "true") {
-    mainWindow.loadURL("http://localhost:5174");
-    mainWindow.webContents.openDevTools();
+  // HMR for renderer base on electron-vite cli.
+  // Load the remote URL for development or the local html file for production.
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
   } else {
-    // Load the index.html when not in development
-    mainWindow.loadFile(path.join(process.env.DIST || "dist", "index.html"));
+    mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 
   // Make all links open with the browser, not with the application

@@ -7,7 +7,10 @@
     "baseUrl": ".",
     "paths": {
       "@renderer/*": ["src/renderer/src/*"]
-    }
+    },
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "skipLibCheck": true
   },
   "references": [
     { "path": "../../packages/agent" },

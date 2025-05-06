@@ -41,10 +41,10 @@ export function useLogs(options: UseLogsOptions = {}) {
 
       try {
         console.info("Fetching logs with params:", params);
-        const response = await api.fetchLogs(params);
+        const data = await api.fetchLogs(params);
 
-        if (response && response.success && response.data) {
-          let filteredLogs = response.data.logs || [];
+        if (data) {
+          const filteredLogs = data.logs || [];
 
           // Store the complete response data with pagination
           if (params.pageCursor) {
@@ -52,24 +52,24 @@ export function useLogs(options: UseLogsOptions = {}) {
             if (logsWithPagination) {
               const updatedLogs = [...logsWithPagination.logs, ...filteredLogs];
               setLogsWithPagination({
-                ...response.data,
+                ...data,
                 logs: updatedLogs,
               });
             } else {
-              setLogsWithPagination(response.data);
+              setLogsWithPagination(data);
             }
             // Update logs array for UI components
             setLogs((prev) => [...prev, ...filteredLogs]);
           } else {
             // For new queries, replace existing data
-            setLogsWithPagination(response.data);
+            setLogsWithPagination(data);
             setLogs(filteredLogs);
           }
 
           // Update the cursor for next page
-          setPageCursor(response.data.pageCursorOrIndicator);
+          setPageCursor(data.pageCursorOrIndicator);
         } else {
-          console.warn("Invalid response format from fetchLogs:", response);
+          console.warn("Invalid response format from fetchLogs:", data);
           if (!params.pageCursor) {
             setLogs([]);
             setLogsWithPagination(null);
@@ -85,7 +85,7 @@ export function useLogs(options: UseLogsOptions = {}) {
         setIsLoading(false);
       }
     },
-    [setIsLoading, setLogs, setLogsWithPagination, setPageCursor]
+    [setIsLoading, setLogs, setLogsWithPagination, setPageCursor, logsWithPagination]
   );
 
   // Fetch logs with query
@@ -110,18 +110,10 @@ export function useLogs(options: UseLogsOptions = {}) {
     // Only fetch facets if we haven't loaded them for this time range
     if (loadedFacetsForRange.current !== rangeKey) {
       try {
-        const response = await api.getLogsFacetValues(timeRange.start, timeRange.end);
+        const data = await api.getLogsFacetValues(timeRange.start, timeRange.end);
 
-        if (
-          response &&
-          "data" in response &&
-          response.success &&
-          response.data &&
-          response.data.length > 0
-        ) {
-          setFacets(response.data);
-        } else if (Array.isArray(response) && response.length > 0) {
-          setFacets(response);
+        if (data && data.length > 0) {
+          setFacets(data);
         } else {
           console.info("No valid facet data received, using empty array");
           setFacets([]);

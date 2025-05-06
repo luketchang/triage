@@ -15,7 +15,6 @@ import NavigationSidebar from "./components/NavigationSidebar";
 import ChatView from "./features/ChatView";
 import DashboardsView from "./features/DashboardsView";
 import LogsView from "./features/LogsView";
-import TracesView from "./features/TracesView";
 
 // Custom hooks
 import { useChat } from "./hooks/useChat";
@@ -174,35 +173,35 @@ function App(): JSX.Element {
             setSelectedFacets={logsState.setSelectedFacets}
           />
         );
-      case "traces":
-        return TRACES_ENABLED ? (
-          <TracesView
-            selectedTrace={tracesState.selectedTrace}
-            handleTraceSelect={tracesState.handleTraceSelect}
-            traces={tracesState.traces}
-            traceQuery={tracesState.traceQuery}
-            setTraceQuery={tracesState.setTraceQuery}
-            isLoading={tracesState.isLoading}
-            timeRange={tracesState.timeRange}
-            fetchTracesWithQuery={tracesState.fetchTracesWithQuery}
-            handleLoadMoreTraces={tracesState.handleLoadMoreTraces}
-            handleTimeRangeChange={tracesState.handleTimeRangeChange}
-            facets={tracesState.facets}
-            selectedFacets={tracesState.selectedFacets}
-            setSelectedFacets={tracesState.setSelectedFacets}
-            selectedSpan={tracesState.selectedSpan}
-            handleSpanSelect={tracesState.handleSpanSelect}
-            pageCursor={tracesState.pageCursor}
-            setSelectedSpan={tracesState.setSelectedSpan}
-          />
-        ) : (
-          <div className="traces-view">
-            <div className="dashboards-placeholder">
-              <h2>Traces View</h2>
-              <p>Distributed tracing functionality will be implemented in a future update.</p>
-            </div>
-          </div>
-        );
+      // case "traces":
+      //   return TRACES_ENABLED ? (
+      //     <TracesView
+      //       selectedTrace={tracesState.selectedTrace}
+      //       handleTraceSelect={tracesState.handleTraceSelect}
+      //       traces={tracesState.traces}
+      //       traceQuery={tracesState.traceQuery}
+      //       setTraceQuery={tracesState.setTraceQuery}
+      //       isLoading={tracesState.isLoading}
+      //       timeRange={tracesState.timeRange}
+      //       fetchTracesWithQuery={tracesState.fetchTracesWithQuery}
+      //       handleLoadMoreTraces={tracesState.handleLoadMoreTraces}
+      //       handleTimeRangeChange={tracesState.handleTimeRangeChange}
+      //       facets={tracesState.facets}
+      //       selectedFacets={tracesState.selectedFacets}
+      //       setSelectedFacets={tracesState.setSelectedFacets}
+      //       selectedSpan={tracesState.selectedSpan}
+      //       handleSpanSelect={tracesState.handleSpanSelect}
+      //       pageCursor={tracesState.pageCursor}
+      //       setSelectedSpan={tracesState.setSelectedSpan}
+      //     />
+      //   ) : (
+      //     <div className="traces-view">
+      //       <div className="dashboards-placeholder">
+      //         <h2>Traces View</h2>
+      //         <p>Distributed tracing functionality will be implemented in a future update.</p>
+      //       </div>
+      //     </div>
+      //   );
       case "dashboards":
         return <DashboardsView />;
       case "chat":
