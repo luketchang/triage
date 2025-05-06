@@ -228,3 +228,29 @@ export function formatChatHistory(messages: ChatMessage[]): string {
     .filter(Boolean)
     .join("\n\n");
 }
+
+export function normalizeDatadogQueryString(query: string): string {
+  // Regex pattern to match attribute filters like key:"value" but not service: or status:
+  const attributeFilterRegex = /\b(?!service\b)(?!status\b)(\w+):"([^"]+)"/g;
+
+  // Replace matching attribute filters with *:"value"
+  const normalizedQuery = query.replace(attributeFilterRegex, '*:"$2"');
+
+  return normalizedQuery;
+}
+
+// Browser-compatible path normalization function
+export function normalizeFilePath(filePath: string, repoPath: string): string {
+  // Ensure paths use consistent separators
+  const normalizedFilePath = filePath.replace(/\\/g, "/");
+  const normalizedRepoPath = repoPath.replace(/\\/g, "/");
+
+  // If file path starts with repo path, remove it to get the relative path
+  if (normalizedFilePath.startsWith(normalizedRepoPath)) {
+    // Remove repo path and any leading slashes
+    return normalizedFilePath.slice(normalizedRepoPath.length).replace(/^\/+/, "");
+  }
+
+  // If file path doesn't start with repo path, it might already be relative
+  return normalizedFilePath.replace(/^\/+/, "");
+}

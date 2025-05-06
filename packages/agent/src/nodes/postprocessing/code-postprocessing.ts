@@ -3,7 +3,7 @@ import { generateId, generateText } from "ai";
 
 import { AgentStreamUpdate, CodePostprocessingStep, CodeSearchStep } from "../../types";
 import { codePostprocessingToolSchema } from "../../types/tools";
-import { ensureSingleToolCall, formatCodeSearchSteps } from "../utils";
+import { ensureSingleToolCall, formatCodeSearchSteps, normalizeFilePath } from "../utils";
 
 function createPrompt(params: {
   query: string;
@@ -86,12 +86,19 @@ export class CodePostprocessor {
       toolCall = ensureSingleToolCall(toolCalls);
     }
 
+    // Normalize filepaths in each fact
+    const normalizedFacts =
+      toolCall.args.facts?.map((fact) => ({
+        ...fact,
+        filepath: normalizeFilePath(fact.filepath, params.repoPath),
+      })) || [];
+
     if (params.onUpdate) {
       params.onUpdate({
         type: "intermediateUpdate",
         step: {
           type: "codePostprocessing",
-          facts: toolCall.args.facts || [],
+          facts: normalizedFacts,
           timestamp: new Date(),
         },
         id: generateId(),
@@ -102,7 +109,7 @@ export class CodePostprocessor {
     return {
       type: "codePostprocessing",
       timestamp: new Date(),
-      facts: toolCall.args.facts || [],
+      facts: normalizedFacts,
     };
   }
 }

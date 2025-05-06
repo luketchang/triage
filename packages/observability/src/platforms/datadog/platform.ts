@@ -47,8 +47,9 @@ Use Datadog Log Search Syntax to search for logs.
   - service:<service_name> AND *:"<keyword in attributes>"
   - service:<service_name> AND status:error
 
-## Tips
-- Excluding the service attribute, when using attribute filters, use *:"<keyword>" instead of a specific attribute like <attribute>:"<keyword>" ()
+## Rules
+- Excluding the service attribute, when using attribute filters, use *:"<keyword>" instead of a specific attribute like <attribute>:"<keyword>"
+- Never use anything other than the * key for attribute filters. Attribute filters with specific words for the key are NOT allowed.
 
 ## Best practices (examples):
 - GOOD: (service:orders OR service:payments) AND (*:"67ec59004bb8930018a81adc" OR *:"67ec59004bb8930018a81def")

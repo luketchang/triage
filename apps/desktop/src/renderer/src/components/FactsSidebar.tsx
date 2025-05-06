@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAppConfig } from "../context/AppConfigContext";
 import { CodePostprocessingFact, LogPostprocessingFact } from "../types";
-import { filepathToGitHubUrl, normalizeFilePath } from "../utils/facts/code";
+import { filepathToGitHubUrl } from "../utils/facts/code";
 import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs";
 
 interface FactsSidebarProps {
@@ -20,8 +20,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
 
       const elements = codeFacts.map((fact, index) => {
         // Generate GitHub URL for the code fact
-        const relativeFilePath = normalizeFilePath(fact.filepath, config.repoPath);
-        const githubUrl = filepathToGitHubUrl(config.githubRepoBaseUrl, relativeFilePath, {
+        const githubUrl = filepathToGitHubUrl(config.githubRepoBaseUrl, fact.filepath, {
           startLine: fact.startLine,
           endLine: fact.endLine,
         });
@@ -34,7 +33,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
             </div>
             <div className="fact-content">
               <p className="fact-text">{fact.fact}</p>
-              <div className="fact-path">{relativeFilePath}</div>
+              <div className="fact-path">{fact.filepath}</div>
               <a
                 href={githubUrl}
                 target="_blank"
