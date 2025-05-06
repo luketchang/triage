@@ -34,20 +34,3 @@ export interface AppConfig {
   /** End date for the time range */
   endDate: Date;
 }
-
-/**
- * Default configuration for the agent
- */
-export const defaultConfig: AppConfig = {
-  repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
-  githubRepoBaseUrl: process.env.GITHUB_REPO_BASE_URL || "https://github.com/luketchang/ticketing",
-  codebaseOverviewPath:
-    process.env.CODEBASE_OVERVIEW_PATH ||
-    "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-  observabilityPlatform: process.env.OBSERVABILITY_PLATFORM || "datadog",
-  observabilityFeatures: process.env.OBSERVABILITY_FEATURES
-    ? process.env.OBSERVABILITY_FEATURES.split(",")
-    : ["logs"],
-  startDate: new Date(process.env.START_DATE || "2025-04-16T21:00:00Z"),
-  endDate: new Date(process.env.END_DATE || "2025-04-16T23:59:59Z"),
-};
