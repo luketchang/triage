@@ -1,5 +1,4 @@
 import { logger } from "@triage/common";
-import { execSync } from "child_process";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { CollectedFiles } from "../types";
@@ -33,6 +32,8 @@ export const EXCLUDED_DIRS = new Set([
 
 export const EXCLUDED_EXTENSIONS = [".json"];
 
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB
+
 /**
  * Checks if a path should be excluded based on the EXCLUDED_DIRS set
  */
@@ -51,43 +52,54 @@ export async function collectFiles(
   const fileTree: string[] = [];
   const pathToSourceCode: Record<string, string> = {};
 
-  async function walkDir(currentPath: string) {
-    try {
-      const entries = await fs.readdir(currentPath, { withFileTypes: true });
+  const processDirectory = async (
+    dirPath: string,
+    depth = 0,
+    maxDepth = 5,
+    maxFiles = 100
+  ): Promise<void> => {
+    if (depth > maxDepth || Object.keys(pathToSourceCode).length >= maxFiles) {
+      return;
+    }
 
-      for (const entry of entries) {
-        const fullPath = path.join(currentPath, entry.name);
+    const dirEntries = await fs.readdir(dirPath, { withFileTypes: true });
 
-        if (entry.isDirectory()) {
-          if (!isExcluded(fullPath)) {
-            await walkDir(fullPath);
-          }
-        } else if (entry.isFile()) {
-          const ext = path.extname(entry.name);
-          if (EXCLUDED_EXTENSIONS.includes(ext)) {
-            continue;
-          }
+    for (const entry of dirEntries) {
+      const entryPath = path.join(dirPath, entry.name);
+      const relativePath = path.relative(repoRoot, entryPath);
 
-          if (allowedExtensions.includes(ext) && !isExcluded(fullPath)) {
-            const relPath = path.relative(repoRoot, fullPath);
-            fileTree.push(relPath);
+      if (entry.isDirectory()) {
+        // Skip hidden directories and node_modules
+        if (entry.name.startsWith(".") || entry.name === "node_modules") {
+          continue;
+        }
 
+        fileTree.push(`${" ".repeat(depth * 2)}📁 ${entry.name}/`);
+        await processDirectory(entryPath, depth + 1, maxDepth, maxFiles);
+      } else if (entry.isFile()) {
+        const ext = path.extname(entry.name);
+        if (allowedExtensions.includes(ext)) {
+          fileTree.push(`${" ".repeat(depth * 2)}📄 ${entry.name}`);
+
+          if (Object.keys(pathToSourceCode).length < maxFiles) {
             try {
-              const content = await fs.readFile(fullPath, "utf-8");
-              pathToSourceCode[relPath] = content;
+              const stats = await fs.stat(entryPath);
+              if (stats.size <= MAX_FILE_SIZE) {
+                const content = await fs.readFile(entryPath, "utf-8");
+                pathToSourceCode[relativePath] = content;
+              } else {
+                pathToSourceCode[relativePath] = `File too large to include (${stats.size} bytes)`;
+              }
             } catch (error) {
-              pathToSourceCode[relPath] = `Error reading file: ${error}`;
-              logger.error(`Could not read file ${fullPath}: ${error}`);
+              logger.error(`Error reading file ${entryPath}: ${error}`);
             }
           }
         }
       }
-    } catch (error) {
-      logger.error(`Error walking directory ${currentPath}: ${error}`);
     }
-  }
+  };
 
-  await walkDir(directory);
+  await processDirectory(directory);
   return { fileTree, pathToSourceCode };
 }
 
@@ -115,83 +127,23 @@ export async function getSourceCodeFromPaths(filePaths: string[]): Promise<Recor
  */
 export function generateTreeString(filePaths: string[]): string {
   if (filePaths.length === 0) {
-    return "";
+    return "No files found";
   }
-
-  // Sort files for a more organized tree
-  const sortedFiles = [...filePaths].sort();
-
-  // Simple indentation-based tree representation
-  let result = "";
-
-  for (const file of sortedFiles) {
-    const parts = file.split(file.includes("/") ? "/" : "\\");
-    let line = "";
-
-    // Add indentation based on path depth
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      const isLast = i === parts.length - 1;
-
-      if (i === 0) {
-        // Root level
-        line += isLast ? "└── " : "├── ";
-      } else {
-        // Add indentation
-        line += "│   ".repeat(i) + (isLast ? "└── " : "├── ");
-      }
-
-      line += part + "\n";
-    }
-
-    result += line;
-  }
-
-  return result;
-}
-
-/**
- * Clones a repository to the specified directory
- */
-export function cloneRepository(repoUrl: string, cloneDir: string, branch?: string): void {
-  logger.info(`Cloning repository ${repoUrl} into ${cloneDir}...`);
-
-  const cmd = ["git", "clone"];
-  if (branch) {
-    cmd.push("--branch", branch);
-  }
-  cmd.push(repoUrl, cloneDir);
-
-  try {
-    execSync(cmd.join(" "), { stdio: "pipe" });
-    logger.info("Repository clone completed.");
-  } catch (error) {
-    const errorMsg = `Git clone failed: ${error}`;
-    logger.error(errorMsg);
-    throw new Error(errorMsg);
-  }
+  return filePaths.join("\n");
 }
 
 /**
  * Lists major directories in a repository
  */
 export async function listMajorDirectories(repoPath: string): Promise<string[]> {
-  const dirs: string[] = [];
+  const dirEntries = await fs.readdir(repoPath, { withFileTypes: true });
+  const majorDirs: string[] = [];
 
-  try {
-    const items = await fs.readdir(repoPath, { withFileTypes: true });
-
-    for (const item of items) {
-      if (item.isDirectory()) {
-        const fullPath = path.join(repoPath, item.name);
-        if (!isExcluded(fullPath)) {
-          dirs.push(fullPath);
-        }
-      }
+  for (const entry of dirEntries) {
+    if (entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== "node_modules") {
+      majorDirs.push(path.join(repoPath, entry.name));
     }
-  } catch (error) {
-    logger.error(`Error listing directories in ${repoPath}: ${error}`);
   }
 
-  return dirs;
+  return majorDirs;
 }

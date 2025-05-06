@@ -1,45 +1,72 @@
-import { logger, OpenAIModel } from "@triage/common";
+#!/usr/bin/env node
+
+import { Model } from "@triage/common";
 import { Command } from "commander";
-import * as dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
 import { CodebaseProcessor } from "./processor/codebase-processor";
 
-console.info("Current working directory:", process.cwd());
-console.info("Environment variables:", {
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY ? "Set" : "Not set",
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? "Set" : "Not set",
-});
-
-dotenv.config();
+const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), "output");
 
 /**
- * Runs the CLI for generating codebase overviews
+ * Main CLI function for generating codebase overviews
  */
-export async function runCLI(): Promise<void> {
+export async function main() {
   const program = new Command();
 
   program
-    .name("codebase-overview")
-    .description("Generate a codebase overview from a GitHub repository")
-    .requiredOption("--repo-url <url>", "GitHub repository URL to clone and analyze")
-    .option("--model <model>", "LLM model to use", OpenAIModel.GPT_4_O)
-    .option("--system-description <description>", "Optional system description for context", "");
+    .name("generate-overview")
+    .description("Generate an overview of a codebase using AI")
+    .option("-d, --directory <path>", "Path to the local directory to analyze", process.cwd())
+    .option(
+      "-o, --output <path>",
+      "Path to save the generated overview markdown file",
+      DEFAULT_OUTPUT_DIR
+    )
+    .option(
+      "-m, --model <model>",
+      "AI model to use for generating the overview (e.g. gpt-4.1-mini-2025-04-14)",
+      "gpt-4.1-mini-2025-04-14"
+    )
+    .option(
+      "-s, --system-description <description>",
+      "A brief description of the system (optional)",
+      ""
+    );
 
-  program.parse();
+  program.parse(process.argv);
+
   const options = program.opts();
+  const directoryPath = path.resolve(options.directory);
+  const outputDir = path.resolve(options.output);
+  const model = options.model as Model;
+  const systemDescription = options.systemDescription;
+
+  // Verify the directory exists
+  if (!fs.existsSync(directoryPath)) {
+    console.error(`Error: Directory ${directoryPath} does not exist`);
+    process.exit(1);
+  }
+
+  // Create the output directory if it doesn't exist
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
 
   try {
-    const model = options.model;
-    logger.info(`Using model: ${model}`);
+    console.log(`Analyzing codebase at: ${directoryPath}`);
+    console.log(`Using model: ${model}`);
+    console.log(`Overview will be saved to: ${path.join(outputDir, "codebase-overview.md")}`);
 
-    const processor = new CodebaseProcessor(model, options.repoUrl, options.systemDescription);
+    const processor = new CodebaseProcessor(model, directoryPath, outputDir, systemDescription);
+    await processor.process();
 
-    const finalDocument = await processor.process();
-    logger.info(`Final Document:\n${finalDocument}`);
+    console.log("Overview generation complete!");
+    console.log(`Overview has been saved to ${path.join(outputDir, "codebase-overview.md")}`);
   } catch (error) {
-    logger.error(`Error: ${error}`);
-    if (error instanceof Error && error.stack) {
-      logger.error(`Stack trace: ${error.stack}`);
-    }
+    console.error("Error generating overview:", error);
     process.exit(1);
   }
 }
+
+main();

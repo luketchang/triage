@@ -1,7 +1,19 @@
 /**
- * Prompt template for generating a directory summary
+ * Generates a prompt for directory summary
  */
-export const DIR_SUMMARY_TEMPLATE = `
+export function createDirectorySummaryPrompt(params: {
+  systemDescription: string;
+  repoFileTree: string;
+  directory: string;
+  dirFileTree: string;
+  fileContents: Record<string, string>;
+}): string {
+  let fileContentsStr = "";
+  for (const [path, content] of Object.entries(params.fileContents)) {
+    fileContentsStr += `\nFile: ${path}\n${"-".repeat(40)}\n${content}\n${"-".repeat(40)}\n`;
+  }
+
+  return `
 Your task is to analyze this directory of code files and generate a narrative overview that explains what this component does, its architecture, and how it fits into the broader system. Focus on creating a readable, flowing document rather than a structured reference.
 
 Additional Instructions:
@@ -13,25 +25,36 @@ Additional Instructions:
 - Use markdown formatting with headers, lists, and code blocks to organize the content
 - Avoid excessive listing of file contents - focus on the most important components and their relationships
 
-System Description: {system_description}
+System Description: ${params.systemDescription}
 
 Overall Repository File Tree:
 ----------------------------------------
-{repo_file_tree}
+${params.repoFileTree}
 ----------------------------------------
 
-Processing Directory: {directory}
+Processing Directory: ${params.directory}
 Directory File List:
-{dir_file_tree}
+${params.dirFileTree}
 
 Source Files (file path and content):
-{file_contents}
+${fileContentsStr}
 `;
+}
 
 /**
- * Prompt template for merging summaries of all directories
+ * Generates a prompt for merging summaries
  */
-export const MERGE_SUMMARIES_TEMPLATE = `
+export function createMergeSummariesPrompt(params: {
+  systemDescription: string;
+  repoFileTree: string;
+  summaries: Record<string, string>;
+}): string {
+  let summariesStr = "";
+  for (const [directory, summary] of Object.entries(params.summaries)) {
+    summariesStr += `Walkthrough for ${directory}:\n${summary}\n\n`;
+  }
+
+  return `
 Synthesize a comprehensive codebase walkthrough based on the individual component summaries provided. Create a narrative document that explains the system architecture, components, and how they interact with each other.
 
 Additional Instructions:
@@ -45,25 +68,28 @@ Additional Instructions:
 - Use a hierarchical structure with main sections and relevant subsections
 - Use markdown for formatting, with headers, lists, and code blocks
 
-System Description: {system_description}
+System Description: ${params.systemDescription}
 
 Overall Repository File Tree:
-{repo_file_tree}
+${params.repoFileTree}
 
 Walkthroughs for each major module/directory:
-{summaries}
+${summariesStr}
 
 Be sure to conclude with a section that ties everything together, explaining how all components interact in typical user flows or system operations.
 `;
+}
 
 /**
- * Prompt template for identifying services from a repository file tree
+ * Generates a prompt for top-level module identification
  */
-export const TOP_LEVEL_IDENTIFICATION_TEMPLATE = `
+export function createTopLevelIdentificationPrompt(params: { repoFileTree: string }): string {
+  return `
 You are given the file tree of a repository. Your task is to identify upper-level directories that represent separate services or top-level modules. These directories are independent services/modules that can (or should) be summarized individually.
 
 Return a JSON array of directory paths (relative to the repository root) that should be treated as separate services or packages. Prioritize recall over precision, be generous about including directories as services. But note that you must choose directories not actual files.
 
 Repository File Tree:
-{repo_file_tree}
+${params.repoFileTree}
 `;
+}

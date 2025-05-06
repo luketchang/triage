@@ -4,6 +4,9 @@
   "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "generate-codebase-overview": "./dist/bin/generate-codebase-overview.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx",

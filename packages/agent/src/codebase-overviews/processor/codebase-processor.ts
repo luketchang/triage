@@ -1,15 +1,14 @@
 import { Model, getModelWrapper, logger } from "@triage/common";
 import { generateText } from "ai";
 import * as fs from "fs/promises";
-import * as os from "os";
 import * as path from "path";
 import { SelectedModules, selectedModulesSchema } from "../types";
 import {
-  DIR_SUMMARY_TEMPLATE,
-  MERGE_SUMMARIES_TEMPLATE,
-  TOP_LEVEL_IDENTIFICATION_TEMPLATE,
+  createDirectorySummaryPrompt,
+  createMergeSummariesPrompt,
+  createTopLevelIdentificationPrompt,
 } from "./templates";
-import { cloneRepository, collectFiles, generateTreeString, listMajorDirectories } from "./utils";
+import { collectFiles, generateTreeString, listMajorDirectories } from "./utils";
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that helps analyze codebases and generate comprehensive overviews. Your task is to identify services and generate summaries of codebase components.
@@ -27,13 +26,15 @@ const selectedModulesTool = {
  */
 export class CodebaseProcessor {
   private llm: Model;
-  private repoUrl: string;
+  private repoPath: string;
+  private outputDir: string;
   private systemDescription: string;
   private allowedExtensions: string[];
 
-  constructor(llm: Model, repoUrl: string, systemDescription = "") {
+  constructor(llm: Model, repoPath: string, outputDir: string, systemDescription = "") {
     this.llm = llm;
-    this.repoUrl = repoUrl;
+    this.repoPath = repoPath;
+    this.outputDir = outputDir;
     this.systemDescription = systemDescription;
     this.allowedExtensions = [".py", ".js", ".ts", ".java", ".go", ".rs", ".yaml", ".cs"];
   }
@@ -46,7 +47,9 @@ export class CodebaseProcessor {
     logger.info(`File tree: ${treeStr}`);
 
     try {
-      const prompt = TOP_LEVEL_IDENTIFICATION_TEMPLATE.replace("{repo_file_tree}", treeStr);
+      const prompt = createTopLevelIdentificationPrompt({
+        repoFileTree: treeStr,
+      });
       logger.info(`Using prompt: ${prompt}`);
 
       // Use AI to identify services with tool calls
@@ -118,16 +121,13 @@ export class CodebaseProcessor {
     fileContents: Record<string, string>,
     repoFileTree: string[]
   ): Promise<string> {
-    let fileContentsStr = "";
-    for (const [path, content] of Object.entries(fileContents)) {
-      fileContentsStr += `\nFile: ${path}\n${"-".repeat(40)}\n${content}\n${"-".repeat(40)}\n`;
-    }
-
-    const prompt = DIR_SUMMARY_TEMPLATE.replace("{system_description}", this.systemDescription)
-      .replace("{repo_file_tree}", generateTreeString(repoFileTree))
-      .replace("{directory}", directory)
-      .replace("{dir_file_tree}", generateTreeString(dirFileTree))
-      .replace("{file_contents}", fileContentsStr);
+    const prompt = createDirectorySummaryPrompt({
+      systemDescription: this.systemDescription,
+      repoFileTree: generateTreeString(repoFileTree),
+      directory,
+      dirFileTree: generateTreeString(dirFileTree),
+      fileContents,
+    });
 
     try {
       const { text } = await generateText({
@@ -150,14 +150,11 @@ export class CodebaseProcessor {
     summaries: Record<string, string>,
     repoFileTree: string[]
   ): Promise<string> {
-    let summariesStr = "";
-    for (const [directory, summary] of Object.entries(summaries)) {
-      summariesStr += `Walkthrough for ${directory}:\n${summary}\n\n`;
-    }
-
-    const prompt = MERGE_SUMMARIES_TEMPLATE.replace("{system_description}", this.systemDescription)
-      .replace("{repo_file_tree}", generateTreeString(repoFileTree))
-      .replace("{summaries}", summariesStr);
+    const prompt = createMergeSummariesPrompt({
+      systemDescription: this.systemDescription,
+      repoFileTree: generateTreeString(repoFileTree),
+      summaries,
+    });
 
     try {
       const { text } = await generateText({
@@ -177,30 +174,26 @@ export class CodebaseProcessor {
    * Process the repository to generate a codebase overview
    */
   public async process(): Promise<string> {
-    // Create temporary directory
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "repo-"));
+    // Create the output directory if it doesn't exist
+    await fs.mkdir(this.outputDir, { recursive: true });
 
     try {
-      // Clone repository
-      cloneRepository(this.repoUrl, tempDir);
-      const repoPath = tempDir;
-
       // Collect files from the repository
       const { fileTree: repoFileTree } = await collectFiles(
-        repoPath,
+        this.repoPath,
         this.allowedExtensions,
-        repoPath
+        this.repoPath
       );
 
       // Identify service directories
-      const serviceDirs = await this.identifyTopLevel(repoPath, repoFileTree);
+      const serviceDirs = await this.identifyTopLevel(this.repoPath, repoFileTree);
       let directoriesToProcess: string[];
 
       if (serviceDirs.length > 0) {
         directoriesToProcess = serviceDirs;
         logger.info(`Identified service directories: ${directoriesToProcess}`);
       } else {
-        directoriesToProcess = await listMajorDirectories(repoPath);
+        directoriesToProcess = await listMajorDirectories(this.repoPath);
         logger.info(
           "No specific service directories identified; falling back to major directories."
         );
@@ -214,7 +207,7 @@ export class CodebaseProcessor {
         const { fileTree: dirFileTree, pathToSourceCode } = await collectFiles(
           directory,
           this.allowedExtensions,
-          repoPath
+          this.repoPath
         );
 
         const summary = await this.generateDirectorySummary(
@@ -233,14 +226,15 @@ export class CodebaseProcessor {
       const finalDocument = await this.mergeAllSummaries(summaries, repoFileTree);
       logger.info(`Final Document:\n${finalDocument}`);
 
+      // Save the final document to the output directory
+      const outputPath = path.join(this.outputDir, "codebase-overview.md");
+      await fs.writeFile(outputPath, finalDocument);
+      logger.info(`Saved codebase overview to ${outputPath}`);
+
       return finalDocument;
-    } finally {
-      // Clean up temporary directory
-      try {
-        await fs.rm(tempDir, { recursive: true, force: true });
-      } catch (error) {
-        logger.error(`Error cleaning up temporary directory: ${error}`);
-      }
+    } catch (error) {
+      logger.error(`Error processing codebase: ${error}`);
+      throw error;
     }
   }
 }
