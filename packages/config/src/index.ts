@@ -1,12 +1,7 @@
-import crypto from "crypto";
-
 import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["production", "development", "test"]).default("development"),
-  PORT: z.string().default("3001"),
-  REDIS_URL: z.string().default("redis://localhost:6379"),
-  PROCESS_LABEL: z.string().default("oncall-api"),
   OPENAI_API_KEY: z.string(),
   ANTHROPIC_API_KEY: z.string(),
   GOOGLE_API_KEY: z.string().optional(),
@@ -20,12 +15,6 @@ const envSchema = z.object({
   GRAFANA_BASE_URL: z.string().default("https://logs-prod-021.grafana.net"),
   GRAFANA_USERNAME: z.string().optional(),
   GRAFANA_PASSWORD: z.string().optional(),
-
-  // Encryption key for DB secrets
-  ENCRYPTION_KEY: z
-    .string()
-    .min(64)
-    .default(() => crypto.randomBytes(32).toString("hex")),
 });
 
 // Define the return type
@@ -55,9 +44,6 @@ const env = validateEnv();
 
 const config = {
   env: env.NODE_ENV,
-  port: env.PORT,
-  redisUrl: env.REDIS_URL,
-  processLabel: env.PROCESS_LABEL,
   openaiApiKey: env.OPENAI_API_KEY,
   anthropicApiKey: env.ANTHROPIC_API_KEY,
   googleApiKey: env.GOOGLE_API_KEY,
@@ -71,7 +57,21 @@ const config = {
     username: env.GRAFANA_USERNAME,
     password: env.GRAFANA_PASSWORD,
   },
-  encryptionKey: env.ENCRYPTION_KEY,
 };
+
+// Log the configuration to verify it's correctly loaded
+console.info("Using environment configuration:", {
+  NODE_ENV: config.env,
+  openaiApiKey: config.openaiApiKey ? "Set" : "Not set",
+  anthropicApiKey: config.anthropicApiKey ? "Set" : "Not set",
+  datadog: {
+    apiKey: config.datadog.apiKey ? "Set" : "Not set",
+    appKey: config.datadog.appKey ? "Set" : "Not set",
+  },
+  grafana: {
+    baseUrl: config.grafana.baseUrl,
+    username: config.grafana.username ? "Set" : "Not set",
+  },
+});
 
 export { config };
