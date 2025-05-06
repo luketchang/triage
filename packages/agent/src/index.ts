@@ -71,20 +71,17 @@ export interface TriageAgentState {
 export class TriageAgent {
   private reasoningModel: Model;
   private fastModel: Model;
-  private postprocessingModel: Model;
   private observabilityPlatform: ObservabilityPlatform;
   private observabilityFeatures: string[];
 
   constructor(
     reasoningModel: Model,
     fastModel: Model,
-    postprocessingModel: Model,
     observabilityPlatform: ObservabilityPlatform,
     observabilityFeatures: string[]
   ) {
     this.reasoningModel = reasoningModel;
     this.fastModel = fastModel;
-    this.postprocessingModel = postprocessingModel;
     this.observabilityPlatform = observabilityPlatform;
     this.observabilityFeatures = observabilityFeatures;
   }
@@ -348,10 +345,7 @@ export class TriageAgent {
       onUpdate({ type: "highLevelUpdate", id: logPostprocessingId, stepType: "logPostprocessing" });
     }
 
-    const postprocessor = new LogPostprocessor(
-      this.postprocessingModel,
-      this.observabilityPlatform
-    );
+    const postprocessor = new LogPostprocessor(this.fastModel, this.observabilityPlatform);
     const logSearchSteps = state.agentSteps.filter((step) => step.type === "logSearch");
     const response = await postprocessor.invoke({
       query: state.query,
@@ -386,7 +380,7 @@ export class TriageAgent {
       });
     }
 
-    const postprocessor = new CodePostprocessor(this.postprocessingModel);
+    const postprocessor = new CodePostprocessor(this.fastModel);
 
     const codeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
     const response = await postprocessor.invoke({
@@ -566,14 +560,12 @@ export async function invokeAgent({
 
   const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
   const fastModel = GeminiModel.GEMINI_2_5_FLASH;
-  const postprocessingModel = GeminiModel.GEMINI_2_5_FLASH;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 
   const agent = new TriageAgent(
     reasoningModel,
     fastModel,
-    postprocessingModel,
     observabilityPlatform,
     observabilityFeatures
   );
