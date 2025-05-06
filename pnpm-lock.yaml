@@ -120,15 +120,15 @@ importers:
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
+      dotenv-cli:
+        specifier: ^8.0.0
+        version: 8.0.0
       electron:
         specifier: ^35.1.5
         version: 35.2.2
       electron-builder:
         specifier: ^25.1.8
         version: 25.1.8(electron-builder-squirrel-windows@24.13.3(dmg-builder@25.1.8))
-      electron-rebuild:
-        specifier: ^3.2.9
-        version: 3.2.9
       electron-vite:
         specifier: ^3.1.0
         version: 3.1.0(vite@6.3.5(@types/node@22.15.9)(tsx@4.19.3)(yaml@2.7.0))
@@ -2573,6 +2573,14 @@ packages:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
     engines: {node: '>=0.10.0'}
 
+  dotenv-cli@8.0.0:
+    resolution: {integrity: sha512-aLqYbK7xKOiTMIRf1lDPbI+Y+Ip/wo5k3eyp6ePysVaSqbyxjyK3dK35BTxG+rmd7djf5q2UPs4noPNH+cj0Qw==}
+    hasBin: true
+
+  dotenv-expand@10.0.0:
+    resolution: {integrity: sha512-GopVGCpVS1UKH75VKHGuQFqS1Gusej0z4FyQkPdwjil2gNIv+LNsqBlboOzpJFZKVT95GkCyWJbBSdFEFUWI2A==}
+    engines: {node: '>=12'}
+
   dotenv-expand@11.0.7:
     resolution: {integrity: sha512-zIHwmZPRshsCdpMDyVsqGmgyP0yT8GAgXUnkdAoJisxvf33k7yO6OuoKmcTGuXPWSsm8Oh88nZicRLA9Y0rUeA==}
     engines: {node: '>=12'}
@@ -2695,12 +2703,6 @@ packages:
 
   electron-publish@25.1.7:
     resolution: {integrity: sha512-+jbTkR9m39eDBMP4gfbqglDd6UvBC7RLh5Y0MhFSsc6UkGHj9Vj9TWobxevHYMMqmoujL11ZLjfPpMX+Pt6YEg==}
-
-  electron-rebuild@3.2.9:
-    resolution: {integrity: sha512-FkEZNFViUem3P0RLYbZkUjC8LUFIK+wKq09GHoOITSJjfDAVQv964hwaNseTTWt58sITQX3/5fHNYcTefqaCWw==}
-    engines: {node: '>=12.13.0'}
-    deprecated: Please use @electron/rebuild moving forward.  There is no API change, just a package name change
-    hasBin: true
 
   electron-to-chromium@1.5.123:
     resolution: {integrity: sha512-refir3NlutEZqlKaBLK0tzlVLe5P2wDKS7UQt/3SpibizgsRAPOsqQC3ffw1nlv3ze5gjRQZYHoPymgVZkplFA==}
@@ -3878,11 +3880,6 @@ packages:
     resolution: {integrity: sha512-rh+Zjr6DNfUYR3bPwJEnuwDdqMbxZW7LOQfUN4B54+Cl+0o5zaU9RJ6bcidfDtC1cWCZXQ+nvX8bf6bAji37QQ==}
     engines: {node: '>=12'}
 
-  lzma-native@8.0.6:
-    resolution: {integrity: sha512-09xfg67mkL2Lz20PrrDeNYZxzeW7ADtpYFbwSQh9U8+76RIzx5QsJBMy8qikv3hbUPfpy6hqwxt6FcGK81g9AA==}
-    engines: {node: '>=10.0.0'}
-    hasBin: true
-
   magic-string@0.30.17:
     resolution: {integrity: sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA==}
 
@@ -4191,14 +4188,8 @@ packages:
   node-addon-api@1.7.2:
     resolution: {integrity: sha512-ibPK3iA+vaY1eEjESkQkM0BbCqFOaZMiXRTtdB0u7b4djtY6JnsjvPdUHVMg6xQt3B8fpTTWHI9A+ADjM9frzg==}
 
-  node-addon-api@3.2.1:
-    resolution: {integrity: sha512-mmcei9JghVNDYydghQmeDX8KoAm0FAiYyIcUt/N4nhyAipB17pllZQDOJD2fotxABnt4Mdz+dKTO7eftLg4d0A==}
-
   node-addon-api@6.1.0:
     resolution: {integrity: sha512-+eawOlIgy680F0kBzPUNFhMZGtJ1YmqM6l4+Crf4IkImjYrO/mqPwRMh352g23uIaQKFItcQ64I7KMaJxHgAVA==}
-
-  node-api-version@0.1.4:
-    resolution: {integrity: sha512-KGXihXdUChwJAOHO53bv9/vXcLmdUsZ6jIptbvYvkpKfth+r7jw44JkVxQFA3kX5nQjzjmGu1uAu/xNNLNlI5g==}
 
   node-api-version@0.2.1:
     resolution: {integrity: sha512-2xP/IGGMmmSQpI1+O/k72jF/ykvZ89JeuKX3TLJAYPDVLUalrshrLHkeVcCCZqG/eEa635cr8IBYzgnDvM2O8Q==}
@@ -7872,6 +7863,15 @@ snapshots:
     dependencies:
       esutils: 2.0.3
 
+  dotenv-cli@8.0.0:
+    dependencies:
+      cross-spawn: 7.0.6
+      dotenv: 16.4.7
+      dotenv-expand: 10.0.0
+      minimist: 1.2.8
+
+  dotenv-expand@10.0.0: {}
+
   dotenv-expand@11.0.7:
     dependencies:
       dotenv: 16.4.7
@@ -7980,26 +7980,6 @@ snapshots:
       lazy-val: 1.0.5
       mime: 2.6.0
     transitivePeerDependencies:
-      - supports-color
-
-  electron-rebuild@3.2.9:
-    dependencies:
-      '@malept/cross-spawn-promise': 2.0.0
-      chalk: 4.1.2
-      debug: 4.4.0
-      detect-libc: 2.0.3
-      fs-extra: 10.1.0
-      got: 11.8.6
-      lzma-native: 8.0.6
-      node-abi: 3.75.0
-      node-api-version: 0.1.4
-      node-gyp: 9.4.1
-      ora: 5.4.1
-      semver: 7.7.1
-      tar: 6.2.1
-      yargs: 17.7.2
-    transitivePeerDependencies:
-      - bluebird
       - supports-color
 
   electron-to-chromium@1.5.123: {}
@@ -9523,12 +9503,6 @@ snapshots:
 
   luxon@3.5.0: {}
 
-  lzma-native@8.0.6:
-    dependencies:
-      node-addon-api: 3.2.1
-      node-gyp-build: 4.8.4
-      readable-stream: 3.6.2
-
   magic-string@0.30.17:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.0
@@ -9955,13 +9929,7 @@ snapshots:
   node-addon-api@1.7.2:
     optional: true
 
-  node-addon-api@3.2.1: {}
-
   node-addon-api@6.1.0: {}
-
-  node-api-version@0.1.4:
-    dependencies:
-      semver: 7.7.1
 
   node-api-version@0.2.1:
     dependencies:

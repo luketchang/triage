@@ -1,11 +1,11 @@
 import {} from "@triage/agent";
 import { BrowserWindow, ipcMain } from "electron";
-import { AppConfig } from "../../src/config.js";
+import { AppConfig } from "../../src/renderer/src/config.js";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
   invokeAgent,
-} from "../../src/renderer/types/index.js";
+} from "../../src/renderer/src/types/index.js";
 
 let mainWindow: BrowserWindow | null = null;
 

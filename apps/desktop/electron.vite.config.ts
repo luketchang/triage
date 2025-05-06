@@ -5,9 +5,23 @@ import { resolve } from "path";
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, "electron/main.ts"),
+        },
+      },
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, "preload/index.ts"),
+        },
+      },
+    },
   },
   renderer: {
     resolve: {

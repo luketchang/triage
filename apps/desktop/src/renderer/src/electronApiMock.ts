@@ -305,48 +305,22 @@ The primary issue appears to be in the authentication middleware where token val
         title: "Auth Middleware Issue",
         fact: "The authentication middleware is using a hardcoded JWT secret instead of loading from environment variables",
         filepath: "src/services/auth.ts",
-        codeBlock: `export function validateToken(token: string): boolean {
-  try {
-    // BUG: Hardcoded secret instead of using process.env.JWT_SECRET
-    const decoded = jwt.verify(token, 'hardcoded_secret_do_not_use_in_production');
-    return true;
-  } catch (error) {
-    console.error('Token validation failed:', error);
-    return false;
-  }
-}`,
+        startLine: 1,
+        endLine: 10,
       },
       {
         title: "Database Connection Configuration",
         fact: "The database connection pool size is set too low for production traffic and timeout is misconfigured",
         filepath: "src/services/payments/database.ts",
-        codeBlock: `export const dbConfig = {
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
-  username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  // BUG: Connection pool size too small and timeout too short
-  pool: {
-    max: 5,          // Should be higher for production
-    min: 0,
-    timeout: 5000    // Too short for complex queries
-  }
-};`,
+        startLine: 1,
+        endLine: 15,
       },
       {
         title: "Order Processing Performance",
         fact: "The order service is not properly caching inventory checks, leading to duplicate database queries",
         filepath: "src/services/orders/service.ts",
-        codeBlock: `async function checkInventory(productId: string): Promise<boolean> {
-  // BUG: No caching, causing repeated database calls
-  const inventory = await db.query(
-    'SELECT quantity FROM inventory WHERE product_id = $1',
-    [productId]
-  );
-  
-  return inventory.rows[0]?.quantity > 0;
-}`,
+        startLine: 1,
+        endLine: 8,
       },
     ];
 

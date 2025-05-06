@@ -64,11 +64,11 @@ export function useTraces(options: UseTracesOptions = {}) {
 
       try {
         console.info("Fetching traces with params:", params);
-        const response = await api.fetchTraces(params);
+        const data = await api.fetchTraces(params);
 
-        if (response && response.success && response.data) {
+        if (data) {
           // Process trace data to add UI enhancements like colors
-          const processedTraces = processTracesForUI(response.data.traces);
+          const processedTraces = processTracesForUI(data.traces);
 
           // Update traces state
           if (params.pageCursor) {
@@ -78,7 +78,7 @@ export function useTraces(options: UseTracesOptions = {}) {
           }
 
           // Update the cursor for next page
-          setPageCursor(response.data.pageCursorOrIndicator);
+          setPageCursor(data.pageCursorOrIndicator);
 
           // Clear selected trace if not in new results
           if (selectedTrace) {
@@ -91,7 +91,7 @@ export function useTraces(options: UseTracesOptions = {}) {
             }
           }
         } else {
-          console.warn("Invalid response format from fetchTraces:", response);
+          console.warn("Invalid response format from fetchTraces:", data);
           if (!params.pageCursor) {
             setTraces([]);
           }
@@ -167,13 +167,9 @@ export function useTraces(options: UseTracesOptions = {}) {
         try {
           // Only fetch facets if we haven't loaded them for this time range
           if (loadedFacetsForRange.current !== rangeKey) {
-            const response = await api.getSpansFacetValues(timeRange.start, timeRange.end);
-            if (Array.isArray(response)) {
-              // Cast the array to match the FacetData[] type
-              setFacets(response as FacetData[]);
-            } else if (response && response.success && response.data && response.data.length > 0) {
-              // Cast the response data to match the FacetData[] type
-              setFacets(response.data as FacetData[]);
+            const data = await api.getSpansFacetValues(timeRange.start, timeRange.end);
+            if (data && data.length > 0) {
+              setFacets(data);
             } else {
               console.info("No valid facet data received, using empty array");
               setFacets([]);
