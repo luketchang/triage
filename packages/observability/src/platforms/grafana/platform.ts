@@ -1,7 +1,7 @@
 import { logger, toUnixNano } from "@triage/common";
-import { appConfig } from "@triage/config";
 import axios from "axios";
 
+import { GrafanaConfig } from "../../config";
 import { ObservabilityPlatform } from "../../observability.interface";
 import {
   IntegrationType,
@@ -66,14 +66,10 @@ export class GrafanaPlatform implements ObservabilityPlatform {
   private username: string;
   private password: string;
 
-  constructor() {
-    // Fall back to environment config
-    if (!appConfig.grafana) {
-      throw new Error("Grafana environment configuration is missing required values");
-    }
-    this.baseUrl = appConfig.grafana.baseUrl;
-    this.username = appConfig.grafana.username;
-    this.password = appConfig.grafana.password;
+  constructor(cfg: GrafanaConfig) {
+    this.baseUrl = cfg.baseUrl;
+    this.username = cfg.username;
+    this.password = cfg.password;
   }
 
   addKeywordsToQuery(query: string, keywords: string[]): string {

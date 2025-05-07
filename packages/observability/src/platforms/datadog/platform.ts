@@ -1,7 +1,7 @@
 import { client, v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
-import { appConfig } from "@triage/config";
 
+import { DatadogConfig } from "../../config";
 import { ObservabilityPlatform } from "../../observability.interface";
 import {
   IntegrationType,
@@ -76,34 +76,26 @@ export class DatadogPlatform implements ObservabilityPlatform {
   private apiKey: string;
   private appKey: string;
   private site: string;
-  private configuration: client.Configuration;
   private logsApiInstance: v2.LogsApi;
   private spansApiInstance: v2.SpansApi;
   private traceCache: Map<string, Trace> = new Map();
 
-  constructor() {
-    // Get credentials from environment config
-    if (!appConfig.datadog) {
-      throw new Error("Datadog environment configuration is missing required values");
-    }
-    this.apiKey = appConfig.datadog.apiKey;
-    this.appKey = appConfig.datadog.appKey;
-    this.site = appConfig.datadog.site;
+  constructor(cfg: DatadogConfig) {
+    this.apiKey = cfg.apiKey;
+    this.appKey = cfg.appKey;
+    this.site = cfg.site;
 
-    // Initialize Datadog client with these credentials
-    this.configuration = client.createConfiguration({
+    const clientCfg = client.createConfiguration({
       authMethods: {
         apiKeyAuth: this.apiKey,
         appKeyAuth: this.appKey,
       },
     });
-    this.configuration.setServerVariables({
+    clientCfg.setServerVariables({
       site: this.site,
     });
-
-    // Create API clients
-    this.logsApiInstance = new v2.LogsApi(this.configuration);
-    this.spansApiInstance = new v2.SpansApi(this.configuration);
+    this.logsApiInstance = new v2.LogsApi(clientCfg);
+    this.spansApiInstance = new v2.SpansApi(clientCfg);
   }
 
   addKeywordsToQuery(query: string, keywords: string[]): string {

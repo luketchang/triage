@@ -1,3 +1,4 @@
+import { ObservabilityConfigStore } from "@triage/observability";
 import { ipcMain } from "electron";
 import {
   FacetData,
@@ -7,12 +8,11 @@ import {
   TraceQueryParams,
   TracesWithPagination,
 } from "../../renderer/src/types/index.js";
-import { DEFAULT_INTEGRATION_TYPE } from "../tmp-hardcode.js";
 
 /**
  * Set up all IPC handlers related to observability (logs, traces)
  */
-export function setupObservabilityHandlers(): void {
+export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityConfigStore): void {
   console.info("Setting up observability handlers...");
 
   // Fetch logs based on query parameters
@@ -22,7 +22,8 @@ export function setupObservabilityHandlers(): void {
       try {
         console.info("Fetching logs with params:", params);
 
-        const platform = getObservabilityPlatform(DEFAULT_INTEGRATION_TYPE);
+        const observabilityCfg = await observabilityCfgStore.getValues();
+        const platform = getObservabilityPlatform(observabilityCfg);
 
         // Call the real platform API
         const result = await platform.fetchLogs({
@@ -48,7 +49,8 @@ export function setupObservabilityHandlers(): void {
       try {
         console.info("Getting log facet values for time range:", { start, end });
 
-        const platform = getObservabilityPlatform(DEFAULT_INTEGRATION_TYPE);
+        const observabilityCfg = await observabilityCfgStore.getValues();
+        const platform = getObservabilityPlatform(observabilityCfg);
 
         // Call the real platform API
         const logFacetsMap = await platform.getLogsFacetValues(start, end);
@@ -75,8 +77,8 @@ export function setupObservabilityHandlers(): void {
       try {
         console.info("Fetching traces with params:", params);
 
-        // Get the observability platform implementation
-        const platform = getObservabilityPlatform(DEFAULT_INTEGRATION_TYPE);
+        const observabilityCfg = await observabilityCfgStore.getValues();
+        const platform = getObservabilityPlatform(observabilityCfg);
 
         // Call the real platform API (assuming the method exists)
         const result = await platform.fetchTraces({
@@ -102,7 +104,8 @@ export function setupObservabilityHandlers(): void {
       try {
         console.info("Getting span facet values for time range:", { start, end });
 
-        const platform = getObservabilityPlatform(DEFAULT_INTEGRATION_TYPE);
+        const observabilityCfg = await observabilityCfgStore.getValues();
+        const platform = getObservabilityPlatform(observabilityCfg);
 
         // Call the real platform API (assuming the method exists)
         const spanFacetsMap = await platform.getSpansFacetValues(start, end);

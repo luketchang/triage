@@ -1,8 +1,15 @@
-import { getModelWrapper, logger, Model, timer } from "@triage/common";
-import { streamText } from "ai";
+import { logger, timer } from "@triage/common";
+import { LanguageModelV1, streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import { AgentStep, AgentStreamUpdate, ChatMessage, logRequestToolSchema, ReasoningStep, RequestToolCalls } from "../types";
+import {
+  AgentStep,
+  AgentStreamUpdate,
+  ChatMessage,
+  logRequestToolSchema,
+  ReasoningStep,
+  RequestToolCalls,
+} from "../types";
 
 import { formatAgentSteps, formatChatHistory, formatFacetValues } from "./utils";
 
@@ -77,10 +84,10 @@ ${formatAgentSteps(agentSteps)}
 };
 
 export class Reasoner {
-  private llm: Model;
+  private llmClient: LanguageModelV1;
 
-  constructor(llm: Model) {
-    this.llm = llm;
+  constructor(llm: LanguageModelV1) {
+    this.llmClient = llm;
   }
 
   @timer
@@ -104,7 +111,7 @@ export class Reasoner {
 
     // Stream reasoning response and collect text and tool calls
     const { fullStream, toolCalls } = streamText({
-      model: getModelWrapper(this.llm),
+      model: this.llmClient,
       prompt,
       tools: {
         // TODO: add other tools

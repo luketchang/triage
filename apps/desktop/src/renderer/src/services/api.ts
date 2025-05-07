@@ -1,4 +1,4 @@
-import { AppConfig } from "@triage/config";
+import { AppConfig } from "@renderer/AppConfig.js";
 import mockElectronAPI from "../electronApiMock.js";
 import {
   AgentAssistantMessage,

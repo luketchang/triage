@@ -1,4 +1,5 @@
-import { collectSourceCode, Model, timer } from "@triage/common";
+import { collectSourceCode, timer } from "@triage/common";
+import { LanguageModelV1 } from "ai";
 
 import { AgentStreamUpdate, CodeSearchStep } from "../types";
 
@@ -8,8 +9,8 @@ export interface CodeSearchAgentResponse {
 
 // TODO: implement actual code search, not just dummy implementation
 export class CodeSearchAgent {
-  constructor(private readonly fastModel: Model) {
-    this.fastModel = fastModel;
+  constructor(private readonly llmClient: LanguageModelV1) {
+    this.llmClient = llmClient;
   }
 
   @timer

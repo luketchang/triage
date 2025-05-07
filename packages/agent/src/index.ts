@@ -1,15 +1,19 @@
 import fs from "fs/promises";
 
-import { GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common";
+import { GeminiModel, getModelWrapper, loadFileTree, logger, timer } from "@triage/common";
 import {
+  DatadogCfgSchema,
   getObservabilityPlatform,
+  GrafanaCfgSchema,
   IntegrationType,
   ObservabilityPlatform,
 } from "@triage/observability";
+import { LanguageModelV1 } from "ai";
 import { Command as CommanderCommand } from "commander";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
+import { AgentConfig } from "./config";
 import { CodePostprocessor } from "./nodes/code-postprocessing";
 import { CodeSearchAgent } from "./nodes/code-search";
 import { LogPostprocessor } from "./nodes/log-postprocessing";
@@ -64,19 +68,19 @@ export interface TriageAgentState {
 }
 
 export class TriageAgent {
-  private reasoningModel: Model;
-  private fastModel: Model;
+  private reasoningLLMClient: LanguageModelV1;
+  private fastLLMClient: LanguageModelV1;
   private observabilityPlatform: ObservabilityPlatform;
   private observabilityFeatures: string[];
 
   constructor(
-    reasoningModel: Model,
-    fastModel: Model,
+    reasoningLLMClient: LanguageModelV1,
+    fastLLMClient: LanguageModelV1,
     observabilityPlatform: ObservabilityPlatform,
     observabilityFeatures: string[]
   ) {
-    this.reasoningModel = reasoningModel;
-    this.fastModel = fastModel;
+    this.reasoningLLMClient = reasoningLLMClient;
+    this.fastLLMClient = fastLLMClient;
     this.observabilityPlatform = observabilityPlatform;
     this.observabilityFeatures = observabilityFeatures;
   }
@@ -100,7 +104,7 @@ export class TriageAgent {
       return {};
     }
 
-    const logSearchAgent = new LogSearchAgent(this.fastModel, this.observabilityPlatform);
+    const logSearchAgent = new LogSearchAgent(this.fastLLMClient, this.observabilityPlatform);
 
     // Get logSearch steps from both chatHistory (past interactions) and current agentSteps
     const historyLogSearchSteps = state.chatHistory.flatMap((msg) => {
@@ -148,7 +152,7 @@ export class TriageAgent {
       onUpdate({ type: "highLevelUpdate", id: codeSearchId, stepType: "codeSearch" });
     }
 
-    const codeSearchAgent = new CodeSearchAgent(this.fastModel);
+    const codeSearchAgent = new CodeSearchAgent(this.fastLLMClient);
 
     // Get codeSearch steps from both chatHistory (past interactions) and current agentSteps
     const historyCodeSearchSteps = state.chatHistory.flatMap((msg) => {
@@ -195,7 +199,7 @@ export class TriageAgent {
       onUpdate({ type: "highLevelUpdate", id: reasoningId, stepType: "reasoning" });
     }
 
-    const reasoner = new Reasoner(this.reasoningModel);
+    const reasoner = new Reasoner(this.reasoningLLMClient);
     logger.info(`Chat history: ${JSON.stringify(state.chatHistory)}`);
     const response = await reasoner.invoke({
       query: state.query,
@@ -246,7 +250,7 @@ export class TriageAgent {
       onUpdate({ type: "highLevelUpdate", id: reviewId, stepType: "review" });
     }
 
-    const reviewer = new Reviewer(this.reasoningModel);
+    const reviewer = new Reviewer(this.reasoningLLMClient);
     const response = await reviewer.invoke({
       query: state.query,
       chatHistory: state.chatHistory,
@@ -295,7 +299,7 @@ export class TriageAgent {
       onUpdate({ type: "highLevelUpdate", id: logPostprocessingId, stepType: "logPostprocessing" });
     }
 
-    const postprocessor = new LogPostprocessor(this.fastModel, this.observabilityPlatform);
+    const postprocessor = new LogPostprocessor(this.fastLLMClient, this.observabilityPlatform);
     const logSearchSteps = state.agentSteps.filter((step) => step.type === "logSearch");
     const response = await postprocessor.invoke({
       query: state.query,
@@ -330,7 +334,7 @@ export class TriageAgent {
       });
     }
 
-    const postprocessor = new CodePostprocessor(this.fastModel);
+    const postprocessor = new CodePostprocessor(this.fastLLMClient);
 
     const codeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
     const response = await postprocessor.invoke({
@@ -414,10 +418,7 @@ export class TriageAgent {
 export interface AgentArgs {
   query: string;
   chatHistory: ChatMessage[];
-  repoPath: string;
-  codebaseOverviewPath: string;
-  integrationType?: IntegrationType;
-  observabilityFeatures?: string[];
+  agentCfg: AgentConfig;
   startDate?: Date;
   endDate?: Date;
   reasonOnly?: boolean;
@@ -430,21 +431,13 @@ export interface AgentArgs {
 export async function invokeAgent({
   query,
   chatHistory,
-  repoPath,
-  codebaseOverviewPath,
-  integrationType = IntegrationType.DATADOG,
-  observabilityFeatures = ["logs"],
+  agentCfg,
   startDate = new Date("2025-04-01T21:00:00Z"),
   endDate = new Date("2025-04-01T22:00:00Z"),
   reasonOnly = false,
   onUpdate,
 }: AgentArgs): Promise<AssistantMessage> {
-  // If reasonOnly is true, override observabilityFeatures to be empty
-  if (reasonOnly) {
-    observabilityFeatures = [];
-  }
-
-  const observabilityPlatform = getObservabilityPlatform(integrationType);
+  const observabilityPlatform = getObservabilityPlatform(agentCfg);
 
   // Get formatted labels map for time range
   const logLabelsMap = await observabilityPlatform.getLogsFacetValues(
@@ -454,9 +447,9 @@ export async function invokeAgent({
   logger.info(formatFacetValues(logLabelsMap));
 
   // Load the codebase overview
-  const overview = await fs.readFile(codebaseOverviewPath, "utf-8");
+  const overview = await fs.readFile(agentCfg.codebaseOverviewPath, "utf-8");
 
-  const fileTree = loadFileTree(repoPath);
+  const fileTree = loadFileTree(agentCfg.repoPath);
 
   let toolCalls: Array<
     | LogRequest
@@ -466,12 +459,11 @@ export async function invokeAgent({
     | LogPostprocessingRequest
     | CodePostprocessingRequest
   > = [];
+  let observabilityFeatures: string[] = reasonOnly ? [] : agentCfg.observabilityFeatures;
   if (observabilityFeatures.includes("logs")) {
     toolCalls.push(INITIAL_LOG_REQUEST);
   }
-
   toolCalls.push(INITIAL_CODE_REQUEST);
-
   // If no observability features are enabled, start with reasoning
   if (toolCalls.length === 0) {
     toolCalls.push({ type: "reasoningRequest" });
@@ -481,7 +473,7 @@ export async function invokeAgent({
     firstPass: true,
     toolCalls,
     query,
-    repoPath,
+    repoPath: agentCfg.repoPath,
     codebaseOverview: overview,
     fileTree,
     logLabelsMap,
@@ -491,14 +483,11 @@ export async function invokeAgent({
     answer: "",
   };
 
-  const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
-  const fastModel = GeminiModel.GEMINI_2_5_FLASH;
-
   logger.info(`Observability features: ${observabilityFeatures}`);
 
   const agent = new TriageAgent(
-    reasoningModel,
-    fastModel,
+    getModelWrapper(agentCfg.reasoningModel, agentCfg),
+    getModelWrapper(agentCfg.fastModel, agentCfg),
     observabilityPlatform,
     observabilityFeatures
   );
@@ -538,8 +527,6 @@ async function main(): Promise<void> {
   const endDate = new Date("2025-05-02T03:00:00Z");
 
   const repoPath = "/Users/rob/code/ticketing";
-
-  // Load or generate the codebase overview
   const overviewPath = "/Users/rob/code/triage/repos/ticketing/codebase-analysis.md";
   const bugPath = "/Users/rob/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
 
@@ -556,10 +543,29 @@ async function main(): Promise<void> {
   const response = await invokeAgent({
     query: bug,
     chatHistory,
-    repoPath,
-    codebaseOverviewPath: overviewPath,
-    integrationType: integration as IntegrationType,
-    observabilityFeatures,
+    agentCfg: {
+      repoPath,
+      codebaseOverviewPath: overviewPath,
+      reasoningModel: GeminiModel.GEMINI_2_5_PRO,
+      fastModel: GeminiModel.GEMINI_2_5_FLASH,
+      observabilityPlatform: integration,
+      observabilityFeatures: observabilityFeatures as ("logs" | "spans")[],
+      datadog:
+        integration === "datadog"
+          ? DatadogCfgSchema.parse({
+              apiKey: process.env.DATADOG_API_KEY!,
+              appKey: process.env.DATADOG_APP_KEY!,
+            })
+          : undefined,
+      grafana:
+        integration === "grafana"
+          ? GrafanaCfgSchema.parse({
+              baseUrl: process.env.GRAFANA_BASE_URL!,
+              username: process.env.GRAFANA_USERNAME!,
+              password: process.env.GRAFANA_PASSWORD!,
+            })
+          : undefined,
+    },
     startDate,
     endDate,
     onUpdate: (update) => {
@@ -605,9 +611,9 @@ if (typeof require !== "undefined" && typeof module !== "undefined" && require.m
 }
 
 // Agent package exports
+export * from "./config";
 export * from "./nodes/log-search";
 export * from "./nodes/reasoner";
 export * from "./nodes/reviewer";
 export * from "./nodes/utils";
 export * from "./types";
-

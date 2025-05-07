@@ -1,6 +1,5 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
-import { appConfig } from "@triage/config";
 import { Command } from "commander";
 import { Trace, TracesWithPagination } from "../src"; // Adjust import path if needed
 import { DatadogPlatform } from "../src/platforms/datadog"; // Adjust import path if needed
