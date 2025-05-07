@@ -1,10 +1,6 @@
-// @ts-ignore - Ignoring React module resolution issues
 import React, { useEffect, useMemo, useRef, useState } from "react";
-// @ts-ignore - Ignoring ReactMarkdown module resolution issues
 import ReactMarkdown from "react-markdown";
-// @ts-ignore - Ignoring SyntaxHighlighter module resolution issues
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-// @ts-ignore - Ignoring vscDarkPlus module resolution issues
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { cn } from "../lib/utils";
 import {
@@ -53,22 +49,23 @@ const CollapsibleStep: React.FC<{
   });
 
   return (
-    <div className="step-container border border-border rounded-md overflow-hidden mb-3">
+    <div className="step-container border border-border rounded-lg overflow-hidden mb-3 transition-standard shadow-sm">
       <div
-        className="step-header cursor-pointer p-3 flex justify-between items-center bg-background-lighter"
+        className="step-header cursor-pointer p-2.5 flex justify-between items-center bg-background-lighter"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
-        <div className="step-header-content font-medium text-sm">
+        <div className="step-header-content font-medium text-sm text-primary-light">
           <span>{title}</span>
         </div>
-        <span className="collapse-icon">{isCollapsed ? "▼" : "▲"}</span>
+        <span className="collapse-icon text-xs text-gray-400">{isCollapsed ? "▼" : "▲"}</span>
       </div>
       {isCollapsed ? (
-        <div className="min-h-[8px] w-full" />
+        <div className="min-h-[4px] w-full" />
       ) : (
         <div
-          className="step-content p-4 bg-background prose prose-invert max-w-none"
+          className="step-content p-3 bg-background prose prose-invert max-w-none overflow-auto"
           ref={contentRef}
+          style={{ maxHeight: "300px" }}
         >
           {children}
         </div>
@@ -100,7 +97,7 @@ const renderLogSearchStage = (stage: LogSearchStage) => (
       stage.queries.map((query, index) => (
         <div
           key={`${stage.id}-search-${index}`}
-          className="log-search-item mb-2 p-3 bg-background-lighter rounded-md"
+          className="log-search-item mb-2 p-3 bg-background-lighter rounded-lg"
         >
           <div className="font-mono text-sm">{query.input.query}</div>
         </div>
@@ -120,13 +117,16 @@ const renderReasoningStage = (stage: ReasoningStage) => (
               style={vscDarkPlus}
               language={match[1]}
               PreTag="div"
-              className="my-4 rounded-md overflow-auto"
+              className="my-3 rounded-lg overflow-auto text-sm"
               {...props}
             >
               {String(children).replace(/\n$/, "")}
             </SyntaxHighlighter>
           ) : (
-            <code className={cn("bg-gray-800 px-1 py-0.5 rounded", className)} {...props}>
+            <code
+              className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
+              {...props}
+            >
               {children}
             </code>
           );
@@ -149,13 +149,16 @@ const renderReviewStage = (stage: ReviewStage) => (
               style={vscDarkPlus}
               language={match[1]}
               PreTag="div"
-              className="my-4 rounded-md overflow-auto"
+              className="my-3 rounded-lg overflow-auto text-sm"
               {...props}
             >
               {String(children).replace(/\n$/, "")}
             </SyntaxHighlighter>
           ) : (
-            <code className={cn("bg-gray-800 px-1 py-0.5 rounded", className)} {...props}>
+            <code
+              className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
+              {...props}
+            >
               {children}
             </code>
           );
@@ -173,10 +176,10 @@ const renderLogPostprocessingStage = (stage: LogPostprocessingStage) => (
       {stage.facts.map((fact, index) => (
         <div
           key={`fact-${index}`}
-          className="p-3 bg-background-lighter rounded-md border border-border"
+          className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
         >
-          <div className="font-medium">{fact.title || "Log Fact"}</div>
-          <div className="mt-2 text-sm">{fact.fact}</div>
+          <div className="font-medium text-sm">{fact.title || "Log Fact"}</div>
+          <div className="mt-2 text-sm text-gray-300">{fact.fact}</div>
         </div>
       ))}
     </div>
@@ -189,11 +192,11 @@ const renderCodePostprocessingStage = (stage: CodePostprocessingStage) => (
       {stage.facts.map((fact, index) => (
         <div
           key={`fact-${index}`}
-          className="p-3 bg-background-lighter rounded-md border border-border"
+          className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
         >
-          <div className="font-medium">{fact.title || "Code Fact"}</div>
-          <div className="mt-2 text-sm">{fact.fact}</div>
-          {fact.filepath && <div className="mt-1 text-xs text-gray-400">{fact.filepath}</div>}
+          <div className="font-medium text-sm">{fact.title || "Code Fact"}</div>
+          <div className="mt-2 text-sm text-gray-300">{fact.fact}</div>
+          {fact.filepath && <div className="mt-1 text-xs text-gray-500">{fact.filepath}</div>}
         </div>
       ))}
     </div>
@@ -281,8 +284,8 @@ function CellView({
   return (
     <div
       className={cn(
-        "cellview-container py-6 px-5",
-        activeInFactsSidebar ? "border-l-4 border-l-primary" : ""
+        "cellview-container py-4 px-4",
+        activeInFactsSidebar ? "border-l-2 border-l-primary" : ""
       )}
     >
       {/* Main content area */}
@@ -294,14 +297,14 @@ function CellView({
 
         {/* Show waiting indicator with less restrictive conditions */}
         {isThinking && showWaitingIndicator && (
-          <div className="waiting-indicator p-3 text-center text-gray-400">
+          <div className="waiting-indicator p-2 text-center text-gray-400">
             <span className="animate-pulse">...</span>
           </div>
         )}
 
         {/* Render error if present */}
         {message.error && (
-          <div className="error-message p-3 my-2 bg-red-900/30 border border-red-700 rounded-md text-red-200">
+          <div className="error-message p-3 my-2 bg-red-900/30 border border-red-700 rounded-lg text-red-200 text-sm">
             {message.error}
           </div>
         )}
@@ -318,13 +321,16 @@ function CellView({
                       style={vscDarkPlus}
                       language={match[1]}
                       PreTag="div"
-                      className="my-4 rounded-md overflow-auto"
+                      className="my-3 rounded-lg overflow-auto text-sm shadow-sm"
                       {...props}
                     >
                       {String(children).replace(/\n$/, "")}
                     </SyntaxHighlighter>
                   ) : (
-                    <code className={cn("bg-gray-800 px-1 py-0.5 rounded", className)} {...props}>
+                    <code
+                      className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
+                      {...props}
+                    >
                       {children}
                     </code>
                   );
@@ -336,19 +342,19 @@ function CellView({
 
             {/* Facts button - only shown when facts are available */}
             {hasFacts && onShowFacts && (
-              <div className="mt-4 flex justify-end">
+              <div className="mt-3 flex justify-end">
                 <button
                   className={cn(
-                    "px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1",
+                    "px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-standard",
                     activeInFactsSidebar
-                      ? "bg-primary text-white"
-                      : "bg-background-lighter hover:bg-background-alt text-primary-dark"
+                      ? "bg-primary text-white shadow-sm"
+                      : "bg-background-lighter hover:bg-background-alt text-primary border border-border/50"
                   )}
                   onClick={handleShowFacts}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
+                    className="h-3.5 w-3.5"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"

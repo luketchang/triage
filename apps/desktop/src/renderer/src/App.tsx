@@ -42,15 +42,17 @@ function App(): JSX.Element {
 
   return (
     <AppConfigProvider>
-      <div className="flex w-full h-full bg-background">
+      <div className="flex w-full h-full bg-background antialiased">
         <NavigationSidebar
           activeTab={activeTab}
           handleTabChange={handleTabChange}
           contextItemsCount={chatState.contextItems?.length || 0}
         />
 
-        <div className="flex-1 h-full overflow-hidden flex">
-          <div className={`${showFactsSidebar ? "flex-1" : "w-full"} h-full overflow-hidden`}>
+        <div className="flex-1 h-full overflow-hidden flex shadow-sm">
+          <div
+            className={`${showFactsSidebar ? "flex-1" : "w-full"} h-full overflow-hidden transition-standard`}
+          >
             <ChatView />
           </div>
         </div>

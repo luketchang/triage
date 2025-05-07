@@ -156,12 +156,12 @@ function ChatView() {
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Chat header */}
-      <div className="flex justify-between items-center py-4 px-5 border-b border-border">
-        <h1 className="text-xl font-semibold text-primary">Chat</h1>
+      <div className="flex justify-between items-center py-3 px-4 border-b border-border bg-background-lighter backdrop-blur-sm shadow-sm z-10">
+        <h1 className="text-lg font-semibold text-primary">Chat</h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="hover:bg-background-lighter">
-              <MoreHorizontalIcon className="h-5 w-5" />
+            <Button variant="ghost" size="sm" className="hover:bg-background-alt h-8 w-8 p-0">
+              <MoreHorizontalIcon className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[150px]">
@@ -188,18 +188,15 @@ function ChatView() {
         >
           {/* Chat messages */}
           <ScrollArea className="h-full overflow-y-auto">
-            <div className="flex flex-col divide-y divide-border">
+            <div className="flex flex-col">
               {messages.map((message) =>
                 message.role === "user" ? (
-                  <div
-                    key={message.id}
-                    className={cn("py-6 px-5 flex flex-col bg-background-user")}
-                  >
-                    <div className="flex items-start">
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center mr-4 flex-shrink-0 shadow-sm bg-primary">
-                        <span className="text-white font-medium">U</span>
+                  <div key={message.id} className={cn("py-4 px-4 flex flex-col bg-background")}>
+                    <div className="flex items-start max-w-3xl mx-auto w-full">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary">
+                        <span className="text-white font-medium text-sm">U</span>
                       </div>
-                      <div className="flex-1 overflow-hidden">
+                      <div className="flex-1 overflow-hidden pt-0.5">
                         <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3">
                           <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
@@ -207,25 +204,29 @@ function ChatView() {
                     </div>
                   </div>
                 ) : (
-                  <CellView
-                    key={message.id}
-                    message={message as AssistantMessage}
-                    isThinking={
-                      isThinking && (message as AssistantMessage).response === "Thinking..."
-                    }
-                    onShowFacts={(logFactsArr, codeFactsArr) =>
-                      openFactsSidebar(message.id, logFactsArr, codeFactsArr)
-                    }
-                    activeInFactsSidebar={factsSidebarOpen && sidebarMessageId === message.id}
-                  />
+                  <div className="bg-background-assistant">
+                    <div className="max-w-3xl mx-auto w-full">
+                      <CellView
+                        key={message.id}
+                        message={message as AssistantMessage}
+                        isThinking={
+                          isThinking && (message as AssistantMessage).response === "Thinking..."
+                        }
+                        onShowFacts={(logFactsArr, codeFactsArr) =>
+                          openFactsSidebar(message.id, logFactsArr, codeFactsArr)
+                        }
+                        activeInFactsSidebar={factsSidebarOpen && sidebarMessageId === message.id}
+                      />
+                    </div>
+                  </div>
                 )
               )}
               {isThinking && (
-                <div className="py-6 px-5 text-center text-gray-400 italic">
-                  Assistant is thinking...
+                <div className="py-4 px-4 text-center text-gray-400 italic animate-pulse">
+                  <div className="max-w-3xl mx-auto">Assistant is thinking...</div>
                 </div>
               )}
-              <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} className="h-4" />
             </div>
           </ScrollArea>
         </div>
@@ -245,19 +246,19 @@ function ChatView() {
 
       {/* Context items display */}
       {contextItems && contextItems.length > 0 && (
-        <div className="px-4 py-3 border-t border-border bg-background-lighter">
-          <div className="flex flex-wrap gap-3">
+        <div className="px-4 py-2 border-t border-border bg-background-lighter">
+          <div className="flex flex-wrap gap-2 max-w-3xl mx-auto">
             {contextItems.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center bg-background-alt rounded-md px-3 py-1.5 text-sm gap-2 shadow-sm"
+                className="flex items-center bg-background-alt rounded-lg px-2 py-1 text-xs gap-2 shadow-sm"
               >
                 <span className="text-xs font-medium text-primary-dark">{item.type}</span>
-                <span className="text-gray-200">{item.title}</span>
+                <span className="text-gray-300 truncate max-w-[160px]">{item.title}</span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-5 w-5 p-0 ml-1 hover:bg-background text-gray-400 hover:text-white"
+                  className="h-4 w-4 p-0 ml-1 hover:bg-background-lighter text-gray-400 hover:text-white"
                   onClick={() => removeContextItem(item.id)}
                 >
                   ×
@@ -269,32 +270,32 @@ function ChatView() {
       )}
 
       {/* Input area */}
-      <div className="p-5 border-t border-border">
-        <div className="relative">
+      <div className="p-4 border-t border-border bg-background-lighter">
+        <div className="relative max-w-3xl mx-auto">
           <textarea
             ref={textareaRef}
             className={cn(
-              "w-full p-4 pr-12 bg-background-lighter border border-border rounded-lg",
-              "resize-none min-h-[80px] max-h-[200px] outline-none focus:ring-2 focus:ring-primary/50",
-              "text-primary placeholder:text-gray-500 shadow-sm"
+              "w-full p-3 pr-10 bg-background border border-border rounded-lg",
+              "resize-none min-h-[50px] max-h-[200px] outline-none focus-ring",
+              "text-primary-light placeholder:text-gray-500 text-sm shadow-sm"
             )}
             placeholder="Type your message here..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            rows={3}
+            rows={1}
             disabled={isThinking}
           />
           <Button
-            className="absolute right-3 bottom-3 shadow-sm"
+            className="absolute right-2 bottom-2 shadow-sm size-7 p-0"
             size="sm"
             onClick={handleSendMessage}
             disabled={newMessage.trim() === "" || isThinking}
           >
-            <SendIcon className="h-4 w-4" />
+            <SendIcon className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <div className="mt-2 text-xs text-gray-500 text-right">
+        <div className="mt-1.5 text-xs text-gray-500 text-right max-w-3xl mx-auto">
           Press Enter to send, Shift+Enter for new line
         </div>
       </div>
