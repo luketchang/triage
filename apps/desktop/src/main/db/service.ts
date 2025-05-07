@@ -3,8 +3,8 @@ import { desc, eq } from "drizzle-orm";
 import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
 import fs from "fs";
 import path from "path";
-import * as schema from "./schema";
-import { AssistantMessage, UserMessage } from "./schema";
+import * as schema from "./schema.js";
+import { AssistantMessage, UserMessage } from "./schema.js";
 
 /**
  * Service for interacting with the SQLite database for chat persistence

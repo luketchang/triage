@@ -8,9 +8,9 @@ import {
   LogSearchStage,
   ReasoningStage,
   ReviewStage,
-} from "../types";
-import AnimatedEllipsis from "./AnimatedEllipsis";
-import FactsSidebar from "./FactsSidebar";
+} from "../types/index.js";
+import AnimatedEllipsis from "./AnimatedEllipsis.js";
+import FactsSidebar from "./FactsSidebar.js";
 
 interface CellViewProps {
   message: AssistantMessage;

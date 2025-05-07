@@ -1,4 +1,4 @@
-import { AssistantMessage } from "../types";
+import { AssistantMessage } from "../types/index.js";
 
 /**
  * CellUpdateManager

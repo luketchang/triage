@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import SearchBar from "../components/SearchBar";
-import TimeRangePicker from "../components/TimeRangePicker";
-import { FacetData, Log, LogsWithPagination, TimeRange } from "../types";
-import { formatDate } from "../utils/formatters";
+import SearchBar from "../components/SearchBar.js";
+import TimeRangePicker from "../components/TimeRangePicker.js";
+import { FacetData, Log, LogsWithPagination, TimeRange } from "../types/index.js";
+import { formatDate } from "../utils/formatters.js";
 
 interface LogsViewProps {
   logs: Log[];
@@ -107,7 +107,7 @@ const LogsView: React.FC<LogsViewProps> = ({
     }
 
     // Tokenize the query
-    let remaining = query.trim();
+    const remaining = query.trim();
 
     // Find facet:value pairs using a simplified approach
     const facetValuePattern = /([a-zA-Z0-9_-]+):((?:\([^)]+\)|[^\s]+))/g;

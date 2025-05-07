@@ -1,6 +1,6 @@
-import React, { createContext, ReactNode, useContext, useEffect, useState } from "react";
-import { AppConfig } from "../config";
-import api from "../services/api";
+import React, { createContext, ReactNode, useEffect, useState } from "react";
+import { AppConfig } from "../config.js";
+import api from "../services/api.js";
 
 type AppConfigContextType = {
   config: AppConfig | null;
@@ -13,8 +13,6 @@ const AppConfigContext = createContext<AppConfigContextType>({
   isLoading: true,
   updateConfig: async () => {},
 });
-
-export const useAppConfig = () => useContext(AppConfigContext);
 
 export const AppConfigProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -50,3 +48,5 @@ export const AppConfigProvider: React.FC<{ children: ReactNode }> = ({ children 
     </AppConfigContext.Provider>
   );
 };
+
+export { AppConfigContext };
