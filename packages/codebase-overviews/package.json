@@ -1,5 +1,5 @@
 {
-  "name": "@triage/agent",
+  "name": "@triage/codebase-overviews",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
@@ -10,7 +10,8 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "lint:check": "eslint \"src/**/*.{js,ts}\" --max-warnings 99",
     "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix --max-warnings 99",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "generate-overview": "tsx src/codebase-overviews/cli.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",
