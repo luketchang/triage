@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import CellView from "../components/CellView";
-import { AssistantMessage, ChatMessage, ContextItem } from "../types";
+import CellView from "../components/CellView.js";
+import { AssistantMessage, ChatMessage, ContextItem } from "../types/index.js";
 
 interface ChatViewProps {
   messages: ChatMessage[];

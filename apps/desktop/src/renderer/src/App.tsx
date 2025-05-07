@@ -5,25 +5,25 @@ import "./styles.css";
 // Feature flag for Traces view
 const TRACES_ENABLED = window.env.TRACES_ENABLED;
 
-import { ContextItem, LogSearchInputCore, TabType, TraceForAgent } from "./types";
-import { generateId } from "./utils/formatters";
+import { ContextItem, LogSearchInputCore, TabType, TraceForAgent } from "./types/index.js";
+import { generateId } from "./utils/formatters.js";
 
 // Components
-import NavigationSidebar from "./components/NavigationSidebar";
+import NavigationSidebar from "./components/NavigationSidebar.js";
 
 // Feature Views
-import ChatView from "./features/ChatView";
-import DashboardsView from "./features/DashboardsView";
-import LogsView from "./features/LogsView";
+import ChatView from "./features/ChatView.js";
+import DashboardsView from "./features/DashboardsView.js";
+import LogsView from "./features/LogsView.js";
 
 // Custom hooks
-import { useChat } from "./hooks/useChat";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
-import { useLogs } from "./hooks/useLogs";
-import { useTraces } from "./hooks/useTraces";
+import { useChat } from "./hooks/useChat.js";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
+import { useLogs } from "./hooks/useLogs.js";
+import { useTraces } from "./hooks/useTraces.js";
 
 // Context Provider
-import { AppConfigProvider } from "./context/AppConfigContext";
+import { AppConfigProvider } from "./context/AppConfigContext.js";
 
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>("chat");

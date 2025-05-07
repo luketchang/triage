@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../components/TimeRangePicker";
-import api from "../services/api";
-import { FacetData, Log, LogQueryParams, LogsWithPagination, TimeRange } from "../types";
+import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../components/TimeRangePicker.js";
+import api from "../services/api.js";
+import { FacetData, Log, LogQueryParams, LogsWithPagination, TimeRange } from "../types/index.js";
 
 interface UseLogsOptions {
   shouldFetch?: boolean;

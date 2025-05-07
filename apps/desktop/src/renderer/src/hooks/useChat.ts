@@ -1,14 +1,20 @@
 import { HighLevelUpdate, IntermediateUpdate } from "@triage/agent";
 import { useEffect, useRef, useState } from "react";
-import api from "../services/api";
-import { AgentStage, AssistantMessage, ChatMessage, ContextItem, UserMessage } from "../types";
+import api from "../services/api.js";
+import {
+  AgentStage,
+  AssistantMessage,
+  ChatMessage,
+  ContextItem,
+  UserMessage,
+} from "../types/index.js";
 import {
   assertStageType,
   convertAgentStepsToStages,
   convertToAgentChatMessages,
-} from "../utils/agentDesktopConversion";
-import { CellUpdateManager } from "../utils/CellUpdateManager";
-import { generateId } from "../utils/formatters";
+} from "../utils/agentDesktopConversion.js";
+import { CellUpdateManager } from "../utils/CellUpdateManager.js";
+import { generateId } from "../utils/formatters.js";
 
 // Define the chat mode type
 export type ChatMode = "agent" | "manual";

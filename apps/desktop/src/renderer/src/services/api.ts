@@ -1,4 +1,4 @@
-import mockElectronAPI from "../electronApiMock";
+import mockElectronAPI from "../electronApiMock.js";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
@@ -10,7 +10,7 @@ import {
   LogQueryParams,
   TraceQueryParams,
   UserMessage,
-} from "../types";
+} from "../types/index.js";
 
 // Get mock API setting from environment
 const USE_MOCK_API = window.env.USE_MOCK_API;
