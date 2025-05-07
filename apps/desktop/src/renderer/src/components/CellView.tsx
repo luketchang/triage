@@ -1,21 +1,22 @@
 // @ts-ignore - Ignoring React module resolution issues
-import { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 // @ts-ignore - Ignoring ReactMarkdown module resolution issues
 import ReactMarkdown from "react-markdown";
 // @ts-ignore - Ignoring SyntaxHighlighter module resolution issues
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 // @ts-ignore - Ignoring vscDarkPlus module resolution issues
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { ChevronDownIcon, ChevronRightIcon } from "../icons";
 import { cn } from "../lib/utils";
 import {
-  AssistantMessage as AssistantMessageType,
+  AgentStage,
+  AssistantMessage,
   CodePostprocessingStage,
   LogPostprocessingStage,
+  LogSearchStage,
+  ReasoningStage,
+  ReviewStage,
 } from "../types";
 import FactsSidebar from "./FactsSidebar";
-import { Button } from "./ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 
 // Add custom type for ReactMarkdown code component props
 interface CodeProps {
@@ -27,89 +28,86 @@ interface CodeProps {
 }
 
 interface CellViewProps {
-  role: "user" | "assistant";
-  content: string;
-  stepId?: string;
-  steps?: Array<{
-    id: string;
-    title: string;
-    content: string;
-  }>;
-  // For direct access to the original message if available
-  originalMessage?: AssistantMessageType;
+  message: AssistantMessage;
+  isThinking?: boolean;
 }
 
-// Interface for facts extracted from stages
-interface Fact {
+/**
+ * Collapsible step container component
+ */
+const CollapsibleStep: React.FC<{
   title: string;
-  content: string;
-  type: "log" | "code";
-  // Additional fields that might be used later
-  sourcePath?: string;
-  sourceUrl?: string;
-}
+  children: React.ReactNode;
+}> = ({ title, children }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
-function CellView({ role, content, stepId, steps, originalMessage }: CellViewProps) {
-  const [openSteps, setOpenSteps] = useState<Record<string, boolean>>({});
-  const [showFactsSidebar, setShowFactsSidebar] = useState(false);
-
-  const toggleStep = (id: string) => {
-    setOpenSteps((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
-  const toggleFactsSidebar = () => {
-    setShowFactsSidebar((prev) => !prev);
-  };
-
-  // Determine if this is a step cell
-  const isStep = Boolean(stepId);
-
-  // Determine if this is the user or assistant
-  const isUser = role === "user";
-
-  // Get facts from the originalMessage if available
-  const facts: Fact[] = [];
-  if (originalMessage?.stages) {
-    // Extract facts from LogPostprocessingStage
-    const logPostprocessingStage = originalMessage.stages.find(
-      (stage): stage is LogPostprocessingStage => stage.type === "logPostprocessing"
-    );
-
-    if (logPostprocessingStage?.facts) {
-      logPostprocessingStage.facts.forEach((fact) => {
-        facts.push({
-          title: fact.title || "Log Fact",
-          content: fact.fact,
-          type: "log",
-        });
-      });
+  // Auto-scroll to the bottom of content when new content is added
+  useEffect(() => {
+    if (!isCollapsed && contentRef.current) {
+      contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
+  });
 
-    // Extract facts from CodePostprocessingStage
-    const codePostprocessingStage = originalMessage.stages.find(
-      (stage): stage is CodePostprocessingStage => stage.type === "codePostprocessing"
-    );
+  return (
+    <div className="step-container border border-border rounded-md overflow-hidden mb-3">
+      <div
+        className="step-header cursor-pointer p-3 flex justify-between items-center bg-background-lighter"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+      >
+        <div className="step-header-content font-medium text-sm">
+          <span>{title}</span>
+        </div>
+        <span className="collapse-icon">{isCollapsed ? "▼" : "▲"}</span>
+      </div>
+      {isCollapsed ? (
+        <div className="min-h-[8px] w-full" />
+      ) : (
+        <div
+          className="step-content p-4 bg-background prose prose-invert max-w-none"
+          ref={contentRef}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
 
-    if (codePostprocessingStage?.facts) {
-      codePostprocessingStage.facts.forEach((fact) => {
-        facts.push({
-          title: fact.title || "Code Fact",
-          content: fact.fact,
-          type: "code",
-          sourcePath: fact.filepath,
-        });
-      });
-    }
+const renderStage = (stage: AgentStage) => {
+  switch (stage.type) {
+    case "logSearch":
+      return renderLogSearchStage(stage);
+    case "reasoning":
+      return renderReasoningStage(stage);
+    case "review":
+      return renderReviewStage(stage);
+    case "logPostprocessing":
+      return renderLogPostprocessingStage(stage);
+    case "codePostprocessing":
+      return renderCodePostprocessingStage(stage);
   }
+};
 
-  // Determine if we should show facts button
-  const hasFacts = facts.length > 0;
+const renderLogSearchStage = (stage: LogSearchStage) => (
+  <CollapsibleStep title="Log Search">
+    {stage.queries.length === 0 ? (
+      <em>Searching logs...</em>
+    ) : (
+      stage.queries.map((query, index) => (
+        <div
+          key={`${stage.id}-search-${index}`}
+          className="log-search-item mb-2 p-3 bg-background-lighter rounded-md"
+        >
+          <div className="font-mono text-sm">{query.input.query}</div>
+        </div>
+      ))
+    )}
+  </CollapsibleStep>
+);
 
-  // Custom Markdown component for code rendering
-  const MarkdownContent = ({ content }: { content: string }) => (
+const renderReasoningStage = (stage: ReasoningStage) => (
+  <CollapsibleStep title="Reasoning">
     <ReactMarkdown
       components={{
         code({ node, inline, className, children, ...props }: CodeProps) {
@@ -132,138 +130,199 @@ function CellView({ role, content, stepId, steps, originalMessage }: CellViewPro
         },
       }}
     >
-      {content}
+      {stage.content}
     </ReactMarkdown>
+  </CollapsibleStep>
+);
+
+const renderReviewStage = (stage: ReviewStage) => (
+  <CollapsibleStep title="Review">
+    <ReactMarkdown
+      components={{
+        code({ node, inline, className, children, ...props }: CodeProps) {
+          const match = /language-(\w+)/.exec(className || "");
+          return !inline && match ? (
+            <SyntaxHighlighter
+              style={vscDarkPlus}
+              language={match[1]}
+              PreTag="div"
+              className="my-4 rounded-md overflow-auto"
+              {...props}
+            >
+              {String(children).replace(/\n$/, "")}
+            </SyntaxHighlighter>
+          ) : (
+            <code className={cn("bg-gray-800 px-1 py-0.5 rounded", className)} {...props}>
+              {children}
+            </code>
+          );
+        },
+      }}
+    >
+      {stage.content}
+    </ReactMarkdown>
+  </CollapsibleStep>
+);
+
+const renderLogPostprocessingStage = (stage: LogPostprocessingStage) => (
+  <CollapsibleStep title="Log Postprocessing">
+    <div className="space-y-3">
+      {stage.facts.map((fact, index) => (
+        <div
+          key={`fact-${index}`}
+          className="p-3 bg-background-lighter rounded-md border border-border"
+        >
+          <div className="font-medium">{fact.title || "Log Fact"}</div>
+          <div className="mt-2 text-sm">{fact.fact}</div>
+        </div>
+      ))}
+    </div>
+  </CollapsibleStep>
+);
+
+const renderCodePostprocessingStage = (stage: CodePostprocessingStage) => (
+  <CollapsibleStep title="Code Postprocessing">
+    <div className="space-y-3">
+      {stage.facts.map((fact, index) => (
+        <div
+          key={`fact-${index}`}
+          className="p-3 bg-background-lighter rounded-md border border-border"
+        >
+          <div className="font-medium">{fact.title || "Code Fact"}</div>
+          <div className="mt-2 text-sm">{fact.fact}</div>
+          {fact.filepath && <div className="mt-1 text-xs text-gray-400">{fact.filepath}</div>}
+        </div>
+      ))}
+    </div>
+  </CollapsibleStep>
+);
+
+function CellView({ message, isThinking = false }: CellViewProps) {
+  const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
+  const lastUpdateTimeRef = useRef<number>(Date.now());
+  const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Filter stages to only show the ones that should be visible in the UI
+  const stages = useMemo(() => message.stages || [], [message.stages]);
+
+  const logPostprocessingStage = useMemo(
+    () =>
+      stages.find(
+        (stage): stage is LogPostprocessingStage => stage.type === "logPostprocessing"
+      ) as LogPostprocessingStage | undefined,
+    [stages]
   );
 
-  // Specialized renderers for different stage types
-  const renderStageContent = (step: { id: string; title: string; content: string }) => {
-    // Try to parse the content if it's JSON (happens with some stage types)
-    try {
-      const parsedContent = JSON.parse(step.content);
+  const codePostprocessingStage = useMemo(
+    () =>
+      stages.find(
+        (stage): stage is CodePostprocessingStage => stage.type === "codePostprocessing"
+      ) as CodePostprocessingStage | undefined,
+    [stages]
+  );
 
-      switch (step.title.toLowerCase()) {
-        case "logsearch":
-          return (
-            <div className="space-y-2">
-              {parsedContent.queries?.map((query: any, idx: number) => (
-                <div key={idx} className="p-2 bg-gray-800 rounded border border-gray-700">
-                  <div className="font-mono text-xs mb-1">Query: {query.input?.query || ""}</div>
-                </div>
-              )) || <div className="italic text-gray-400">No search queries found</div>}
-            </div>
-          );
+  // Determine if we should show facts sidebar - only show when there are actually facts
+  const shouldShowFactsSidebar = useMemo(
+    () =>
+      !isThinking &&
+      message.response &&
+      ((logPostprocessingStage?.facts?.length || 0) > 0 ||
+        (codePostprocessingStage?.facts?.length || 0) > 0),
+    [isThinking, message.response, logPostprocessingStage, codePostprocessingStage]
+  );
 
-        case "logpostprocessing":
-        case "codepostprocessing":
-          return (
-            <div className="space-y-2">
-              {parsedContent.facts?.map((fact: any, idx: number) => (
-                <div key={idx} className="p-2 bg-gray-800 rounded border border-gray-700">
-                  <div className="font-medium text-sm">{fact.title || "Untitled Fact"}</div>
-                  <div className="text-xs mt-1">{fact.fact}</div>
-                  {fact.filepath && (
-                    <div className="text-xs text-gray-400 mt-1">{fact.filepath}</div>
-                  )}
-                </div>
-              )) || <div className="italic text-gray-400">No facts found</div>}
-            </div>
-          );
-
-        default:
-          // For other types or if parsing fails, just render as markdown
-          return <MarkdownContent content={step.content} />;
-      }
-    } catch (e) {
-      // If parsing fails, render as markdown
-      return <MarkdownContent content={step.content} />;
+  // Set up a time-based check for showing the waiting indicator
+  useEffect(() => {
+    if (waitingCheckIntervalRef.current) {
+      clearInterval(waitingCheckIntervalRef.current);
+      waitingCheckIntervalRef.current = null;
     }
-  };
+
+    if (isThinking) {
+      lastUpdateTimeRef.current = Date.now();
+      setShowWaitingIndicator(false);
+      waitingCheckIntervalRef.current = setInterval(() => {
+        if (Date.now() - lastUpdateTimeRef.current > 1000) {
+          setShowWaitingIndicator(true);
+        }
+      }, 500);
+    } else {
+      setShowWaitingIndicator(false);
+    }
+
+    return () => {
+      if (waitingCheckIntervalRef.current) {
+        clearInterval(waitingCheckIntervalRef.current);
+      }
+    };
+  }, [isThinking]);
+
+  // Update last update time when cell steps change
+  useEffect(() => {
+    lastUpdateTimeRef.current = Date.now();
+    setShowWaitingIndicator(false);
+  }, [stages]);
 
   return (
-    <div className="relative">
-      <div
-        className={cn(
-          "py-6 px-5 flex flex-col",
-          isUser ? "bg-background-user" : "bg-background-assistant"
+    <div className={cn("cellview-container py-6 px-5", shouldShowFactsSidebar ? "with-facts" : "")}>
+      {/* Main content area */}
+      <div className="cellview-main-content flex-1">
+        {/* Render each visible step */}
+        {stages.map((stage) => (
+          <React.Fragment key={stage.id}>{renderStage(stage)}</React.Fragment>
+        ))}
+
+        {/* Show waiting indicator with less restrictive conditions */}
+        {isThinking && showWaitingIndicator && (
+          <div className="waiting-indicator p-3 text-center text-gray-400">
+            <span className="animate-pulse">...</span>
+          </div>
         )}
-      >
-        <div className="flex items-start">
-          <div
-            className={cn(
-              "w-9 h-9 rounded-full flex items-center justify-center mr-4 flex-shrink-0 shadow-sm",
-              isUser ? "bg-primary" : "bg-primary-dark"
-            )}
-          >
-            <span className="text-white font-medium">{isUser ? "U" : "A"}</span>
+
+        {/* Render error if present */}
+        {message.error && (
+          <div className="error-message p-3 my-2 bg-red-900/30 border border-red-700 rounded-md text-red-200">
+            {message.error}
           </div>
+        )}
 
-          <div className="flex-1 overflow-hidden">
-            {isStep && <div className="mb-3 text-sm font-medium text-gray-300">Step {stepId}</div>}
-
-            {/* Facts button - only for assistant messages with facts */}
-            {!isUser && hasFacts && (
-              <div className="flex justify-end mb-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleFactsSidebar}
-                  className="text-xs font-medium hover:bg-background-lighter"
-                >
-                  {facts.length} Facts {showFactsSidebar ? "◀" : "▶"}
-                </Button>
-              </div>
-            )}
-
-            {/* For assistant messages, first show steps, then response */}
-            {!isUser && steps && steps.length > 0 && (
-              <div className="mb-6 space-y-2">
-                {steps.map((step) => (
-                  <Collapsible
-                    key={step.id}
-                    open={openSteps[step.id]}
-                    onOpenChange={() => toggleStep(step.id)}
-                    className="border border-border rounded-md overflow-hidden shadow-sm"
-                  >
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="w-full flex items-center justify-between p-3 text-left hover:bg-background-lighter hover:text-white"
-                      >
-                        <span className="font-medium text-sm">
-                          Step {step.id}: {step.title}
-                        </span>
-                        {openSteps[step.id] ? (
-                          <ChevronDownIcon className="h-4 w-4" />
-                        ) : (
-                          <ChevronRightIcon className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="p-4 bg-background-lighter border-t border-border">
-                      <div className="prose prose-invert max-w-none">
-                        {renderStageContent(step)}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </div>
-            )}
-
-            {/* Content (user message or assistant response) */}
-            <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3">
-              <MarkdownContent content={content} />
-            </div>
+        {/* Render final response if present */}
+        {message.response && message.response !== "Thinking..." && (
+          <div className="response-content prose prose-invert max-w-none">
+            <ReactMarkdown
+              components={{
+                code({ node, inline, className, children, ...props }: CodeProps) {
+                  const match = /language-(\w+)/.exec(className || "");
+                  return !inline && match ? (
+                    <SyntaxHighlighter
+                      style={vscDarkPlus}
+                      language={match[1]}
+                      PreTag="div"
+                      className="my-4 rounded-md overflow-auto"
+                      {...props}
+                    >
+                      {String(children).replace(/\n$/, "")}
+                    </SyntaxHighlighter>
+                  ) : (
+                    <code className={cn("bg-gray-800 px-1 py-0.5 rounded", className)} {...props}>
+                      {children}
+                    </code>
+                  );
+                },
+              }}
+            >
+              {message.response || ""}
+            </ReactMarkdown>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Render FactsSidebar if visible */}
-      {!isUser && showFactsSidebar && facts.length > 0 && (
-        <div className="absolute top-0 right-0 h-full">
+      {/* Render facts sidebar if facts are available */}
+      {shouldShowFactsSidebar && (
+        <div className="facts-sidebar-wrapper">
           <FactsSidebar
-            facts={facts.map((f) => ({ title: f.title, content: f.content }))}
-            toggleFactsSidebar={toggleFactsSidebar}
+            logFacts={logPostprocessingStage?.facts || []}
+            codeFacts={codePostprocessingStage?.facts || []}
           />
         </div>
       )}

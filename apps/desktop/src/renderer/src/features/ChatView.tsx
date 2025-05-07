@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView";
 import { Button } from "../components/ui/button";
 import {
@@ -156,27 +157,28 @@ function ChatView() {
       {/* Chat messages */}
       <ScrollArea className="flex-1 overflow-y-auto">
         <div className="flex flex-col divide-y divide-border">
-          {messages.map((message) => (
-            <CellView
-              key={message.id}
-              role={message.role}
-              content={
-                message.role === "user" ? message.content : (message as AssistantMessage).response
-              }
-              steps={
-                message.role === "assistant"
-                  ? (message as AssistantMessage).stages?.map((stage) => ({
-                      id: stage.id,
-                      title: stage.type,
-                      content: "content" in stage ? stage.content : JSON.stringify(stage),
-                    })) || []
-                  : []
-              }
-              originalMessage={
-                message.role === "assistant" ? (message as AssistantMessage) : undefined
-              }
-            />
-          ))}
+          {messages.map((message) =>
+            message.role === "user" ? (
+              <div key={message.id} className={cn("py-6 px-5 flex flex-col bg-background-user")}>
+                <div className="flex items-start">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center mr-4 flex-shrink-0 shadow-sm bg-primary">
+                    <span className="text-white font-medium">U</span>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <CellView
+                key={message.id}
+                message={message as AssistantMessage}
+                isThinking={isThinking && (message as AssistantMessage).response === "Thinking..."}
+              />
+            )
+          )}
           {isThinking && (
             <div className="py-6 px-5 text-center text-gray-400 italic">
               Assistant is thinking...
