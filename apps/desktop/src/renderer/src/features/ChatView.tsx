@@ -192,12 +192,12 @@ function ChatView() {
               {messages.map((message) =>
                 message.role === "user" ? (
                   <div key={message.id} className={cn("py-4 px-4 flex flex-col bg-background")}>
-                    <div className="flex items-start max-w-3xl mx-auto w-full">
+                    <div className="flex items-start max-w-[75%] mx-auto w-full">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary">
                         <span className="text-white font-medium text-sm">U</span>
                       </div>
                       <div className="flex-1 overflow-hidden pt-0.5">
-                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3">
+                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3 break-words">
                           <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
                       </div>
@@ -205,7 +205,7 @@ function ChatView() {
                   </div>
                 ) : (
                   <div className="bg-background-assistant">
-                    <div className="max-w-3xl mx-auto w-full">
+                    <div className="max-w-[75%] mx-auto w-full">
                       <CellView
                         key={message.id}
                         message={message as AssistantMessage}
@@ -223,7 +223,7 @@ function ChatView() {
               )}
               {isThinking && (
                 <div className="py-4 px-4 text-center text-gray-400 italic animate-pulse">
-                  <div className="max-w-3xl mx-auto">Assistant is thinking...</div>
+                  <div className="max-w-[75%] mx-auto">Assistant is thinking...</div>
                 </div>
               )}
               <div ref={messagesEndRef} className="h-4" />
@@ -247,7 +247,7 @@ function ChatView() {
       {/* Context items display */}
       {contextItems && contextItems.length > 0 && (
         <div className="px-4 py-2 border-t border-border bg-background-lighter">
-          <div className="flex flex-wrap gap-2 max-w-3xl mx-auto">
+          <div className="flex flex-wrap gap-2 max-w-[75%] mx-auto">
             {contextItems.map((item) => (
               <div
                 key={item.id}
@@ -271,7 +271,7 @@ function ChatView() {
 
       {/* Input area */}
       <div className="p-4 border-t border-border bg-background-lighter">
-        <div className="relative max-w-3xl mx-auto">
+        <div className="relative max-w-[75%] mx-auto">
           <textarea
             ref={textareaRef}
             className={cn(
@@ -295,7 +295,7 @@ function ChatView() {
             <SendIcon className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <div className="mt-1.5 text-xs text-gray-500 text-right max-w-3xl mx-auto">
+        <div className="mt-1.5 text-xs text-gray-500 text-right max-w-[75%] mx-auto">
           Press Enter to send, Shift+Enter for new line
         </div>
       </div>

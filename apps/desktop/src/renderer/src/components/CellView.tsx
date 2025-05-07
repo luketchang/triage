@@ -1,3 +1,4 @@
+// @ts-ignore - Ignoring React module resolution issues
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -99,74 +100,105 @@ const renderLogSearchStage = (stage: LogSearchStage) => (
           key={`${stage.id}-search-${index}`}
           className="log-search-item mb-2 p-3 bg-background-lighter rounded-lg"
         >
-          <div className="font-mono text-sm">{query.input.query}</div>
+          <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
+            {query.input.query}
+          </div>
         </div>
       ))
     )}
   </CollapsibleStep>
 );
 
+const CodeBlock = ({ language, value }: { language: string; value: string }) => {
+  return (
+    <div className="relative my-3 rounded-lg overflow-hidden">
+      <div className="absolute top-0 right-0 px-2 py-1 text-xs bg-background-alt text-gray-400 rounded-bl-md">
+        {language}
+      </div>
+      <SyntaxHighlighter
+        language={language}
+        style={vscDarkPlus}
+        customStyle={{
+          margin: 0,
+          borderRadius: "0.5rem",
+          fontSize: "0.875rem",
+          lineHeight: 1.6,
+          padding: "1.5rem 1rem",
+        }}
+        wrapLines={true}
+        wrapLongLines={true}
+      >
+        {value}
+      </SyntaxHighlighter>
+    </div>
+  );
+};
+
 const renderReasoningStage = (stage: ReasoningStage) => (
   <CollapsibleStep title="Reasoning">
-    <ReactMarkdown
-      components={{
-        code({ node, inline, className, children, ...props }: CodeProps) {
-          const match = /language-(\w+)/.exec(className || "");
-          return !inline && match ? (
-            <SyntaxHighlighter
-              style={vscDarkPlus}
-              language={match[1]}
-              PreTag="div"
-              className="my-3 rounded-lg overflow-auto text-sm"
-              {...props}
-            >
-              {String(children).replace(/\n$/, "")}
-            </SyntaxHighlighter>
-          ) : (
-            <code
-              className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
-              {...props}
-            >
-              {children}
-            </code>
-          );
-        },
-      }}
-    >
-      {stage.content}
-    </ReactMarkdown>
+    <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+      <ReactMarkdown
+        components={{
+          code({ node, inline, className, children, ...props }: CodeProps) {
+            const match = /language-(\w+)/.exec(className || "");
+            return !inline && match ? (
+              <CodeBlock language={match[1]} value={String(children).replace(/\n$/, "")} />
+            ) : (
+              <code
+                className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
+                {...props}
+              >
+                {children}
+              </code>
+            );
+          },
+          p({ children }) {
+            return <p className="mb-4 leading-relaxed">{children}</p>;
+          },
+          pre({ children }) {
+            return (
+              <pre className="overflow-x-auto whitespace-pre-wrap break-words">{children}</pre>
+            );
+          },
+        }}
+      >
+        {stage.content}
+      </ReactMarkdown>
+    </div>
   </CollapsibleStep>
 );
 
 const renderReviewStage = (stage: ReviewStage) => (
   <CollapsibleStep title="Review">
-    <ReactMarkdown
-      components={{
-        code({ node, inline, className, children, ...props }: CodeProps) {
-          const match = /language-(\w+)/.exec(className || "");
-          return !inline && match ? (
-            <SyntaxHighlighter
-              style={vscDarkPlus}
-              language={match[1]}
-              PreTag="div"
-              className="my-3 rounded-lg overflow-auto text-sm"
-              {...props}
-            >
-              {String(children).replace(/\n$/, "")}
-            </SyntaxHighlighter>
-          ) : (
-            <code
-              className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
-              {...props}
-            >
-              {children}
-            </code>
-          );
-        },
-      }}
-    >
-      {stage.content}
-    </ReactMarkdown>
+    <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+      <ReactMarkdown
+        components={{
+          code({ node, inline, className, children, ...props }: CodeProps) {
+            const match = /language-(\w+)/.exec(className || "");
+            return !inline && match ? (
+              <CodeBlock language={match[1]} value={String(children).replace(/\n$/, "")} />
+            ) : (
+              <code
+                className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
+                {...props}
+              >
+                {children}
+              </code>
+            );
+          },
+          p({ children }) {
+            return <p className="mb-4 leading-relaxed">{children}</p>;
+          },
+          pre({ children }) {
+            return (
+              <pre className="overflow-x-auto whitespace-pre-wrap break-words">{children}</pre>
+            );
+          },
+        }}
+      >
+        {stage.content}
+      </ReactMarkdown>
+    </div>
   </CollapsibleStep>
 );
 
@@ -179,7 +211,9 @@ const renderLogPostprocessingStage = (stage: LogPostprocessingStage) => (
           className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
         >
           <div className="font-medium text-sm">{fact.title || "Log Fact"}</div>
-          <div className="mt-2 text-sm text-gray-300">{fact.fact}</div>
+          <div className="mt-2 text-sm text-gray-300 overflow-x-auto whitespace-pre-wrap break-words">
+            {fact.fact}
+          </div>
         </div>
       ))}
     </div>
@@ -195,7 +229,9 @@ const renderCodePostprocessingStage = (stage: CodePostprocessingStage) => (
           className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
         >
           <div className="font-medium text-sm">{fact.title || "Code Fact"}</div>
-          <div className="mt-2 text-sm text-gray-300">{fact.fact}</div>
+          <div className="mt-2 text-sm text-gray-300 overflow-x-auto whitespace-pre-wrap break-words">
+            {fact.fact}
+          </div>
           {fact.filepath && <div className="mt-1 text-xs text-gray-500">{fact.filepath}</div>}
         </div>
       ))}
@@ -312,33 +348,56 @@ function CellView({
         {/* Render final response if present */}
         {message.response && message.response !== "Thinking..." && (
           <div className="response-content prose prose-invert max-w-none">
-            <ReactMarkdown
-              components={{
-                code({ node, inline, className, children, ...props }: CodeProps) {
-                  const match = /language-(\w+)/.exec(className || "");
-                  return !inline && match ? (
-                    <SyntaxHighlighter
-                      style={vscDarkPlus}
-                      language={match[1]}
-                      PreTag="div"
-                      className="my-3 rounded-lg overflow-auto text-sm shadow-sm"
-                      {...props}
-                    >
-                      {String(children).replace(/\n$/, "")}
-                    </SyntaxHighlighter>
-                  ) : (
-                    <code
-                      className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
-                      {...props}
-                    >
-                      {children}
-                    </code>
-                  );
-                },
-              }}
-            >
-              {message.response || ""}
-            </ReactMarkdown>
+            <div className="text-base leading-relaxed break-words whitespace-pre-wrap">
+              <ReactMarkdown
+                components={{
+                  code({ node, inline, className, children, ...props }: CodeProps) {
+                    const match = /language-(\w+)/.exec(className || "");
+                    return !inline && match ? (
+                      <CodeBlock language={match[1]} value={String(children).replace(/\n$/, "")} />
+                    ) : (
+                      <code
+                        className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    );
+                  },
+                  p({ children }) {
+                    return <p className="mb-4 leading-relaxed">{children}</p>;
+                  },
+                  pre({ children }) {
+                    return (
+                      <pre className="overflow-x-auto whitespace-pre-wrap break-words">
+                        {children}
+                      </pre>
+                    );
+                  },
+                  table({ children }) {
+                    return (
+                      <div className="overflow-x-auto my-4">
+                        <table className="border-collapse border border-border/60">
+                          {children}
+                        </table>
+                      </div>
+                    );
+                  },
+                  th({ children }) {
+                    return (
+                      <th className="border border-border/60 bg-background-lighter p-2 text-left font-medium">
+                        {children}
+                      </th>
+                    );
+                  },
+                  td({ children }) {
+                    return <td className="border border-border/60 p-2">{children}</td>;
+                  },
+                }}
+              >
+                {message.response || ""}
+              </ReactMarkdown>
+            </div>
 
             {/* Facts button - only shown when facts are available */}
             {hasFacts && onShowFacts && (

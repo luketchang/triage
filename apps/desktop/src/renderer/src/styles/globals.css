@@ -77,3 +77,64 @@ body {
 .transition-standard {
   @apply transition-all duration-200 ease-in-out;
 }
+
+/* Improved prose customization */
+.prose {
+  @apply text-gray-100;
+}
+
+.prose p {
+  @apply leading-relaxed text-gray-100;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  @apply text-white font-semibold;
+}
+
+.prose code {
+  @apply bg-background-alt text-gray-200 rounded px-1 py-0.5 text-sm;
+}
+
+.prose pre {
+  @apply my-4 bg-background-alt rounded-lg p-3 text-sm overflow-x-auto;
+}
+
+.prose ol,
+.prose ul {
+  @apply pl-6 my-4 space-y-2;
+}
+
+.prose li {
+  @apply mb-1;
+}
+
+.prose a {
+  @apply text-primary-light hover:text-primary-light hover:underline;
+}
+
+.prose img {
+  @apply rounded-md;
+}
+
+.prose blockquote {
+  @apply border-l-2 border-primary/50 pl-4 italic text-gray-300;
+}
+
+/* Code block styling */
+pre code {
+  @apply bg-transparent p-0 rounded-none !important;
+}
+
+/* Fix line wrapping in code blocks */
+.whitespace-pre-wrap {
+  white-space: pre-wrap !important;
+}
+
+.break-words {
+  word-break: break-word !important;
+}
