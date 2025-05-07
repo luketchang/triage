@@ -90,14 +90,14 @@ export class CodebaseProcessor {
         return [];
       }
 
-      const absTopLevelDirs: string[] = [];
+      const absServiceDirs: string[] = [];
       for (const selection of selections) {
         const relPath = selection.module;
         const absPath = path.join(repoPath, relPath);
         try {
           const stat = await fs.stat(absPath);
           if (stat.isDirectory()) {
-            absTopLevelDirs.push(absPath);
+            absServiceDirs.push(absPath);
           } else {
             logger.info(`Identified service path '${relPath}' is not a directory.`);
           }
@@ -107,7 +107,7 @@ export class CodebaseProcessor {
           );
         }
       }
-      return absTopLevelDirs;
+      return absServiceDirs;
     } catch (error) {
       logger.error(`Error processing service identification: ${error}`);
       return [];
@@ -202,14 +202,14 @@ export class CodebaseProcessor {
         dirStructureMatch && dirStructureMatch[1] ? dirStructureMatch[1].trim().split("\n") : [];
 
       // Identify service directories
-      const topLevelDirs = await this.identifyTopLevel(this.repoPath, repoFileTree);
+      const serviceDirs = await this.identifyTopLevel(this.repoPath, repoFileTree);
       let directoriesToProcess: string[];
 
-      if (topLevelDirs.length > 0) {
-        directoriesToProcess = topLevelDirs;
-        logger.info(`Identified top level directories: ${directoriesToProcess}`);
+      if (serviceDirs.length > 0) {
+        directoriesToProcess = serviceDirs;
+        logger.info(`Identified service directories: ${directoriesToProcess}`);
       } else {
-        directoriesToProcess = await listMajorDirectories(this.repoPath, this.repomixOutput);
+        directoriesToProcess = await listMajorDirectories(this.repoPath);
         logger.info(
           "No specific service directories identified; falling back to major directories."
         );

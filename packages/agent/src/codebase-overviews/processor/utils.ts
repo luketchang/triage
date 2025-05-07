@@ -1,4 +1,5 @@
 import { logger } from "@triage/common";
+import * as fs from "fs/promises";
 import * as path from "path";
 import { CollectedFiles } from "../types";
 
@@ -122,51 +123,17 @@ export function generateTreeString(filePaths: string[]): string {
 }
 
 /**
- * Lists major directories in a repository, fallback
+ * Lists major directories in a repository
  */
-export async function listMajorDirectories(
-  repoPath: string,
-  repomixOutput?: string | null
-): Promise<string[]> {
-  if (!repomixOutput) {
-    logger.warn("No repomix output provided to listMajorDirectories");
-    return [];
-  }
+export async function listMajorDirectories(repoPath: string): Promise<string[]> {
+  const dirEntries = await fs.readdir(repoPath, { withFileTypes: true });
+  const majorDirs: string[] = [];
 
-  // Extract directory structure from repomix output
-  const dirStructureMatch = repomixOutput.match(
-    /<directory_structure>([\s\S]*?)<\/directory_structure>/
-  );
-
-  if (!dirStructureMatch || !dirStructureMatch[1]) {
-    logger.warn("Could not extract directory structure from repomix output");
-    return [];
-  }
-
-  const directoryStructure = dirStructureMatch[1].trim().split("\n");
-  const majorDirs = new Set<string>();
-
-  // Process each line of the directory structure
-  for (const line of directoryStructure) {
-    // Skip empty lines
-    if (!line.trim()) continue;
-
-    // Files are indicated by no trailing slash
-    const isFile = !line.trim().endsWith("/");
-
-    if (isFile) {
-      // Extract the top-level directory from the file path
-      const parts = line.split("/");
-      if (parts.length > 1) {
-        // Add the top directory to our set
-        const topDir = parts[0];
-        if (topDir && !topDir.startsWith(".") && topDir !== "node_modules") {
-          majorDirs.add(topDir);
-        }
-      }
+  for (const entry of dirEntries) {
+    if (entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== "node_modules") {
+      majorDirs.push(path.join(repoPath, entry.name));
     }
   }
 
-  // Convert to absolute paths
-  return Array.from(majorDirs).map((dir) => path.join(repoPath, dir));
+  return majorDirs;
 }
