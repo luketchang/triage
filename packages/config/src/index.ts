@@ -27,6 +27,12 @@ interface GrafanaConfig {
   password: string;
 }
 
+export interface ConfigProvider {
+  get<T = unknown>(key: string): Promise<T | undefined>;
+  set<T = unknown>(key: string, value: T): Promise<void>;
+  onChange(cb: (changedKey: string) => void): void;
+}
+
 // TODO: remove temporary defaults
 const appConfig: AppConfig = {
   env: process.env.NODE_ENV || "development",
