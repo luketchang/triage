@@ -1,7 +1,7 @@
 // @ts-ignore - Ignoring React module resolution issues
 import { useState } from "react";
 import "./electron.d";
-import "./tailwind.css";
+import "./styles/globals.css";
 
 import { TabType } from "./types";
 

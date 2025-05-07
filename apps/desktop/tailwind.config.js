@@ -2,9 +2,8 @@
 export default {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   darkMode: "class", // use dark mode by default
-  // Add the Tailwind v4 default tailwind.css path
   css: {
-    files: ["./src/**/tailwind.css"],
+    files: ["./src/**/global.css"],
   },
   theme: {
     extend: {
