@@ -1,5 +1,13 @@
-import { ChatIcon, DashboardsIcon, LogsIcon, TracesIcon } from "../icons/index.js";
-import { TabType } from "../types/index.js";
+import { useState } from "react";
+import { ChatIcon } from "../icons";
+import { TabType } from "../types";
+
+// Define a simple Chat type for chat history
+interface Chat {
+  id: string;
+  title: string;
+  timestamp: Date;
+}
 
 interface NavigationSidebarProps {
   activeTab: TabType;
@@ -12,47 +20,54 @@ function NavigationSidebar({
   handleTabChange,
   contextItemsCount,
 }: NavigationSidebarProps) {
+  // TODO: Replace with actual chat history functionality
+  const [chatHistory] = useState<Chat[]>([]);
+
+  // Make sure to keep the chat tab active
+  if (activeTab !== "chat") {
+    handleTabChange("chat");
+  }
+
   return (
     <div className="navigation-sidebar">
       <div className="sidebar-header">
         <div className="logo">TRI</div>
+        <button className="new-chat-button" onClick={() => console.log("New chat")}>
+          + New Chat
+        </button>
       </div>
-      <div className="sidebar-nav">
-        <div
-          className={`nav-item ${activeTab === "chat" ? "active" : ""}`}
-          onClick={() => handleTabChange("chat")}
-          title="Chat"
-        >
-          <ChatIcon />
-          <span className="nav-label">Chat</span>
-          {contextItemsCount > 0 && <div className="context-count">{contextItemsCount}</div>}
-        </div>
-        <div
-          className={`nav-item ${activeTab === "logs" ? "active" : ""}`}
-          onClick={() => handleTabChange("logs")}
-          title="Logs"
-        >
-          <LogsIcon />
-          <span className="nav-label">Logs</span>
-        </div>
-        <div
-          className={`nav-item ${activeTab === "traces" ? "active" : ""}`}
-          onClick={() => handleTabChange("traces")}
-          title="Traces"
-        >
-          <TracesIcon />
-          <span className="nav-label">Traces</span>
-        </div>
-        <div
-          className={`nav-item ${activeTab === "dashboards" ? "active" : ""}`}
-          onClick={() => handleTabChange("dashboards")}
-          title="Dashboards"
-        >
-          <DashboardsIcon />
-          <span className="nav-label">Dashboards</span>
-        </div>
+
+      <div className="chat-history">
+        {chatHistory.length > 0 ? (
+          chatHistory.map((chat) => (
+            <div
+              key={chat.id}
+              className="chat-history-item"
+              onClick={() => console.log(`Clicked chat: ${chat.id}`)}
+            >
+              <ChatIcon />
+              <div className="chat-title">{chat.title}</div>
+            </div>
+          ))
+        ) : (
+          <div className="no-history-message">
+            No chat history yet
+            {contextItemsCount > 0 && (
+              <div className="context-indicator">Current context items: {contextItemsCount}</div>
+            )}
+          </div>
+        )}
       </div>
-      <div className="sidebar-footer">{/* Footer content can be added here if needed */}</div>
+
+      <div className="sidebar-footer">
+        <button
+          className="settings-button"
+          onClick={() => console.log("Settings clicked")}
+          title="Settings"
+        >
+          ⚙️ Settings
+        </button>
+      </div>
     </div>
   );
 }

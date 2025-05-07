@@ -12,9 +12,8 @@ import { generateId } from "./utils/formatters.js";
 import NavigationSidebar from "./components/NavigationSidebar.js";
 
 // Feature Views
-import ChatView from "./features/ChatView.js";
-import DashboardsView from "./features/DashboardsView.js";
-import LogsView from "./features/LogsView.js";
+import ChatView from "./features/ChatView";
+import LogsView from "./features/LogsView";
 
 // Custom hooks
 import { useChat } from "./hooks/useChat.js";
@@ -155,8 +154,11 @@ function App(): JSX.Element {
   };
 
   const renderMainContent = () => {
+    // We always default to chat view in the UI, but keep the other views in code
+    // in case they need to be accessed programmatically
     switch (activeTab) {
       case "logs":
+        // Keep logs view for programmatic access but don't show in nav
         return (
           <LogsView
             logs={logsState.logs}
@@ -174,6 +176,7 @@ function App(): JSX.Element {
           />
         );
       // case "traces":
+      //   // Keep traces view for programmatic access but don't show in nav
       //   return TRACES_ENABLED ? (
       //     <TracesView
       //       selectedTrace={tracesState.selectedTrace}
@@ -202,24 +205,9 @@ function App(): JSX.Element {
       //       </div>
       //     </div>
       //   );
-      case "dashboards":
-        return <DashboardsView />;
-      case "chat":
-        return (
-          <ChatView
-            messages={chatState.messages}
-            newMessage={chatState.newMessage}
-            setNewMessage={chatState.setNewMessage}
-            sendMessage={chatState.sendMessage}
-            isThinking={chatState.isThinking}
-            contextItems={chatState.contextItems}
-            removeContextItem={chatState.removeContextItem}
-            initialChatMode={chatState.chatMode}
-            toggleChatMode={chatState.toggleChatMode}
-            clearChat={chatState.clearChat}
-          />
-        );
+      // We've removed the dashboards view as requested
       default:
+        // Default is always chat view
         return (
           <ChatView
             messages={chatState.messages}
