@@ -1,2 +1,2 @@
 export { main } from "./cli";
-export { CodebaseProcessor } from "./processor/codebase-processor";
+export { CodebaseProcessor } from "./processor";

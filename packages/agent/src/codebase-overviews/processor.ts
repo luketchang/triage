@@ -2,12 +2,12 @@ import { Model, getModelWrapper, logger } from "@triage/common";
 import { generateText } from "ai";
 import * as fs from "fs/promises";
 import * as path from "path";
-import { SelectedModules, selectedModulesSchema } from "../types";
 import {
   createDirectorySummaryPrompt,
   createMergeSummariesPrompt,
   createTopLevelIdentificationPrompt,
 } from "./templates";
+import { SelectedModules, selectedModulesSchema } from "./types";
 import { collectFiles, generateTreeString, listMajorDirectories } from "./utils";
 
 const SYSTEM_PROMPT = `
