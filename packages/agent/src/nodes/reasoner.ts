@@ -2,10 +2,10 @@ import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import { AgentStep, AgentStreamUpdate, ChatMessage, ReasoningStep } from "../index";
-import { logRequestToolSchema, RequestToolCalls } from "../types/tools";
+import { AgentStep, AgentStreamUpdate, ChatMessage, logRequestToolSchema, ReasoningStep, RequestToolCalls } from "../types";
 
 import { formatAgentSteps, formatChatHistory, formatFacetValues } from "./utils";
+
 type ReasoningResponse = ReasoningStep | RequestToolCalls;
 
 // TODO: some unused params, will fix

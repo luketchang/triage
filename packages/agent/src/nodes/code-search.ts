@@ -1,6 +1,6 @@
 import { collectSourceCode, Model, timer } from "@triage/common";
 
-import { AgentStreamUpdate, CodeSearchStep } from "../..";
+import { AgentStreamUpdate, CodeSearchStep } from "../types";
 
 export interface CodeSearchAgentResponse {
   newCodeSearchSteps: CodeSearchStep[];

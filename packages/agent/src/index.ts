@@ -10,12 +10,12 @@ import { Command as CommanderCommand } from "commander";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
-import { CodePostprocessor } from "./nodes/postprocessing/code-postprocessing";
-import { LogPostprocessor } from "./nodes/postprocessing/log-postprocessing";
+import { CodePostprocessor } from "./nodes/code-postprocessing";
+import { CodeSearchAgent } from "./nodes/code-search";
+import { LogPostprocessor } from "./nodes/log-postprocessing";
+import { LogSearchAgent } from "./nodes/log-search";
 import { Reasoner } from "./nodes/reasoner";
 import { Reviewer } from "./nodes/reviewer";
-import { CodeSearchAgent } from "./nodes/search/code-search";
-import { LogSearchAgent } from "./nodes/search/log-search";
 import { formatFacetValues } from "./nodes/utils";
 import type { AgentStep, ChatMessage, CodeRequest, LogRequest, SpanRequest } from "./types";
 import {
@@ -33,16 +33,11 @@ const INITIAL_LOG_REQUEST: LogRequest = {
     "fetch logs relevant to the issue/event that will give you a full picture of the issue/event",
   reasoning: "",
 };
+
 const INITIAL_CODE_REQUEST: CodeRequest = {
   type: "codeRequest",
   request:
     "fetch code relevant to the issue/event that will give you a full picture of the issue/event",
-  reasoning: "",
-};
-const INITIAL_SPAN_REQUEST: SpanRequest = {
-  type: "spanRequest",
-  request:
-    "fetch spans relevant to the issue/event that will give you a full picture of the issue/event",
   reasoning: "",
 };
 
@@ -186,51 +181,6 @@ export class TriageAgent {
       toolCalls: updatedToolCalls,
     };
   }
-
-  // @timer
-  // async processSpanRequest(
-  //   state: TriageAgentState,
-  //   request: SpanRequest,
-  //   onUpdate?: (update: AgentStreamUpdate) => void
-  // ): Promise<Partial<TriageAgentState>> {
-  //   logger.info("\n\n" + "=".repeat(25) + " Span Search " + "=".repeat(25));
-
-  //   const spanSearchId = uuidv4();
-
-  //   if (onUpdate) {
-  //     onUpdate({ type: "highLevelUpdate", id: spanSearchId, stepType: "spanSearch" });
-  //   }
-
-  //   if (!this.observabilityFeatures.includes("spans")) {
-  //     logger.info("Span search not enabled, skipping");
-  //     return {};
-  //   }
-
-  //   const spanSearchAgent = new SpanSearchAgent(
-  //     this.fastModel,
-  //     this.reasoningModel,
-  //     this.observabilityPlatform
-  //   );
-
-  //   const response = await spanSearchAgent.invoke({
-  //     query: state.query,
-  //     spanRequest: request.request,
-  //     spanLabelsMap: state.spanLabelsMap,
-  //     codebaseOverview: state.codebaseOverview,
-  //   });
-
-  //   // Check if this is the last tool call in queue and if so, add a reasoning call to the queue
-  //   const updatedToolCalls = [...state.toolCalls];
-  //   if (updatedToolCalls.length === 0) {
-  //     updatedToolCalls.push({ type: "reasoningRequest" });
-  //   }
-
-  //   return {
-  //     spanContext: new Map([...state.spanContext, ...response.newSpanContext]),
-  //     chatHistory: [...state.chatHistory, response.summary],
-  //     toolCalls: updatedToolCalls,
-  //   };
-  // }
 
   @timer
   async processReasoningRequest(
@@ -428,8 +378,6 @@ export class TriageAgent {
           stateUpdates = await this.processLogRequest(currentState, nextToolCall, onUpdate);
         } else if (nextToolCall.type === "codeRequest") {
           stateUpdates = await this.processCodeRequest(currentState, nextToolCall, onUpdate);
-          // } else if (nextToolCall.type === "spanRequest") {
-          //   stateUpdates = await this.processSpanRequest(currentState, nextToolCall, onUpdate);
         } else if (nextToolCall.type === "reasoningRequest") {
           stateUpdates = await this.processReasoningRequest(currentState, onUpdate);
         } else if (nextToolCall.type === "reviewRequest") {
@@ -508,13 +456,6 @@ export async function invokeAgent({
   );
   logger.info(formatFacetValues(logLabelsMap));
 
-  // TODO: add back in once spans ready
-  // const spanLabelsMap = await observabilityPlatform.getSpansFacetValues(
-  //   startDate.toISOString(),
-  //   endDate.toISOString()
-  // );
-  // logger.info(formatFacetValues(spanLabelsMap));
-
   // Load the codebase overview
   const overview = await fs.readFile(codebaseOverviewPath, "utf-8");
 
@@ -530,11 +471,6 @@ export async function invokeAgent({
   > = [];
   if (observabilityFeatures.includes("logs")) {
     toolCalls.push(INITIAL_LOG_REQUEST);
-  }
-
-  // Add default span request if spans feature is enabled
-  if (observabilityFeatures.includes("spans")) {
-    toolCalls.push(INITIAL_SPAN_REQUEST);
   }
 
   toolCalls.push(INITIAL_CODE_REQUEST);
@@ -601,11 +537,11 @@ async function main(): Promise<void> {
   const startDate = new Date("2025-05-02T02:00:00Z");
   const endDate = new Date("2025-05-02T03:00:00Z");
 
-  const repoPath = "/Users/luketchang/code/ticketing";
+  const repoPath = "/Users/rob/code/ticketing";
 
   // Load or generate the codebase overview
-  const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
-  const bugPath = "/Users/luketchang/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
+  const overviewPath = "/Users/rob/code/triage/repos/ticketing/codebase-analysis.md";
+  const bugPath = "/Users/rob/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
 
   const bug = await fs.readFile(bugPath, "utf-8");
 
@@ -669,9 +605,9 @@ if (typeof require !== "undefined" && typeof module !== "undefined" && require.m
 }
 
 // Agent package exports
+export * from "./nodes/log-search";
 export * from "./nodes/reasoner";
 export * from "./nodes/reviewer";
-export * from "./nodes/search/log-search";
-export * from "./nodes/search/span-search";
 export * from "./nodes/utils";
 export * from "./types";
+

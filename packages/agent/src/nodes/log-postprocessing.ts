@@ -1,15 +1,15 @@
 import { getModelWrapper, logger, Model, timer } from "@triage/common";
+import { ObservabilityPlatform } from "@triage/observability";
 import { generateId, generateText } from "ai";
 
-import { ObservabilityPlatform } from "@triage/observability";
-import { AgentStreamUpdate, LogPostprocessingStep, LogSearchStep } from "../../types";
-import { LogPostprocessingFact, logPostprocessingToolSchema } from "../../types/tools";
+import { AgentStreamUpdate, LogPostprocessingFact, LogPostprocessingStep, logPostprocessingToolSchema, LogSearchStep } from "../types";
+
 import {
   ensureSingleToolCall,
   formatFacetValues,
   formatLogSearchSteps,
   normalizeDatadogQueryString,
-} from "../utils";
+} from "./utils";
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from logs.
