@@ -178,12 +178,12 @@ function ChatView() {
         </DropdownMenu>
       </div>
 
-      <div className="flex flex-1 h-full overflow-hidden relative">
+      <div className="flex flex-row flex-nowrap h-full overflow-hidden">
         {/* Main chat area - takes full width when sidebar closed, 2/3 when open */}
         <div
           className={cn(
-            "transition-all duration-300 ease-in-out h-full overflow-hidden flex-shrink-0",
-            factsSidebarOpen ? "w-2/3" : "w-full"
+            "transition-all duration-300 ease-in-out h-full overflow-hidden",
+            factsSidebarOpen ? "w-2/3 max-w-2/3 flex-[2]" : "w-full flex-1"
           )}
         >
           {/* Chat messages */}
@@ -233,8 +233,8 @@ function ChatView() {
         {/* Facts sidebar - slides in from right taking 1/3 width */}
         <div
           className={cn(
-            "h-full bg-background-sidebar border-l border-border transition-all duration-300 ease-in-out flex-shrink-0",
-            factsSidebarOpen ? "w-1/3" : "w-0 opacity-0 overflow-hidden"
+            "h-full bg-background-sidebar border-l border-border transition-all duration-300 ease-in-out",
+            factsSidebarOpen ? "w-1/3 max-w-1/3 flex-[1]" : "w-0 opacity-0 overflow-hidden flex-[0]"
           )}
         >
           {factsSidebarOpen && (
