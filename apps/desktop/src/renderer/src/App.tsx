@@ -6,7 +6,6 @@ import "./tailwind.css";
 import { TabType } from "./types";
 
 // Components
-import FactsSidebar from "./components/FactsSidebar";
 import NavigationSidebar from "./components/NavigationSidebar";
 
 // Feature Views
@@ -41,10 +40,6 @@ function App(): JSX.Element {
     setActiveTab(tab);
   };
 
-  const toggleFactsSidebar = () => {
-    setShowFactsSidebar((prev) => !prev);
-  };
-
   return (
     <AppConfigProvider>
       <div className="flex w-full h-full bg-background">
@@ -58,21 +53,6 @@ function App(): JSX.Element {
           <div className={`${showFactsSidebar ? "flex-1" : "w-full"} h-full overflow-hidden`}>
             <ChatView />
           </div>
-
-          {showFactsSidebar && (
-            <FactsSidebar
-              toggleFactsSidebar={toggleFactsSidebar}
-              facts={[
-                { title: "Active Model", content: "Triage Assistant v1.0" },
-                { title: "Active Context", content: "3 items loaded" },
-                {
-                  title: "System Prompt",
-                  content:
-                    "You are an intelligent assistant designed to help with debugging issues.",
-                },
-              ]}
-            />
-          )}
         </div>
       </div>
     </AppConfigProvider>

@@ -2,8 +2,7 @@
  * Main entry point for the renderer process
  */
 import ReactDOM from "react-dom/client";
-import App from "./App.js";
-import "./styles.css";
+import App from "./App";
 
 // Import Electron types to ensure proper TypeScript checks
 import "./electron.d";
