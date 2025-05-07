@@ -1,3 +1,4 @@
+import { ipcMain } from "electron";
 import {
   FacetData,
   getObservabilityPlatform,
@@ -6,8 +7,7 @@ import {
   LogsWithPagination,
   TraceQueryParams,
   TracesWithPagination,
-} from "@renderer/types";
-import { ipcMain } from "electron";
+} from "../../renderer/src/types/index.js";
 
 /**
  * Set up all IPC handlers related to observability (logs, traces)

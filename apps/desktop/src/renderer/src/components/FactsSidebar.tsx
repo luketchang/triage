@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useAppConfig } from "../context/AppConfigContext";
-import { CodePostprocessingFact, LogPostprocessingFact } from "../types";
-import { filepathToGitHubUrl } from "../utils/facts/code";
-import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs";
+import { useAppConfig } from "../context/useAppConfig.js";
+import { CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
+import { filepathToGitHubUrl } from "../utils/facts/code.js";
+import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs.js";
 
 interface FactsSidebarProps {
   logFacts: LogPostprocessingFact[];

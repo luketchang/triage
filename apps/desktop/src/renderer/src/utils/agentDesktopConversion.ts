@@ -11,8 +11,8 @@ import {
   AssistantMessage,
   ChatMessage,
   UserMessage,
-} from "../types";
-import { generateId } from "./formatters";
+} from "../types/index.js";
+import { generateId } from "./formatters.js";
 
 export type StageOf<T extends AgentStage["type"]> = Extract<AgentStage, { type: T }>;
 export function assertStageType<T extends AgentStage["type"]>(

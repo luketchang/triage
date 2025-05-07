@@ -12,7 +12,7 @@ import {
   setupConfigHandlers,
   setupDbHandlers,
   setupObservabilityHandlers,
-} from "./handlers/index";
+} from "./handlers/index.js";
 const { autoUpdater } = pkg;
 
 // Log the configuration to verify it's correctly loaded
