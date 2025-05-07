@@ -55,7 +55,6 @@ export type {
   TracesWithPagination,
 };
 
-export { invokeAgent } from "@triage/agent";
 export { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 
 // Define code map type alias

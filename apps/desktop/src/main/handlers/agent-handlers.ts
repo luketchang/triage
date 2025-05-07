@@ -1,7 +1,13 @@
-import { AgentAssistantMessage, AgentChatMessage, invokeAgent } from "@renderer/types/index.js";
-import {} from "@triage/agent";
-import { AppConfig } from "@triage/config";
+import { AgentAssistantMessage, AgentChatMessage } from "@renderer/types/index.js";
+import { invokeAgent } from "@triage/agent";
+import { appConfig } from "@triage/config";
 import { BrowserWindow, ipcMain } from "electron";
+import {
+  DEFAULT_END_DATE,
+  DEFAULT_INTEGRATION_TYPE,
+  DEFAULT_OBSERVABILITY_FEATURES,
+  DEFAULT_START_DATE,
+} from "../tmp-hardcode.js";
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -26,12 +32,6 @@ export function setupAgentHandlers(window: BrowserWindow): void {
         console.info("Invoking agent with query:", query);
         console.info("IPC chat history:", chatHistory);
 
-        const appConfig: AppConfig = {
-          repoPath: process.env.REPO_PATH!,
-          githubRepoBaseUrl: process.env.GITHUB_REPO_BASE_URL!,
-          codebaseOverviewPath: process.env.CODEBASE_OVERVIEW_PATH!,
-        };
-
         // Send updates to renderer via mainWindow
         const onUpdate = (update: any) => {
           if (mainWindow) {
@@ -44,12 +44,10 @@ export function setupAgentHandlers(window: BrowserWindow): void {
           chatHistory,
           repoPath: appConfig.repoPath,
           codebaseOverviewPath: appConfig.codebaseOverviewPath,
-          // TODO: Hardcode these here until we implement proper handling
-          // for them (and expose them in the UI)
-          observabilityPlatform: "datadog",
-          observabilityFeatures: ["logs"],
-          startDate: new Date("2025-04-16T21:00:00Z"),
-          endDate: new Date("2025-04-16T23:59:59Z"),
+          integrationType: DEFAULT_INTEGRATION_TYPE,
+          observabilityFeatures: DEFAULT_OBSERVABILITY_FEATURES,
+          startDate: DEFAULT_START_DATE,
+          endDate: DEFAULT_END_DATE,
           reasonOnly: options?.reasonOnly === true,
           onUpdate: onUpdate,
         });

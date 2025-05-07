@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
-import { config } from "@triage/config";
+import { appConfig } from "@triage/config";
 import { Command } from "commander";
 import { Trace, TracesWithPagination } from "../src"; // Adjust import path if needed
 import { DatadogPlatform } from "../src/platforms/datadog"; // Adjust import path if needed
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
 
   // Check if platform configs are available
   if (options.platform === "datadog") {
-    if (!config.datadog?.apiKey || !config.datadog?.appKey) {
+    if (!appConfig.datadog?.apiKey || !appConfig.datadog?.appKey) {
       logger.error("Datadog API key and App key are required but not found in config");
       process.exit(1);
     }

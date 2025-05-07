@@ -1,4 +1,4 @@
-import { AppConfig } from "@triage/config";
+import { appConfig, AppConfig } from "@triage/config";
 import { ipcMain } from "electron";
 
 /**
@@ -9,14 +9,7 @@ export function setupConfigHandlers(): void {
 
   // Get the current application configuration
   ipcMain.handle("config:get-app-config", async (): Promise<AppConfig> => {
-    return {
-      repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
-      githubRepoBaseUrl:
-        process.env.GITHUB_REPO_BASE_URL || "https://github.com/luketchang/ticketing",
-      codebaseOverviewPath:
-        process.env.CODEBASE_OVERVIEW_PATH ||
-        "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-    };
+    return appConfig;
   });
 
   // Update the application configuration
@@ -25,21 +18,14 @@ export function setupConfigHandlers(): void {
     async (_event: any, newConfig: Partial<AppConfig>): Promise<AppConfig> => {
       // Store updated values in process.env for future access
       if (newConfig.repoPath) {
-        process.env.REPO_PATH = newConfig.repoPath;
+        appConfig.repoPath = newConfig.repoPath;
       }
       if (newConfig.codebaseOverviewPath) {
-        process.env.CODEBASE_OVERVIEW_PATH = newConfig.codebaseOverviewPath;
+        appConfig.codebaseOverviewPath = newConfig.codebaseOverviewPath;
       }
 
       // Return the updated configuration
-      return {
-        repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
-        githubRepoBaseUrl:
-          process.env.GITHUB_REPO_BASE_URL || "https://github.com/luketchang/ticketing",
-        codebaseOverviewPath:
-          process.env.CODEBASE_OVERVIEW_PATH ||
-          "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-      };
+      return appConfig;
     }
   );
 
