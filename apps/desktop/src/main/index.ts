@@ -1,7 +1,10 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
+import { AgentConfigView } from "@triage/agent/src/config.js";
+import { CommonConfigView } from "@triage/common/src/config.js";
 import { app, BrowserWindow, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
+import { ElectronConfigProvider } from "./electron-config.js";
 import {
   cleanupAgentHandlers,
   cleanupConfigHandlers,
@@ -60,6 +63,11 @@ function createWindow(): BrowserWindow {
 
   return mainWindow;
 }
+
+const configProvider = new ElectronConfigProvider();
+await configProvider.init(["openai.apiKey"]); // preload secrets
+export const commonCfg = new CommonConfigView(configProvider);
+export const agentCfg = new AgentConfigView(configProvider);
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
