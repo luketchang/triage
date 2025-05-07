@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { TimeRange, TimeRangePreset } from "../types";
-import { formatDate } from "../utils/formatters";
+import { TimeRange, TimeRangePreset } from "../types/index.js";
+import { formatDate } from "../utils/formatters.js";
 
 export const DEFAULT_START_DATE = new Date("2025-04-16T22:00:00Z");
 export const DEFAULT_END_DATE = new Date("2025-04-17T03:00:00Z");

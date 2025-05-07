@@ -1,5 +1,5 @@
-import { ChatIcon, DashboardsIcon, LogsIcon, TracesIcon } from "../icons";
-import { TabType } from "../types";
+import { ChatIcon, DashboardsIcon, LogsIcon, TracesIcon } from "../icons/index.js";
+import { TabType } from "../types/index.js";
 
 interface NavigationSidebarProps {
   activeTab: TabType;

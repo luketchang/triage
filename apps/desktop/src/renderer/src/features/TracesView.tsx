@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import TimeRangePicker from "../components/TimeRangePicker";
-import { FacetData, UIServiceLatency, UISpan, UITrace } from "../types";
-import { formatDate } from "../utils/formatters";
+import TimeRangePicker from "../components/TimeRangePicker.js";
+import { FacetData, UIServiceLatency, UISpan, UITrace } from "../types/index.js";
+import { formatDate } from "../utils/formatters.js";
 
 interface TracesViewProps {
   selectedTrace: UITrace | null;

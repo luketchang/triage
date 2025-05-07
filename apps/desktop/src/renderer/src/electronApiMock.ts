@@ -8,7 +8,7 @@ import {
   LogsWithPagination,
   TraceQueryParams,
   TracesWithPagination,
-} from "./types";
+} from "./types/index.js";
 
 // Define a local version of PostprocessedLogSearchInput to avoid import issues
 export interface PostprocessedLogSearchInput {
