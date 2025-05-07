@@ -1,29 +1,16 @@
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
-
 import { config } from "dotenv";
+import path from "path";
 import { z } from "zod";
 
-// Look for .env in the repo root (three directories up from packages/config)
-const repoRoot = path.resolve(__dirname, "../../../");
-const envPath = path.join(repoRoot, ".env");
-console.info(`Loading .env file from: ${envPath}`);
-console.info(`Current working directory: ${process.cwd()}`);
-console.info(`.env file exists: ${fs.existsSync(envPath)}`);
-
-const result = config({ path: envPath });
-console.info(`Environment variables after loading:`, {
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY ? "Set" : "Not set",
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? "Set" : "Not set",
-});
+const envPath = path.resolve(__dirname, "../../../.env");
+config({ path: envPath });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["production", "development", "test"]).default("development"),
   PORT: z.string().default("3001"),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   PROCESS_LABEL: z.string().default("oncall-api"),
-  // Make these optional in development mode
   OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   GOOGLE_API_KEY: z.string().optional(),
@@ -50,8 +37,8 @@ type EnvConfig = z.infer<typeof envSchema>;
 
 function validateEnv(): EnvConfig {
   // Allow skipping validation in development environments
-  if (process.env.SKIP_ENV_VALIDATION === "true" || process.env.NODE_ENV === "development") {
-    console.info("Skipping environment validation in development mode");
+  if (process.env.SKIP_ENV_VALIDATION === "true") {
+    console.info("Skipping environment validation");
     return envSchema.partial().parse(process.env) as EnvConfig;
   }
 
