@@ -42,74 +42,84 @@ export function isExcluded(filePath: string): boolean {
 }
 
 /**
- * Collects files from a directory using repomix output
+ * Collects files from a directory, filtering by allowed extensions
  */
 export async function collectFiles(
   directory: string,
   allowedExtensions: string[],
-  repoRoot: string,
-  repomixOutput: string
+  repoRoot: string
 ): Promise<CollectedFiles> {
   const fileTree: string[] = [];
   const pathToSourceCode: Record<string, string> = {};
 
-  try {
-    // Extract directory structure
-    const dirStructureMatch = repomixOutput.match(
-      /<directory_structure>([\s\S]*?)<\/directory_structure>/
-    );
-    if (dirStructureMatch && dirStructureMatch[1]) {
-      const allPaths = dirStructureMatch[1].trim().split("\n");
-      // Filter paths to only include those under the target directory
-      const relativeDir = path.relative(repoRoot, directory);
-      fileTree.push(...allPaths.filter((p) => p.startsWith(relativeDir)));
+  const processDirectory = async (
+    dirPath: string,
+    depth = 0,
+    maxDepth = 5,
+    maxFiles = 100
+  ): Promise<void> => {
+    if (depth > maxDepth || Object.keys(pathToSourceCode).length >= maxFiles) {
+      return;
     }
 
-    // Extract file contents
-    const fileMatches = repomixOutput.matchAll(/<file path="([^"]+)">([\s\S]*?)<\/file>/g);
-    for (const match of fileMatches) {
-      const [, filePath, content] = match;
-      if (filePath && content) {
-        const relativePath = path.relative(repoRoot, filePath);
-        if (relativePath.startsWith(directory)) {
-          const ext = path.extname(filePath);
-          if (allowedExtensions.includes(ext)) {
-            pathToSourceCode[relativePath] = content;
+    const dirEntries = await fs.readdir(dirPath, { withFileTypes: true });
+
+    for (const entry of dirEntries) {
+      const entryPath = path.join(dirPath, entry.name);
+      const relativePath = path.relative(repoRoot, entryPath);
+
+      if (entry.isDirectory()) {
+        // Skip hidden directories and node_modules
+        if (entry.name.startsWith(".") || entry.name === "node_modules") {
+          continue;
+        }
+
+        fileTree.push(`${" ".repeat(depth * 2)}📁 ${entry.name}/`);
+        await processDirectory(entryPath, depth + 1, maxDepth, maxFiles);
+      } else if (entry.isFile()) {
+        const ext = path.extname(entry.name);
+        if (allowedExtensions.includes(ext)) {
+          fileTree.push(`${" ".repeat(depth * 2)}📄 ${entry.name}`);
+
+          if (Object.keys(pathToSourceCode).length < maxFiles) {
+            try {
+              const stats = await fs.stat(entryPath);
+              if (stats.size <= MAX_FILE_SIZE) {
+                const content = await fs.readFile(entryPath, "utf-8");
+                pathToSourceCode[relativePath] = content;
+              } else {
+                pathToSourceCode[relativePath] = `File too large to include (${stats.size} bytes)`;
+              }
+            } catch (error) {
+              logger.error(`Error reading file ${entryPath}: ${error}`);
+            }
           }
         }
       }
     }
+  };
 
-    return { fileTree, pathToSourceCode };
-  } catch (error) {
-    logger.error(`Error parsing repomix output: ${error}`);
-    return { fileTree: [], pathToSourceCode: {} };
-  }
+  await processDirectory(directory);
+  return { fileTree, pathToSourceCode };
 }
 
 /**
- * Reads source code from a list of file paths using repomix output
+ * Reads source code from a list of file paths
  */
-export async function getSourceCodeFromPaths(
-  filePaths: string[],
-  repomixOutput: string
-): Promise<Record<string, string>> {
+export async function getSourceCodeFromPaths(filePaths: string[]): Promise<Record<string, string>> {
   const pathToSourceCode: Record<string, string> = {};
 
-  try {
-    const fileMatches = repomixOutput.matchAll(/<file path="([^"]+)">([\s\S]*?)<\/file>/g);
-    for (const match of fileMatches) {
-      const [, filePath, content] = match;
-      if (filePath && content && filePaths.includes(filePath)) {
-        pathToSourceCode[filePath] = content;
-      }
+  for (const filePath of filePaths) {
+    try {
+      const content = await fs.readFile(filePath, "utf-8");
+      pathToSourceCode[filePath] = content;
+    } catch (error) {
+      pathToSourceCode[filePath] = `Error reading file: ${error}`;
+      logger.error(`Could not read file ${filePath}: ${error}`);
     }
-
-    return pathToSourceCode;
-  } catch (error) {
-    logger.error(`Error parsing repomix output: ${error}`);
-    return {};
   }
+
+  return pathToSourceCode;
 }
 
 /**

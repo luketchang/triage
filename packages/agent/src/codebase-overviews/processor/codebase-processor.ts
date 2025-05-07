@@ -2,7 +2,6 @@ import { Model, getModelWrapper, logger } from "@triage/common";
 import { generateText } from "ai";
 import * as fs from "fs/promises";
 import * as path from "path";
-import { runCli, type CliOptions } from "repomix";
 import { SelectedModules, selectedModulesSchema } from "../types";
 import {
   createDirectorySummaryPrompt,
@@ -31,7 +30,6 @@ export class CodebaseProcessor {
   private outputDir: string;
   private systemDescription: string;
   private allowedExtensions: string[];
-  private repomixOutput: string | null = null;
 
   constructor(llm: Model, repoPath: string, outputDir: string, systemDescription = "") {
     this.llm = llm;
@@ -180,26 +178,12 @@ export class CodebaseProcessor {
     await fs.mkdir(this.outputDir, { recursive: true });
 
     try {
-      // Call repomix once to get the full codebase overview
-      const repomixOutputPath = path.join(this.outputDir, "temp-repomix-output.xml");
-      const options = {
-        output: repomixOutputPath,
-        style: "xml",
-        compress: true,
-        quiet: true,
-        include: this.allowedExtensions.map((ext) => `**/*${ext}`).join(","),
-      } as CliOptions;
-
-      await runCli([this.repoPath], this.repoPath, options);
-      this.repomixOutput = await fs.readFile(repomixOutputPath, "utf-8");
-      await fs.unlink(repomixOutputPath);
-
-      // Extract file tree from repomix output
-      const dirStructureMatch = this.repomixOutput.match(
-        /<directory_structure>([\s\S]*?)<\/directory_structure>/
+      // Collect files from the repository
+      const { fileTree: repoFileTree } = await collectFiles(
+        this.repoPath,
+        this.allowedExtensions,
+        this.repoPath
       );
-      const repoFileTree =
-        dirStructureMatch && dirStructureMatch[1] ? dirStructureMatch[1].trim().split("\n") : [];
 
       // Identify service directories
       const serviceDirs = await this.identifyTopLevel(this.repoPath, repoFileTree);
@@ -223,8 +207,7 @@ export class CodebaseProcessor {
         const { fileTree: dirFileTree, pathToSourceCode } = await collectFiles(
           directory,
           this.allowedExtensions,
-          this.repoPath,
-          this.repomixOutput
+          this.repoPath
         );
 
         const summary = await this.generateDirectorySummary(
