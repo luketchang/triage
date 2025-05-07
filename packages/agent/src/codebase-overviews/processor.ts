@@ -61,7 +61,7 @@ export class CodebaseProcessor {
         tools: {
           selectedModules: selectedModulesTool,
         },
-        toolChoice: "auto",
+        toolChoice: "required",
       });
 
       if (!toolCalls || toolCalls.length === 0) {

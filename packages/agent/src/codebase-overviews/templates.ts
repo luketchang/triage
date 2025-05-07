@@ -14,7 +14,7 @@ export function createDirectorySummaryPrompt(params: {
   }
 
   return `
-Your task is to create a comprehensive, detailed analysis of this directory of code files. Generate an in-depth technical walkthrough that explains exactly what this component does, its internal architecture, implementation details, and its relationship to the broader system.
+Your task is to create a comprehensive, detailed analysis of this directory of code files. Generate an in-depth technical walkthrough that explains exactly what this component does, its internal architecture, implementation details, and its relationship to the broader system. Your response should be well formatted using markdown and easily digestible by an engineer navigating the codebase.
 
 Additional Instructions:
 - Begin with a clear explanation of the component's purpose, architecture, and key responsibilities
@@ -50,7 +50,7 @@ export function createMergeSummariesPrompt(params: {
   }
 
   return `
-Create a comprehensive, technically detailed codebase walkthrough based on the component analyses provided. Your walkthrough should provide an in-depth understanding of the entire system's architecture, implementation details, and component interactions.
+Create a comprehensive, technically detailed codebase walkthrough based on the component analyses provided. Your walkthrough should provide an in-depth understanding of the entire system's architecture, implementation details, and component interactions. Your response should be well formatted using markdown and easily digestible by an engineer navigating the codebase.
 
 Additional Instructions:
 - Begin with a thorough overview of the system's purpose, architecture, and key components
