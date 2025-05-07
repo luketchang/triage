@@ -1,9 +1,9 @@
 import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { generateId, generateText } from "ai";
 
-import { AgentStreamUpdate, CodePostprocessingStep, CodeSearchStep } from "../../types";
-import { codePostprocessingToolSchema } from "../../types/tools";
-import { ensureSingleToolCall, formatCodeSearchSteps, normalizeFilePath } from "../utils";
+import { AgentStreamUpdate, CodePostprocessingStep, codePostprocessingToolSchema, CodeSearchStep } from "../types";
+
+import { ensureSingleToolCall, formatCodeSearchSteps, normalizeFilePath } from "./utils";
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from code.
