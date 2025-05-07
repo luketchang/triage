@@ -1,3 +1,14 @@
+import { Model, getModelWrapper, logger } from "@triage/common";
+import { generateText } from "ai";
+
+/**
+ * System prompt specific to the code summarization tasks
+ */
+export const SUMMARIZATION_SYSTEM_PROMPT = `
+You are an expert AI assistant that helps analyze codebases and generate comprehensive technical overviews. 
+Your task is to generate detailed summaries of code components and create a unified walkthrough of the entire system.
+`;
+
 /**
  * Generates a prompt for directory summary
  */
@@ -72,27 +83,63 @@ Conclude with a section that provides an end-to-end technical walkthrough of the
 }
 
 /**
- * Generates a prompt for top-level module identification
+ * Generate a summary for a specific directory
  */
-export function createTopLevelIdentificationPrompt(params: { repoFileTree: string }): string {
-  return `
-You are given the file tree of a repository. Your task is to identify upper-level directories that represent separate services, components, or top-level modules that should be analyzed individually in depth.
+export async function generateDirectorySummary(
+  model: Model,
+  systemDescription: string,
+  directory: string,
+  dirFileTree: string,
+  fileContents: Record<string, string>,
+  repoFileTree: string
+): Promise<string> {
+  const prompt = createDirectorySummaryPrompt({
+    systemDescription,
+    repoFileTree,
+    directory,
+    dirFileTree,
+    fileContents,
+  });
 
-Look for directories that represent:
-- Microservices
-- API services
-- Frontend applications
-- Backend services 
-- Shared libraries or utilities
-- Infrastructure configurations
-- Domain-specific modules
-- Major system components
+  try {
+    const { text } = await generateText({
+      model: getModelWrapper(model),
+      system: SUMMARIZATION_SYSTEM_PROMPT,
+      prompt,
+    });
 
-These directories are logically independent components that require in-depth technical analysis individually. Be thorough and include all potentially significant directories.
-
-Return a JSON array of directory paths (relative to the repository root) that should be treated as separate services or modules for detailed analysis. Prioritize recall over precision - be inclusive about which directories might contain important code. Note that you must choose directories not actual files.
-
-Repository File Tree:
-${params.repoFileTree}
-`;
+    return text;
+  } catch (error) {
+    logger.error(`Error generating directory summary: ${error}`);
+    return `Error generating summary for ${directory}: ${error}`;
+  }
 }
+
+/**
+ * Merge all directory summaries into a final document
+ */
+export async function mergeAllSummaries(
+  model: Model,
+  systemDescription: string,
+  summaries: Record<string, string>,
+  repoFileTree: string
+): Promise<string> {
+  const prompt = createMergeSummariesPrompt({
+    systemDescription,
+    repoFileTree,
+    summaries,
+  });
+
+  try {
+    const { text } = await generateText({
+      model: getModelWrapper(model),
+      system: SUMMARIZATION_SYSTEM_PROMPT,
+      prompt,
+    });
+
+    return text;
+  } catch (error) {
+    logger.error(`Error merging summaries: ${error}`);
+    return `Error generating final document: ${error}`;
+  }
+} 

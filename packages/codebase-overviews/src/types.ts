@@ -21,6 +21,6 @@ export const selectedModulesSchema = z.object({
 });
 
 export interface CollectedFiles {
-  fileTree: string[];
+  fileTree: string;
   pathToSourceCode: Record<string, string>;
 }

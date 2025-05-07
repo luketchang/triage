@@ -1,3 +1,4 @@
+// Ported from  https://github.com/yamadashy/repomix/blob/main/src/config/defaultIgnore.ts
 export const DEFAULT_IGNORELIST = [
   // Version control
   ".git/",

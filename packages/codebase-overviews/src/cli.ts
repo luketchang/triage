@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 
-import { Model } from "@triage/common";
+import { Model, VALID_MODELS } from "@triage/common";
 import { Command } from "commander";
 import fs from "fs";
 import path from "path";
 import { CodebaseProcessor } from "./processor";
 
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), "output");
-
 /**
  * Main CLI function for generating codebase overviews
  */
@@ -39,7 +38,13 @@ export async function main() {
   const options = program.opts();
   const repoPath = path.resolve(options.repoPath);
   const outputDir = path.resolve(options.output);
-  const model = options.model as Model;
+  const modelName = options.model;
+  // Validate that the model name is a valid Model from the enum
+  if (!VALID_MODELS.includes(modelName)) {
+    console.error(`Error: Invalid model name '${modelName}'`);
+    process.exit(1);
+  }
+  const model = modelName as Model;
   const systemDescription = options.systemDescription;
 
   // Verify the directory exists
