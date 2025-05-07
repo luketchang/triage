@@ -18,34 +18,17 @@ Your task is to create a comprehensive, detailed analysis of this directory of c
 
 Additional Instructions:
 - Begin with a clear explanation of the component's purpose, architecture, and key responsibilities
-- Include complete and detailed directory structures using code blocks
-- For each significant file or module, provide in-depth analysis explaining:
-  * Its purpose and implementation details
-  * Key functions, classes, and data structures
-  * How it interacts with other components
-  * Important algorithms, patterns, or design decisions
-- If the directory contains a service, thoroughly explain:
-  * Its data models and schemas
-  * API routes and their implementation
-  * Event publishers and listeners with exact event types
-  * Database interactions and data flow
-  * Error handling mechanisms
-- For configuration files, explain configuration options and their effects
-- Include relevant code snippets to illustrate key concepts
-- Explain architectural patterns and design decisions with technical justification
-- Be extremely thorough, detailed, and precise in your analysis
-- Use markdown formatting with headers, lists, and code blocks to organize the content
-- Focus on technical depth rather than high-level summary
+- Include complete and detailed directory structures using code blocks with the full file tree of the directory, with each file having comments on its functionality
+- Explain the key components of this service or module and how it may interact with other services or modules
 
 System Description: ${params.systemDescription}
 
 Overall Repository File Tree:
-----------------------------------------
 ${params.repoFileTree}
-----------------------------------------
 
 Processing Directory: ${params.directory}
-Directory File List:
+
+Directory File Tree:
 ${params.dirFileTree}
 
 Source Files (file path and content):
@@ -71,29 +54,10 @@ Create a comprehensive, technically detailed codebase walkthrough based on the c
 
 Additional Instructions:
 - Begin with a thorough overview of the system's purpose, architecture, and key components
-- Include detailed sections for each component with technical specifics about:
-  * Implementation details
-  * Data structures and models
-  * Business logic
-  * Communication patterns
-  * Database schemas and interactions
-- Include complete directory structures using code blocks
-- Provide detailed explanations of:
-  * Service communication mechanisms with exact event types and payloads
-  * Data flow between components
-  * Authentication and authorization mechanisms
-  * Error handling and validation approaches
-  * Environment configuration options
-- For microservices, explain in precise technical detail:
-  * Service boundaries and responsibilities
-  * Database schemas and data models
-  * API routes and endpoints
-  * Event publishers and subscribers
-- Show a complete event flow walkthrough with exact event types and payloads for key user scenarios
-- Explain development workflow, testing approaches, and deployment processes
-- Highlight important design patterns, architectural decisions, and their technical justifications
-- Include relevant code snippets to illustrate key concepts
-- Use markdown with headers, subheaders, code blocks, and lists for readability
+- Each summary you are provided should have its own very thorough and highly technical section with explaining the component's role in the system, its architecture, and a full file tree with comments for its files
+- After listing all subcomponents, provide a detailed walkthrough of the system's operation, including detailed explanations of data flow and service interactions for key user scenarios. This section should highlight how all the components work together and the low-level details of the inter-component interactions.
+- Focus on both the individual services in detail and the fine details of how the various components interact with each other
+- Include several examples of the overall system flow through various scenarios to illustrate
 
 System Description: ${params.systemDescription}
 

@@ -8,7 +8,7 @@ import {
   createTopLevelIdentificationPrompt,
 } from "./templates";
 import { SelectedModules, selectedModulesSchema } from "./types";
-import { collectFiles, generateTreeString, listMajorDirectories } from "./utils";
+import { collectFiles, getMajorDirectories } from "./utils";
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that helps analyze codebases and generate comprehensive overviews. Your task is to identify services and generate summaries of codebase components.
@@ -43,7 +43,7 @@ export class CodebaseProcessor {
    * Identify top level directories using LLM
    */
   private async identifyTopLevel(repoPath: string, repoFileTree: string[]): Promise<string[]> {
-    const treeStr = generateTreeString(repoFileTree);
+    const treeStr = repoFileTree.join("\n");
     logger.info(`File tree: ${treeStr}`);
 
     try {
@@ -123,9 +123,9 @@ export class CodebaseProcessor {
   ): Promise<string> {
     const prompt = createDirectorySummaryPrompt({
       systemDescription: this.systemDescription,
-      repoFileTree: generateTreeString(repoFileTree),
+      repoFileTree: repoFileTree.join("\n"),
       directory,
-      dirFileTree: generateTreeString(dirFileTree),
+      dirFileTree: dirFileTree.join("\n"),
       fileContents,
     });
 
@@ -152,7 +152,7 @@ export class CodebaseProcessor {
   ): Promise<string> {
     const prompt = createMergeSummariesPrompt({
       systemDescription: this.systemDescription,
-      repoFileTree: generateTreeString(repoFileTree),
+      repoFileTree: repoFileTree.join("\n"),
       summaries,
     });
 
@@ -178,7 +178,7 @@ export class CodebaseProcessor {
     await fs.mkdir(this.outputDir, { recursive: true });
 
     try {
-      // Collect files from the repository
+      // Collect files from the repository using the unified collectFiles function
       const { fileTree: repoFileTree } = await collectFiles(
         this.repoPath,
         this.allowedExtensions,
@@ -193,7 +193,7 @@ export class CodebaseProcessor {
         directoriesToProcess = serviceDirs;
         logger.info(`Identified service directories: ${directoriesToProcess}`);
       } else {
-        directoriesToProcess = await listMajorDirectories(this.repoPath);
+        directoriesToProcess = await getMajorDirectories(this.repoPath);
         logger.info(
           "No specific service directories identified; falling back to major directories."
         );

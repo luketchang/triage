@@ -1,124 +1,327 @@
 import { logger } from "@triage/common";
-import * as fs from "fs/promises";
-import * as path from "path";
-import { DEFAULT_IGNORELIST } from "./default-ignorelist";
-import { CollectedFiles } from "./types";
+import fs from "fs/promises";
+import { globby } from "globby";
+import path from "path";
+import { DEFAULT_IGNORELIST } from "./ignorelist";
 
-export const EXCLUDED_EXTENSIONS = [".json"];
+export type TreeNode = {
+  name: string;
+  children: TreeNode[];
+  isDirectory: boolean;
+};
 
-const MAX_FILE_SIZE = 1024 * 1024; // 1MB
-
-/**
- * Checks if a path should be excluded based on the EXCLUDED_DIRS set
- */
-export function isExcluded(filePath: string): boolean {
-  return DEFAULT_IGNORELIST.some((pattern) => filePath.includes(pattern));
+function createTreeNode(name: string, isDirectory: boolean): TreeNode {
+  return { name, children: [], isDirectory };
 }
 
-/**
- * Collects files from a directory, filtering by allowed extensions
- */
-export async function collectFiles(
-  directory: string,
-  allowedExtensions: string[],
-  repoRoot: string
-): Promise<CollectedFiles> {
-  const fileTree: string[] = [];
-  const pathToSourceCode: Record<string, string> = {};
+function addPathToTree(root: TreeNode, filePath: string) {
+  const parts = filePath.split(path.sep);
+  let current = root;
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (!part) continue; // Skip empty parts
 
-  const processDirectory = async (
-    dirPath: string,
-    depth = 0,
-    maxDepth = 5,
-    maxFiles = 100
-  ): Promise<void> => {
-    if (depth > maxDepth || Object.keys(pathToSourceCode).length >= maxFiles) {
-      return;
+    const isLast = i === parts.length - 1;
+    let child = current.children.find((c) => c.name === part);
+    if (!child) {
+      child = createTreeNode(part, !isLast);
+      current.children.push(child);
     }
-
-    const dirEntries = await fs.readdir(dirPath, { withFileTypes: true });
-
-    for (const entry of dirEntries) {
-      const entryPath = path.join(dirPath, entry.name);
-      const relativePath = path.relative(repoRoot, entryPath);
-
-      if (entry.isDirectory()) {
-        // Skip excluded directories
-        if (isExcluded(entryPath)) {
-          continue;
-        }
-
-        fileTree.push(`${" ".repeat(depth * 2)}${entry.name}/`);
-        await processDirectory(entryPath, depth + 1, maxDepth, maxFiles);
-      } else if (entry.isFile()) {
-        const ext = path.extname(entry.name);
-        if (allowedExtensions.includes(ext)) {
-          fileTree.push(`${" ".repeat(depth * 2)}${entry.name}`);
-
-          if (Object.keys(pathToSourceCode).length < maxFiles) {
-            try {
-              const stats = await fs.stat(entryPath);
-              if (stats.size <= MAX_FILE_SIZE) {
-                const content = await fs.readFile(entryPath, "utf-8");
-                pathToSourceCode[relativePath] = content;
-              } else {
-                pathToSourceCode[relativePath] = `File too large to include (${stats.size} bytes)`;
-              }
-            } catch (error) {
-              logger.error(`Error reading file ${entryPath}: ${error}`);
-            }
-          }
-        }
-      }
-    }
-  };
-
-  await processDirectory(directory);
-  return { fileTree, pathToSourceCode };
+    current = child;
+  }
 }
 
-/**
- * Reads source code from a list of file paths
- */
-export async function getSourceCodeFromPaths(filePaths: string[]): Promise<Record<string, string>> {
+function treeToString(node: TreeNode, prefix = ""): string {
+  let result = "";
+  for (const child of node.children.sort((a, b) => a.name.localeCompare(b.name))) {
+    result += `${prefix}${child.name}${child.isDirectory ? "/" : ""}\n`;
+    if (child.isDirectory) {
+      result += treeToString(child, prefix + "  ");
+    }
+  }
+  return result;
+}
+
+export async function getDirectoryStructure(repoPath: string): Promise<string> {
+  // Collect ignore patterns from .gitignore if present
+  let ignorePatterns = [...DEFAULT_IGNORELIST];
+  try {
+    const gitignore = await fs.readFile(path.join(repoPath, ".gitignore"), "utf8");
+    ignorePatterns = ignorePatterns.concat(
+      gitignore
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#"))
+    );
+  } catch {
+    // .gitignore not present, that's fine
+  }
+
+  // Find all files, ignoring patterns
+  const filePaths = await globby(["**/*"], {
+    cwd: repoPath,
+    ignore: ignorePatterns,
+    onlyFiles: true,
+    dot: true,
+    absolute: false,
+    followSymbolicLinks: false,
+  });
+
+  // Build tree
+  const root = createTreeNode("root", true);
+  for (const filePath of filePaths) {
+    addPathToTree(root, filePath);
+  }
+
+  // Convert to string, skip the artificial 'root' node
+  return treeToString(root).trim();
+}
+
+// Function to collect file contents
+export async function collectFileContents(
+  repoPath: string,
+  allowedExtensions: string[] = []
+): Promise<Record<string, string>> {
+  const MAX_FILE_SIZE = 1024 * 1024; // 1MB
+
+  // Collect ignore patterns from .gitignore if present
+  let ignorePatterns = [...DEFAULT_IGNORELIST];
+  try {
+    const gitignore = await fs.readFile(path.join(repoPath, ".gitignore"), "utf8");
+    ignorePatterns = ignorePatterns.concat(
+      gitignore
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#"))
+    );
+  } catch {
+    // .gitignore not present, that's fine
+  }
+
+  // Extension pattern for globby
+  const extensionPattern =
+    allowedExtensions.length > 0 ? allowedExtensions.map((ext) => `**/*${ext}`) : ["**/*"];
+
+  // Find all files matching extensions and not in ignored paths
+  const filePaths = await globby(extensionPattern, {
+    cwd: repoPath,
+    ignore: ignorePatterns,
+    onlyFiles: true,
+    dot: true,
+    absolute: false,
+    followSymbolicLinks: false,
+  });
+
   const pathToSourceCode: Record<string, string> = {};
 
+  // Collect file contents
   for (const filePath of filePaths) {
     try {
-      const content = await fs.readFile(filePath, "utf-8");
-      pathToSourceCode[filePath] = content;
+      const fullPath = path.join(repoPath, filePath);
+      const stats = await fs.stat(fullPath);
+
+      if (stats.size <= MAX_FILE_SIZE) {
+        const content = await fs.readFile(fullPath, "utf-8");
+        pathToSourceCode[filePath] = content;
+      } else {
+        pathToSourceCode[filePath] = `File too large to include (${stats.size} bytes)`;
+      }
     } catch (error) {
-      pathToSourceCode[filePath] = `Error reading file: ${error}`;
-      logger.error(`Could not read file ${filePath}: ${error}`);
+      logger.error(`Error reading file ${filePath}: ${error}`);
     }
   }
 
   return pathToSourceCode;
 }
 
-/**
- * Generates a tree string representation from a list of file paths
- */
-export function generateTreeString(filePaths: string[]): string {
-  if (filePaths.length === 0) {
-    return "No files found";
+// Get major directories (top-level directories that aren't ignored)
+export async function getMajorDirectories(repoPath: string): Promise<string[]> {
+  try {
+    const entries = await fs.readdir(repoPath, { withFileTypes: true });
+    const majorDirs: string[] = [];
+
+    // Get ignore patterns from .gitignore
+    let ignorePatterns = [...DEFAULT_IGNORELIST];
+    try {
+      const gitignore = await fs.readFile(path.join(repoPath, ".gitignore"), "utf8");
+      ignorePatterns = ignorePatterns.concat(
+        gitignore
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line && !line.startsWith("#"))
+      );
+    } catch {
+      // .gitignore not present, that's fine
+    }
+
+    // Create a simple matcher function to check if a path is ignored
+    const isIgnored = (dirName: string) => {
+      return ignorePatterns.some((pattern) => {
+        const simplifiedPattern = pattern.replace("**/", "").replace("/**", "");
+        return dirName === simplifiedPattern || dirName.startsWith(simplifiedPattern + "/");
+      });
+    };
+
+    for (const entry of entries) {
+      if (entry.isDirectory() && !isIgnored(entry.name)) {
+        majorDirs.push(path.join(repoPath, entry.name));
+      }
+    }
+
+    return majorDirs;
+  } catch (error) {
+    logger.error(`Error listing major directories: ${error}`);
+    return [];
   }
-  return filePaths.join("\n");
 }
 
 /**
- * Lists major directories in a repository
+ * Collects files from a directory, builds a tree structure, and gathers file contents
+ * Returns both a file tree and source code map in the same format as the original collectFiles
  */
-export async function listMajorDirectories(repoPath: string): Promise<string[]> {
-  const dirEntries = await fs.readdir(repoPath, { withFileTypes: true });
-  const majorDirs: string[] = [];
+export async function collectFiles(
+  directory: string,
+  allowedExtensions: string[],
+  repoRoot: string
+): Promise<{ fileTree: string[]; pathToSourceCode: Record<string, string> }> {
+  const MAX_FILE_SIZE = 1024 * 1024; // 1MB
+  const MAX_DEPTH = 10;
 
-  for (const entry of dirEntries) {
-    const entryPath = path.join(repoPath, entry.name);
-    if (entry.isDirectory() && !isExcluded(entryPath)) {
-      majorDirs.push(entryPath);
+  // Hardcoded common directories to always ignore (to ensure consistent behavior)
+  const alwaysIgnoreDirs = [".git", "node_modules", ".cache", "dist", "build", "coverage"];
+
+  // Collect ignore patterns from .gitignore if present
+  let ignorePatterns = [...DEFAULT_IGNORELIST];
+  try {
+    const gitignore = await fs.readFile(path.join(repoRoot, ".gitignore"), "utf8");
+    ignorePatterns = ignorePatterns.concat(
+      gitignore
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#"))
+    );
+  } catch {
+    // .gitignore not present, that's fine
+  }
+
+  // This is a simplified check for ignoring a path - just check if any component of the path
+  // matches our ignore patterns or directories
+  const isIgnored = (pathToCheck: string): boolean => {
+    // Get path relative to repo root for pattern matching
+    const relativePath = path.relative(repoRoot, pathToCheck);
+    const pathParts = relativePath.split(path.sep);
+
+    // Check if any part of the path matches the always-ignore directories
+    if (pathParts.some((part) => alwaysIgnoreDirs.includes(part))) {
+      return true;
+    }
+
+    // Check against ignore patterns
+    for (const pattern of ignorePatterns) {
+      // Handle simple directory names (like 'node_modules')
+      if (pathParts.includes(pattern.replace(/\/$/, ""))) {
+        return true;
+      }
+
+      // Handle patterns with wildcards
+      if (pattern.includes("*")) {
+        const regexString = pattern
+          .replace(/\./g, "\\.")
+          .replace(/\*\*/g, ".*")
+          .replace(/\*/g, "[^/]*");
+
+        const regex = new RegExp(`^${regexString}$`);
+
+        // Check each part of the path
+        if (pathParts.some((part) => regex.test(part))) {
+          return true;
+        }
+
+        // Check the full path
+        if (regex.test(relativePath)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  // For content collection, find files with matching extensions
+  const filePaths = await globby(
+    allowedExtensions.length > 0 ? allowedExtensions.map((ext) => `**/*${ext}`) : ["**/*"],
+    {
+      cwd: directory,
+      ignore: ignorePatterns,
+      onlyFiles: true,
+      dot: true,
+      absolute: false,
+      followSymbolicLinks: false,
+    }
+  );
+
+  // For tree building, we'll use a recursive function to traverse directories
+  const fileTree: string[] = [];
+  const pathToSourceCode: Record<string, string> = {};
+
+  // Recursive function to build the file tree
+  const processDirectory = async (dirPath: string, depth = 0): Promise<void> => {
+    if (depth > MAX_DEPTH) return;
+
+    // Skip this directory if it's in our ignore list
+    if (isIgnored(dirPath)) {
+      return;
+    }
+
+    try {
+      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const entryPath = path.join(dirPath, entry.name);
+
+        // Skip if this entry should be ignored
+        if (isIgnored(entryPath)) {
+          continue;
+        }
+
+        if (entry.isDirectory()) {
+          fileTree.push(`${" ".repeat(depth * 2)}${entry.name}/`);
+          await processDirectory(entryPath, depth + 1);
+        } else {
+          fileTree.push(`${" ".repeat(depth * 2)}${entry.name}`);
+        }
+      }
+    } catch (error) {
+      logger.error(`Error reading directory ${dirPath}: ${error}`);
+    }
+  };
+
+  // Start processing from the root directory
+  await processDirectory(directory);
+
+  // Collect file contents for files with allowed extensions
+  for (const filePath of filePaths) {
+    try {
+      const fullPath = path.join(directory, filePath);
+      const relativePath = path.relative(repoRoot, fullPath);
+
+      // Skip ignored files
+      if (isIgnored(fullPath)) {
+        continue;
+      }
+
+      const stats = await fs.stat(fullPath);
+
+      if (stats.size <= MAX_FILE_SIZE) {
+        const content = await fs.readFile(fullPath, "utf-8");
+        pathToSourceCode[relativePath] = content;
+      } else {
+        pathToSourceCode[relativePath] = `File too large to include (${stats.size} bytes)`;
+      }
+    } catch (error) {
+      logger.error(`Error reading file ${filePath}: ${error}`);
     }
   }
 
-  return majorDirs;
+  return { fileTree, pathToSourceCode };
 }
