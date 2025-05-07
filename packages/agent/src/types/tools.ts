@@ -123,12 +123,12 @@ export const logSearchInputSchema = z.object({
   start: z
     .string()
     .describe(
-      "Start time in ISO 8601 format with timezone (e.g., '2025-03-19T04:10:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
+      "Start time in ISO 8601 format with timezone (e.g., '2025-03-19T04:10:00Z'). Be generous and give -15 minutes if user provided exact time."
     ),
   end: z
     .string()
     .describe(
-      "End time in ISO 8601 format with timezone (e.g., '2025-03-19T04:40:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
+      "End time in ISO 8601 format with timezone (e.g., '2025-03-19T04:40:00Z'). Be generous and give +15 minutes if user provided exact time."
     ),
   query: z.string().describe("Log search query in the observability platform query language"),
   limit: z.number().describe("Maximum number of logs to return, default to 500"),

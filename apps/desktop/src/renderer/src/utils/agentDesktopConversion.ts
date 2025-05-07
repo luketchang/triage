@@ -1,9 +1,4 @@
-import {
-  ChatMessage as AgentChatMessage,
-  AgentStep,
-  AgentStepType,
-  LogSearchStep,
-} from "@triage/agent";
+import { ChatMessage as AgentChatMessage, AgentStep, LogSearchStep } from "@triage/agent";
 import {
   AgentAssistantMessage,
   AgentStage,
@@ -36,7 +31,7 @@ export function convertAgentStepsToStages(steps?: AgentStep[] | null): AgentStag
   if (!Array.isArray(steps) || !steps.length) return [];
 
   const stages: AgentStage[] = [];
-  let currentStageType: AgentStepType | null = null;
+  let currentStageType: AgentStep["type"] | null = null;
   let currentStage: AgentStage | null = null;
 
   for (const step of steps) {
