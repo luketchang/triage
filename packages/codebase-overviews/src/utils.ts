@@ -55,10 +55,6 @@ export async function collectFiles(
   repoRoot: string
 ): Promise<{ fileTree: string; pathToSourceCode: Record<string, string> }> {
   const MAX_FILE_SIZE = 1024 * 1024; // 1MB
-  const MAX_DEPTH = 10;
-
-  // Hardcoded common directories to always ignore (to ensure consistent behavior)
-  const alwaysIgnoreDirs = [".git", "node_modules", ".cache", "dist", "build", "coverage"];
 
   // Collect ignore patterns from .gitignore if present
   let ignorePatterns = [...DEFAULT_IGNORELIST];
@@ -74,49 +70,6 @@ export async function collectFiles(
     // .gitignore not present, that's fine
   }
 
-  // This is a simplified check for ignoring a path - just check if any component of the path
-  // matches our ignore patterns or directories
-  const isIgnored = (pathToCheck: string): boolean => {
-    // Get path relative to repo root for pattern matching
-    const relativePath = path.relative(repoRoot, pathToCheck);
-    const pathParts = relativePath.split(path.sep);
-
-    // Check if any part of the path matches the always-ignore directories
-    if (pathParts.some((part) => alwaysIgnoreDirs.includes(part))) {
-      return true;
-    }
-
-    // Check against ignore patterns
-    for (const pattern of ignorePatterns) {
-      // Handle simple directory names (like 'node_modules')
-      if (pathParts.includes(pattern.replace(/\/$/, ""))) {
-        return true;
-      }
-
-      // Handle patterns with wildcards
-      if (pattern.includes("*")) {
-        const regexString = pattern
-          .replace(/\./g, "\\.")
-          .replace(/\*\*/g, ".*")
-          .replace(/\*/g, "[^/]*");
-
-        const regex = new RegExp(`^${regexString}$`);
-
-        // Check each part of the path
-        if (pathParts.some((part) => regex.test(part))) {
-          return true;
-        }
-
-        // Check the full path
-        if (regex.test(relativePath)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  };
-
   // For content collection, find files with matching extensions
   const filePaths = await globby(
     allowedExtensions.length > 0 ? allowedExtensions.map((ext) => `**/*${ext}`) : ["**/*"],
@@ -130,56 +83,38 @@ export async function collectFiles(
     }
   );
 
-  // For tree building, we'll use a recursive function to traverse directories
+  // For directory tree, use globby to get all directories
+  const dirPaths = await globby("**/*", {
+    cwd: directory,
+    ignore: ignorePatterns,
+    onlyDirectories: true,
+    dot: true,
+    absolute: false,
+    followSymbolicLinks: false,
+  });
+
+  // Build the file tree structure
   const fileTreeLines: string[] = [];
   const pathToSourceCode: Record<string, string> = {};
 
-  // Recursive function to build the file tree
-  const processDirectory = async (dirPath: string, depth = 0): Promise<void> => {
-    if (depth > MAX_DEPTH) return;
+  // Sort paths to ensure parent directories come before their children
+  const sortedPaths = [...dirPaths, ...filePaths].sort();
 
-    // Skip this directory if it's in our ignore list
-    if (isIgnored(dirPath)) {
-      return;
-    }
+  // Build the tree structure
+  for (const relativePath of sortedPaths) {
+    const pathParts = relativePath.split(path.sep);
+    const depth = pathParts.length - 1;
+    const name = pathParts[pathParts.length - 1];
+    const isDirectory = dirPaths.includes(relativePath);
 
-    try {
-      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    fileTreeLines.push(`${" ".repeat(depth * 2)}${name}${isDirectory ? "/" : ""}`);
+  }
 
-      for (const entry of entries) {
-        const entryPath = path.join(dirPath, entry.name);
-
-        // Skip if this entry should be ignored
-        if (isIgnored(entryPath)) {
-          continue;
-        }
-
-        if (entry.isDirectory()) {
-          fileTreeLines.push(`${" ".repeat(depth * 2)}${entry.name}/`);
-          await processDirectory(entryPath, depth + 1);
-        } else {
-          fileTreeLines.push(`${" ".repeat(depth * 2)}${entry.name}`);
-        }
-      }
-    } catch (error) {
-      logger.error(`Error reading directory ${dirPath}: ${error}`);
-    }
-  };
-
-  // Start processing from the root directory
-  await processDirectory(directory);
-
-  // Collect file contents for files with allowed extensions
+  // Collect file contents
   for (const filePath of filePaths) {
     try {
       const fullPath = path.join(directory, filePath);
       const relativePath = path.relative(repoRoot, fullPath);
-
-      // Skip ignored files
-      if (isIgnored(fullPath)) {
-        continue;
-      }
-
       const stats = await fs.stat(fullPath);
 
       if (stats.size <= MAX_FILE_SIZE) {

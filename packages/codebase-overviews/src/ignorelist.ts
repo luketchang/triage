@@ -1,5 +1,12 @@
 // Ported from  https://github.com/yamadashy/repomix/blob/main/src/config/defaultIgnore.ts
 export const DEFAULT_IGNORELIST = [
+  "**/node_modules/**",
+  "**/.git/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/coverage/**",
+  "**/.cache/**",
+
   // Version control
   ".git/",
   ".hg/",
