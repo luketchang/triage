@@ -11,7 +11,7 @@
     "lint:check": "eslint \"src/**/*.{js,ts}\" --max-warnings 99",
     "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix --max-warnings 99",
     "check-types": "tsc --noEmit",
-    "generate-overview": "tsx src/codebase-overviews/cli.ts"
+    "generate-overview": "tsx src/cli.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",

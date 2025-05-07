@@ -4,44 +4,6 @@ import { globby } from "globby";
 import path from "path";
 import { DEFAULT_IGNORELIST } from "./ignorelist";
 
-export type TreeNode = {
-  name: string;
-  children: TreeNode[];
-  isDirectory: boolean;
-};
-
-function createTreeNode(name: string, isDirectory: boolean): TreeNode {
-  return { name, children: [], isDirectory };
-}
-
-function addPathToTree(root: TreeNode, filePath: string) {
-  const parts = filePath.split(path.sep);
-  let current = root;
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (!part) continue; // Skip empty parts
-
-    const isLast = i === parts.length - 1;
-    let child = current.children.find((c) => c.name === part);
-    if (!child) {
-      child = createTreeNode(part, !isLast);
-      current.children.push(child);
-    }
-    current = child;
-  }
-}
-
-function treeToString(node: TreeNode, prefix = ""): string {
-  let result = "";
-  for (const child of node.children.sort((a, b) => a.name.localeCompare(b.name))) {
-    result += `${prefix}${child.name}${child.isDirectory ? "/" : ""}\n`;
-    if (child.isDirectory) {
-      result += treeToString(child, prefix + "  ");
-    }
-  }
-  return result;
-}
-
 // Get major directories (top-level directories that aren't ignored)
 export async function getMajorDirectories(repoPath: string): Promise<string[]> {
   try {
@@ -55,8 +17,8 @@ export async function getMajorDirectories(repoPath: string): Promise<string[]> {
       ignorePatterns = ignorePatterns.concat(
         gitignore
           .split("\n")
-          .map((line: string) => line.trim())
-          .filter((line: string) => line && !line.startsWith("#"))
+          .map((line) => line.trim())
+          .filter((line) => line && !line.startsWith("#"))
       );
     } catch {
       // .gitignore not present, that's fine
@@ -85,7 +47,7 @@ export async function getMajorDirectories(repoPath: string): Promise<string[]> {
 
 /**
  * Collects files from a directory, builds a tree structure, and gathers file contents
- * Returns both a file tree and source code map
+ * Returns both a file tree and source code map in the same format as the original collectFiles
  */
 export async function collectFiles(
   directory: string,
@@ -95,10 +57,8 @@ export async function collectFiles(
   const MAX_FILE_SIZE = 1024 * 1024; // 1MB
   const MAX_DEPTH = 10;
 
-  // Extract common ignore directories from DEFAULT_IGNORELIST
-  const alwaysIgnoreDirs = DEFAULT_IGNORELIST.filter(
-    (item) => item.endsWith("/") && !item.includes("*")
-  ).map((item) => item.replace("/", ""));
+  // Hardcoded common directories to always ignore (to ensure consistent behavior)
+  const alwaysIgnoreDirs = [".git", "node_modules", ".cache", "dist", "build", "coverage"];
 
   // Collect ignore patterns from .gitignore if present
   let ignorePatterns = [...DEFAULT_IGNORELIST];
@@ -107,8 +67,8 @@ export async function collectFiles(
     ignorePatterns = ignorePatterns.concat(
       gitignore
         .split("\n")
-        .map((line: string) => line.trim())
-        .filter((line: string) => line && !line.startsWith("#"))
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#"))
     );
   } catch {
     // .gitignore not present, that's fine
@@ -122,7 +82,7 @@ export async function collectFiles(
     const pathParts = relativePath.split(path.sep);
 
     // Check if any part of the path matches the always-ignore directories
-    if (pathParts.some((part: string) => alwaysIgnoreDirs.includes(part))) {
+    if (pathParts.some((part) => alwaysIgnoreDirs.includes(part))) {
       return true;
     }
 
@@ -143,7 +103,7 @@ export async function collectFiles(
         const regex = new RegExp(`^${regexString}$`);
 
         // Check each part of the path
-        if (pathParts.some((part: string) => regex.test(part))) {
+        if (pathParts.some((part) => regex.test(part))) {
           return true;
         }
 
