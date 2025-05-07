@@ -15,13 +15,13 @@ interface FactsSidebarProps {
 }
 
 const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClose }) => {
-  const { config, isLoading } = useAppConfig();
+  const { appConfig, isLoading } = useAppConfig();
   const [codeFactElements, setCodeFactElements] = useState<React.ReactNode[]>([]);
 
   useEffect(() => {
-    if (isLoading || !config) return;
+    if (isLoading || !appConfig) return;
     const elements = codeFacts.map((fact, index) => {
-      const githubUrl = filepathToGitHubUrl(config.githubRepoBaseUrl, fact.filepath, {
+      const githubUrl = filepathToGitHubUrl(appConfig.githubRepoBaseUrl, fact.filepath, {
         startLine: fact.startLine,
         endLine: fact.endLine,
       });
@@ -82,7 +82,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
       );
     });
     setCodeFactElements(elements);
-  }, [codeFacts, config, isLoading]);
+  }, [codeFacts, appConfig, isLoading]);
 
   const renderLogFact = (fact: LogPostprocessingFact, index: number) => {
     const datadogUrl = logSearchInputToDatadogLogsViewUrl(fact);

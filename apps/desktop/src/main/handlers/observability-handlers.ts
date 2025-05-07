@@ -2,12 +2,12 @@ import { ipcMain } from "electron";
 import {
   FacetData,
   getObservabilityPlatform,
-  IntegrationType,
   LogQueryParams,
   LogsWithPagination,
   TraceQueryParams,
   TracesWithPagination,
 } from "../../renderer/src/types/index.js";
+import { DEFAULT_INTEGRATION_TYPE } from "../tmp-hardcode.js";
 
 /**
  * Set up all IPC handlers related to observability (logs, traces)
@@ -22,12 +22,7 @@ export function setupObservabilityHandlers(): void {
       try {
         console.info("Fetching logs with params:", params);
 
-        // Get the configured observability platform
-        const platformType =
-          (process.env.OBSERVABILITY_PLATFORM as IntegrationType) || IntegrationType.DATADOG;
-
-        // Get the observability platform implementation
-        const platform = getObservabilityPlatform(platformType);
+        const platform = getObservabilityPlatform(DEFAULT_INTEGRATION_TYPE);
 
         // Call the real platform API
         const result = await platform.fetchLogs({
@@ -53,12 +48,7 @@ export function setupObservabilityHandlers(): void {
       try {
         console.info("Getting log facet values for time range:", { start, end });
 
-        // Get the configured observability platform
-        const platformType =
-          (process.env.OBSERVABILITY_PLATFORM as IntegrationType) || IntegrationType.DATADOG;
-
-        // Get the observability platform implementation
-        const platform = getObservabilityPlatform(platformType);
+        const platform = getObservabilityPlatform(DEFAULT_INTEGRATION_TYPE);
 
         // Call the real platform API
         const logFacetsMap = await platform.getLogsFacetValues(start, end);
@@ -85,12 +75,8 @@ export function setupObservabilityHandlers(): void {
       try {
         console.info("Fetching traces with params:", params);
 
-        // Get the configured observability platform
-        const platformType =
-          (process.env.OBSERVABILITY_PLATFORM as IntegrationType) || IntegrationType.DATADOG;
-
         // Get the observability platform implementation
-        const platform = getObservabilityPlatform(platformType);
+        const platform = getObservabilityPlatform(DEFAULT_INTEGRATION_TYPE);
 
         // Call the real platform API (assuming the method exists)
         const result = await platform.fetchTraces({
@@ -116,12 +102,7 @@ export function setupObservabilityHandlers(): void {
       try {
         console.info("Getting span facet values for time range:", { start, end });
 
-        // Get the configured observability platform
-        const platformType =
-          (process.env.OBSERVABILITY_PLATFORM as IntegrationType) || IntegrationType.DATADOG;
-
-        // Get the observability platform implementation
-        const platform = getObservabilityPlatform(platformType);
+        const platform = getObservabilityPlatform(DEFAULT_INTEGRATION_TYPE);
 
         // Call the real platform API (assuming the method exists)
         const spanFacetsMap = await platform.getSpansFacetValues(start, end);

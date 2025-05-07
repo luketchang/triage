@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
-import { config } from "@triage/config";
+import { appConfig } from "@triage/config";
 import { Command } from "commander";
 import { DatadogPlatform, GrafanaPlatform, LogsWithPagination } from "../src";
 
@@ -116,7 +116,7 @@ async function main(): Promise<void> {
 
   // Check if platform configs are available
   if (options.platform === "datadog" || options.platform === "both") {
-    if (!config.datadog?.apiKey || !config.datadog?.appKey) {
+    if (!appConfig.datadog?.apiKey || !appConfig.datadog?.appKey) {
       logger.error("Datadog API key and App key are required but not found in config");
       if (options.platform === "datadog") {
         process.exit(1);
@@ -125,7 +125,11 @@ async function main(): Promise<void> {
   }
 
   if (options.platform === "grafana" || options.platform === "both") {
-    if (!config.grafana?.baseUrl || !config.grafana?.username || !config.grafana?.password) {
+    if (
+      !appConfig.grafana?.baseUrl ||
+      !appConfig.grafana?.username ||
+      !appConfig.grafana?.password
+    ) {
       logger.error("Grafana base URL, username, and password are required but not found in config");
       if (options.platform === "grafana") {
         process.exit(1);

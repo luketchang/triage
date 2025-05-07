@@ -1,6 +1,6 @@
 import { client, v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
-import { config } from "@triage/config";
+import { appConfig } from "@triage/config";
 
 import { ObservabilityPlatform } from "../../observability.interface";
 import {
@@ -83,12 +83,12 @@ export class DatadogPlatform implements ObservabilityPlatform {
 
   constructor() {
     // Get credentials from environment config
-    if (!config.datadog.apiKey || !config.datadog.appKey || !config.datadog.site) {
+    if (!appConfig.datadog) {
       throw new Error("Datadog environment configuration is missing required values");
     }
-    this.apiKey = config.datadog.apiKey;
-    this.appKey = config.datadog.appKey;
-    this.site = config.datadog.site;
+    this.apiKey = appConfig.datadog.apiKey;
+    this.appKey = appConfig.datadog.appKey;
+    this.site = appConfig.datadog.site;
 
     // Initialize Datadog client with these credentials
     this.configuration = client.createConfiguration({

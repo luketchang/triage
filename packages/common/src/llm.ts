@@ -4,20 +4,22 @@ import { openai as openaiAI } from "@ai-sdk/openai";
 import { LanguageModelV1 } from "@ai-sdk/provider";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { config } from "@triage/config";
+import { appConfig } from "@triage/config";
 import OpenAI from "openai";
 
 export const openai = new OpenAI({
-  apiKey: config.openaiApiKey,
+  apiKey: appConfig.openaiApiKey,
   timeout: 1000 * 60, // 60 seconds
 });
 
 export const anthropic = new Anthropic({
-  apiKey: config.anthropicApiKey,
+  apiKey: appConfig.anthropicApiKey,
   timeout: 1000 * 60, // 60 seconds
 });
 
-export const gemini = config.googleApiKey ? new GoogleGenerativeAI(config.googleApiKey) : null;
+export const gemini = appConfig.googleApiKey
+  ? new GoogleGenerativeAI(appConfig.googleApiKey)
+  : null;
 
 export enum AnthropicModel {
   CLAUDE_3_7_SONNET_20250219 = "claude-3-7-sonnet-20250219",

@@ -416,7 +416,7 @@ export interface AgentArgs {
   chatHistory: ChatMessage[];
   repoPath: string;
   codebaseOverviewPath: string;
-  observabilityPlatform?: string;
+  integrationType?: IntegrationType;
   observabilityFeatures?: string[];
   startDate?: Date;
   endDate?: Date;
@@ -432,7 +432,7 @@ export async function invokeAgent({
   chatHistory,
   repoPath,
   codebaseOverviewPath,
-  observabilityPlatform: platformType = "grafana",
+  integrationType = IntegrationType.DATADOG,
   observabilityFeatures = ["logs"],
   startDate = new Date("2025-04-01T21:00:00Z"),
   endDate = new Date("2025-04-01T22:00:00Z"),
@@ -443,9 +443,6 @@ export async function invokeAgent({
   if (reasonOnly) {
     observabilityFeatures = [];
   }
-
-  const integrationType =
-    platformType === "datadog" ? IntegrationType.DATADOG : IntegrationType.GRAFANA;
 
   const observabilityPlatform = getObservabilityPlatform(integrationType);
 
@@ -512,7 +509,10 @@ export async function invokeAgent({
 const parseArgs = (): { integration: "datadog" | "grafana"; features: string[] } => {
   const argsSchema = z.object({
     orgId: z.string().optional(),
-    integration: z.enum(["datadog", "grafana"]).default("datadog"),
+    integration: z
+      .enum(["datadog", "grafana"])
+      .default("datadog")
+      .transform((value) => value as IntegrationType),
     features: z
       .string()
       .default("logs")
@@ -558,7 +558,7 @@ async function main(): Promise<void> {
     chatHistory,
     repoPath,
     codebaseOverviewPath: overviewPath,
-    observabilityPlatform: integration,
+    integrationType: integration as IntegrationType,
     observabilityFeatures,
     startDate,
     endDate,

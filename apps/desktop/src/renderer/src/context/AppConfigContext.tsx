@@ -3,13 +3,13 @@ import React, { createContext, ReactNode, useEffect, useState } from "react";
 import api from "../services/api.js";
 
 type AppConfigContextType = {
-  config: AppConfig | null;
+  appConfig: AppConfig | null;
   isLoading: boolean;
   updateConfig: (newConfig: Partial<AppConfig>) => Promise<void>;
 };
 
 const AppConfigContext = createContext<AppConfigContextType>({
-  config: null,
+  appConfig: null,
   isLoading: true,
   updateConfig: async () => {},
 });
@@ -43,7 +43,7 @@ export const AppConfigProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   return (
-    <AppConfigContext.Provider value={{ config, isLoading, updateConfig }}>
+    <AppConfigContext.Provider value={{ appConfig: config, isLoading, updateConfig }}>
       {children}
     </AppConfigContext.Provider>
   );

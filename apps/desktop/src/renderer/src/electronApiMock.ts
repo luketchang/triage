@@ -328,11 +328,7 @@ The primary issue appears to be in the authentication middleware where token val
   getAppConfig: async (): Promise<AppConfig> => {
     console.info("Mock getAppConfig called");
 
-    return {
-      repoPath: "/Users/luketchang/code/ticketing",
-      githubRepoBaseUrl: "https://github.com/luketchang/ticketing",
-      codebaseOverviewPath: "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-    };
+    throw new Error("Not implemented");
   },
 
   /**
