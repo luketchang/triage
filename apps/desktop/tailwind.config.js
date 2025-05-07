@@ -20,6 +20,8 @@ export default {
           DEFAULT: "#111111",
           lighter: "#1a1a1a",
           sidebar: "#202123",
+          user: "#343541",
+          assistant: "#444654",
         },
         border: {
           DEFAULT: "#333333",

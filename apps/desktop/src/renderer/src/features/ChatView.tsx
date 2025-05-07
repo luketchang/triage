@@ -22,8 +22,6 @@ function ChatView() {
     isThinking,
     contextItems,
     removeContextItem,
-    chatMode,
-    toggleChatMode,
     clearChat,
   } = useChat();
 
@@ -133,17 +131,22 @@ function ChatView() {
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Chat header */}
-      <div className="flex justify-between items-center p-4 border-b border-border">
+      <div className="flex justify-between items-center py-4 px-5 border-b border-border">
         <h1 className="text-xl font-semibold text-primary">Chat</h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="hover:bg-background-lighter">
               <MoreHorizontalIcon className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleClearChat}>Clear chat</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.info("Export chat")}>
+          <DropdownMenuContent align="end" className="min-w-[150px]">
+            <DropdownMenuItem onClick={handleClearChat} className="cursor-pointer">
+              Clear chat
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => console.info("Export chat")}
+              className="cursor-pointer"
+            >
               Export chat
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -169,10 +172,15 @@ function ChatView() {
                     })) || []
                   : []
               }
+              originalMessage={
+                message.role === "assistant" ? (message as AssistantMessage) : undefined
+              }
             />
           ))}
           {isThinking && (
-            <div className="p-4 text-center text-gray-400">Assistant is thinking...</div>
+            <div className="py-6 px-5 text-center text-gray-400 italic">
+              Assistant is thinking...
+            </div>
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -180,19 +188,19 @@ function ChatView() {
 
       {/* Context items display */}
       {contextItems && contextItems.length > 0 && (
-        <div className="p-2 border-t border-border bg-background-lighter">
-          <div className="flex flex-wrap gap-2">
+        <div className="px-4 py-3 border-t border-border bg-background-lighter">
+          <div className="flex flex-wrap gap-3">
             {contextItems.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center bg-background-alt rounded-md p-1.5 text-sm gap-1.5"
+                className="flex items-center bg-background-alt rounded-md px-3 py-1.5 text-sm gap-2 shadow-sm"
               >
-                <span className="text-xs font-medium">{item.type}</span>
-                <span>{item.title}</span>
+                <span className="text-xs font-medium text-primary-dark">{item.type}</span>
+                <span className="text-gray-200">{item.title}</span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-5 w-5 p-0 ml-1"
+                  className="h-5 w-5 p-0 ml-1 hover:bg-background text-gray-400 hover:text-white"
                   onClick={() => removeContextItem(item.id)}
                 >
                   ×
@@ -204,14 +212,14 @@ function ChatView() {
       )}
 
       {/* Input area */}
-      <div className="p-4 border-t border-border">
+      <div className="p-5 border-t border-border">
         <div className="relative">
           <textarea
             ref={textareaRef}
             className={cn(
-              "w-full p-3 pr-12 bg-background-lighter border border-border rounded-md",
+              "w-full p-4 pr-12 bg-background-lighter border border-border rounded-lg",
               "resize-none min-h-[80px] max-h-[200px] outline-none focus:ring-2 focus:ring-primary/50",
-              "text-primary placeholder:text-gray-500"
+              "text-primary placeholder:text-gray-500 shadow-sm"
             )}
             placeholder="Type your message here..."
             value={newMessage}
@@ -221,7 +229,7 @@ function ChatView() {
             disabled={isThinking}
           />
           <Button
-            className="absolute right-2 bottom-2"
+            className="absolute right-3 bottom-3 shadow-sm"
             size="sm"
             onClick={handleSendMessage}
             disabled={newMessage.trim() === "" || isThinking}
@@ -231,13 +239,6 @@ function ChatView() {
         </div>
         <div className="mt-2 text-xs text-gray-500 text-right">
           Press Enter to send, Shift+Enter for new line
-        </div>
-
-        {/* Chat mode selection */}
-        <div className="mt-2 flex justify-end">
-          <Button variant="outline" size="sm" onClick={toggleChatMode} className="text-xs">
-            Mode: {chatMode === "agent" ? "AI Agent" : "Manual"}
-          </Button>
         </div>
       </div>
     </div>
