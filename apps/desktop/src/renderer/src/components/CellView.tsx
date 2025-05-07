@@ -10,13 +10,14 @@ import { cn } from "../lib/utils";
 import {
   AgentStage,
   AssistantMessage,
+  CodePostprocessingFact,
   CodePostprocessingStage,
+  LogPostprocessingFact,
   LogPostprocessingStage,
   LogSearchStage,
   ReasoningStage,
   ReviewStage,
 } from "../types";
-import FactsSidebar from "./FactsSidebar";
 
 // Add custom type for ReactMarkdown code component props
 interface CodeProps {
@@ -30,6 +31,8 @@ interface CodeProps {
 interface CellViewProps {
   message: AssistantMessage;
   isThinking?: boolean;
+  onShowFacts?: (logFacts: LogPostprocessingFact[], codeFacts: CodePostprocessingFact[]) => void;
+  activeInFactsSidebar?: boolean;
 }
 
 /**
@@ -197,7 +200,12 @@ const renderCodePostprocessingStage = (stage: CodePostprocessingStage) => (
   </CollapsibleStep>
 );
 
-function CellView({ message, isThinking = false }: CellViewProps) {
+function CellView({
+  message,
+  isThinking = false,
+  onShowFacts,
+  activeInFactsSidebar = false,
+}: CellViewProps) {
   const [showWaitingIndicator, setShowWaitingIndicator] = useState(false);
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -221,8 +229,8 @@ function CellView({ message, isThinking = false }: CellViewProps) {
     [stages]
   );
 
-  // Determine if we should show facts sidebar - only show when there are actually facts
-  const shouldShowFactsSidebar = useMemo(
+  // Determine if we have facts to show - only when there are actually facts
+  const hasFacts = useMemo(
     () =>
       !isThinking &&
       message.response &&
@@ -263,8 +271,20 @@ function CellView({ message, isThinking = false }: CellViewProps) {
     setShowWaitingIndicator(false);
   }, [stages]);
 
+  // Handle opening the facts sidebar
+  const handleShowFacts = () => {
+    if (onShowFacts && hasFacts) {
+      onShowFacts(logPostprocessingStage?.facts || [], codePostprocessingStage?.facts || []);
+    }
+  };
+
   return (
-    <div className={cn("cellview-container py-6 px-5", shouldShowFactsSidebar ? "with-facts" : "")}>
+    <div
+      className={cn(
+        "cellview-container py-6 px-5",
+        activeInFactsSidebar ? "border-l-4 border-l-primary" : ""
+      )}
+    >
       {/* Main content area */}
       <div className="cellview-main-content flex-1">
         {/* Render each visible step */}
@@ -313,19 +333,42 @@ function CellView({ message, isThinking = false }: CellViewProps) {
             >
               {message.response || ""}
             </ReactMarkdown>
+
+            {/* Facts button - only shown when facts are available */}
+            {hasFacts && onShowFacts && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1",
+                    activeInFactsSidebar
+                      ? "bg-primary text-white"
+                      : "bg-background-lighter hover:bg-background-alt text-primary-dark"
+                  )}
+                  onClick={handleShowFacts}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {activeInFactsSidebar ? "Facts Open" : "View Facts"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Render facts sidebar if facts are available */}
-      {shouldShowFactsSidebar && (
-        <div className="facts-sidebar-wrapper">
-          <FactsSidebar
-            logFacts={logPostprocessingStage?.facts || []}
-            codeFacts={codePostprocessingStage?.facts || []}
-          />
-        </div>
-      )}
+      {/* Facts sidebar is now rendered in ChatView component */}
     </div>
   );
 }

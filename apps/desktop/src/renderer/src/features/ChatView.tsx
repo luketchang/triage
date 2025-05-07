@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView";
+import FactsSidebar from "../components/FactsSidebar";
 import { Button } from "../components/ui/button";
 import {
   DropdownMenu,
@@ -12,7 +13,7 @@ import { ScrollArea } from "../components/ui/scroll-area";
 import { useChat } from "../hooks/useChat";
 import { MoreHorizontalIcon, SendIcon } from "../icons";
 import { cn } from "../lib/utils";
-import { AssistantMessage } from "../types";
+import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types";
 
 function ChatView() {
   const {
@@ -25,6 +26,12 @@ function ChatView() {
     removeContextItem,
     clearChat,
   } = useChat();
+
+  // Facts sidebar state
+  const [factsSidebarOpen, setFactsSidebarOpen] = useState(false);
+  const [sidebarMessageId, setSidebarMessageId] = useState<string | null>(null);
+  const [logFacts, setLogFacts] = useState<LogPostprocessingFact[]>([]);
+  const [codeFacts, setCodeFacts] = useState<CodePostprocessingFact[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -129,6 +136,23 @@ function ChatView() {
     }
   };
 
+  // Function to open facts sidebar for a specific message
+  const openFactsSidebar = (
+    messageId: string,
+    logFacts: LogPostprocessingFact[],
+    codeFacts: CodePostprocessingFact[]
+  ) => {
+    setSidebarMessageId(messageId);
+    setLogFacts(logFacts);
+    setCodeFacts(codeFacts);
+    setFactsSidebarOpen(true);
+  };
+
+  // Function to close facts sidebar
+  const closeFactsSidebar = () => {
+    setFactsSidebarOpen(false);
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Chat header */}
@@ -154,39 +178,70 @@ function ChatView() {
         </DropdownMenu>
       </div>
 
-      {/* Chat messages */}
-      <ScrollArea className="flex-1 overflow-y-auto">
-        <div className="flex flex-col divide-y divide-border">
-          {messages.map((message) =>
-            message.role === "user" ? (
-              <div key={message.id} className={cn("py-6 px-5 flex flex-col bg-background-user")}>
-                <div className="flex items-start">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center mr-4 flex-shrink-0 shadow-sm bg-primary">
-                    <span className="text-white font-medium">U</span>
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+      <div className="flex flex-1 h-full overflow-hidden relative">
+        {/* Main chat area - takes full width when sidebar closed, 2/3 when open */}
+        <div
+          className={cn(
+            "transition-all duration-300 ease-in-out h-full overflow-hidden flex-shrink-0",
+            factsSidebarOpen ? "w-2/3" : "w-full"
+          )}
+        >
+          {/* Chat messages */}
+          <ScrollArea className="h-full overflow-y-auto">
+            <div className="flex flex-col divide-y divide-border">
+              {messages.map((message) =>
+                message.role === "user" ? (
+                  <div
+                    key={message.id}
+                    className={cn("py-6 px-5 flex flex-col bg-background-user")}
+                  >
+                    <div className="flex items-start">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center mr-4 flex-shrink-0 shadow-sm bg-primary">
+                        <span className="text-white font-medium">U</span>
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3">
+                          <ReactMarkdown>{message.content}</ReactMarkdown>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                ) : (
+                  <CellView
+                    key={message.id}
+                    message={message as AssistantMessage}
+                    isThinking={
+                      isThinking && (message as AssistantMessage).response === "Thinking..."
+                    }
+                    onShowFacts={(logFactsArr, codeFactsArr) =>
+                      openFactsSidebar(message.id, logFactsArr, codeFactsArr)
+                    }
+                    activeInFactsSidebar={factsSidebarOpen && sidebarMessageId === message.id}
+                  />
+                )
+              )}
+              {isThinking && (
+                <div className="py-6 px-5 text-center text-gray-400 italic">
+                  Assistant is thinking...
                 </div>
-              </div>
-            ) : (
-              <CellView
-                key={message.id}
-                message={message as AssistantMessage}
-                isThinking={isThinking && (message as AssistantMessage).response === "Thinking..."}
-              />
-            )
-          )}
-          {isThinking && (
-            <div className="py-6 px-5 text-center text-gray-400 italic">
-              Assistant is thinking...
+              )}
+              <div ref={messagesEndRef} />
             </div>
-          )}
-          <div ref={messagesEndRef} />
+          </ScrollArea>
         </div>
-      </ScrollArea>
+
+        {/* Facts sidebar - slides in from right taking 1/3 width */}
+        <div
+          className={cn(
+            "h-full bg-background-sidebar border-l border-border transition-all duration-300 ease-in-out flex-shrink-0",
+            factsSidebarOpen ? "w-1/3" : "w-0 opacity-0 overflow-hidden"
+          )}
+        >
+          {factsSidebarOpen && (
+            <FactsSidebar logFacts={logFacts} codeFacts={codeFacts} onClose={closeFactsSidebar} />
+          )}
+        </div>
+      </div>
 
       {/* Context items display */}
       {contextItems && contextItems.length > 0 && (
