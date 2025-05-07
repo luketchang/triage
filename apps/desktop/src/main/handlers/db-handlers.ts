@@ -89,10 +89,13 @@ export function setupDbHandlers(): void {
  * Clean up resources used by chat handlers
  */
 export function cleanupDbHandlers(): void {
-  console.info("Cleaning up chat handlers...");
   if (dbService) {
     dbService.destroy();
     dbService = null;
   }
-  console.info("Chat handlers cleanup complete.");
+  ipcMain.removeHandler("db:save-user-message");
+  ipcMain.removeHandler("db:save-assistant-message");
+  ipcMain.removeHandler("db:get-messages");
+  ipcMain.removeHandler("db:clear-messages");
+  console.info("DB handlers cleanup complete.");
 }

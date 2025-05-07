@@ -1,25 +1,10 @@
-import { anthropic as anthropicAI } from "@ai-sdk/anthropic";
-import { google as googleAI } from "@ai-sdk/google";
-import { openai as openaiAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenAI } from "@ai-sdk/openai";
 import { LanguageModelV1 } from "@ai-sdk/provider";
-import Anthropic from "@anthropic-ai/sdk";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { appConfig } from "@triage/config";
-import OpenAI from "openai";
+import { z } from "zod";
 
-export const openai = new OpenAI({
-  apiKey: appConfig.openaiApiKey,
-  timeout: 1000 * 60, // 60 seconds
-});
-
-export const anthropic = new Anthropic({
-  apiKey: appConfig.anthropicApiKey,
-  timeout: 1000 * 60, // 60 seconds
-});
-
-export const gemini = appConfig.googleApiKey
-  ? new GoogleGenerativeAI(appConfig.googleApiKey)
-  : null;
+import { LLMCfgSchema } from "./config";
 
 export enum AnthropicModel {
   CLAUDE_3_7_SONNET_20250219 = "claude-3-7-sonnet-20250219",
@@ -51,43 +36,26 @@ export const VALID_MODELS = [
 /**
  * Get the appropriate AI SDK model wrapper based on the model type
  * @param model The model to use
+ * @param llmCfg Configuration containing API keys
  * @returns The appropriate AI SDK model wrapper
  */
-export function getModelWrapper(model: Model): LanguageModelV1 {
+export function getModelWrapper(
+  model: Model,
+  llmCfg: z.infer<typeof LLMCfgSchema>
+): LanguageModelV1 {
   if (Object.values(AnthropicModel).includes(model as AnthropicModel)) {
-    return anthropicAI(model);
+    return createAnthropic({
+      apiKey: llmCfg.anthropicApiKey || undefined,
+    })(model);
   } else if (Object.values(OpenAIModel).includes(model as OpenAIModel)) {
-    return openaiAI(model);
+    return createOpenAI({
+      apiKey: llmCfg.openaiApiKey || undefined,
+    })(model);
   } else if (Object.values(GeminiModel).includes(model as GeminiModel)) {
-    return googleAI(model);
+    return createGoogleGenerativeAI({
+      apiKey: llmCfg.googleApiKey || undefined,
+    })(model);
   } else {
     throw new Error(`Unsupported model: ${model}`);
   }
-}
-
-/**
- * Check if a model is an Anthropic model
- * @param model The model to check
- * @returns True if the model is an Anthropic model
- */
-export function isAnthropicModel(model: Model): model is AnthropicModel {
-  return Object.values(AnthropicModel).includes(model as AnthropicModel);
-}
-
-/**
- * Check if a model is an OpenAI model
- * @param model The model to check
- * @returns True if the model is an OpenAI model
- */
-export function isOpenAIModel(model: Model): model is OpenAIModel {
-  return Object.values(OpenAIModel).includes(model as OpenAIModel);
-}
-
-/**
- * Check if a model is a Google Gemini model
- * @param model The model to check
- * @returns True if the model is a Gemini model
- */
-export function isGeminiModel(model: Model): model is GeminiModel {
-  return Object.values(GeminiModel).includes(model as GeminiModel);
 }

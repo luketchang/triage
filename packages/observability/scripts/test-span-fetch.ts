@@ -1,6 +1,5 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
-import { appConfig } from "@triage/config";
 import { Command } from "commander";
 import { SpansWithPagination } from "../dist";
 import { DatadogPlatform } from "../src";

@@ -1,6 +1,6 @@
-import { getModelWrapper, logger, Model, timer } from "@triage/common";
+import { logger, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
-import { generateId, generateText } from "ai";
+import { generateId, generateText, LanguageModelV1 } from "ai";
 
 import {
   AgentStreamUpdate,
@@ -9,6 +9,7 @@ import {
   logPostprocessingToolSchema,
   LogSearchStep,
 } from "../types";
+
 import {
   ensureSingleToolCall,
   formatFacetValues,
@@ -67,11 +68,11 @@ function createPrompt(params: {
 }
 
 export class LogPostprocessor {
-  private llm: Model;
+  private llmClient: LanguageModelV1;
   private observabilityPlatform: ObservabilityPlatform;
 
-  constructor(llm: Model, observabilityPlatform: ObservabilityPlatform) {
-    this.llm = llm;
+  constructor(llmClient: LanguageModelV1, observabilityPlatform: ObservabilityPlatform) {
+    this.llmClient = llmClient;
     this.observabilityPlatform = observabilityPlatform;
   }
 
@@ -92,7 +93,7 @@ export class LogPostprocessor {
     logger.info(`Log postprocessing prompt:\n${prompt}`);
 
     const { toolCalls } = await generateText({
-      model: getModelWrapper(this.llm),
+      model: this.llmClient,
       system: SYSTEM_PROMPT,
       prompt: prompt,
       tools: {

@@ -1,8 +1,15 @@
-import { getModelWrapper, logger, Model, timer } from "@triage/common";
-import { streamText } from "ai";
+import { logger, timer } from "@triage/common";
+import { LanguageModelV1, streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import { AgentStep, AgentStreamUpdate, ChatMessage, logRequestToolSchema, RequestToolCalls, ReviewStep } from "../types";
+import {
+  AgentStep,
+  AgentStreamUpdate,
+  ChatMessage,
+  logRequestToolSchema,
+  RequestToolCalls,
+  ReviewStep,
+} from "../types";
 
 import { formatAgentSteps, formatChatHistory, formatFacetValues } from "./utils";
 
@@ -63,10 +70,10 @@ ${params.answer}
 }
 
 export class Reviewer {
-  private llm: Model;
+  private llmClient: LanguageModelV1;
 
-  constructor(llm: Model) {
-    this.llm = llm;
+  constructor(llm: LanguageModelV1) {
+    this.llmClient = llm;
   }
 
   @timer
@@ -88,7 +95,7 @@ export class Reviewer {
     logger.info(`Reviewer prompt: ${prompt}`);
 
     const { fullStream, toolCalls } = streamText({
-      model: getModelWrapper(this.llm),
+      model: this.llmClient,
       prompt: prompt,
       tools: {
         // TODO: add other tools

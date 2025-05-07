@@ -12,15 +12,6 @@ import type {
   UserMessage,
 } from "./types";
 
-// Allow importing components, features, etc. without type errors
-declare module "*/components/*";
-declare module "*/features/*";
-declare module "*/hooks/*";
-declare module "*/icons/*";
-declare module "*/services/*";
-declare module "*/types/*";
-declare module "*/utils/*";
-
 /**
  * Global type declarations for custom window properties
  */

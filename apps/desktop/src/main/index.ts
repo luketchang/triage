@@ -1,10 +1,11 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
-import { AgentConfigView } from "@triage/agent/src/config.js";
-import { CommonConfigView } from "@triage/common/src/config.js";
+import { AgentConfigStore } from "@triage/agent";
+import { ObservabilityConfigStore } from "@triage/observability";
 import { app, BrowserWindow, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
-import { ElectronConfigProvider } from "./electron-config.js";
+import { AppCfgSchema, AppConfigStore } from "../renderer/src/AppConfig.js";
+import { ElectronConfigStore } from "./ElectronConfigStore.js";
 import {
   cleanupAgentHandlers,
   cleanupConfigHandlers,
@@ -64,10 +65,20 @@ function createWindow(): BrowserWindow {
   return mainWindow;
 }
 
-const configProvider = new ElectronConfigProvider();
-await configProvider.init(["openai.apiKey"]); // preload secrets
-export const commonCfg = new CommonConfigView(configProvider);
-export const agentCfg = new AgentConfigView(configProvider);
+function initApp(mainWindow: BrowserWindow): void {
+  const configStore = new ElectronConfigStore(AppCfgSchema);
+
+  // Create specialized views for each schema
+  const appCfgStore = new AppConfigStore(configStore);
+  const agentCfgStore = new AgentConfigStore(configStore);
+  const observabilityCfgStore = new ObservabilityConfigStore(configStore);
+
+  // Set up all IPC handlers
+  setupAgentHandlers(mainWindow, agentCfgStore);
+  setupDbHandlers();
+  setupConfigHandlers(appCfgStore);
+  setupObservabilityHandlers(observabilityCfgStore);
+}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -84,12 +95,7 @@ app.whenReady().then(() => {
   });
 
   const mainWindow = createWindow();
-
-  // Now set up all IPC handlers, with mainWindow available
-  setupAgentHandlers(mainWindow);
-  setupDbHandlers();
-  setupObservabilityHandlers();
-  setupConfigHandlers();
+  initApp(mainWindow);
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
@@ -109,10 +115,10 @@ app.on("window-all-closed", () => {
 
 // Clean up handlers when app quits
 app.on("quit", () => {
-  cleanupDbHandlers();
   cleanupAgentHandlers();
-  cleanupObservabilityHandlers();
+  cleanupDbHandlers();
   cleanupConfigHandlers();
+  cleanupObservabilityHandlers();
 });
 
 // In this file you can include the rest of your app's specific main process

@@ -1,9 +1,15 @@
-import { getModelWrapper, logger, Model, timer } from "@triage/common";
+import { logger, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
-import { generateText } from "ai";
+import { generateText, LanguageModelV1 } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import { AgentStreamUpdate, LogSearchInput, logSearchInputToolSchema, LogSearchStep, TaskComplete } from "../types";
+import {
+  AgentStreamUpdate,
+  LogSearchInput,
+  logSearchInputToolSchema,
+  LogSearchStep,
+  TaskComplete,
+} from "../types";
 
 import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "./utils";
 
@@ -98,11 +104,11 @@ ${params.codebaseOverview}
 }
 
 class LogSearch {
-  private llm: Model;
+  private llmClient: LanguageModelV1;
   private observabilityPlatform: ObservabilityPlatform;
 
-  constructor(llm: Model, observabilityPlatform: ObservabilityPlatform) {
-    this.llm = llm;
+  constructor(llmClient: LanguageModelV1, observabilityPlatform: ObservabilityPlatform) {
+    this.llmClient = llmClient;
     this.observabilityPlatform = observabilityPlatform;
   }
 
@@ -122,7 +128,7 @@ class LogSearch {
 
     try {
       const { toolCalls, text } = await generateText({
-        model: getModelWrapper(this.llm),
+        model: this.llmClient,
         system: SYSTEM_PROMPT,
         prompt: prompt,
         tools: {
@@ -171,9 +177,9 @@ export class LogSearchAgent {
   private observabilityPlatform: ObservabilityPlatform;
   private logSearch: LogSearch;
 
-  constructor(fastModel: Model, observabilityPlatform: ObservabilityPlatform) {
+  constructor(llmClient: LanguageModelV1, observabilityPlatform: ObservabilityPlatform) {
     this.observabilityPlatform = observabilityPlatform;
-    this.logSearch = new LogSearch(fastModel, observabilityPlatform);
+    this.logSearch = new LogSearch(llmClient, observabilityPlatform);
   }
 
   @timer
