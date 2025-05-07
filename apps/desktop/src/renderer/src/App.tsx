@@ -1,75 +1,38 @@
+// @ts-ignore - Ignoring React module resolution issues
 import { useState } from "react";
 import "./electron.d";
-import "./styles.css";
+import "./tailwind.css";
 
-// Feature flag for Traces view
-const TRACES_ENABLED = window.env.TRACES_ENABLED;
-
-import { ContextItem, LogSearchInputCore, TabType, TraceForAgent } from "./types/index.js";
-import { generateId } from "./utils/formatters.js";
+import { TabType } from "./types";
 
 // Components
-import NavigationSidebar from "./components/NavigationSidebar.js";
+import FactsSidebar from "./components/FactsSidebar";
+import NavigationSidebar from "./components/NavigationSidebar";
 
 // Feature Views
 import ChatView from "./features/ChatView";
-import LogsView from "./features/LogsView";
 
 // Custom hooks
-import { useChat } from "./hooks/useChat.js";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
-import { useLogs } from "./hooks/useLogs.js";
-import { useTraces } from "./hooks/useTraces.js";
+import { useChat } from "./hooks/useChat";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 // Context Provider
 import { AppConfigProvider } from "./context/AppConfigContext.js";
 
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>("chat");
+  const [showFactsSidebar, setShowFactsSidebar] = useState(false);
 
   // Use custom hooks
-  const logsState = useLogs({ shouldFetch: activeTab === "logs" });
   const chatState = useChat();
-
-  // Always use the traces hook, but use the result conditionally
-  const tracesHookResult = useTraces({ shouldFetch: activeTab === "traces" && TRACES_ENABLED });
-  const tracesState = TRACES_ENABLED
-    ? tracesHookResult
-    : {
-        // Dummy implementation when traces are disabled
-        traces: [],
-        traceQuery: "",
-        setTraceQuery: () => {},
-        isLoading: false,
-        timeRange: { start: "", end: "" },
-        fetchTracesWithQuery: () => {},
-        handleLoadMoreTraces: () => {},
-        handleTimeRangeChange: () => {},
-        facets: [],
-        selectedFacets: [],
-        setSelectedFacets: () => {},
-        selectedTrace: null,
-        selectedSpan: null,
-        handleTraceSelect: () => {},
-        handleSpanSelect: () => {},
-        pageCursor: undefined,
-        setTraces: () => {},
-        setIsLoading: () => {},
-        setPageCursor: () => {},
-        setSelectedSpan: () => {},
-        setTimeRange: () => {},
-        processTracesForUI: () => [],
-      };
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts([
     {
-      key: "u",
+      key: "f",
       metaKey: true,
       action: () => {
-        addCurrentContextToChat();
-        // Switch to chat view after adding context
-        setActiveTab("chat");
+        setShowFactsSidebar((prev) => !prev);
       },
     },
   ]);
@@ -78,165 +41,39 @@ function App(): JSX.Element {
     setActiveTab(tab);
   };
 
-  // Add current view context to chat
-  const addCurrentContextToChat = async (): Promise<void> => {
-    let newContextItem: ContextItem | null = null;
-
-    switch (activeTab) {
-      case "logs":
-        // Create context from logs view
-        // Both logQuery and logsWithPagination should be populated or neither should be
-        if (logsState.logQuery && logsState.logsWithPagination) {
-          // Create a LogSearchInputCore object
-          const logSearchInput: LogSearchInputCore = {
-            query: logsState.logQuery,
-            start: logsState.timeRange.start,
-            end: logsState.timeRange.end,
-            limit: 500,
-            pageCursor: logsState.pageCursor || null,
-            type: "logSearchInput",
-          };
-
-          // Use the logs data directly from state - no need to fetch again
-          newContextItem = {
-            id: generateId(),
-            type: "logSearch",
-            title: logsState.logQuery || "Log Query",
-            description: `Time: ${new Date(logsState.timeRange.start).toLocaleString()} - ${new Date(logsState.timeRange.end).toLocaleString()}`,
-            data: {
-              input: logSearchInput,
-              results: logsState.logsWithPagination,
-            },
-            sourceTab: "logs",
-          };
-        } else if (logsState.logQuery) {
-          console.warn("Unexpected state: logQuery exists but logsWithPagination is missing");
-        } else if (logsState.logsWithPagination) {
-          console.warn("Unexpected state: logsWithPagination exists but logQuery is missing");
-        }
-        break;
-      case "traces":
-        // Skip adding trace context if traces are disabled
-        if (!TRACES_ENABLED) {
-          console.info("Traces view is disabled - no context will be added");
-          break;
-        }
-
-        // Create context from traces view - ONLY if a trace is explicitly selected
-        if (tracesState.selectedTrace) {
-          console.info("Adding selected trace to context:", tracesState.selectedTrace.traceId);
-
-          // Extract just the necessary properties without serviceBreakdown
-          const { serviceBreakdown, ...traceForAgent } = tracesState.selectedTrace;
-
-          // Create a SingleTraceContextItem with the selected trace
-          newContextItem = {
-            id: generateId(),
-            type: "singleTrace",
-            title: `Trace: ${tracesState.selectedTrace.rootService} - ${tracesState.selectedTrace.rootResource}`,
-            description: `Trace ID: ${tracesState.selectedTrace.traceId}`,
-            data: traceForAgent as TraceForAgent,
-            sourceTab: "traces",
-          };
-        } else {
-          console.info("No trace selected - cmd+u has no effect in traces view without selection");
-        }
-        break;
-      case "dashboards":
-      case "chat":
-        // No context to add from these views
-        break;
-    }
-
-    if (newContextItem) {
-      chatState.setContextItems((prev) => [...prev, newContextItem!]);
-    }
-  };
-
-  const renderMainContent = () => {
-    // We always default to chat view in the UI, but keep the other views in code
-    // in case they need to be accessed programmatically
-    switch (activeTab) {
-      case "logs":
-        // Keep logs view for programmatic access but don't show in nav
-        return (
-          <LogsView
-            logs={logsState.logs}
-            logsWithPagination={logsState.logsWithPagination}
-            logQuery={logsState.logQuery}
-            timeRange={logsState.timeRange}
-            isLoading={logsState.isLoading}
-            setLogQuery={logsState.setLogQuery}
-            onTimeRangeChange={logsState.handleTimeRangeChange}
-            onQuerySubmit={logsState.fetchLogsWithQuery}
-            onLoadMore={logsState.handleLoadMoreLogs}
-            facets={logsState.facets}
-            selectedFacets={logsState.selectedFacets}
-            setSelectedFacets={logsState.setSelectedFacets}
-          />
-        );
-      // case "traces":
-      //   // Keep traces view for programmatic access but don't show in nav
-      //   return TRACES_ENABLED ? (
-      //     <TracesView
-      //       selectedTrace={tracesState.selectedTrace}
-      //       handleTraceSelect={tracesState.handleTraceSelect}
-      //       traces={tracesState.traces}
-      //       traceQuery={tracesState.traceQuery}
-      //       setTraceQuery={tracesState.setTraceQuery}
-      //       isLoading={tracesState.isLoading}
-      //       timeRange={tracesState.timeRange}
-      //       fetchTracesWithQuery={tracesState.fetchTracesWithQuery}
-      //       handleLoadMoreTraces={tracesState.handleLoadMoreTraces}
-      //       handleTimeRangeChange={tracesState.handleTimeRangeChange}
-      //       facets={tracesState.facets}
-      //       selectedFacets={tracesState.selectedFacets}
-      //       setSelectedFacets={tracesState.setSelectedFacets}
-      //       selectedSpan={tracesState.selectedSpan}
-      //       handleSpanSelect={tracesState.handleSpanSelect}
-      //       pageCursor={tracesState.pageCursor}
-      //       setSelectedSpan={tracesState.setSelectedSpan}
-      //     />
-      //   ) : (
-      //     <div className="traces-view">
-      //       <div className="dashboards-placeholder">
-      //         <h2>Traces View</h2>
-      //         <p>Distributed tracing functionality will be implemented in a future update.</p>
-      //       </div>
-      //     </div>
-      //   );
-      // We've removed the dashboards view as requested
-      default:
-        // Default is always chat view
-        return (
-          <ChatView
-            messages={chatState.messages}
-            newMessage={chatState.newMessage}
-            setNewMessage={chatState.setNewMessage}
-            sendMessage={chatState.sendMessage}
-            isThinking={chatState.isThinking}
-            contextItems={chatState.contextItems}
-            removeContextItem={chatState.removeContextItem}
-            initialChatMode={chatState.chatMode}
-            toggleChatMode={chatState.toggleChatMode}
-            clearChat={chatState.clearChat}
-          />
-        );
-    }
+  const toggleFactsSidebar = () => {
+    setShowFactsSidebar((prev) => !prev);
   };
 
   return (
     <AppConfigProvider>
-      <div className="app-container observability-layout">
-        {/* Vertical Navigation Sidebar */}
+      <div className="flex w-full h-full bg-background">
         <NavigationSidebar
           activeTab={activeTab}
           handleTabChange={handleTabChange}
-          contextItemsCount={chatState.contextItems.length}
+          contextItemsCount={chatState.contextItems?.length || 0}
         />
 
-        {/* Main Content Area */}
-        <div className="main-content-wrapper">{renderMainContent()}</div>
+        <div className="flex-1 h-full overflow-hidden flex">
+          <div className={`${showFactsSidebar ? "flex-1" : "w-full"} h-full overflow-hidden`}>
+            <ChatView />
+          </div>
+
+          {showFactsSidebar && (
+            <FactsSidebar
+              toggleFactsSidebar={toggleFactsSidebar}
+              facts={[
+                { title: "Active Model", content: "Triage Assistant v1.0" },
+                { title: "Active Context", content: "3 items loaded" },
+                {
+                  title: "System Prompt",
+                  content:
+                    "You are an intelligent assistant designed to help with debugging issues.",
+                },
+              ]}
+            />
+          )}
+        </div>
       </div>
     </AppConfigProvider>
   );

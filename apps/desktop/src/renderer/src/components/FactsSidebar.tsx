@@ -1,111 +1,36 @@
-import React, { useEffect, useState } from "react";
-import { useAppConfig } from "../context/useAppConfig.js";
-import { CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
-import { filepathToGitHubUrl } from "../utils/facts/code.js";
-import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs.js";
+// @ts-ignore - Ignoring React module resolution issues
+import React from "react";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface FactsSidebarProps {
-  logFacts: LogPostprocessingFact[];
-  codeFacts: CodePostprocessingFact[];
+  facts: { title: string; content: string }[];
+  toggleFactsSidebar: () => void;
 }
 
-const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts }) => {
-  const { config, isLoading } = useAppConfig();
-  const [codeFactElements, setCodeFactElements] = useState<React.ReactNode[]>([]);
-
-  // Generate code fact elements when config loads or facts change
-  useEffect(() => {
-    const generateCodeFacts = async () => {
-      if (isLoading || !config) return;
-
-      const elements = codeFacts.map((fact, index) => {
-        // Generate GitHub URL for the code fact
-        const githubUrl = filepathToGitHubUrl(config.githubRepoBaseUrl, fact.filepath, {
-          startLine: fact.startLine,
-          endLine: fact.endLine,
-        });
-
-        return (
-          <div key={`code-fact-${index}`} className="fact-item code-fact">
-            <div className="fact-header">
-              <h3 className="fact-title">{fact.title}</h3>
-              <span className="fact-type">CODE</span>
-            </div>
-            <div className="fact-content">
-              <p className="fact-text">{fact.fact}</p>
-              <div className="fact-path">{fact.filepath}</div>
-              <a
-                href={githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="fact-link github-link"
-              >
-                View in GitHub
-              </a>
-            </div>
-          </div>
-        );
-      });
-
-      setCodeFactElements(elements);
-    };
-
-    generateCodeFacts();
-  }, [codeFacts, config, isLoading]);
-
-  const renderLogFact = (fact: LogPostprocessingFact, index: number) => {
-    // Generate Datadog URL for the log fact
-    const datadogUrl = logSearchInputToDatadogLogsViewUrl(fact);
-
-    return (
-      <div key={`log-fact-${index}`} className="fact-item log-fact">
-        <div className="fact-header">
-          <h3 className="fact-title">{fact.title}</h3>
-          <span className="fact-type">LOG</span>
-        </div>
-        <div className="fact-content">
-          <p className="fact-text">{fact.fact}</p>
-          <a
-            href={datadogUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="fact-link datadog-link"
-          >
-            View in Datadog
-          </a>
-        </div>
-      </div>
-    );
-  };
-
-  // Only render the sidebar if there are facts to show
-  if (logFacts.length === 0 && codeFacts.length === 0) {
-    return null;
-  }
-
-  // Show loading state if config is still loading
-  if (isLoading) {
-    return (
-      <div className="facts-sidebar">
-        <div className="facts-header">
-          <h2 className="facts-title">Facts</h2>
-        </div>
-        <div className="facts-content">
-          <p>Loading facts...</p>
-        </div>
-      </div>
-    );
-  }
+const FactsSidebar: React.FC<FactsSidebarProps> = ({ facts, toggleFactsSidebar }) => {
+  // Simplified version for the refactored design
 
   return (
-    <div className="facts-sidebar">
-      <div className="facts-header">
-        <h2 className="facts-title">Facts</h2>
+    <div className="w-72 h-full bg-background-sidebar border-l border-border flex flex-col">
+      <div className="p-3 border-b border-border flex justify-between items-center">
+        <h2 className="font-medium">Facts</h2>
+        <button
+          onClick={toggleFactsSidebar}
+          className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700"
+        >
+          ×
+        </button>
       </div>
-      <div className="facts-content">
-        {logFacts.map(renderLogFact)}
-        {codeFactElements}
-      </div>
+      <ScrollArea className="h-full">
+        <div className="p-3 space-y-3">
+          {facts.map((fact, index) => (
+            <div key={index} className="p-3 rounded-lg bg-background-lighter border border-border">
+              <h3 className="font-medium text-sm mb-2">{fact.title}</h3>
+              <p className="text-sm text-gray-300">{fact.content}</p>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 };
