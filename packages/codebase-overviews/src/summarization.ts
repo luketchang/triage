@@ -68,6 +68,7 @@ Additional Instructions:
 - Each summary you are provided should have its own very thorough and highly technical section with explaining the component's role in the system, its architecture, and a full file tree with comments for its files
 - After listing all subcomponents, provide a detailed walkthrough of the system's operation, including detailed explanations of data flow and service interactions for main few user scenarios. 
 - Then highlight how all the components work together and the low-level details of the inter-component interactions, specifically enumerating/outlining the different types of data or message flows between components if there are any
+- Try to keep you final merged summary under 5000 words
 
 System Description: ${params.systemDescription}
 
