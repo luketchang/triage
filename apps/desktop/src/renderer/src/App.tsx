@@ -1,31 +1,16 @@
-// @ts-ignore - Ignoring React module resolution issues
 import { useState } from "react";
-import "./electron.d";
-import "./styles/globals.css";
-
-import { TabType } from "./types/index.js";
-
-// Components
 import NavigationSidebar from "./components/NavigationSidebar.js";
-
-// Feature Views
-import ChatView from "./features/ChatView.js";
-
-// Custom hooks
-import { useChat } from "./hooks/useChat.js";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
-
-// Context Provider
 import { AppConfigProvider } from "./context/AppConfigContext.js";
+import ChatView from "./features/ChatView.js";
+import SettingsView from "./features/SettingsView.js";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
+import "./styles/globals.css";
+import { TabType } from "./types/index.js";
 
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [showFactsSidebar, setShowFactsSidebar] = useState(false);
 
-  // Use custom hooks
-  const chatState = useChat();
-
-  // Setup keyboard shortcuts
   useKeyboardShortcuts([
     {
       key: "f",
@@ -36,24 +21,26 @@ function App(): JSX.Element {
     },
   ]);
 
-  const handleTabChange = (tab: TabType) => {
-    setActiveTab(tab);
+  const renderActiveTabContent = () => {
+    switch (activeTab) {
+      case "settings":
+        return <SettingsView />;
+      case "chat":
+      default:
+        return <ChatView />;
+    }
   };
 
   return (
     <AppConfigProvider>
       <div className="flex w-full h-full bg-background antialiased">
-        <NavigationSidebar
-          activeTab={activeTab}
-          handleTabChange={handleTabChange}
-          contextItemsCount={chatState.contextItems?.length || 0}
-        />
+        <NavigationSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
         <div className="flex-1 h-full overflow-hidden flex shadow-sm">
           <div
             className={`${showFactsSidebar ? "flex-1" : "w-full"} h-full overflow-hidden transition-standard`}
           >
-            <ChatView />
+            {renderActiveTabContent()}
           </div>
         </div>
       </div>

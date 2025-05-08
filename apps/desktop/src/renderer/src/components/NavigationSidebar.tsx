@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { ChatIcon } from "../icons/index.js";
+import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
 import { TabType } from "../types/index.js";
 import { Button } from "./ui/button.jsx";
 import { ScrollArea } from "./ui/scroll-area.jsx";
 
+import { useChat } from "@renderer/hooks/useChat.js";
 import { FaPlus } from "react-icons/fa";
 // removed unused import
 
@@ -16,22 +17,15 @@ interface Chat {
 
 interface NavigationSidebarProps {
   activeTab: TabType;
-  handleTabChange: (tab: TabType) => void;
-  contextItemsCount: number;
+  setActiveTab: (tab: TabType) => void;
 }
 
-function NavigationSidebar({
-  activeTab,
-  handleTabChange,
-  contextItemsCount,
-}: NavigationSidebarProps) {
+function NavigationSidebar({ activeTab, setActiveTab }: NavigationSidebarProps) {
   // TODO: Replace with actual chat history functionality
   const [chatHistory] = useState<Chat[]>([]);
 
-  // Make sure to keep the chat tab active
-  if (activeTab !== "chat") {
-    handleTabChange("chat");
-  }
+  const chatState = useChat();
+  const contextItemsCount = chatState.contextItems.length;
 
   return (
     <div className="w-60 h-full bg-background-sidebar border-r border-border flex flex-col">
@@ -40,7 +34,10 @@ function NavigationSidebar({
         <Button
           variant="outline"
           className="w-full justify-start gap-2"
-          onClick={() => console.info("New chat")}
+          onClick={() => {
+            setActiveTab("chat");
+            console.info("New chat");
+          }}
         >
           <FaPlus size={12} /> New Chat
         </Button>
@@ -74,9 +71,10 @@ function NavigationSidebar({
       <div className="p-3 border-t border-border">
         <Button
           variant="ghost"
-          className="w-full justify-start text-sm text-gray-300"
-          onClick={() => console.info("Settings")}
+          className={`w-full justify-start text-sm ${activeTab === "settings" ? "text-primary" : "text-gray-300"}`}
+          onClick={() => setActiveTab("settings")}
         >
+          <SettingsIcon className="w-4 h-4 mr-2" />
           Settings
         </Button>
       </div>
