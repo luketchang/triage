@@ -437,19 +437,22 @@ export async function invokeAgent({
   reasonOnly = false,
   onUpdate,
 }: AgentArgs): Promise<AssistantMessage> {
-  const observabilityPlatform = getObservabilityPlatform(agentCfg);
+  if (!agentCfg.codebaseOverviewPath) {
+    throw new Error("Codebase overview path is required");
+  }
+  if (!agentCfg.repoPath) {
+    throw new Error("Repo path is required");
+  }
+  const overview = await fs.readFile(agentCfg.codebaseOverviewPath, "utf-8");
+  const fileTree = loadFileTree(agentCfg.repoPath);
 
+  const observabilityPlatform = getObservabilityPlatform(agentCfg);
   // Get formatted labels map for time range
   const logLabelsMap = await observabilityPlatform.getLogsFacetValues(
     startDate.toISOString(),
     endDate.toISOString()
   );
   logger.info(formatFacetValues(logLabelsMap));
-
-  // Load the codebase overview
-  const overview = await fs.readFile(agentCfg.codebaseOverviewPath, "utf-8");
-
-  const fileTree = loadFileTree(agentCfg.repoPath);
 
   let toolCalls: Array<
     | LogRequest
