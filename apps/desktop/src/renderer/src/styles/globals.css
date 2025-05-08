@@ -73,6 +73,20 @@ body {
   animation: fadeIn 0.3s ease forwards;
 }
 
+@keyframes pulseSlow {
+  0%,
+  100% {
+    background-color: rgba(255, 106, 61, 0.05);
+  }
+  50% {
+    background-color: rgba(255, 106, 61, 0.15);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 3s ease-in-out infinite;
+}
+
 /* Transitions */
 .transition-standard {
   @apply transition-all duration-200 ease-in-out;

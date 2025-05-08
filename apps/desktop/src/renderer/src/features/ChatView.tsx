@@ -191,13 +191,16 @@ function ChatView() {
             <div className="flex flex-col">
               {messages.map((message) =>
                 message.role === "user" ? (
-                  <div key={message.id} className={cn("py-4 px-4 flex flex-col bg-background")}>
+                  <div
+                    key={message.id}
+                    className={cn("py-4 px-4 flex flex-col bg-background-assistant")}
+                  >
                     <div className="flex items-start max-w-[75%] mx-auto w-full">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary">
                         <span className="text-white font-medium text-sm">U</span>
                       </div>
                       <div className="flex-1 overflow-hidden pt-0.5">
-                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3 break-words">
+                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3 break-words bg-background-alt p-3 rounded-lg shadow-sm">
                           <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
                       </div>
@@ -220,11 +223,6 @@ function ChatView() {
                     </div>
                   </div>
                 )
-              )}
-              {isThinking && (
-                <div className="py-4 px-4 text-center text-gray-400 italic animate-pulse">
-                  <div className="max-w-[75%] mx-auto">Assistant is thinking...</div>
-                </div>
               )}
               <div ref={messagesEndRef} className="h-4" />
             </div>

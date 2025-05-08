@@ -15,6 +15,7 @@ import {
   ReasoningStage,
   ReviewStage,
 } from "../types";
+import AnimatedEllipsis from "./AnimatedEllipsis";
 
 // Add custom type for ReactMarkdown code component props
 interface CodeProps {
@@ -38,7 +39,8 @@ interface CellViewProps {
 const CollapsibleStep: React.FC<{
   title: string;
   children: React.ReactNode;
-}> = ({ title, children }) => {
+  isActive?: boolean;
+}> = ({ title, children, isActive = false }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -52,11 +54,22 @@ const CollapsibleStep: React.FC<{
   return (
     <div className="step-container border border-border rounded-lg overflow-hidden mb-3 transition-standard shadow-sm">
       <div
-        className="step-header cursor-pointer p-2.5 flex justify-between items-center bg-background-lighter"
+        className={cn(
+          "step-header cursor-pointer p-2.5 flex justify-between items-center",
+          isActive ? "bg-primary/10 animate-pulse-slow" : "bg-background-lighter"
+        )}
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
-        <div className="step-header-content font-medium text-sm text-primary-light">
-          <span>{title}</span>
+        <div
+          className={cn(
+            "step-header-content font-medium text-sm",
+            isActive ? "text-primary" : "text-primary-light"
+          )}
+        >
+          <span>
+            {title}
+            {isActive && " (in progress)"}
+          </span>
         </div>
         <span className="collapse-icon text-xs text-gray-400">{isCollapsed ? "▼" : "▲"}</span>
       </div>
@@ -75,23 +88,23 @@ const CollapsibleStep: React.FC<{
   );
 };
 
-const renderStage = (stage: AgentStage) => {
+const renderStage = (stage: AgentStage, isActive: boolean = false) => {
   switch (stage.type) {
     case "logSearch":
-      return renderLogSearchStage(stage);
+      return renderLogSearchStage(stage, isActive);
     case "reasoning":
-      return renderReasoningStage(stage);
+      return renderReasoningStage(stage, isActive);
     case "review":
-      return renderReviewStage(stage);
+      return renderReviewStage(stage, isActive);
     case "logPostprocessing":
-      return renderLogPostprocessingStage(stage);
+      return renderLogPostprocessingStage(stage, isActive);
     case "codePostprocessing":
-      return renderCodePostprocessingStage(stage);
+      return renderCodePostprocessingStage(stage, isActive);
   }
 };
 
-const renderLogSearchStage = (stage: LogSearchStage) => (
-  <CollapsibleStep title="Log Search">
+const renderLogSearchStage = (stage: LogSearchStage, isActive: boolean = false) => (
+  <CollapsibleStep title="Log Search" isActive={isActive}>
     {stage.queries.length === 0 ? (
       <em>Searching logs...</em>
     ) : (
@@ -134,8 +147,8 @@ const CodeBlock = ({ language, value }: { language: string; value: string }) => 
   );
 };
 
-const renderReasoningStage = (stage: ReasoningStage) => (
-  <CollapsibleStep title="Reasoning">
+const renderReasoningStage = (stage: ReasoningStage, isActive: boolean = false) => (
+  <CollapsibleStep title="Reasoning" isActive={isActive}>
     <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
       <ReactMarkdown
         components={{
@@ -168,8 +181,8 @@ const renderReasoningStage = (stage: ReasoningStage) => (
   </CollapsibleStep>
 );
 
-const renderReviewStage = (stage: ReviewStage) => (
-  <CollapsibleStep title="Review">
+const renderReviewStage = (stage: ReviewStage, isActive: boolean = false) => (
+  <CollapsibleStep title="Review" isActive={isActive}>
     <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
       <ReactMarkdown
         components={{
@@ -202,8 +215,8 @@ const renderReviewStage = (stage: ReviewStage) => (
   </CollapsibleStep>
 );
 
-const renderLogPostprocessingStage = (stage: LogPostprocessingStage) => (
-  <CollapsibleStep title="Log Postprocessing">
+const renderLogPostprocessingStage = (stage: LogPostprocessingStage, isActive: boolean = false) => (
+  <CollapsibleStep title="Log Postprocessing" isActive={isActive}>
     <div className="space-y-3">
       {stage.facts.map((fact, index) => (
         <div
@@ -220,8 +233,11 @@ const renderLogPostprocessingStage = (stage: LogPostprocessingStage) => (
   </CollapsibleStep>
 );
 
-const renderCodePostprocessingStage = (stage: CodePostprocessingStage) => (
-  <CollapsibleStep title="Code Postprocessing">
+const renderCodePostprocessingStage = (
+  stage: CodePostprocessingStage,
+  isActive: boolean = false
+) => (
+  <CollapsibleStep title="Code Postprocessing" isActive={isActive}>
     <div className="space-y-3">
       {stage.facts.map((fact, index) => (
         <div
@@ -251,6 +267,12 @@ function CellView({
 
   // Filter stages to only show the ones that should be visible in the UI
   const stages = useMemo(() => message.stages || [], [message.stages]);
+
+  // Determine which stage is currently active when thinking
+  const activeStageIndex = useMemo(() => {
+    if (!isThinking || stages.length === 0) return -1;
+    return stages.length - 1;
+  }, [isThinking, stages]);
 
   const logPostprocessingStage = useMemo(
     () =>
@@ -327,14 +349,16 @@ function CellView({
       {/* Main content area */}
       <div className="cellview-main-content flex-1">
         {/* Render each visible step */}
-        {stages.map((stage) => (
-          <React.Fragment key={stage.id}>{renderStage(stage)}</React.Fragment>
+        {stages.map((stage, index) => (
+          <React.Fragment key={stage.id}>
+            {renderStage(stage, isThinking && index === activeStageIndex)}
+          </React.Fragment>
         ))}
 
         {/* Show waiting indicator with less restrictive conditions */}
         {isThinking && showWaitingIndicator && (
-          <div className="waiting-indicator p-2 text-center text-gray-400">
-            <span className="animate-pulse">...</span>
+          <div className="waiting-indicator p-2 text-left text-gray-400">
+            <AnimatedEllipsis />
           </div>
         )}
 
