@@ -17,9 +17,10 @@ export type ChatMode = "agent" | "manual";
 
 interface UseChatProps {
   selectedChatId?: number;
+  onChatCreated: (chatId: number) => void;
 }
 
-export function useChat({ selectedChatId }: UseChatProps = {}) {
+export function useChat({ selectedChatId, onChatCreated }: UseChatProps) {
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
@@ -292,6 +293,7 @@ export function useChat({ selectedChatId }: UseChatProps = {}) {
     // If no chat is selected or it's the "empty" chat (0), create a new chat
     if (!chatId || chatId === 0) {
       try {
+        console.info("Creating new chat via API");
         const newChatId = await api.createChat();
         if (newChatId === null) {
           console.error("Failed to create new chat");
@@ -300,6 +302,12 @@ export function useChat({ selectedChatId }: UseChatProps = {}) {
         chatId = newChatId;
         console.info("Created new chat with ID:", chatId);
         setCurrentChatId(chatId);
+
+        // Call the callback when a new chat is created
+        if (onChatCreated) {
+          console.info("Calling onChatCreated callback with chat ID:", chatId);
+          onChatCreated(chatId);
+        }
       } catch (error) {
         console.error("Error creating new chat:", error);
         return;

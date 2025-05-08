@@ -15,6 +15,7 @@ interface NavigationSidebarProps {
   contextItemsCount: number;
   selectedChatId?: number;
   onSelectChat: (chatId: number) => void;
+  refreshTrigger?: number;
 }
 
 function NavigationSidebar({
@@ -23,36 +24,17 @@ function NavigationSidebar({
   contextItemsCount,
   selectedChatId,
   onSelectChat,
+  refreshTrigger,
 }: NavigationSidebarProps) {
   // State for chat history
   const [chatHistory, setChatHistory] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch chat list on component mount
-  useEffect(() => {
-    fetchChats();
-  }, []);
-
   // Function to fetch chats
   const fetchChats = async () => {
     setIsLoading(true);
     try {
-      setIsLoading(true);
-      const chatId = await api.createChat();
-      console.info("Created new chat with ID:", chatId);
-
-      if (chatId) {
-        // Add the new chat to the beginning of the history
-        const newChat: Chat = {
-          id: chatId,
-          createdAt: new Date(),
-        };
-
-        setChatHistory((prev) => [newChat, ...prev]);
-
-        // Select the new chat
-        onSelectChat(chatId);
-      }
+      console.info("Fetching chats from API...");
       const chats = await api.getAllChats();
       console.info("Fetched chats:", chats);
       setChatHistory(chats);
@@ -63,6 +45,12 @@ function NavigationSidebar({
       setIsLoading(false);
     }
   };
+
+  // Fetch chat list on component mount and when refreshTrigger changes
+  useEffect(() => {
+    console.info("NavigationSidebar: refreshTrigger changed:", refreshTrigger);
+    fetchChats();
+  }, [refreshTrigger]);
 
   // Make sure to keep the chat tab active
   if (activeTab !== "chat") {
@@ -79,14 +67,6 @@ function NavigationSidebar({
   const handleSelectChat = (chatId: number) => {
     onSelectChat(chatId);
   };
-
-  // Refresh the chat list when a new chat becomes available
-  useEffect(() => {
-    if (selectedChatId && !chatHistory.some((chat) => chat.id === selectedChatId)) {
-      // A new chat ID was selected that's not in our history, fetch updated list
-      fetchChats();
-    }
-  }, [selectedChatId, chatHistory]);
 
   return (
     <div className="w-60 h-full bg-background-sidebar border-r border-border flex flex-col">

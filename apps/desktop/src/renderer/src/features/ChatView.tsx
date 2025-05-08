@@ -17,9 +17,12 @@ import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from 
 
 interface ChatViewProps {
   selectedChatId?: number;
+  onChatCreated: (chatId: number) => void;
 }
 
-function ChatView({ selectedChatId }: ChatViewProps) {
+function ChatView({ selectedChatId, onChatCreated }: ChatViewProps) {
+  console.info("ChatView rendering with selectedChatId:", selectedChatId);
+
   const {
     messages,
     newMessage,
@@ -29,7 +32,10 @@ function ChatView({ selectedChatId }: ChatViewProps) {
     contextItems,
     removeContextItem,
     clearChat,
-  } = useChat({ selectedChatId });
+  } = useChat({
+    selectedChatId,
+    onChatCreated,
+  });
 
   // Facts sidebar state
   const [factsSidebarOpen, setFactsSidebarOpen] = useState(false);
