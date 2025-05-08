@@ -3,9 +3,15 @@ import { ObservabilityPlatform } from "@triage/observability";
 import { generateText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import { AgentStreamUpdate, LogSearchInput, logSearchInputToolSchema, LogSearchStep, TaskComplete } from "../types";
+import {
+  AgentStreamUpdate,
+  LogSearchInput,
+  logSearchInputToolSchema,
+  LogSearchStep,
+  TaskComplete,
+} from "../../types";
 
-import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "./utils";
+import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "../utils";
 
 export interface LogSearchAgentResponse {
   newLogSearchSteps: LogSearchStep[];
