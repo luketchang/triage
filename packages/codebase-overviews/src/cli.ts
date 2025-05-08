@@ -53,17 +53,12 @@ export async function main() {
     process.exit(1);
   }
 
-  // Create the output directory if it doesn't exist
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-
   try {
     console.log(`Analyzing codebase at: ${repoPath}`);
     console.log(`Using model: ${model}`);
     console.log(`Overview will be saved to: ${path.join(outputDir, "codebase-overview.md")}`);
 
-    const processor = new CodebaseProcessor(model, repoPath, outputDir, systemDescription);
+    const processor = new CodebaseProcessor(model, repoPath, systemDescription, outputDir);
     await processor.process();
 
     console.log("Overview generation complete!");

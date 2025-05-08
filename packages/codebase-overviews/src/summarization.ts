@@ -30,7 +30,7 @@ Your task is to create a comprehensive, detailed analysis of this directory of c
 Additional Instructions:
 - Begin with a clear explanation of the component's purpose, architecture, and key responsibilities
 - Include complete and detailed directory structures using code blocks with the full file tree of the directory, with each file having comments on its functionality
-- Explain the key components of this service or module and how it may interact with other services or modules
+- Explain the key components of this service or module and how it may interact with other services or modules, specifically enumerating/outlining the different types of data or message flows between components if there are any
 
 System Description: ${params.systemDescription}
 
@@ -66,9 +66,8 @@ Create a comprehensive, technically detailed codebase walkthrough based on the c
 Additional Instructions:
 - Begin with a thorough overview of the system's purpose, architecture, and key components
 - Each summary you are provided should have its own very thorough and highly technical section with explaining the component's role in the system, its architecture, and a full file tree with comments for its files
-- After listing all subcomponents, provide a detailed walkthrough of the system's operation, including detailed explanations of data flow and service interactions for key user scenarios. This section should highlight how all the components work together and the low-level details of the inter-component interactions.
-- Focus on both the individual services in detail and the fine details of how the various components interact with each other
-- Include several examples of the overall system flow through various scenarios to illustrate
+- After listing all subcomponents, provide a detailed walkthrough of the system's operation, including detailed explanations of data flow and service interactions for main few user scenarios. 
+- Then highlight how all the components work together and the low-level details of the inter-component interactions, specifically enumerating/outlining the different types of data or message flows between components if there are any
 
 System Description: ${params.systemDescription}
 
@@ -142,4 +141,4 @@ export async function mergeAllSummaries(
     logger.error(`Error merging summaries: ${error}`);
     return `Error generating final document: ${error}`;
   }
-} 
+}

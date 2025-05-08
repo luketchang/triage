@@ -11,25 +11,22 @@ import { collectFiles, getMajorDirectories } from "./utils";
 export class CodebaseProcessor {
   private llm: Model;
   private repoPath: string;
-  private outputDir: string;
   private systemDescription: string;
   private allowedExtensions: string[];
+  private outputDir: string | undefined;
 
-  constructor(llm: Model, repoPath: string, outputDir: string, systemDescription = "") {
+  constructor(llm: Model, repoPath: string, systemDescription = "", outputDir?: string) {
     this.llm = llm;
     this.repoPath = repoPath;
-    this.outputDir = outputDir;
     this.systemDescription = systemDescription;
     this.allowedExtensions = [".py", ".js", ".ts", ".java", ".go", ".rs", ".yaml", ".cs"];
+    this.outputDir = outputDir;
   }
 
   /**
    * Process the repository to generate a codebase overview
    */
   public async process(): Promise<string> {
-    // Create the output directory if it doesn't exist
-    await fs.mkdir(this.outputDir, { recursive: true });
-
     try {
       // Collect files from the repository using the unified collectFiles function
       const { fileTree: repoFileTree } = await collectFiles(
@@ -87,9 +84,12 @@ export class CodebaseProcessor {
       logger.info(`Final Document:\n${finalDocument}`);
 
       // Save the final document to the output directory
-      const outputPath = path.join(this.outputDir, "codebase-overview.md");
-      await fs.writeFile(outputPath, finalDocument);
-      logger.info(`Saved codebase overview to ${outputPath}`);
+      if (this.outputDir) {
+        await fs.mkdir(this.outputDir, { recursive: true });
+        const outputPath = path.join(this.outputDir, "codebase-overview.md");
+        await fs.writeFile(outputPath, finalDocument);
+        logger.info(`Saved codebase overview to ${outputPath}`);
+      }
 
       return finalDocument;
     } catch (error) {
