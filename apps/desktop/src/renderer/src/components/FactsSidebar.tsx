@@ -1,12 +1,12 @@
 // @ts-ignore - Ignoring React module resolution issues
 import React, { useEffect, useState } from "react";
-import { useAppConfig } from "../context/AppConfigContext";
-import { filepathToGitHubUrl } from "../utils/facts/code";
-import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs";
-import { ScrollArea } from "./ui/scroll-area";
+import { useAppConfig } from "../context/useAppConfig.js";
+import { filepathToGitHubUrl } from "../utils/facts/code.js";
+import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs.js";
+import { ScrollArea } from "./ui/scroll-area.jsx";
 
 // Fact types from the codebase
-import { CodePostprocessingFact, LogPostprocessingFact } from "../types";
+import { CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
 interface FactsSidebarProps {
   logFacts: LogPostprocessingFact[];

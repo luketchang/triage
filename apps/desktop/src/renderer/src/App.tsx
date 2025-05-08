@@ -3,17 +3,17 @@ import { useState } from "react";
 import "./electron.d";
 import "./styles/globals.css";
 
-import { TabType } from "./types";
+import { TabType } from "./types/index.js";
 
 // Components
-import NavigationSidebar from "./components/NavigationSidebar";
+import NavigationSidebar from "./components/NavigationSidebar.js";
 
 // Feature Views
-import ChatView from "./features/ChatView";
+import ChatView from "./features/ChatView.js";
 
 // Custom hooks
-import { useChat } from "./hooks/useChat";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useChat } from "./hooks/useChat.js";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
 
 // Context Provider
 import { AppConfigProvider } from "./context/AppConfigContext.js";

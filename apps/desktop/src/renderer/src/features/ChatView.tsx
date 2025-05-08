@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import CellView from "../components/CellView";
-import FactsSidebar from "../components/FactsSidebar";
-import { Button } from "../components/ui/button";
+import CellView from "../components/CellView.js";
+import FactsSidebar from "../components/FactsSidebar.js";
+import { Button } from "../components/ui/button.js";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
-import { ScrollArea } from "../components/ui/scroll-area";
-import { useChat } from "../hooks/useChat";
-import { MoreHorizontalIcon, SendIcon } from "../icons";
-import { cn } from "../lib/utils";
-import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types";
+} from "../components/ui/dropdown-menu.js";
+import { ScrollArea } from "../components/ui/scroll-area.js";
+import { useChat } from "../hooks/useChat.js";
+import { MoreHorizontalIcon, SendIcon } from "../icons/index.js";
+import { cn } from "../lib/utils.js";
+import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
 function ChatView() {
   const {

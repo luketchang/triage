@@ -7,6 +7,19 @@ export default {
   },
   theme: {
     extend: {
+      keyframes: {
+        shine: {
+          "0%": { backgroundPosition: "200% center" },
+          "100%": { backgroundPosition: "-200% center" },
+        },
+      },
+      animation: {
+        shine: "shine 6s linear infinite",
+      },
+      backgroundImage: {
+        "shine-white":
+          "linear-gradient(90deg, #b0b0b0 0%, #b0b0b0 40%, rgba(255,255,255,0.5) 40%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.5) 60%, #b0b0b0 60%, #b0b0b0 100%)",
+      },
       colors: {
         primary: {
           DEFAULT: "#ff6a3d",

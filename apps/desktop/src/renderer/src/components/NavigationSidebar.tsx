@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { ChatIcon } from "../icons";
-import { TabType } from "../types";
-import { Button } from "./ui/button";
-import { ScrollArea } from "./ui/scroll-area";
+import { ChatIcon } from "../icons/index.js";
+import { TabType } from "../types/index.js";
+import { Button } from "./ui/button.jsx";
+import { ScrollArea } from "./ui/scroll-area.jsx";
 // removed unused import
 
 // Define a simple Chat type for chat history

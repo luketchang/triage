@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { cn } from "../lib/utils";
+import { cn } from "../lib/utils.js";
 import {
   AgentStage,
   AssistantMessage,
@@ -14,8 +14,8 @@ import {
   LogSearchStage,
   ReasoningStage,
   ReviewStage,
-} from "../types";
-import AnimatedEllipsis from "./AnimatedEllipsis";
+} from "../types/index.js";
+import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
 
 // Add custom type for ReactMarkdown code component props
 interface CodeProps {
@@ -63,13 +63,12 @@ const CollapsibleStep: React.FC<{
         <div
           className={cn(
             "step-header-content font-medium text-sm",
-            isActive ? "text-primary animate-text-pulse-slow" : "text-primary-light"
+            isActive
+              ? "text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine"
+              : "text-white"
           )}
         >
-          <span>
-            {title}
-            {isActive && " (in progress)"}
-          </span>
+          <span>{title}</span>
         </div>
         <span className="collapse-icon text-xs text-gray-400">{isCollapsed ? "▼" : "▲"}</span>
       </div>
