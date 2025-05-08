@@ -86,8 +86,8 @@ Create a comprehensive, technically detailed codebase walkthrough based on the c
 Additional Instructions:
 - Begin with a thorough overview of the system's purpose, architecture, and key components
 - Each summary you are provided should have its own very thorough and highly technical section with explaining the component's role in the system, its architecture, and a full file tree with comments for its files
-- After listing all subcomponents, provide a detailed walkthrough of the system's operation, including detailed explanations of data flow and service interactions for main few user scenarios. 
-- Then highlight how all the components work together and the low-level details of the inter-component interactions (e.g. what messages service A sends to service B), specifically enumerating/outlining the different types of data or message flows between components if there are any.
+- After listing all subcomponents, provide a detailed walkthrough of the system's operation, including explanations of data flow and inter-service interactions for main few user scenarios. 
+- Then highlight the low-level details of the inter-component interactions (e.g. what messages service A sends to service B and what the message triggers). You should explain the specific types of data or messages exchanged between specific services (i.e. literally explain which services send which messages to which other services).
 - Try to keep you final merged summary under 5000 words. Closely follow the example summary provided for an example on how to write your overview.
 
 System Description: ${params.systemDescription}
