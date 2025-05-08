@@ -10,6 +10,7 @@ import { TabType } from "./types/index.js";
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [showFactsSidebar, setShowFactsSidebar] = useState(false);
+  const [selectedChatId, setSelectedChatId] = useState<number | undefined>(undefined);
 
   useKeyboardShortcuts([
     {
@@ -31,16 +32,26 @@ function App(): JSX.Element {
     }
   };
 
+  const handleSelectChat = (chatId: number) => {
+    setSelectedChatId(chatId);
+  };
+
   return (
     <AppConfigProvider>
       <div className="flex w-full h-full bg-background antialiased">
-        <NavigationSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <NavigationSidebar
+          activeTab={activeTab}
+          handleTabChange={handleTabChange}
+          contextItemsCount={chatState.contextItems?.length || 0}
+          selectedChatId={selectedChatId}
+          onSelectChat={handleSelectChat}
+        />
 
         <div className="flex-1 h-full overflow-hidden flex shadow-sm">
           <div
             className={`${showFactsSidebar ? "flex-1" : "w-full"} h-full overflow-hidden transition-standard`}
           >
-            {renderActiveTabContent()}
+            <ChatView selectedChatId={selectedChatId} />
           </div>
         </div>
       </div>

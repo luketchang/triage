@@ -1,31 +1,72 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
-import { TabType } from "../types/index.js";
-import { Button } from "./ui/Button.jsx";
-import { ScrollArea } from "./ui/ScrollArea.js";
+import api from "../services/api.js";
+import { Chat, TabType } from "../types/index.js";
+import { Button } from "./ui/button.jsx";
+import { ScrollArea } from "./ui/scroll-area.jsx";
 
 import { useChat } from "@renderer/hooks/useChat.js";
 import { FaPlus } from "react-icons/fa";
 // removed unused import
 
-// Define a simple Chat type for chat history
-interface Chat {
-  id: string;
-  title: string;
-  timestamp: Date;
-}
-
 interface NavigationSidebarProps {
   activeTab: TabType;
-  setActiveTab: (tab: TabType) => void;
+  handleTabChange: (tab: TabType) => void;
+  contextItemsCount: number;
+  selectedChatId?: number;
+  onSelectChat: (chatId: number) => void;
 }
 
-function NavigationSidebar({ activeTab, setActiveTab }: NavigationSidebarProps) {
-  // TODO: Replace with actual chat history functionality
-  const [chatHistory] = useState<Chat[]>([]);
+function NavigationSidebar({
+  activeTab,
+  handleTabChange,
+  contextItemsCount,
+  selectedChatId,
+  onSelectChat,
+}: NavigationSidebarProps) {
+  // State for chat history
+  const [chatHistory, setChatHistory] = useState<Chat[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch chat list on component mount
+  useEffect(() => {
+    // This would be implemented in a later update
+    // For now we'll work with the latest chat only
+  }, []);
 
   const chatState = useChat();
   const contextItemsCount = chatState.contextItems.length;
+
+  // Handle creating a new chat
+  const handleCreateChat = async () => {
+    try {
+      setIsLoading(true);
+      const chatId = await api.createChat();
+      console.info("Created new chat with ID:", chatId);
+
+      if (chatId) {
+        // Add the new chat to the beginning of the history
+        const newChat: Chat = {
+          id: chatId,
+          createdAt: new Date(),
+        };
+
+        setChatHistory((prev) => [newChat, ...prev]);
+
+        // Select the new chat
+        onSelectChat(chatId);
+      }
+    } catch (error) {
+      console.error("Error creating chat:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle selecting a chat
+  const handleSelectChat = (chatId: number) => {
+    onSelectChat(chatId);
+  };
 
   return (
     <div className="w-60 h-full bg-background-sidebar border-r border-border flex flex-col">
@@ -34,10 +75,8 @@ function NavigationSidebar({ activeTab, setActiveTab }: NavigationSidebarProps) 
         <Button
           variant="outline"
           className="w-full justify-start gap-2"
-          onClick={() => {
-            setActiveTab("chat");
-            console.info("New chat");
-          }}
+          onClick={handleCreateChat}
+          disabled={isLoading}
         >
           <FaPlus size={12} /> New Chat
         </Button>
@@ -49,11 +88,15 @@ function NavigationSidebar({ activeTab, setActiveTab }: NavigationSidebarProps) 
             chatHistory.map((chat) => (
               <div
                 key={chat.id}
-                className="flex items-center p-2 rounded-md hover:bg-background-lighter cursor-pointer mb-1 text-gray-200 group"
-                onClick={() => console.info(`Clicked chat: ${chat.id}`)}
+                className={`flex items-center p-2 rounded-md hover:bg-background-lighter cursor-pointer mb-1 text-gray-200 group ${
+                  selectedChatId === chat.id ? "bg-background-lighter" : ""
+                }`}
+                onClick={() => handleSelectChat(chat.id)}
               >
                 <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white" />
-                <div className="text-sm truncate">{chat.title}</div>
+                <div className="text-sm truncate">
+                  Chat {chat.id} - {chat.createdAt.toLocaleDateString()}
+                </div>
               </div>
             ))
           ) : (

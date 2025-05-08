@@ -550,6 +550,42 @@ The primary issue appears to be in the authentication middleware where token val
     // Always return mock facet data
     return createMockSpanFacets();
   },
+
+  /**
+   * Create a new chat
+   */
+  createChat: async (): Promise<number> => {
+    console.info("Mock createChat called");
+
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Return a mock chat ID
+    return Math.floor(Math.random() * 1000) + 1;
+  },
+
+  /**
+   * Chat persistence methods
+   */
+  saveUserMessage: async () => {
+    console.info("Mock saveUserMessage - not implemented in mock mode");
+    return null;
+  },
+
+  saveAssistantMessage: async () => {
+    console.info("Mock saveAssistantMessage - not implemented in mock mode");
+    return null;
+  },
+
+  loadChatMessages: async (chatId?: number) => {
+    console.info("Mock loadChatMessages called with chatId:", chatId);
+    return [];
+  },
+
+  clearChat: async () => {
+    console.info("Mock clearChat - not implemented in mock mode");
+    return false;
+  },
 };
 
 export default mockElectronAPI;

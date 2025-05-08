@@ -14,6 +14,17 @@ export function setupDbHandlers(): void {
   // Initialize database service
   dbService = new DatabaseService();
 
+  // Create a new chat
+  ipcMain.handle("db:create-chat", async (): Promise<number | null> => {
+    console.info("IPC: db:create-chat called");
+    if (!dbService) return null;
+
+    console.info("Creating a new chat");
+    const chatId = await dbService.createChat();
+    console.info("Created new chat with ID:", chatId);
+    return chatId;
+  });
+
   // Save user message
   ipcMain.handle(
     "db:save-user-message",
@@ -54,16 +65,16 @@ export function setupDbHandlers(): void {
   );
 
   // Get chat messages
-  ipcMain.handle("db:get-messages", async (): Promise<ChatMessage[]> => {
-    console.info("IPC: db:get-messages called");
+  ipcMain.handle("db:get-messages", async (_, chatId?: number): Promise<ChatMessage[]> => {
+    console.info("IPC: db:get-messages called with chatId:", chatId);
     if (!dbService) return [];
 
-    // Get the latest chat ID
-    const chatId = await dbService.getLatestChatId();
-    if (!chatId) return [];
+    // Get the specified chat ID or the latest chat ID if not provided
+    const id = chatId || (await dbService.getLatestChatId());
+    if (!id) return [];
 
-    console.info("Getting messages for chat ID:", chatId);
-    const messages = await dbService.getChatMessages(chatId);
+    console.info("Getting messages for chat ID:", id);
+    const messages = await dbService.getChatMessages(id);
     console.info(`Got ${messages.length} messages`);
     return messages;
   });
