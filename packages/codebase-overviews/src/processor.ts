@@ -1,4 +1,4 @@
-import { Model, logger } from "@triage/common";
+import { Model, chunkArray, logger } from "@triage/common";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { identifyTopLevelServices } from "./service-identification";
@@ -14,13 +14,21 @@ export class CodebaseProcessor {
   private systemDescription: string;
   private allowedExtensions: string[];
   private outputDir: string | undefined;
+  private chunkSize: number = 8;
 
-  constructor(llm: Model, repoPath: string, systemDescription = "", outputDir?: string) {
+  constructor(
+    llm: Model,
+    repoPath: string,
+    systemDescription = "",
+    outputDir?: string,
+    options: { chunkSize?: number } = {}
+  ) {
     this.llm = llm;
     this.repoPath = repoPath;
     this.systemDescription = systemDescription;
     this.allowedExtensions = [".py", ".js", ".ts", ".java", ".go", ".rs", ".yaml", ".cs"];
     this.outputDir = outputDir;
+    this.chunkSize = options.chunkSize || 8;
   }
 
   /**
@@ -51,26 +59,39 @@ export class CodebaseProcessor {
 
       // Process each directory
       const summaries: Record<string, string> = {};
-      for (const directory of directoriesToProcess) {
-        logger.info(`Processing directory: ${directory}`);
+      const directoryChunks = chunkArray(directoriesToProcess, this.chunkSize);
 
-        const { fileTree: dirFileTree, pathToSourceCode } = await collectFiles(
-          directory,
-          this.allowedExtensions,
-          this.repoPath
+      for (const chunk of directoryChunks) {
+        const summaryPromises = chunk.map(
+          async (directory: string): Promise<{ directory: string; summary: string }> => {
+            logger.info(`Processing directory: ${directory}`);
+
+            const { fileTree: dirFileTree, pathToSourceCode } = await collectFiles(
+              directory,
+              this.allowedExtensions,
+              this.repoPath
+            );
+
+            const summary = await generateDirectorySummary(
+              this.llm,
+              this.systemDescription,
+              directory,
+              dirFileTree,
+              pathToSourceCode,
+              repoFileTree
+            );
+
+            logger.info(`Summary for ${directory}:\n${summary}`);
+            return { directory, summary };
+          }
         );
 
-        const summary = await generateDirectorySummary(
-          this.llm,
-          this.systemDescription,
-          directory,
-          dirFileTree,
-          pathToSourceCode,
-          repoFileTree
+        // Wait for current chunk to complete
+        const summaryResults = await Promise.all(summaryPromises);
+        Object.assign(
+          summaries,
+          Object.fromEntries(summaryResults.map(({ directory, summary }) => [directory, summary]))
         );
-
-        summaries[directory] = summary;
-        logger.info(`Summary for ${directory}:\n${summary}`);
       }
 
       // Merge all summaries

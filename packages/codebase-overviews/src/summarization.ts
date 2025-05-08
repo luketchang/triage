@@ -1,5 +1,7 @@
 import { Model, getModelWrapper, logger } from "@triage/common";
 import { generateText } from "ai";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 /**
  * System prompt specific to the code summarization tasks
@@ -8,6 +10,19 @@ export const SUMMARIZATION_SYSTEM_PROMPT = `
 You are an expert AI assistant that helps analyze codebases and generate comprehensive technical overviews. 
 Your task is to generate detailed summaries of code components and create a unified walkthrough of the entire system.
 `;
+
+/**
+ * Loads the example merge summary file
+ */
+function loadMergeSummaryExample(): string {
+  try {
+    const examplePath = join(__dirname, "../examples/merge-summaries-example.md");
+    return readFileSync(examplePath, "utf-8");
+  } catch (error) {
+    logger.warn("Failed to load merge summary example:", error);
+    return "";
+  }
+}
 
 /**
  * Generates a prompt for directory summary
@@ -54,11 +69,16 @@ export function createMergeSummariesPrompt(params: {
   systemDescription: string;
   repoFileTree: string;
   summaries: Record<string, string>;
+  example?: string;
 }): string {
   let summariesStr = "";
   for (const [directory, summary] of Object.entries(params.summaries)) {
     summariesStr += `Walkthrough for ${directory}:\n${summary}\n\n`;
   }
+
+  const exampleSection = params.example
+    ? `\nHere is an example of a well-formatted codebase walkthrough to use as a reference:\n\n${params.example}\n\n`
+    : "";
 
   return `
 Create a comprehensive, technically detailed codebase walkthrough based on the component analyses provided. Your walkthrough should provide an in-depth understanding of the entire system's architecture, implementation details, and component interactions. Your response should be well formatted using markdown and easily digestible by an engineer navigating the codebase.
@@ -67,8 +87,8 @@ Additional Instructions:
 - Begin with a thorough overview of the system's purpose, architecture, and key components
 - Each summary you are provided should have its own very thorough and highly technical section with explaining the component's role in the system, its architecture, and a full file tree with comments for its files
 - After listing all subcomponents, provide a detailed walkthrough of the system's operation, including detailed explanations of data flow and service interactions for main few user scenarios. 
-- Then highlight how all the components work together and the low-level details of the inter-component interactions, specifically enumerating/outlining the different types of data or message flows between components if there are any
-- Try to keep you final merged summary under 5000 words
+- Then highlight how all the components work together and the low-level details of the inter-component interactions (e.g. what messages service A sends to service B), specifically enumerating/outlining the different types of data or message flows between components if there are any.
+- Try to keep you final merged summary under 5000 words. Closely follow the example summary provided for an example on how to write your overview.
 
 System Description: ${params.systemDescription}
 
@@ -78,7 +98,8 @@ ${params.repoFileTree}
 Walkthroughs for each major module/directory:
 ${summariesStr}
 
-Conclude with a section that provides an end-to-end technical walkthrough of the system's operation, including detailed explanations of data flow and service interactions for key user scenarios.
+Example summary:
+${params.example}
 `;
 }
 
@@ -124,10 +145,12 @@ export async function mergeAllSummaries(
   summaries: Record<string, string>,
   repoFileTree: string
 ): Promise<string> {
+  const example = loadMergeSummaryExample();
   const prompt = createMergeSummariesPrompt({
     systemDescription,
     repoFileTree,
     summaries,
+    example,
   });
 
   try {
