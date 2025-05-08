@@ -22,8 +22,8 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
   }
 
   private registerSchemaRecursively(schema: z.ZodTypeAny, parentKey: string = ""): void {
-    if (schema instanceof z.ZodObject) {
-      const shape = schema._def.shape();
+    if (schema && schema._def && (schema._def as any).typeName === "ZodObject") {
+      const shape = (schema._def as any).shape();
       for (const [key, subSchema] of Object.entries(shape)) {
         const fullKey = parentKey ? `${parentKey}.${key}` : key;
         if (subSchema instanceof z.ZodType) {
@@ -42,11 +42,19 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
    */
   async getValues<S>(schema?: z.ZodType<S>): Promise<T | S> {
     const actualSchema = schema ?? this.schema;
-    if (!(actualSchema instanceof z.ZodObject)) {
+    // For debugging
+    console.info("Schema type:", (actualSchema as any)?._def?.typeName);
+
+    // Check if it's a ZodObject by looking at the _def.typeName property
+    if (
+      !actualSchema ||
+      !actualSchema._def ||
+      (actualSchema._def as any).typeName !== "ZodObject"
+    ) {
       throw new Error("Schema must be a ZodObject");
     }
     const result: Record<string, any> = {};
-    const shape = actualSchema._def.shape();
+    const shape = (actualSchema._def as any).shape();
     for (const [key, subSchema] of Object.entries(shape)) {
       if (subSchema instanceof z.ZodObject) {
         // Handle nested objects
@@ -89,10 +97,14 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
    */
   async setValues<S = T>(values: Partial<S>, schema?: z.ZodType<S>): Promise<void> {
     const actualSchema = schema ?? this.schema;
-    if (!(actualSchema instanceof z.ZodObject)) {
+    if (
+      !actualSchema ||
+      !actualSchema._def ||
+      (actualSchema._def as any).typeName !== "ZodObject"
+    ) {
       throw new Error("Schema must be a ZodObject");
     }
-    const validatedValues = actualSchema.partial().parse(values);
+    const validatedValues = (actualSchema as any).partial().parse(values);
     for (const [key, value] of Object.entries(validatedValues)) {
       await this.set(key, value);
     }
@@ -118,8 +130,10 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
     const logEntries: string[] = ["Configuration:"];
     for (const [key, value] of Object.entries(config as Record<string, unknown>)) {
       if (
-        this.schema instanceof z.ZodObject &&
-        this.schema._def.shape()[key]?._def?.description === "secret"
+        this.schema &&
+        this.schema._def &&
+        (this.schema._def as any).typeName === "ZodObject" &&
+        (this.schema._def as any).shape()[key]?._def?.description === "secret"
       ) {
         logEntries.push(`  ${key}: ${value !== undefined && value !== null ? "Set" : "Not set"}`);
       } else {
