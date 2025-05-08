@@ -3,6 +3,8 @@ import { ChatIcon } from "../icons/index.js";
 import { TabType } from "../types/index.js";
 import { Button } from "./ui/button.jsx";
 import { ScrollArea } from "./ui/scroll-area.jsx";
+
+import { FaPlus } from "react-icons/fa";
 // removed unused import
 
 // Define a simple Chat type for chat history
@@ -40,7 +42,7 @@ function NavigationSidebar({
           className="w-full justify-start gap-2"
           onClick={() => console.info("New chat")}
         >
-          <span className="text-lg">+</span> New Chat
+          <FaPlus size={12} /> New Chat
         </Button>
       </div>
 
