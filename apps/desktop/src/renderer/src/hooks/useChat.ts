@@ -15,7 +15,11 @@ import { generateId } from "../utils/formatters.js";
 // Define the chat mode type
 export type ChatMode = "agent" | "manual";
 
-export function useChat() {
+interface UseChatProps {
+  selectedChatId?: number;
+}
+
+export function useChat({ selectedChatId }: UseChatProps = {}) {
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
@@ -25,12 +29,29 @@ export function useChat() {
   const [cellManager, setCellManager] = useState<CellUpdateManager | null>(null);
   // Track message IDs that have already been saved to prevent duplicates
   const savedMessageIds = useRef<Set<string>>(new Set());
+  // Track the current chat ID
+  const [currentChatId, setCurrentChatId] = useState<number | undefined>(selectedChatId);
 
-  // Load saved messages when the hook initializes
+  // Update currentChatId when selectedChatId changes
+  useEffect(() => {
+    setCurrentChatId(selectedChatId);
+    // Clear messages when switching to a new chat or to an empty chat view
+    if (selectedChatId === 0) {
+      setMessages([]);
+    }
+  }, [selectedChatId]);
+
+  // Load saved messages when the hook initializes or when selectedChatId changes
   useEffect(() => {
     const loadSavedMessages = async () => {
+      if (!selectedChatId || selectedChatId === 0) {
+        // If no valid chat is selected, just show an empty chat
+        setMessages([]);
+        return;
+      }
+
       try {
-        const savedMessages = await api.loadChatMessages();
+        const savedMessages = await api.loadChatMessages(selectedChatId);
         if (savedMessages && savedMessages.length > 0) {
           setMessages(savedMessages);
           // Add all loaded message IDs to savedMessageIds
@@ -42,7 +63,7 @@ export function useChat() {
     };
 
     loadSavedMessages();
-  }, []);
+  }, [selectedChatId]);
 
   // Watch for new assistant messages and save them
   useEffect(() => {
@@ -59,7 +80,9 @@ export function useChat() {
       if (
         latestMessage.response !== "Thinking..." &&
         !savedMessageIds.current.has(latestMessage.id) &&
-        !isThinking
+        !isThinking &&
+        currentChatId &&
+        currentChatId !== 0
       ) {
         // Mark as saved before the API call to prevent race conditions
         savedMessageIds.current.add(latestMessage.id);
@@ -73,7 +96,7 @@ export function useChat() {
         });
       }
     }
-  }, [messages, isThinking]); // Include isThinking in dependencies
+  }, [messages, isThinking, currentChatId]); // Include currentChatId in dependencies
 
   // Register for agent updates when we have an active cell manager
   useEffect(() => {
@@ -264,6 +287,24 @@ export function useChat() {
     if (!newMessage.trim()) return;
 
     let updatedMessages = [...messages];
+    let chatId = currentChatId;
+
+    // If no chat is selected or it's the "empty" chat (0), create a new chat
+    if (!chatId || chatId === 0) {
+      try {
+        const newChatId = await api.createChat();
+        if (newChatId === null) {
+          console.error("Failed to create new chat");
+          return;
+        }
+        chatId = newChatId;
+        console.info("Created new chat with ID:", chatId);
+        setCurrentChatId(chatId);
+      } catch (error) {
+        console.error("Error creating new chat:", error);
+        return;
+      }
+    }
 
     // Create a new user message with attached context items
     const userMessage: UserMessage = {
@@ -275,9 +316,6 @@ export function useChat() {
     };
 
     updatedMessages = [...updatedMessages, userMessage];
-
-    // Store context items to attach to message
-    // const _contextItemsToAttach = [...contextItems]; // TODO: add this back in once we support attaching context
 
     // Clear context items immediately after creating the message
     setContextItems([]);
@@ -399,5 +437,6 @@ export function useChat() {
     chatMode,
     toggleChatMode,
     clearChat,
+    currentChatId,
   };
 }

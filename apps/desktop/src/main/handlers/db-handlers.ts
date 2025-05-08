@@ -25,6 +25,17 @@ export function setupDbHandlers(): void {
     return chatId;
   });
 
+  // Get all chats
+  ipcMain.handle("db:get-all-chats", async (): Promise<{ id: number; createdAt: string }[]> => {
+    console.info("IPC: db:get-all-chats called");
+    if (!dbService) return [];
+
+    console.info("Getting all chats");
+    const chats = await dbService.getAllChats();
+    console.info(`Got ${chats.length} chats`);
+    return chats;
+  });
+
   // Save user message
   ipcMain.handle(
     "db:save-user-message",

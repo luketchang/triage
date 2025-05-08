@@ -9,6 +9,7 @@ import {
   AgentAssistantMessage,
   AgentChatMessage,
   AssistantMessage,
+  Chat,
   ChatMessage,
   FacetData,
   LogQueryParams,
@@ -90,6 +91,12 @@ declare global {
        * @returns Promise with the created chat ID or null if failed
        */
       createChat: () => Promise<number | null>;
+
+      /**
+       * Get all chats
+       * @returns Promise with an array of chats
+       */
+      getAllChats: () => Promise<Chat[]>;
 
       /**
        * Save a user message to the database

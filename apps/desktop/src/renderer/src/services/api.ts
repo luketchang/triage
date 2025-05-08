@@ -5,6 +5,7 @@ import {
   AgentChatMessage,
   AgentStreamUpdate,
   AssistantMessage,
+  Chat,
   ChatMessage,
   FacetData,
   LogQueryParams,
@@ -177,6 +178,19 @@ const api = {
     } else {
       console.info("Using real electronAPI.createChat");
       return window.electronAPI.createChat();
+    }
+  },
+
+  // Get all chats
+  getAllChats: async (): Promise<Chat[]> => {
+    console.info("[API DEBUG] getAllChats called");
+
+    if (USE_MOCK_API || !isMethodAvailable("getAllChats")) {
+      console.info("Using mock getAllChats");
+      return mockElectronAPI.getAllChats();
+    } else {
+      console.info("Using real electronAPI.getAllChats");
+      return window.electronAPI.getAllChats();
     }
   },
 

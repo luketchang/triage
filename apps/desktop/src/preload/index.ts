@@ -88,6 +88,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createChat: () => ipcRenderer.invoke("db:create-chat"),
 
   /**
+   * Get all chats
+   */
+  getAllChats: () => ipcRenderer.invoke("db:get-all-chats"),
+
+  /**
    * Save a user message to the database
    * @param message The user message to save
    */

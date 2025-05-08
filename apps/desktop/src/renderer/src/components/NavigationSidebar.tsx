@@ -30,15 +30,12 @@ function NavigationSidebar({
 
   // Fetch chat list on component mount
   useEffect(() => {
-    // This would be implemented in a later update
-    // For now we'll work with the latest chat only
+    fetchChats();
   }, []);
 
-  const chatState = useChat();
-  const contextItemsCount = chatState.contextItems.length;
-
-  // Handle creating a new chat
-  const handleCreateChat = async () => {
+  // Function to fetch chats
+  const fetchChats = async () => {
+    setIsLoading(true);
     try {
       setIsLoading(true);
       const chatId = await api.createChat();
@@ -56,17 +53,40 @@ function NavigationSidebar({
         // Select the new chat
         onSelectChat(chatId);
       }
+      const chats = await api.getAllChats();
+      console.info("Fetched chats:", chats);
+      setChatHistory(chats);
     } catch (error) {
       console.error("Error creating chat:", error);
+      console.error("Error fetching chats:", error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Make sure to keep the chat tab active
+  if (activeTab !== "chat") {
+    handleTabChange("chat");
+  }
+
+  // Handle creating a new chat
+  const handleCreateChat = () => {
+    // Now we just clear the selection and let the message sending create the actual chat
+    onSelectChat(0); // Use 0 or undefined to indicate no chat is selected
   };
 
   // Handle selecting a chat
   const handleSelectChat = (chatId: number) => {
     onSelectChat(chatId);
   };
+
+  // Refresh the chat list when a new chat becomes available
+  useEffect(() => {
+    if (selectedChatId && !chatHistory.some((chat) => chat.id === selectedChatId)) {
+      // A new chat ID was selected that's not in our history, fetch updated list
+      fetchChats();
+    }
+  }, [selectedChatId, chatHistory]);
 
   return (
     <div className="w-60 h-full bg-background-sidebar border-r border-border flex flex-col">
@@ -94,9 +114,7 @@ function NavigationSidebar({
                 onClick={() => handleSelectChat(chat.id)}
               >
                 <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white" />
-                <div className="text-sm truncate">
-                  Chat {chat.id} - {chat.createdAt.toLocaleDateString()}
-                </div>
+                <div className="text-sm truncate">New Chat</div>
               </div>
             ))
           ) : (

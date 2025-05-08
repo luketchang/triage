@@ -12,6 +12,10 @@ function App(): JSX.Element {
   const [showFactsSidebar, setShowFactsSidebar] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<number | undefined>(undefined);
 
+  // Use custom hooks
+  const chatState = useChat({ selectedChatId });
+
+  // Setup keyboard shortcuts
   useKeyboardShortcuts([
     {
       key: "f",

@@ -2,6 +2,7 @@ import { AppConfig } from "@renderer/AppConfig.js";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
+  Chat,
   FacetData,
   Log,
   LogQueryParams,
@@ -205,6 +206,13 @@ const createSampleTrace = (
     },
   };
 };
+
+// Create sample chats for mock API
+const mockChats: Chat[] = [
+  { id: 1, createdAt: new Date(Date.now() - 86400000 * 3) },
+  { id: 2, createdAt: new Date(Date.now() - 86400000 * 2) },
+  { id: 3, createdAt: new Date(Date.now() - 86400000) },
+];
 
 /**
  * Mock implementation of the Electron API
@@ -561,7 +569,28 @@ The primary issue appears to be in the authentication middleware where token val
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Return a mock chat ID
-    return Math.floor(Math.random() * 1000) + 1;
+    const newChatId = Math.floor(Math.random() * 1000) + 1;
+
+    // Add to mock chats
+    mockChats.push({
+      id: newChatId,
+      createdAt: new Date(),
+    });
+
+    return newChatId;
+  },
+
+  /**
+   * Get all chats
+   */
+  getAllChats: async (): Promise<Chat[]> => {
+    console.info("Mock getAllChats called");
+
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Return sorted chats (newest first)
+    return [...mockChats].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   },
 
   /**

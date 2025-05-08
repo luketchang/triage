@@ -13,7 +13,6 @@ import { ScrollArea } from "../components/ui/ScrollArea.js";
 import { useChat } from "../hooks/useChat.js";
 import { MoreHorizontalIcon, SendIcon } from "../icons/index.js";
 import { cn } from "../lib/utils.js";
-import api from "../services/api.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
 interface ChatViewProps {
@@ -23,7 +22,6 @@ interface ChatViewProps {
 function ChatView({ selectedChatId }: ChatViewProps) {
   const {
     messages,
-    setMessages,
     newMessage,
     setNewMessage,
     sendMessage,
@@ -31,7 +29,7 @@ function ChatView({ selectedChatId }: ChatViewProps) {
     contextItems,
     removeContextItem,
     clearChat,
-  } = useChat();
+  } = useChat({ selectedChatId });
 
   // Facts sidebar state
   const [factsSidebarOpen, setFactsSidebarOpen] = useState(false);
@@ -41,22 +39,6 @@ function ChatView({ selectedChatId }: ChatViewProps) {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Load messages when selectedChatId changes
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (selectedChatId) {
-        try {
-          const chatMessages = await api.loadChatMessages(selectedChatId);
-          setMessages(chatMessages);
-        } catch (error) {
-          console.error("Error loading messages for chat:", error);
-        }
-      }
-    };
-
-    loadMessages();
-  }, [selectedChatId, setMessages]);
 
   // Auto-resize textarea function
   const resizeTextarea = () => {
