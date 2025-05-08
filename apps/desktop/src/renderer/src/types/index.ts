@@ -263,7 +263,7 @@ export interface AssistantMessage {
 }
 
 // Interface for main content tabs
-export type TabType = "logs" | "traces" | "dashboards" | "chat";
+export type TabType = "dashboards" | "chat";
 
 export interface TimeRange {
   start: string;

@@ -1,41 +1,43 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView.js";
-import { AssistantMessage, ChatMessage, ContextItem } from "../types/index.js";
+import FactsSidebar from "../components/FactsSidebar.js";
+import { Button } from "../components/ui/button.js";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu.js";
+import { ScrollArea } from "../components/ui/scroll-area.js";
+import { useChat } from "../hooks/useChat.js";
+import { MoreHorizontalIcon, SendIcon } from "../icons/index.js";
+import { cn } from "../lib/utils.js";
+import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
-interface ChatViewProps {
-  messages: ChatMessage[];
-  newMessage: string;
-  setNewMessage: (message: string) => void;
-  sendMessage: () => Promise<void>;
-  isThinking: boolean;
-  contextItems?: ContextItem[];
-  removeContextItem?: (id: string) => void;
-  initialChatMode?: "agent" | "manual";
-  toggleChatMode?: () => void;
-  clearChat?: () => Promise<void>;
-}
+function ChatView() {
+  const {
+    messages,
+    newMessage,
+    setNewMessage,
+    sendMessage,
+    isThinking,
+    contextItems,
+    removeContextItem,
+    clearChat,
+  } = useChat();
 
-const ChatView: React.FC<ChatViewProps> = ({
-  messages,
-  newMessage,
-  setNewMessage,
-  sendMessage,
-  isThinking,
-  contextItems = [],
-  removeContextItem,
-  initialChatMode = "agent",
-  toggleChatMode,
-  clearChat,
-}) => {
+  // Facts sidebar state
+  const [factsSidebarOpen, setFactsSidebarOpen] = useState(false);
+  const [sidebarMessageId, setSidebarMessageId] = useState<string | null>(null);
+  const [logFacts, setLogFacts] = useState<LogPostprocessingFact[]>([]);
+  const [codeFacts, setCodeFacts] = useState<CodePostprocessingFact[]>([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [hoveredContextId, setHoveredContextId] = useState<string | null>(null);
-  const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [chatMode, setChatMode] = useState<"agent" | "manual">(initialChatMode);
 
-  // Function to resize textarea based on content
-  const resizeTextarea = useCallback(() => {
+  // Auto-resize textarea function
+  const resizeTextarea = () => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -48,21 +50,20 @@ const ChatView: React.FC<ChatViewProps> = ({
       const newHeight = Math.min(150, scrollHeight);
       textarea.style.height = `${newHeight}px`;
     }
-  }, []);
+  };
 
   // Auto-resize textarea when message changes
   useEffect(() => {
     resizeTextarea();
-  }, [newMessage, resizeTextarea]);
+  }, [newMessage]);
 
-  // Update local mode when chatMode prop changes
+  // Scroll to bottom when messages change
   useEffect(() => {
-    setChatMode(initialChatMode);
-  }, [initialChatMode]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  // Auto-focus the textarea when the chat view is selected or when thinking state changes
+  // Focus input on mount and when thinking state changes
   useEffect(() => {
-    // Small delay to ensure the DOM is fully rendered
     const focusTimeout = setTimeout(() => {
       if (textareaRef.current && !isThinking) {
         textareaRef.current.focus();
@@ -72,105 +73,54 @@ const ChatView: React.FC<ChatViewProps> = ({
     return () => clearTimeout(focusTimeout);
   }, [isThinking]);
 
-  // Auto-focus on component mount
-  useEffect(() => {
-    if (textareaRef.current && !isThinking) {
-      textareaRef.current.focus();
-    }
-  }, [isThinking]);
-
   // Add event listeners for textarea
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Handle paste events specifically
+    // Handle paste events
     const handlePaste = () => {
-      // Use setTimeout to ensure we resize after paste content is added
       setTimeout(resizeTextarea, 0);
     };
 
-    // Handle input events (typing, deleting)
+    // Handle input events
     const handleInput = () => {
       resizeTextarea();
     };
 
-    // Add event listeners
     textarea.addEventListener("paste", handlePaste);
     textarea.addEventListener("input", handleInput);
 
-    // Cleanup
     return () => {
       textarea.removeEventListener("paste", handlePaste);
       textarea.removeEventListener("input", handleInput);
     };
-  }, [resizeTextarea]);
+  }, []);
 
-  // Force reset textarea height when empty
+  // Reset textarea height when empty
   useEffect(() => {
     if (newMessage === "" && textareaRef.current) {
       textareaRef.current.style.height = "28px";
     }
   }, [newMessage]);
 
-  // Force reset textarea height after sending a message
-  useEffect(() => {
-    if (isThinking && textareaRef.current) {
-      // If we're now thinking, a message was just sent
-      textareaRef.current.style.height = "28px";
-    }
-  }, [isThinking]);
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       if (newMessage.trim()) {
         handleSendMessage();
       }
     }
   };
 
-  // Toggle mode selection dropdown
-  const toggleModeMenu = () => {
-    setModeMenuOpen((prev) => !prev);
-  };
-
-  // Set mode and close menu
-  const setMode = (mode: "agent" | "manual") => {
-    // Update local state immediately for UI
-    setChatMode(mode);
-
-    // Only trigger change if needed and handler exists
-    if (chatMode !== mode && toggleChatMode) {
-      // Call the actual toggle function to update parent state
-      toggleChatMode();
-    }
-
-    setModeMenuOpen(false);
-  };
-
-  // Use the provided clearChat function if available, otherwise fallback
-  const handleClearChat = async () => {
-    if (clearChat) {
-      await clearChat();
-    } else {
-      console.error("clearChat function not provided to ChatView component");
-    }
-  };
-
-  // Send message function that uses the hook's provided sendMessage
+  // Send message function
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || isThinking) return;
 
-    // Call the original send function from the hook to handle message creation and sending
+    // Call the send function from the hook
     await sendMessage();
 
-    // Force reset textarea height after sending
+    // Reset textarea height after sending
     if (textareaRef.current) {
       setTimeout(() => {
         if (textareaRef.current) {
@@ -180,337 +130,176 @@ const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
-  // Format timestamp range in a compact way
-  const formatTimeRange = (start: string, end: string): string => {
-    try {
-      const startDate = new Date(start);
-      const endDate = new Date(end);
-
-      // Same day formatting
-      if (startDate.toDateString() === endDate.toDateString()) {
-        return `${startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-      }
-
-      // Different days
-      return `${startDate.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} - ${endDate.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`;
-    } catch (_e) {
-      return "Invalid time range";
+  const handleClearChat = async () => {
+    if (clearChat) {
+      await clearChat();
     }
   };
 
-  // Render a context item card, with optional removal button
-  const renderContextCard = (
-    contextItem: ContextItem,
-    showRemoveButton: boolean = true
-  ): JSX.Element => {
-    // Handle different context item types
-    if (contextItem.type === "logSearch") {
-      let queryDisplay = contextItem.title;
-      let timeRangeDisplay = "";
-      let pageCursorInfo = "";
-
-      // Extract details from LogSearchPair
-      const logSearchInput = contextItem.data.input;
-
-      if (logSearchInput.query) {
-        queryDisplay = logSearchInput.query;
-      }
-
-      if (logSearchInput.start && logSearchInput.end) {
-        timeRangeDisplay = formatTimeRange(logSearchInput.start, logSearchInput.end);
-      }
-
-      if (logSearchInput.pageCursor) {
-        pageCursorInfo = `Page: ${logSearchInput.pageCursor.substring(0, 6)}...`;
-      }
-
-      return (
-        <div
-          key={contextItem.id}
-          className="context-card"
-          onMouseEnter={() => setHoveredContextId(contextItem.id)}
-          onMouseLeave={() => setHoveredContextId(null)}
-        >
-          <div className="context-card-content">
-            <div className="context-type">logs</div>
-            <div className="context-title" title={queryDisplay}>
-              {queryDisplay}
-            </div>
-            {timeRangeDisplay && <div className="context-time-range">{timeRangeDisplay}</div>}
-            {pageCursorInfo && <div className="context-page-cursor">{pageCursorInfo}</div>}
-          </div>
-          {showRemoveButton && hoveredContextId === contextItem.id && removeContextItem && (
-            <button
-              className="remove-context-button"
-              onClick={(e) => {
-                e.stopPropagation();
-                removeContextItem(contextItem.id);
-              }}
-              title="Remove from context"
-            >
-              ×
-            </button>
-          )}
-        </div>
-      );
-    } else if (contextItem.type === "singleTrace") {
-      // Handle single trace context item
-      const traceData = contextItem.data;
-
-      return (
-        <div
-          key={contextItem.id}
-          className="context-card"
-          onMouseEnter={() => setHoveredContextId(contextItem.id)}
-          onMouseLeave={() => setHoveredContextId(null)}
-        >
-          <div className="context-card-content">
-            <div className="context-type">trace</div>
-            <div className="context-title" title={contextItem.title}>
-              {contextItem.title}
-            </div>
-            <div className="context-trace-id" title={traceData.traceId}>
-              ID: {traceData.traceId.substring(0, 8)}...
-            </div>
-            {traceData.startTime && traceData.endTime && (
-              <div className="context-time-range">
-                {formatTimeRange(
-                  traceData.startTime instanceof Date
-                    ? traceData.startTime.toISOString()
-                    : String(traceData.startTime),
-                  traceData.endTime instanceof Date
-                    ? traceData.endTime.toISOString()
-                    : String(traceData.endTime)
-                )}
-              </div>
-            )}
-          </div>
-          {showRemoveButton && hoveredContextId === contextItem.id && removeContextItem && (
-            <button
-              className="remove-context-button"
-              onClick={(e) => {
-                e.stopPropagation();
-                removeContextItem(contextItem.id);
-              }}
-              title="Remove from context"
-            >
-              ×
-            </button>
-          )}
-        </div>
-      );
-    }
-
-    // Fallback for unknown context item types
-    const unknownContextItem = contextItem as ContextItem;
-    return (
-      <div
-        key={unknownContextItem.id}
-        className="context-card"
-        onMouseEnter={() => setHoveredContextId(unknownContextItem.id)}
-        onMouseLeave={() => setHoveredContextId(null)}
-      >
-        <div className="context-card-content">
-          <div className="context-type">{unknownContextItem.type}</div>
-          <div className="context-title">{unknownContextItem.title}</div>
-          <div className="context-description">{unknownContextItem.description}</div>
-        </div>
-        {showRemoveButton && hoveredContextId === unknownContextItem.id && removeContextItem && (
-          <button
-            className="remove-context-button"
-            onClick={(e) => {
-              e.stopPropagation();
-              removeContextItem(unknownContextItem.id);
-            }}
-            title="Remove from context"
-          >
-            ×
-          </button>
-        )}
-      </div>
-    );
+  // Function to open facts sidebar for a specific message
+  const openFactsSidebar = (
+    messageId: string,
+    logFacts: LogPostprocessingFact[],
+    codeFacts: CodePostprocessingFact[]
+  ) => {
+    setSidebarMessageId(messageId);
+    setLogFacts(logFacts);
+    setCodeFacts(codeFacts);
+    setFactsSidebarOpen(true);
   };
 
-  // Function to render message content
-  const renderMessageContent = (message: ChatMessage) => {
-    if (message.role === "user") {
-      // Handle user message
-      const hasContextItems = message.contextItems && message.contextItems.length > 0;
-
-      return (
-        <>
-          {hasContextItems && message.contextItems && (
-            <div className="message-context-items">
-              <div className="context-items-header">
-                <span>Attached Context</span>
-              </div>
-              <div className="context-items-attached">
-                {message.contextItems.map((item) => renderContextCard(item, false))}
-              </div>
-            </div>
-          )}
-
-          <div className={`message-text ${hasContextItems ? "message-text-with-context" : ""}`}>
-            <ReactMarkdown>{message.content}</ReactMarkdown>
-          </div>
-        </>
-      );
-    } else {
-      // Handle assistant message - use direct CellView for streaming
-      const asst = message as AssistantMessage;
-      if (isThinking && asst.response === "Thinking...") {
-        // For thinking assistant message, render the CellView without wrapper
-        return <CellView message={asst} isThinking />;
-      }
-      // For completed assistant message
-      return <CellView message={asst} isThinking={false} />;
-    }
+  // Function to close facts sidebar
+  const closeFactsSidebar = () => {
+    setFactsSidebarOpen(false);
   };
 
   return (
-    <div className="chat-tab" style={{ overflow: "hidden", width: "100%", height: "100%" }}>
-      <div
-        className="chat-container"
-        style={{
-          width: "100%",
-          maxWidth: "100%",
-          overflowX: "hidden",
-          display: "flex",
-          flexDirection: "column",
-          height: "100%",
-        }}
-      >
-        {/* Add Clear Chat Button */}
-        <div
-          className="chat-controls"
-          style={{ padding: "8px", display: "flex", justifyContent: "flex-end" }}
-        >
-          <button
-            onClick={handleClearChat}
-            className="clear-chat-button"
-            style={{
-              backgroundColor: "#f44336",
-              color: "white",
-              border: "none",
-              padding: "6px 12px",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            Clear Chat
-          </button>
-        </div>
+    <div className="flex flex-col h-full bg-background">
+      {/* Chat header */}
+      <div className="flex justify-between items-center py-3 px-4 border-b border-border bg-background-lighter backdrop-blur-sm shadow-sm z-10">
+        <h1 className="text-lg font-semibold text-primary">Chat</h1>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="hover:bg-background-alt h-8 w-8 p-0">
+              <MoreHorizontalIcon className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[150px]">
+            <DropdownMenuItem onClick={handleClearChat} className="cursor-pointer">
+              Clear chat
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => console.info("Export chat")}
+              className="cursor-pointer"
+            >
+              Export chat
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
+      <div className="flex flex-row flex-nowrap h-full overflow-hidden">
+        {/* Main chat area - takes full width when sidebar closed, 2/3 when open */}
         <div
-          className="chat-messages-container"
-          style={{
-            width: "100%",
-            maxWidth: "100%",
-            flex: "1 1 auto",
-            overflow: "auto",
-          }}
+          className={cn(
+            "transition-all duration-300 ease-in-out h-full overflow-hidden",
+            factsSidebarOpen ? "w-2/3 max-w-2/3 flex-[2]" : "w-full flex-1",
+            "bg-background-assistant"
+          )}
         >
-          <div
-            className="chat-messages"
-            style={{ width: "100%", maxWidth: "100%", padding: "0 8px" }}
-          >
-            {messages.length === 0 ? (
-              <div className="empty-chat">
-                <div className="welcome-message">
-                  <h2>Chat with Triage Assistant</h2>
-                  <p>Ask questions about your logs, traces, or codebase.</p>
-                  <p>Use ⌘+U in other views to add context from those views.</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {messages.map((message, index) => (
+          {/* Chat messages */}
+          <ScrollArea className="h-full overflow-y-auto">
+            <div className="flex flex-col min-h-full">
+              {messages.map((message) =>
+                message.role === "user" ? (
                   <div
-                    key={index}
-                    className={`chat-message ${message.role} ${message.role === "assistant" && (message as AssistantMessage).response === "Thinking..." ? "thinking-state" : ""}`}
-                    style={{
-                      width: "100%",
-                      maxWidth: "100%",
-                      boxSizing: "border-box",
-                      overflow: "hidden",
-                      marginBottom: "16px",
-                    }}
+                    key={message.id}
+                    className={cn("py-4 px-4 flex flex-col bg-background-assistant")}
                   >
-                    <div className="message-content" style={{ width: "100%", maxWidth: "100%" }}>
-                      {renderMessageContent(message)}
+                    <div className="flex items-start max-w-[75%] mx-auto w-full">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary">
+                        <span className="text-white font-medium text-sm">U</span>
+                      </div>
+                      <div className="flex-1 overflow-hidden pt-0.5">
+                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3 break-words bg-background-alt p-3 rounded-lg shadow-sm">
+                          <ReactMarkdown>{message.content}</ReactMarkdown>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </>
-            )}
-          </div>
+                ) : (
+                  <div className="bg-background-assistant">
+                    <div className="max-w-[75%] mx-auto w-full">
+                      <CellView
+                        key={message.id}
+                        message={message as AssistantMessage}
+                        isThinking={
+                          isThinking && (message as AssistantMessage).response === "Thinking..."
+                        }
+                        onShowFacts={(logFactsArr, codeFactsArr) =>
+                          openFactsSidebar(message.id, logFactsArr, codeFactsArr)
+                        }
+                        activeInFactsSidebar={factsSidebarOpen && sidebarMessageId === message.id}
+                      />
+                    </div>
+                  </div>
+                )
+              )}
+              <div ref={messagesEndRef} className="h-4" />
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Facts sidebar - slides in from right taking 1/3 width */}
+        <div
+          className={cn(
+            "h-full bg-background-sidebar border-l border-border transition-all duration-300 ease-in-out",
+            factsSidebarOpen ? "w-1/3 max-w-1/3 flex-[1]" : "w-0 opacity-0 overflow-hidden flex-[0]"
+          )}
+        >
+          {factsSidebarOpen && (
+            <FactsSidebar logFacts={logFacts} codeFacts={codeFacts} onClose={closeFactsSidebar} />
+          )}
         </div>
       </div>
 
-      <div className="chat-input-container">
-        {contextItems.length > 0 && (
-          <div className="context-items-container">
-            <div className="context-items-header">
-              <span>Current Context</span>
-              <span className="context-keyboard-shortcut">Add more with ⌘+U in other views</span>
-            </div>
-            <div className="context-items-list">
-              {contextItems.map((item) => renderContextCard(item, true))}
-            </div>
+      {/* Context items display */}
+      {contextItems && contextItems.length > 0 && (
+        <div className="px-4 py-2 border-t border-border bg-background-lighter">
+          <div className="flex flex-wrap gap-2 max-w-[75%] mx-auto">
+            {contextItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center bg-background-alt rounded-lg px-2 py-1 text-xs gap-2 shadow-sm"
+              >
+                <span className="text-xs font-medium text-primary-dark">{item.type}</span>
+                <span className="text-gray-300 truncate max-w-[160px]">{item.title}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-4 w-4 p-0 ml-1 hover:bg-background-lighter text-gray-400 hover:text-white"
+                  onClick={() => removeContextItem(item.id)}
+                >
+                  ×
+                </Button>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="input-wrapper">
+      {/* Input area */}
+      <div className="p-4 border-t border-border bg-background-lighter">
+        <div className="relative max-w-[75%] mx-auto">
           <textarea
             ref={textareaRef}
-            className="message-input"
+            className={cn(
+              "w-full p-3 pr-10 bg-background border border-border rounded-lg",
+              "resize-none min-h-[50px] max-h-[200px] outline-none focus-ring",
+              "text-primary-light placeholder:text-gray-500 text-sm shadow-sm"
+            )}
+            placeholder="Type your message here..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question..."
-            disabled={isThinking}
             rows={1}
-            autoFocus={!isThinking}
+            disabled={isThinking}
           />
-        </div>
-
-        <div className="message-controls">
-          <div className="mode-dropdown">
-            <button className="mode-selector-button" onClick={toggleModeMenu}>
-              <span className="current-mode">{chatMode === "agent" ? "Agent" : "Manual"}</span>
-              <span className="dropdown-arrow">▼</span>
-            </button>
-
-            {modeMenuOpen && (
-              <div className="mode-menu">
-                <div
-                  className={`mode-option ${chatMode === "agent" ? "active" : ""}`}
-                  onClick={() => setMode("agent")}
-                >
-                  Agent
-                </div>
-                <div
-                  className={`mode-option ${chatMode === "manual" ? "active" : ""}`}
-                  onClick={() => setMode("manual")}
-                >
-                  Manual
-                </div>
-              </div>
-            )}
-          </div>
-
-          <button
-            className="send-button"
+          <Button
+            className="absolute right-2 bottom-2 shadow-sm size-7 p-0"
+            size="sm"
             onClick={handleSendMessage}
-            disabled={isThinking || !newMessage.trim()}
+            disabled={newMessage.trim() === "" || isThinking}
           >
-            Send
-          </button>
+            <SendIcon className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <div className="mt-1.5 text-xs text-gray-500 text-right max-w-[75%] mx-auto">
+          Press Enter to send, Shift+Enter for new line
         </div>
       </div>
     </div>
   );
-};
+}
 
 export default ChatView;
