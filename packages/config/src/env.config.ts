@@ -1,18 +1,18 @@
 import crypto from "crypto";
-import path from "path";
-
 import { config } from "dotenv";
+import path from "path";
 import { z } from "zod";
 
-config({ path: path.join(process.cwd(), ".env") });
+const envPath = path.resolve(__dirname, "../../../.env");
+config({ path: envPath });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["production", "development", "test"]).default("development"),
   PORT: z.string().default("3001"),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   PROCESS_LABEL: z.string().default("oncall-api"),
-  OPENAI_API_KEY: z.string(),
-  ANTHROPIC_API_KEY: z.string(),
+  OPENAI_API_KEY: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
   GOOGLE_API_KEY: z.string().optional(),
 
   // Datadog variables (optional by default)

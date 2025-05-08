@@ -40,6 +40,12 @@ export enum GeminiModel {
 
 export type Model = AnthropicModel | OpenAIModel | GeminiModel;
 
+export const VALID_MODELS = [
+  ...Object.values(AnthropicModel),
+  ...Object.values(OpenAIModel),
+  ...Object.values(GeminiModel),
+];
+
 /**
  * Get the appropriate AI SDK model wrapper based on the model type
  * @param model The model to use

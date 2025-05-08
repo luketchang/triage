@@ -43,5 +43,8 @@
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": "^20.18.0"
+  },
+  "resolutions": {
+    "unicorn-magic": "0.2.0"
   }
 }
