@@ -1,7 +1,9 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
 
-import { AgentStep, ChatMessage, CodeSearchStep, LogSearchStep } from "..";
+import { AgentStep, ChatMessage, CodeSearchStep, LogSearchAgentResponse, LogSearchStep } from "..";
 import { LogSearchInput, SpanSearchInput } from "../types/tools";
+
+import { CodeSearchAgentResponse } from "./code-search";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {
@@ -178,6 +180,14 @@ export function formatCodeSearchSteps(
     .map((step) => formatSingleCodeSearchStep(step, options))
     .filter(Boolean)
     .join("\n\n");
+}
+
+export function formatLogContext(logContext: LogSearchAgentResponse): string {
+  return formatLogSearchSteps(logContext.newLogSearchSteps);
+}
+
+export function formatCodeContext(codeContext: CodeSearchAgentResponse): string {
+  return formatCodeSearchSteps(codeContext.newCodeSearchSteps);
 }
 
 export function formatAgentSteps(steps: AgentStep[]): string {

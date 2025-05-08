@@ -190,12 +190,9 @@ function ChatView() {
           {/* Chat messages */}
           <ScrollArea className="h-full overflow-y-auto">
             <div className="flex flex-col min-h-full">
-              {messages.map((message) =>
+              {messages.map((message, idx) =>
                 message.role === "user" ? (
-                  <div
-                    key={message.id}
-                    className={cn("py-4 px-4 flex flex-col bg-background-assistant")}
-                  >
+                  <div key={idx} className={cn("py-4 px-4 flex flex-col bg-background-assistant")}>
                     <div className="flex items-end max-w-[90%] mx-auto w-full">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary my-2">
                         <span className="text-white font-medium text-sm">U</span>
@@ -208,10 +205,9 @@ function ChatView() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-background-assistant">
+                  <div key={idx} className="bg-background-assistant">
                     <div className="max-w-[90%] mx-auto w-full">
                       <CellView
-                        key={message.id}
                         message={message as AssistantMessage}
                         isThinking={
                           isThinking && (message as AssistantMessage).response === "Thinking..."

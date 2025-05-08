@@ -9,6 +9,7 @@ import {
   logPostprocessingToolSchema,
   LogSearchStep,
 } from "../types";
+
 import {
   ensureSingleToolCall,
   formatFacetValues,
