@@ -56,14 +56,14 @@ const CollapsibleStep: React.FC<{
       <div
         className={cn(
           "step-header cursor-pointer p-2.5 flex justify-between items-center",
-          isActive ? "bg-primary/10 animate-pulse-slow" : "bg-background-lighter"
+          isActive ? "bg-background-lighter" : "bg-background-lighter"
         )}
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
         <div
           className={cn(
             "step-header-content font-medium text-sm",
-            isActive ? "text-primary" : "text-primary-light"
+            isActive ? "text-primary animate-text-pulse-slow" : "text-primary-light"
           )}
         >
           <span>

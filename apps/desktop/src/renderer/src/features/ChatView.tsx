@@ -183,12 +183,13 @@ function ChatView() {
         <div
           className={cn(
             "transition-all duration-300 ease-in-out h-full overflow-hidden",
-            factsSidebarOpen ? "w-2/3 max-w-2/3 flex-[2]" : "w-full flex-1"
+            factsSidebarOpen ? "w-2/3 max-w-2/3 flex-[2]" : "w-full flex-1",
+            "bg-background-assistant"
           )}
         >
           {/* Chat messages */}
           <ScrollArea className="h-full overflow-y-auto">
-            <div className="flex flex-col">
+            <div className="flex flex-col min-h-full">
               {messages.map((message) =>
                 message.role === "user" ? (
                   <div

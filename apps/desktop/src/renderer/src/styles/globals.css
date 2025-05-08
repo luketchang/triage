@@ -87,6 +87,22 @@ body {
   animation: pulseSlow 3s ease-in-out infinite;
 }
 
+@keyframes textPulseSlow {
+  0%,
+  100% {
+    color: #ff6a3d;
+    text-shadow: 0 0 0px #ff6a3d44;
+  }
+  50% {
+    color: #ff8a65;
+    text-shadow: 0 0 6px #ff6a3d88;
+  }
+}
+
+.animate-text-pulse-slow {
+  animation: textPulseSlow 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* Transitions */
 .transition-standard {
   @apply transition-all duration-200 ease-in-out;
