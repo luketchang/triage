@@ -251,7 +251,7 @@ export interface AssistantMessage {
 }
 
 // Interface for main content tabs
-export type TabType = "dashboards" | "chat";
+export type TabType = "chat" | "settings";
 
 export interface TimeRange {
   start: string;

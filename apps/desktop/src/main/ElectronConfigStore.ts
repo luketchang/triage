@@ -97,13 +97,16 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
       await this.set(key, value);
     }
   }
-
   private async set<V>(key: string, value: V): Promise<void> {
     if (this.keysForSecretsCache.has(key)) {
       await keytar.setPassword(KEYTAR_SERVICE_NAME, key, value as string);
       this.secretsCache.set(key, value as string);
     } else {
-      this.store.set(key, value as ConfigValue);
+      if (value === undefined || value === null) {
+        this.store.delete(key);
+      } else {
+        this.store.set(key, value as ConfigValue);
+      }
     }
   }
 
