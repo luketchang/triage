@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { Model, VALID_MODELS } from "@triage/common";
+import { getModelWrapper, Model, VALID_MODELS } from "@triage/common";
 import { Command } from "commander";
 import fs from "fs";
 import path from "path";
@@ -58,7 +58,12 @@ export async function main() {
     console.log(`Using model: ${model}`);
     console.log(`Overview will be saved to: ${path.join(outputDir, "codebase-overview.md")}`);
 
-    const processor = new CodebaseProcessor(model, repoPath, systemDescription, outputDir);
+    const llmClient = getModelWrapper(model, {
+      openaiApiKey: process.env.OPENAI_API_KEY,
+      anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+      googleApiKey: process.env.GOOGLE_API_KEY,
+    });
+    const processor = new CodebaseProcessor(llmClient, repoPath, systemDescription, outputDir);
     await processor.process();
 
     console.log("Overview generation complete!");

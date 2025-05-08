@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
 import { Command } from "commander";
-import { SpansWithPagination } from "../dist";
+import { DatadogCfgSchema, DatadogConfig, SpansWithPagination } from "../dist";
 import { DatadogPlatform } from "../src";
 
 // Setup command line options
@@ -61,14 +61,14 @@ function displaySpans(spansWithPagination: SpansWithPagination, platform: string
   logger.info(formattedSpans);
 }
 
-async function testDatadogSpanFetch(): Promise<void> {
+async function testDatadogSpanFetch(datadogCfg: DatadogConfig): Promise<void> {
   try {
     logger.info("Testing Datadog span fetching...");
     logger.info(`Query: ${options.query}`);
     logger.info(`Time range: ${options.start} to ${options.end}`);
     logger.info(`Limit: ${options.limit}`);
 
-    const datadogPlatform = new DatadogPlatform();
+    const datadogPlatform = new DatadogPlatform(datadogCfg);
     const spans = await datadogPlatform.fetchSpans({
       query: options.query,
       start: options.start,
@@ -87,20 +87,11 @@ async function main(): Promise<void> {
 
   // Check if platform configs are available
   if (options.platform === "datadog") {
-    if (!appConfig.datadog?.apiKey || !appConfig.datadog?.appKey) {
-      logger.error("Datadog API key and App key are required but not found in config");
-      process.exit(1);
-    }
-  }
-
-  try {
-    // Run tests based on platform selection
-    if (options.platform === "datadog") {
-      await testDatadogSpanFetch();
-    }
-  } catch (error) {
-    logger.error("Error during test execution:", error);
-    process.exit(1);
+    const datadogCfg = DatadogCfgSchema.parse({
+      apiKey: process.env.DATADOG_API_KEY,
+      appKey: process.env.DATADOG_APP_KEY,
+    });
+    await testDatadogSpanFetch(datadogCfg);
   }
 
   logger.info("Span fetch test completed!");

@@ -1,4 +1,5 @@
-import { Model, chunkArray, logger } from "@triage/common";
+import { chunkArray, logger } from "@triage/common";
+import { LanguageModelV1 } from "ai";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { identifyTopLevelServices } from "./service-identification";
@@ -9,7 +10,7 @@ import { collectFiles, getMajorDirectories } from "./utils";
  * Main class for processing a codebase to generate an overview
  */
 export class CodebaseProcessor {
-  private llm: Model;
+  private llmClient: LanguageModelV1;
   private repoPath: string;
   private systemDescription: string;
   private allowedExtensions: string[];
@@ -17,13 +18,13 @@ export class CodebaseProcessor {
   private chunkSize: number = 8;
 
   constructor(
-    llm: Model,
+    llmClient: LanguageModelV1,
     repoPath: string,
     systemDescription = "",
     outputDir?: string,
     options: { chunkSize?: number } = {}
   ) {
-    this.llm = llm;
+    this.llmClient = llmClient;
     this.repoPath = repoPath;
     this.systemDescription = systemDescription;
     this.allowedExtensions = [".py", ".js", ".ts", ".java", ".go", ".rs", ".yaml", ".cs"];
@@ -44,7 +45,11 @@ export class CodebaseProcessor {
       );
 
       // Identify service directories
-      const serviceDirs = await identifyTopLevelServices(this.llm, this.repoPath, repoFileTree);
+      const serviceDirs = await identifyTopLevelServices(
+        this.llmClient,
+        this.repoPath,
+        repoFileTree
+      );
       let directoriesToProcess: string[];
 
       if (serviceDirs.length > 0) {
@@ -73,7 +78,7 @@ export class CodebaseProcessor {
             );
 
             const summary = await generateDirectorySummary(
-              this.llm,
+              this.llmClient,
               this.systemDescription,
               directory,
               dirFileTree,
@@ -97,7 +102,7 @@ export class CodebaseProcessor {
       // Merge all summaries
       logger.info("Merging all summaries...");
       const finalDocument = await mergeAllSummaries(
-        this.llm,
+        this.llmClient,
         this.systemDescription,
         summaries,
         repoFileTree
