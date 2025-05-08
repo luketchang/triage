@@ -196,8 +196,8 @@ function ChatView() {
                     key={message.id}
                     className={cn("py-4 px-4 flex flex-col bg-background-assistant")}
                   >
-                    <div className="flex items-start max-w-[75%] mx-auto w-full">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary">
+                    <div className="flex items-end max-w-[90%] mx-auto w-full">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary my-2">
                         <span className="text-white font-medium text-sm">U</span>
                       </div>
                       <div className="flex-1 overflow-hidden pt-0.5">
@@ -209,7 +209,7 @@ function ChatView() {
                   </div>
                 ) : (
                   <div className="bg-background-assistant">
-                    <div className="max-w-[75%] mx-auto w-full">
+                    <div className="max-w-[90%] mx-auto w-full">
                       <CellView
                         key={message.id}
                         message={message as AssistantMessage}
@@ -270,7 +270,7 @@ function ChatView() {
 
       {/* Input area */}
       <div className="p-4 border-t border-border bg-background-lighter">
-        <div className="relative max-w-[75%] mx-auto">
+        <div className="relative max-w-[90%] mx-auto">
           <textarea
             ref={textareaRef}
             className={cn(
@@ -286,7 +286,7 @@ function ChatView() {
             disabled={isThinking}
           />
           <Button
-            className="absolute right-2 bottom-2 shadow-sm size-7 p-0"
+            className="absolute right-2 bottom-4 shadow-sm size-8 p-1"
             size="sm"
             onClick={handleSendMessage}
             disabled={newMessage.trim() === "" || isThinking}
@@ -294,7 +294,7 @@ function ChatView() {
             <SendIcon className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <div className="mt-1.5 text-xs text-gray-500 text-right max-w-[75%] mx-auto">
+        <div className="mt-1.5 text-xs text-gray-500 text-left max-w-[90%] mx-auto">
           Press Enter to send, Shift+Enter for new line
         </div>
       </div>
