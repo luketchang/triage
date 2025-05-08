@@ -1,5 +1,16 @@
-import { ChatIcon, DashboardsIcon, LogsIcon, TracesIcon } from "../icons/index.js";
+import { useState } from "react";
+import { ChatIcon } from "../icons/index.js";
 import { TabType } from "../types/index.js";
+import { Button } from "./ui/button.jsx";
+import { ScrollArea } from "./ui/scroll-area.jsx";
+// removed unused import
+
+// Define a simple Chat type for chat history
+interface Chat {
+  id: string;
+  title: string;
+  timestamp: Date;
+}
 
 interface NavigationSidebarProps {
   activeTab: TabType;
@@ -12,47 +23,61 @@ function NavigationSidebar({
   handleTabChange,
   contextItemsCount,
 }: NavigationSidebarProps) {
+  // TODO: Replace with actual chat history functionality
+  const [chatHistory] = useState<Chat[]>([]);
+
+  // Make sure to keep the chat tab active
+  if (activeTab !== "chat") {
+    handleTabChange("chat");
+  }
+
   return (
-    <div className="navigation-sidebar">
-      <div className="sidebar-header">
-        <div className="logo">TRI</div>
+    <div className="w-60 h-full bg-background-sidebar border-r border-border flex flex-col">
+      <div className="p-4 flex flex-col gap-4">
+        <div className="text-primary font-bold text-center text-lg">TRIAGE</div>
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-2"
+          onClick={() => console.info("New chat")}
+        >
+          <span className="text-lg">+</span> New Chat
+        </Button>
       </div>
-      <div className="sidebar-nav">
-        <div
-          className={`nav-item ${activeTab === "chat" ? "active" : ""}`}
-          onClick={() => handleTabChange("chat")}
-          title="Chat"
-        >
-          <ChatIcon />
-          <span className="nav-label">Chat</span>
-          {contextItemsCount > 0 && <div className="context-count">{contextItemsCount}</div>}
+
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {chatHistory.length > 0 ? (
+            chatHistory.map((chat) => (
+              <div
+                key={chat.id}
+                className="flex items-center p-2 rounded-md hover:bg-background-lighter cursor-pointer mb-1 text-gray-200 group"
+                onClick={() => console.info(`Clicked chat: ${chat.id}`)}
+              >
+                <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white" />
+                <div className="text-sm truncate">{chat.title}</div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500 text-sm p-4">No chat history yet</div>
+          )}
         </div>
-        <div
-          className={`nav-item ${activeTab === "logs" ? "active" : ""}`}
-          onClick={() => handleTabChange("logs")}
-          title="Logs"
-        >
-          <LogsIcon />
-          <span className="nav-label">Logs</span>
+      </ScrollArea>
+
+      {contextItemsCount > 0 && (
+        <div className="text-xs text-primary p-2 text-center">
+          {contextItemsCount} context item{contextItemsCount !== 1 ? "s" : ""} active
         </div>
-        <div
-          className={`nav-item ${activeTab === "traces" ? "active" : ""}`}
-          onClick={() => handleTabChange("traces")}
-          title="Traces"
+      )}
+
+      <div className="p-3 border-t border-border">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-sm text-gray-300"
+          onClick={() => console.info("Settings")}
         >
-          <TracesIcon />
-          <span className="nav-label">Traces</span>
-        </div>
-        <div
-          className={`nav-item ${activeTab === "dashboards" ? "active" : ""}`}
-          onClick={() => handleTabChange("dashboards")}
-          title="Dashboards"
-        >
-          <DashboardsIcon />
-          <span className="nav-label">Dashboards</span>
-        </div>
+          Settings
+        </Button>
       </div>
-      <div className="sidebar-footer">{/* Footer content can be added here if needed */}</div>
     </div>
   );
 }

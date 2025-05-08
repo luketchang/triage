@@ -2,8 +2,13 @@ import { getModelWrapper, logger, Model, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
 import { generateId, generateText } from "ai";
 
-import { AgentStreamUpdate, LogPostprocessingFact, LogPostprocessingStep, logPostprocessingToolSchema, LogSearchStep } from "../types";
-
+import {
+  AgentStreamUpdate,
+  LogPostprocessingFact,
+  LogPostprocessingStep,
+  logPostprocessingToolSchema,
+  LogSearchStep,
+} from "../types";
 import {
   ensureSingleToolCall,
   formatFacetValues,
