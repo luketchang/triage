@@ -1,5 +1,4 @@
-import { LLMCfgSchema } from "@triage/common/src/config";
-import { GeminiModel, Model } from "@triage/common/src/llm";
+import { GeminiModel, LLMCfgSchema, Model } from "@triage/common";
 import { ConfigStore, DelegatingConfigStore } from "@triage/config";
 import { ObservabilityCfgSchema } from "@triage/observability";
 import { z } from "zod";

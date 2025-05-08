@@ -208,7 +208,7 @@ function ChatView() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-background-assistant">
+                  <div key={message.id} className="bg-background-assistant">
                     <div className="max-w-[90%] mx-auto w-full">
                       <CellView
                         key={message.id}

@@ -1,5 +1,5 @@
-import { Model, getModelWrapper, logger } from "@triage/common";
-import { generateText } from "ai";
+import { logger } from "@triage/common";
+import { generateText, LanguageModelV1 } from "ai";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { SelectedModules, selectedModulesSchema } from "./types";
@@ -51,8 +51,8 @@ ${params.repoFileTree}
  * Identifies top-level services or modules in a codebase
  */
 export async function identifyTopLevelServices(
-  model: Model, 
-  repoPath: string, 
+  llmClient: LanguageModelV1,
+  repoPath: string,
   repoFileTree: string
 ): Promise<string[]> {
   logger.info(`File tree: ${repoFileTree}`);
@@ -64,9 +64,8 @@ export async function identifyTopLevelServices(
     logger.info(`Using prompt: ${prompt}`);
 
     // Use AI to identify services with tool calls
-    logger.info(`Attempting to use AI model: ${model}`);
     const { toolCalls } = await generateText({
-      model: getModelWrapper(model),
+      model: llmClient,
       system: SERVICE_IDENTIFICATION_SYSTEM_PROMPT,
       prompt,
       tools: {
@@ -111,9 +110,7 @@ export async function identifyTopLevelServices(
           logger.warn(`Identified service path '${relPath}' is not a directory.`);
         }
       } catch (error) {
-        logger.warn(
-          `Identified service directory '${relPath}' does not exist in the repository.`
-        );
+        logger.warn(`Identified service directory '${relPath}' does not exist in the repository.`);
       }
     }
     return absServiceDirs;
@@ -121,4 +118,4 @@ export async function identifyTopLevelServices(
     logger.error(`Error processing service identification: ${error}`);
     return [];
   }
-} 
+}
