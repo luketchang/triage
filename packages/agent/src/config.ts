@@ -5,8 +5,8 @@ import { ObservabilityCfgSchema } from "@triage/observability";
 import { z } from "zod";
 
 export const AgentCfgSchema = z.object({
-  repoPath: z.string(),
-  codebaseOverviewPath: z.string(),
+  repoPath: z.string().optional(),
+  codebaseOverviewPath: z.string().optional(),
 
   reasoningModel: z.custom<Model>().default(GeminiModel.GEMINI_2_5_PRO),
   fastModel: z.custom<Model>().default(GeminiModel.GEMINI_2_5_FLASH),

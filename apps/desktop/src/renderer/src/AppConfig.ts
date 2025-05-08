@@ -2,9 +2,10 @@ import { AgentCfgSchema } from "@triage/agent";
 import { ConfigStore, DelegatingConfigStore } from "@triage/config";
 import { z } from "zod";
 
+// Note: All values should be optional or have defaults.
 export const AppCfgSchema = z.object({
   ...AgentCfgSchema.shape,
-  githubRepoBaseUrl: z.string().url(),
+  githubRepoBaseUrl: z.string().url().optional(),
 });
 
 export type AppConfig = z.infer<typeof AppCfgSchema>;
