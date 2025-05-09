@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useAppConfig } from "../context/useAppConfig.js";
 import { filepathToGitHubUrl } from "../utils/facts/code.js";
 import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs.js";
-import { ScrollArea } from "./ui/scroll-area.jsx";
+import { ScrollArea } from "./ui/ScrollArea.js";
 
 // Fact types from the codebase
 import { CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";

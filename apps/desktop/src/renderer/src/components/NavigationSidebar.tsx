@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
 import { TabType } from "../types/index.js";
-import { Button } from "./ui/button.jsx";
-import { ScrollArea } from "./ui/scroll-area.jsx";
+import { Button } from "./ui/Button.jsx";
+import { ScrollArea } from "./ui/ScrollArea.js";
 
 import { useChat } from "@renderer/hooks/useChat.js";
 import { FaPlus } from "react-icons/fa";
