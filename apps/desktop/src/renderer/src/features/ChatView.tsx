@@ -193,7 +193,7 @@ function ChatView() {
               {messages.map((message) =>
                 message.role === "user" ? (
                   <div
-                    key={message.id}
+                    key={`user-${message.id}`}
                     className={cn("py-4 px-4 flex flex-col bg-background-assistant")}
                   >
                     <div className="flex items-end max-w-[90%] mx-auto w-full">
@@ -208,10 +208,9 @@ function ChatView() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-background-assistant">
+                  <div key={`assistant-${message.id}`} className="bg-background-assistant">
                     <div className="max-w-[90%] mx-auto w-full">
                       <CellView
-                        key={message.id}
                         message={message as AssistantMessage}
                         isThinking={
                           isThinking && (message as AssistantMessage).response === "Thinking..."
