@@ -123,7 +123,7 @@ declare global {
        * Clear the current chat from database and memory
        * @returns Promise with success status
        */
-      clearChat: () => Promise<boolean>;
+      clearChat: (chatId?: number) => Promise<boolean>;
     };
   }
 }

@@ -231,7 +231,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   clearChat: async () => {
     try {
-      const success = await api.clearChat();
+      const success = await api.clearChat(get().currentChatId);
       if (success) {
         set({
           messages: [],

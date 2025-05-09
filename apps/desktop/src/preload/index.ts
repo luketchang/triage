@@ -113,8 +113,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   /**
    * Clear the current chat
+   * @param chatId Optional chat ID, uses latest chat if not provided
    */
-  clearChat: () => ipcRenderer.invoke("db:clear-messages"),
+  clearChat: (chatId?: number) => ipcRenderer.invoke("db:clear-messages", chatId),
 });
 
 /**

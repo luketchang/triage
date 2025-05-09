@@ -231,7 +231,7 @@ const api = {
     }
   },
 
-  clearChat: async (): Promise<boolean> => {
+  clearChat: async (chatId?: number): Promise<boolean> => {
     console.info("[API DEBUG] clearChat called");
 
     if (USE_MOCK_API || !isMethodAvailable("clearChat")) {
@@ -239,7 +239,7 @@ const api = {
       return false;
     } else {
       console.info("Using real electronAPI.clearChat");
-      return window.electronAPI.clearChat();
+      return window.electronAPI.clearChat(chatId);
     }
   },
 };

@@ -91,15 +91,15 @@ export function setupDbHandlers(): void {
   });
 
   // Clear current chat
-  ipcMain.handle("db:clear-messages", async (): Promise<boolean> => {
+  ipcMain.handle("db:clear-messages", async (_, chatId?: number): Promise<boolean> => {
     console.info("IPC: db:clear-messages called");
     if (!dbService) return false;
 
-    const chatId = await dbService.getLatestChatId();
-    if (!chatId) return false;
+    const id = chatId || (await dbService.getLatestChatId());
+    if (!id) return false;
 
-    console.info("Clearing chat ID:", chatId);
-    await dbService.clearChat(chatId);
+    console.info("Clearing chat ID:", id);
+    await dbService.clearChat(id);
     console.info("Chat cleared successfully");
     return true;
   });
