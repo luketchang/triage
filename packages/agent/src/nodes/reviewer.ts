@@ -107,7 +107,7 @@ export class Reviewer {
     logger.info(`Reviewer prompt: ${prompt}`);
 
     const { fullStream, toolCalls } = streamText({
-      model: getModelWrapper(this.config.reasoningModel),
+      model: getModelWrapper(this.config.fastModel),
       prompt: prompt,
       tools: {
         reviewDecision: reviewDecisionToolSchema,
