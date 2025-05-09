@@ -190,12 +190,12 @@ function ChatView() {
         </DropdownMenu>
       </div>
 
-      <div className="flex flex-row flex-nowrap flex-1 relative min-h-0">
-        {/* Main chat area - takes full width when sidebar closed, 2/3 when open */}
+      <div className="flex flex-row flex-nowrap flex-1 relative min-h-0 overflow-hidden">
+        {/* Main chat area - width adjusts based on sidebar state */}
         <div
           className={cn(
-            "transition-all duration-300 ease-in-out overflow-hidden flex flex-col h-full min-h-0",
-            showFactsSidebar ? "pr-[33.333%] md:pr-[34%]" : "w-full",
+            "transition-all duration-300 ease-in-out flex flex-col h-full min-h-0",
+            showFactsSidebar ? "w-full md:w-2/3" : "w-full",
             "bg-background-assistant"
           )}
         >
@@ -248,16 +248,16 @@ function ChatView() {
           </ScrollArea>
         </div>
 
-        {/* Facts sidebar - fixed position at right side taking 1/3 width */}
+        {/* Facts sidebar - slides in from right side, taking 1/3 width */}
         <div
           className={cn(
-            "fixed top-0 right-0 h-full w-1/3 bg-background-sidebar border-l border-border shadow-md transition-transform duration-300 ease-in-out z-10 pl-3",
-            showFactsSidebar ? "translate-x-0" : "translate-x-full"
+            "h-full bg-background-sidebar border-l border-border shadow-md transition-all duration-300 ease-in-out overflow-hidden pl-3",
+            showFactsSidebar ? "w-full md:w-1/3" : "w-0"
           )}
         >
-          {showFactsSidebar && (
+          <div className={cn("h-full", !showFactsSidebar && "invisible")}>
             <FactsSidebar logFacts={logFacts} codeFacts={codeFacts} onClose={closeFactsSidebar} />
-          )}
+          </div>
         </div>
       </div>
 
