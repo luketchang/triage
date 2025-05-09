@@ -8,21 +8,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/DropdownMenu.js";
-import { ScrollArea } from "../components/ui/ScrollArea.js";
-import { useChat } from "../hooks/useChat.js";
+} from "../components/ui/dropdown-menu.js";
+import { ScrollArea } from "../components/ui/scroll-area.js";
 import { MoreHorizontalIcon, SendIcon } from "../icons/index.js";
 import { cn } from "../lib/utils.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
-interface ChatViewProps {
-  selectedChatId?: number;
-  onChatCreated: (chatId: number) => void;
-}
+// Import stores and hooks
+import { useAgentEvents } from "../hooks/useAgentEvents.js";
+import { useChatStore, useUIStore } from "../store/index.js";
 
-function ChatView({ selectedChatId, onChatCreated }: ChatViewProps) {
-  console.info("ChatView rendering with selectedChatId:", selectedChatId);
-
+function ChatView() {
+  // Get chat state from store
   const {
     messages,
     newMessage,
@@ -32,14 +29,16 @@ function ChatView({ selectedChatId, onChatCreated }: ChatViewProps) {
     contextItems,
     removeContextItem,
     clearChat,
-  } = useChat({
-    selectedChatId,
-    onChatCreated,
-  });
+    cellManager,
+  } = useChatStore();
+
+  // Get UI state from store
+  const { showFactsSidebar, activeSidebarMessageId, showFactsForMessage } = useUIStore();
+
+  // Register for agent events
+  useAgentEvents(cellManager);
 
   // Facts sidebar state
-  const [factsSidebarOpen, setFactsSidebarOpen] = useState(false);
-  const [sidebarMessageId, setSidebarMessageId] = useState<string | null>(null);
   const [logFacts, setLogFacts] = useState<LogPostprocessingFact[]>([]);
   const [codeFacts, setCodeFacts] = useState<CodePostprocessingFact[]>([]);
 
@@ -127,7 +126,7 @@ function ChatView({ selectedChatId, onChatCreated }: ChatViewProps) {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || isThinking) return;
 
-    // Call the send function from the hook
+    // Call the send function from the store
     await sendMessage();
 
     // Reset textarea height after sending
@@ -152,15 +151,14 @@ function ChatView({ selectedChatId, onChatCreated }: ChatViewProps) {
     logFacts: LogPostprocessingFact[],
     codeFacts: CodePostprocessingFact[]
   ) => {
-    setSidebarMessageId(messageId);
     setLogFacts(logFacts);
     setCodeFacts(codeFacts);
-    setFactsSidebarOpen(true);
+    showFactsForMessage(messageId);
   };
 
   // Function to close facts sidebar
   const closeFactsSidebar = () => {
-    setFactsSidebarOpen(false);
+    showFactsForMessage(null);
   };
 
   return (
@@ -193,7 +191,7 @@ function ChatView({ selectedChatId, onChatCreated }: ChatViewProps) {
         <div
           className={cn(
             "transition-all duration-300 ease-in-out h-full overflow-hidden",
-            factsSidebarOpen ? "w-2/3 max-w-2/3 flex-[2]" : "w-full flex-1",
+            showFactsSidebar ? "w-2/3 max-w-2/3 flex-[2]" : "w-full flex-1",
             "bg-background-assistant"
           )}
         >
@@ -228,7 +226,9 @@ function ChatView({ selectedChatId, onChatCreated }: ChatViewProps) {
                         onShowFacts={(logFactsArr, codeFactsArr) =>
                           openFactsSidebar(message.id, logFactsArr, codeFactsArr)
                         }
-                        activeInFactsSidebar={factsSidebarOpen && sidebarMessageId === message.id}
+                        activeInFactsSidebar={
+                          showFactsSidebar && activeSidebarMessageId === message.id
+                        }
                       />
                     </div>
                   </div>
@@ -243,10 +243,10 @@ function ChatView({ selectedChatId, onChatCreated }: ChatViewProps) {
         <div
           className={cn(
             "h-full bg-background-sidebar border-l border-border transition-all duration-300 ease-in-out",
-            factsSidebarOpen ? "w-1/3 max-w-1/3 flex-[1]" : "w-0 opacity-0 overflow-hidden flex-[0]"
+            showFactsSidebar ? "w-1/3 max-w-1/3 flex-[1]" : "w-0 opacity-0 overflow-hidden flex-[0]"
           )}
         >
-          {factsSidebarOpen && (
+          {showFactsSidebar && (
             <FactsSidebar logFacts={logFacts} codeFacts={codeFacts} onClose={closeFactsSidebar} />
           )}
         </div>

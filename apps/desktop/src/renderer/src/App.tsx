@@ -1,5 +1,18 @@
-import { useState } from "react";
+// @ts-ignore - Ignoring React module resolution issues
+import { useEffect } from "react";
+import "./electron.d";
+import "./styles/globals.css";
+
+// Components
 import NavigationSidebar from "./components/NavigationSidebar.js";
+
+// Feature Views
+import ChatView from "./features/ChatView.js";
+
+// Custom hooks
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
+
+// Context Provider
 import { AppConfigProvider } from "./context/AppConfigContext.js";
 import ChatView from "./features/ChatView.js";
 import SettingsView from "./features/SettingsView.js";
@@ -7,34 +20,25 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
 import "./styles/globals.css";
 import { TabType } from "./types/index.js";
 
+// Stores
+import { useChatStore, useUIStore } from "./store/index.js";
+
 function App(): JSX.Element {
-  const [activeTab, setActiveTab] = useState<TabType>("chat");
-  const [showFactsSidebar, setShowFactsSidebar] = useState(false);
-  const [selectedChatId, setSelectedChatId] = useState<number | undefined>(undefined);
-  const [refreshNavTrigger, setRefreshNavTrigger] = useState(0);
+  // Get required state from stores
+  const { loadChats } = useChatStore();
+  const { activeTab, showFactsSidebar, setActiveTab, toggleFactsSidebar } = useUIStore();
 
-  // Handle when new chat is created
-  const handleChatCreated = (chatId: number) => {
-    // Update the selected chat ID
-    setSelectedChatId(chatId);
-    // Trigger a navigation refresh by incrementing the trigger
-    setRefreshNavTrigger((prev) => prev + 1);
-  };
+  // Load chats on initial mount
+  useEffect(() => {
+    loadChats();
+  }, [loadChats]);
 
-  // Use custom hooks
-  const chatState = useChat({
-    selectedChatId,
-    onChatCreated: handleChatCreated,
-  });
-
-  // Setup keyboard shortcuts
+  // Set up keyboard shortcuts
   useKeyboardShortcuts([
     {
       key: "f",
       metaKey: true,
-      action: () => {
-        setShowFactsSidebar((prev) => !prev);
-      },
+      action: toggleFactsSidebar,
     },
   ]);
 
@@ -55,20 +59,13 @@ function App(): JSX.Element {
   return (
     <AppConfigProvider>
       <div className="flex w-full h-full bg-background antialiased">
-        <NavigationSidebar
-          activeTab={activeTab}
-          handleTabChange={handleTabChange}
-          contextItemsCount={chatState.contextItems?.length || 0}
-          selectedChatId={selectedChatId}
-          onSelectChat={handleSelectChat}
-          refreshTrigger={refreshNavTrigger}
-        />
+        <NavigationSidebar activeTab={activeTab} handleTabChange={setActiveTab} />
 
         <div className="flex-1 h-full overflow-hidden flex shadow-sm">
           <div
             className={`${showFactsSidebar ? "flex-1" : "w-full"} h-full overflow-hidden transition-standard`}
           >
-            <ChatView selectedChatId={selectedChatId} onChatCreated={handleChatCreated} />
+            <ChatView />
           </div>
         </div>
       </div>

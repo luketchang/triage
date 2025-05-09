@@ -90,7 +90,7 @@ declare global {
        * Create a new chat
        * @returns Promise with the created chat ID or null if failed
        */
-      createChat: () => Promise<number | null>;
+      createChat: () => Promise<number>;
 
       /**
        * Get all chats

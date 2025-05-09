@@ -169,7 +169,7 @@ const api = {
   },
 
   // Create a new chat
-  createChat: async (): Promise<number | null> => {
+  createChat: async (): Promise<number> => {
     console.info("[API DEBUG] createChat called");
 
     if (USE_MOCK_API || !isMethodAvailable("createChat")) {
