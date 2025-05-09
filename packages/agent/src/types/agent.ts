@@ -32,6 +32,7 @@ export interface ReasoningStep extends BaseAgentStep {
 export interface ReviewStep extends BaseAgentStep {
   type: "review";
   content: string;
+  accepted?: boolean;
 }
 
 export interface LogPostprocessingStep extends BaseAgentStep {

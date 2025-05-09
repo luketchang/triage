@@ -68,13 +68,10 @@ function createPrompt(params: {
 }
 
 export class LogPostprocessor {
-  private llmClient: LanguageModelV1;
-  private observabilityPlatform: ObservabilityPlatform;
-
-  constructor(llmClient: LanguageModelV1, observabilityPlatform: ObservabilityPlatform) {
-    this.llmClient = llmClient;
-    this.observabilityPlatform = observabilityPlatform;
-  }
+  constructor(
+    private readonly llmClient: LanguageModelV1,
+    private readonly observabilityPlatform: ObservabilityPlatform
+  ) {}
 
   @timer
   async invoke(params: {

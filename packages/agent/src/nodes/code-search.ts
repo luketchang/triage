@@ -9,9 +9,7 @@ export interface CodeSearchAgentResponse {
 
 // TODO: implement actual code search, not just dummy implementation
 export class CodeSearchAgent {
-  constructor(private readonly llmClient: LanguageModelV1) {
-    this.llmClient = llmClient;
-  }
+  constructor(private readonly llmClient: LanguageModelV1) {}
 
   @timer
   async invoke(params: {

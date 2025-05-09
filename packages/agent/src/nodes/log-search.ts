@@ -3,13 +3,8 @@ import { ObservabilityPlatform } from "@triage/observability";
 import { generateText, LanguageModelV1 } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import {
-  AgentStreamUpdate,
-  LogSearchInput,
-  logSearchInputToolSchema,
-  LogSearchStep,
-  TaskComplete,
-} from "../types";
+import { TriagePipelineConfig } from "../pipeline";
+import { LogSearchInput, logSearchInputToolSchema, LogSearchStep, TaskComplete } from "../types";
 
 import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "./utils";
 
@@ -174,12 +169,10 @@ class LogSearch {
 }
 
 export class LogSearchAgent {
-  private observabilityPlatform: ObservabilityPlatform;
   private logSearch: LogSearch;
 
-  constructor(llmClient: LanguageModelV1, observabilityPlatform: ObservabilityPlatform) {
-    this.observabilityPlatform = observabilityPlatform;
-    this.logSearch = new LogSearch(llmClient, observabilityPlatform);
+  constructor(private readonly config: TriagePipelineConfig) {
+    this.logSearch = new LogSearch(this.config.fastClient, this.config.observabilityPlatform);
   }
 
   @timer
@@ -191,7 +184,6 @@ export class LogSearchAgent {
     logSearchSteps: LogSearchStep[];
     maxIters?: number;
     codebaseOverview: string;
-    onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<LogSearchAgentResponse> {
     // Variable to store the previous query result (initially undefined)
     let previousLogSearchSteps = params.logSearchSteps;
@@ -222,7 +214,7 @@ export class LogSearchAgent {
 
         try {
           logger.info("Fetching logs from observability platform...");
-          const logContext = await this.observabilityPlatform.fetchLogs({
+          const logContext = await this.config.observabilityPlatform.fetchLogs({
             query: response.query,
             start: response.start,
             end: response.end,
@@ -236,8 +228,8 @@ export class LogSearchAgent {
             results: logContext,
           };
 
-          if (params.onUpdate) {
-            params.onUpdate({
+          if (this.config.onUpdate) {
+            this.config.onUpdate({
               type: "intermediateUpdate",
               id: uuidv4(),
               parentId: params.logSearchId,

@@ -8,11 +8,7 @@ import {
   ContextItem,
   UserMessage,
 } from "../types/index.js";
-import {
-  assertStageType,
-  convertAgentStepsToStages,
-  convertToAgentChatMessages,
-} from "../utils/agentDesktopConversion.js";
+import { assertStageType, convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { CellUpdateManager } from "../utils/CellUpdateManager.js";
 import { generateId } from "../utils/formatters.js";
 
@@ -185,7 +181,6 @@ export function useChat() {
       let updatedStage: AgentStage;
 
       // Helper types and assertion
-
       switch (update.step.type) {
         case "logSearch": {
           assertStageType(stage, "logSearch");
@@ -350,7 +345,7 @@ export function useChat() {
           ...cell,
           response:
             agentMessage.response || "I processed your request but got no response content.",
-          stages: convertAgentStepsToStages(agentMessage.steps ?? []),
+          // agentMessage.steps is empty at the end of the agent pipeline
         }));
       } else {
         // Handle error response
