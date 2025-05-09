@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
 import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
 import { Button } from "./ui/button.jsx";
-import { ScrollArea } from "./ui/scroll-area.jsx";
+import { ScrollArea } from "./ui/ScrollArea.jsx";
 
 // Import stores
 import { useChatStore, useUIStore } from "../store/index.js";

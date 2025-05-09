@@ -2,15 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView.js";
 import FactsSidebar from "../components/FactsSidebar.js";
-import { Button } from "../components/ui/Button.jsx";
+import { Button } from "../components/ui/button.jsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu.js";
-import { ScrollArea } from "../components/ui/scroll-area.js";
-import { MoreHorizontalIcon, SendIcon } from "../icons/index.js";
+} from "../components/ui/DropdownMenu.jsx";
+import { ScrollArea } from "../components/ui/ScrollArea.jsx";
+import { MoreHorizontalIcon, SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
