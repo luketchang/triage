@@ -9,6 +9,7 @@ import {
   AgentAssistantMessage,
   AgentChatMessage,
   AssistantMessage,
+  Chat,
   ChatMessage,
   FacetData,
   LogQueryParams,
@@ -86,6 +87,18 @@ declare global {
       getSpansFacetValues: (start: string, end: string) => Promise<FacetData[]>;
 
       /**
+       * Create a new chat
+       * @returns Promise with the created chat ID or null if failed
+       */
+      createChat: () => Promise<number>;
+
+      /**
+       * Get all chats
+       * @returns Promise with an array of chats
+       */
+      getAllChats: () => Promise<Chat[]>;
+
+      /**
        * Save a user message to the database
        * @param message The user message to save
        * @returns Promise with the saved message ID or null if failed
@@ -100,16 +113,17 @@ declare global {
       saveAssistantMessage: (message: AssistantMessage) => Promise<number | null>;
 
       /**
-       * Load all messages from the current chat
+       * Load messages from a specific chat
+       * @param chatId Optional chat ID, uses latest chat if not provided
        * @returns Promise with an array of chat messages
        */
-      loadChatMessages: () => Promise<ChatMessage[]>;
+      loadChatMessages: (chatId?: number) => Promise<ChatMessage[]>;
 
       /**
        * Clear the current chat from database and memory
        * @returns Promise with success status
        */
-      clearChat: () => Promise<boolean>;
+      clearChat: (chatId?: number) => Promise<boolean>;
     };
   }
 }

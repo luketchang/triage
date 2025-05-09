@@ -5,6 +5,7 @@ import {
   AgentChatMessage,
   AgentStreamUpdate,
   AssistantMessage,
+  Chat,
   ChatMessage,
   FacetData,
   LogQueryParams,
@@ -167,6 +168,32 @@ const api = {
     }
   },
 
+  // Create a new chat
+  createChat: async (): Promise<number> => {
+    console.info("[API DEBUG] createChat called");
+
+    if (USE_MOCK_API || !isMethodAvailable("createChat")) {
+      console.info("Using mock createChat");
+      return mockElectronAPI.createChat();
+    } else {
+      console.info("Using real electronAPI.createChat");
+      return window.electronAPI.createChat();
+    }
+  },
+
+  // Get all chats
+  getAllChats: async (): Promise<Chat[]> => {
+    console.info("[API DEBUG] getAllChats called");
+
+    if (USE_MOCK_API || !isMethodAvailable("getAllChats")) {
+      console.info("Using mock getAllChats");
+      return mockElectronAPI.getAllChats();
+    } else {
+      console.info("Using real electronAPI.getAllChats");
+      return window.electronAPI.getAllChats();
+    }
+  },
+
   // Chat persistence methods
   saveUserMessage: async (message: UserMessage): Promise<number | null> => {
     console.info("[API DEBUG] saveUserMessage called");
@@ -192,19 +219,19 @@ const api = {
     }
   },
 
-  loadChatMessages: async (): Promise<ChatMessage[]> => {
-    console.info("[API DEBUG] loadChatMessages called");
+  loadChatMessages: async (chatId?: number): Promise<ChatMessage[]> => {
+    console.info("[API DEBUG] loadChatMessages called with chatId:", chatId);
 
     if (USE_MOCK_API || !isMethodAvailable("loadChatMessages")) {
       console.info("Mock loadChatMessages - not implemented in mock mode");
       return [];
     } else {
       console.info("Using real electronAPI.loadChatMessages");
-      return window.electronAPI.loadChatMessages();
+      return window.electronAPI.loadChatMessages(chatId);
     }
   },
 
-  clearChat: async (): Promise<boolean> => {
+  clearChat: async (chatId?: number): Promise<boolean> => {
     console.info("[API DEBUG] clearChat called");
 
     if (USE_MOCK_API || !isMethodAvailable("clearChat")) {
@@ -212,7 +239,7 @@ const api = {
       return false;
     } else {
       console.info("Using real electronAPI.clearChat");
-      return window.electronAPI.clearChat();
+      return window.electronAPI.clearChat(chatId);
     }
   },
 };

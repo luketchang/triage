@@ -3,8 +3,9 @@ import { desc, eq } from "drizzle-orm";
 import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
 import fs from "fs";
 import path from "path";
+import { AgentStage, ChatMessage } from "../../renderer/src/types/index.js";
 import * as schema from "./schema.js";
-import { AssistantMessage, UserMessage } from "./schema.js";
+import { AssistantMessage, Chat, UserMessage } from "./schema.js";
 
 /**
  * Service for interacting with the SQLite database for chat persistence
@@ -67,6 +68,25 @@ export class DatabaseService {
     } catch (error) {
       console.error("Error creating chat:", error);
       throw error;
+    }
+  }
+
+  async getAllChats(): Promise<Chat[]> {
+    console.info("DatabaseService: Getting all chats");
+    try {
+      const chats = await this.db
+        .select({
+          id: schema.chats.id,
+          createdAt: schema.chats.createdAt,
+        })
+        .from(schema.chats)
+        .orderBy(desc(schema.chats.id));
+
+      console.info(`DatabaseService: Got ${chats.length} chats`);
+      return chats;
+    } catch (error) {
+      console.error("Error getting all chats:", error);
+      return [];
     }
   }
 
@@ -137,7 +157,7 @@ export class DatabaseService {
     }
   }
 
-  async getChatMessages(chatId: number): Promise<any[]> {
+  async getChatMessages(chatId: number): Promise<ChatMessage[]> {
     try {
       const userMessages = await this.db
         .select()
@@ -152,17 +172,19 @@ export class DatabaseService {
       const messages = [
         ...userMessages.map((row: UserMessage) => ({
           id: row.id.toString(),
-          role: "user",
+          chatId: row.chatId,
+          role: "user" as const,
           timestamp: new Date(row.timestamp),
           content: row.content,
           contextItems: row.contextItems ? JSON.parse(row.contextItems) : undefined,
         })),
         ...assistantMessages.map((row: AssistantMessage) => ({
           id: row.id.toString(),
-          role: "assistant",
+          chatId: row.chatId,
+          role: "assistant" as const,
           timestamp: new Date(row.timestamp),
           response: row.response,
-          stages: JSON.parse(row.stages),
+          stages: JSON.parse(row.stages) as AgentStage[], // TODO: unsafe
           error: row.error || undefined,
         })),
       ];

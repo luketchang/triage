@@ -168,3 +168,25 @@ pre code {
 .break-words {
   word-break: break-word !important;
 }
+
+/* Advanced text wrapping for responsive layouts */
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Force all text containers to respect parent width */
+.prose * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Prevent code/pre blocks from causing overflow */
+pre, code {
+  max-width: 100% !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}

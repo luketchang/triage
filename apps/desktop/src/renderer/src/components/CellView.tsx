@@ -346,7 +346,7 @@ function CellView({
       )}
     >
       {/* Main content area */}
-      <div className="cellview-main-content flex-1">
+      <div className="cellview-main-content flex-1 w-full min-w-0 overflow-hidden">
         {/* Render each visible step */}
         {stages.map((stage, index) => (
           <React.Fragment key={stage.id}>
@@ -370,8 +370,8 @@ function CellView({
 
         {/* Render final response if present */}
         {message.response && message.response !== "Thinking..." && (
-          <div className="response-content prose prose-invert max-w-none">
-            <div className="text-base leading-relaxed break-words whitespace-pre-wrap">
+          <div className="response-content prose prose-invert max-w-none overflow-wrap-anywhere">
+            <div className="text-base leading-relaxed break-words whitespace-pre-wrap overflow-wrap-anywhere min-w-0 max-w-full">
               <ReactMarkdown
                 components={{
                   code({ node, inline, className, children, ...props }: CodeProps) {
@@ -392,7 +392,7 @@ function CellView({
                   },
                   pre({ children }) {
                     return (
-                      <pre className="overflow-x-auto whitespace-pre-wrap break-words">
+                      <pre className="overflow-x-auto whitespace-pre-wrap break-words overflow-wrap-anywhere">
                         {children}
                       </pre>
                     );

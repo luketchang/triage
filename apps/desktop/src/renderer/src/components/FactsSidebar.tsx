@@ -1,5 +1,5 @@
 // @ts-ignore - Ignoring React module resolution issues
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useAppConfig } from "../context/useAppConfig.js";
 import { filepathToGitHubUrl } from "../utils/facts/code.js";
 import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs.js";
@@ -16,77 +16,69 @@ interface FactsSidebarProps {
 
 const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClose }) => {
   const { appConfig, isLoading } = useAppConfig();
-  const [codeFactElements, setCodeFactElements] = useState<React.ReactNode[]>([]);
 
-  useEffect(() => {
-    if (isLoading || !appConfig) return;
-    const elements = codeFacts.map((fact, index) => {
-      const githubUrl = appConfig.githubRepoBaseUrl
-        ? filepathToGitHubUrl(appConfig.githubRepoBaseUrl, fact.filepath, {
-            startLine: fact.startLine,
-            endLine: fact.endLine,
-          })
-        : null;
-      return (
-        <div
-          key={`code-fact-${index}`}
-          className="p-3 rounded-lg bg-background-lighter border border-border/60 shadow-sm hover:shadow-md transition-shadow duration-200"
-        >
-          <div className="flex items-center justify-between mb-1.5">
-            <h4 className="font-medium text-sm">{fact.title}</h4>
-            <span className="fact-type px-2 py-0.5 text-xs rounded-md bg-blue-900/60 text-blue-200 ml-2">
-              CODE
-            </span>
-          </div>
-          <p className="text-sm text-gray-300 mb-1.5 leading-relaxed">{fact.fact}</p>
-          <div className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-3.5 w-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-              />
-            </svg>
-            <span>
-              {fact.filepath} (Lines {fact.startLine}-{fact.endLine})
-            </span>
-          </div>
-          {githubUrl && (
-            <a
-              href={githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block text-xs text-blue-400 hover:text-blue-300 hover:underline mt-2 flex items-center gap-1"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3.5 w-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                />
-              </svg>
-              View in GitHub
-            </a>
-          )}
-        </div>
-      );
+  const renderCodeFact = (fact: CodePostprocessingFact, index: number) => {
+    if (!appConfig) return null;
+    const githubUrl = filepathToGitHubUrl(appConfig.githubRepoBaseUrl, fact.filepath, {
+      startLine: fact.startLine,
+      endLine: fact.endLine,
     });
-    setCodeFactElements(elements);
-  }, [codeFacts, appConfig, isLoading]);
+    return (
+      <div
+        key={`code-fact-${index}`}
+        className="p-3 rounded-lg bg-background-lighter border border-border/60 shadow-sm hover:shadow-md transition-shadow duration-200"
+      >
+        <div className="flex items-center justify-between mb-1.5">
+          <h4 className="font-medium text-sm">{fact.title}</h4>
+          <span className="fact-type px-2 py-0.5 text-xs rounded-md bg-blue-900/60 text-blue-200 ml-2">
+            CODE
+          </span>
+        </div>
+        <p className="text-sm text-gray-300 mb-1.5 leading-relaxed">{fact.fact}</p>
+        <div className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-3.5 w-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+            />
+          </svg>
+          <span>
+            {fact.filepath} (Lines {fact.startLine}-{fact.endLine})
+          </span>
+        </div>
+        <a
+          href={githubUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-blue-400 hover:text-blue-300 hover:underline mt-2 flex items-center gap-1"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-3.5 w-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+            />
+          </svg>
+          View in GitHub
+        </a>
+      </div>
+    );
+  };
 
   const renderLogFact = (fact: LogPostprocessingFact, index: number) => {
     const datadogUrl = logSearchInputToDatadogLogsViewUrl(fact);
@@ -123,7 +115,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
           href={datadogUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="block text-xs text-purple-400 hover:text-purple-300 hover:underline mt-2 flex items-center gap-1"
+          className="text-xs text-purple-400 hover:text-purple-300 hover:underline mt-2 flex items-center gap-1"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -190,7 +182,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
       <ScrollArea className="h-full">
         <div className="p-3 space-y-3">
           {logFacts.map(renderLogFact)}
-          {codeFactElements}
+          {codeFacts.map(renderCodeFact)}
         </div>
       </ScrollArea>
     </div>
