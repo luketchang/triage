@@ -186,12 +186,12 @@ function ChatView() {
         </DropdownMenu>
       </div>
 
-      <div className="flex flex-row flex-nowrap h-full overflow-hidden">
+      <div className="flex flex-row flex-nowrap h-full relative">
         {/* Main chat area - takes full width when sidebar closed, 2/3 when open */}
         <div
           className={cn(
-            "transition-all duration-300 ease-in-out h-full overflow-hidden",
-            showFactsSidebar ? "w-2/3 max-w-2/3 flex-[2]" : "w-full flex-1",
+            "transition-all duration-300 ease-in-out h-full overflow-hidden flex-grow",
+            showFactsSidebar ? "pr-[33.333%]" : "w-full",
             "bg-background-assistant"
           )}
         >
@@ -239,11 +239,11 @@ function ChatView() {
           </ScrollArea>
         </div>
 
-        {/* Facts sidebar - slides in from right taking 1/3 width */}
+        {/* Facts sidebar - fixed position at right side taking 1/3 width */}
         <div
           className={cn(
-            "h-full bg-background-sidebar border-l border-border transition-all duration-300 ease-in-out",
-            showFactsSidebar ? "w-1/3 max-w-1/3 flex-[1]" : "w-0 opacity-0 overflow-hidden flex-[0]"
+            "fixed top-0 right-0 h-full w-1/3 bg-background-sidebar border-l border-border shadow-md transition-transform duration-300 ease-in-out z-10",
+            showFactsSidebar ? "translate-x-0" : "translate-x-full"
           )}
         >
           {showFactsSidebar && (
