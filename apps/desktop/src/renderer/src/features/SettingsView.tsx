@@ -272,7 +272,7 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
             <AlertDialogAction
               onClick={removeIntegration}
               disabled={isSaving}
-              variant="destructive"
+              variant="destructiveOutline"
             >
               {isSaving ? "Removing..." : "Remove"}
             </AlertDialogAction>

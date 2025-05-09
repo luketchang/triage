@@ -43,7 +43,7 @@ function App(): JSX.Element {
   return (
     <AppConfigProvider>
       <div className="flex w-full h-full bg-background antialiased">
-        <NavigationSidebar activeTab={activeTab} />
+        <NavigationSidebar />
 
         <div className="flex-1 h-full overflow-hidden flex shadow-sm">
           <div

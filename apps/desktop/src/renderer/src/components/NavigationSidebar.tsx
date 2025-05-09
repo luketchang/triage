@@ -1,21 +1,16 @@
 import { useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
 import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
-import { TabType } from "../types/index.js";
 import { Button } from "./ui/button.jsx";
 import { ScrollArea } from "./ui/scroll-area.jsx";
 
 // Import stores
 import { useChatStore, useUIStore } from "../store/index.js";
 
-interface NavigationSidebarProps {
-  activeTab: TabType;
-}
-
-function NavigationSidebar({ activeTab }: NavigationSidebarProps) {
+function NavigationSidebar() {
   // Get state from stores
   const { chats, contextItems, currentChatId, selectChat, loadChats } = useChatStore();
-  const { setActiveTab } = useUIStore();
+  const { activeTab, setActiveTab } = useUIStore();
 
   // Ensure chats are loaded when component mounts
   useEffect(() => {
