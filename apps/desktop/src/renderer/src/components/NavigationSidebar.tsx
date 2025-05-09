@@ -59,7 +59,7 @@ function NavigationSidebar({ activeTab, handleTabChange }: NavigationSidebarProp
                 onClick={() => handleSelectChat(chat.id)}
               >
                 <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white" />
-                <div className="text-sm truncate">New Chat</div>
+                <div className="text-sm truncate">Chat {chat.id}</div>
               </div>
             ))
           ) : (
