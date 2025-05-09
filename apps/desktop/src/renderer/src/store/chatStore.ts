@@ -1,10 +1,7 @@
 import { create } from "zustand";
 import api from "../services/api.js";
 import { AssistantMessage, Chat, ChatMessage, ContextItem, UserMessage } from "../types/index.js";
-import {
-  convertAgentStepsToStages,
-  convertToAgentChatMessages,
-} from "../utils/agentDesktopConversion.js";
+import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { CellUpdateManager } from "../utils/CellUpdateManager.js";
 import { generateId } from "../utils/formatters.js";
 
@@ -193,7 +190,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ...cell,
           response:
             agentMessage.response || "I processed your request but got no response content.",
-          stages: convertAgentStepsToStages(agentMessage.steps ?? []),
+          // preserve existing stages from streaming; do not override here
+          // TODO: once we add back agent steps we should save
         }));
       } else {
         // Handle error response

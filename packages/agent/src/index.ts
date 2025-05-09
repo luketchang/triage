@@ -130,7 +130,7 @@ async function main(): Promise<void> {
     agentCfg: {
       repoPath,
       codebaseOverviewPath: overviewPath,
-      reasoningModel: GeminiModel.GEMINI_2_5_PRO,
+      reasoningModel: GeminiModel.GEMINI_2_5_FLASH,
       fastModel: GeminiModel.GEMINI_2_5_FLASH,
       observabilityPlatform: integration,
       observabilityFeatures: observabilityFeatures as ("logs" | "spans")[],
