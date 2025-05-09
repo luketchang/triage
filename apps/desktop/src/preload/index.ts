@@ -23,10 +23,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * Invoke the agent with a query and return the result
    * @param query The query to send to the agent
    * @param chatHistory The chat history to send to the agent
-   * @param options Optional configuration options for the agent
    */
-  invokeAgent: (query: string, chatHistory: ChatMessage[], options?: { reasonOnly?: boolean }) => {
-    return ipcRenderer.invoke("agent:invoke-agent", query, chatHistory, options);
+  invokeAgent: (query: string, chatHistory: ChatMessage[]) => {
+    return ipcRenderer.invoke("agent:invoke-agent", query, chatHistory);
   },
 
   /**

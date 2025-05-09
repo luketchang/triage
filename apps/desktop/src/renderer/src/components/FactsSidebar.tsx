@@ -15,16 +15,18 @@ interface FactsSidebarProps {
 }
 
 const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClose }) => {
-  const { config, isLoading } = useAppConfig();
+  const { appConfig, isLoading } = useAppConfig();
   const [codeFactElements, setCodeFactElements] = useState<React.ReactNode[]>([]);
 
   useEffect(() => {
-    if (isLoading || !config) return;
+    if (isLoading || !appConfig) return;
     const elements = codeFacts.map((fact, index) => {
-      const githubUrl = filepathToGitHubUrl(config.githubRepoBaseUrl, fact.filepath, {
-        startLine: fact.startLine,
-        endLine: fact.endLine,
-      });
+      const githubUrl = appConfig.githubRepoBaseUrl
+        ? filepathToGitHubUrl(appConfig.githubRepoBaseUrl, fact.filepath, {
+            startLine: fact.startLine,
+            endLine: fact.endLine,
+          })
+        : null;
       return (
         <div
           key={`code-fact-${index}`}
@@ -56,33 +58,35 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
               {fact.filepath} (Lines {fact.startLine}-{fact.endLine})
             </span>
           </div>
-          <a
-            href={githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-xs text-blue-400 hover:text-blue-300 hover:underline mt-2 flex items-center gap-1"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-3.5 w-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+          {githubUrl && (
+            <a
+              href={githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-xs text-blue-400 hover:text-blue-300 hover:underline mt-2 flex items-center gap-1"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-              />
-            </svg>
-            View in GitHub
-          </a>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
+              View in GitHub
+            </a>
+          )}
         </div>
       );
     });
     setCodeFactElements(elements);
-  }, [codeFacts, config, isLoading]);
+  }, [codeFacts, appConfig, isLoading]);
 
   const renderLogFact = (fact: LogPostprocessingFact, index: number) => {
     const datadogUrl = logSearchInputToDatadogLogsViewUrl(fact);

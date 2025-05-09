@@ -55,7 +55,6 @@ export type {
   TracesWithPagination,
 };
 
-export { invokeAgent } from "@triage/agent";
 export { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 
 // Define code map type alias
@@ -93,17 +92,6 @@ export interface UISpan {
   children?: UISpan[];
   error?: SpanError;
   tags?: Record<string, string>;
-}
-
-// Define the AppConfig interface - specific to desktop app
-export interface AppConfig {
-  repoPath: string;
-  githubRepoBaseUrl: string;
-  codebaseOverviewPath: string;
-  observabilityPlatform: string;
-  observabilityFeatures: string[];
-  startDate: Date;
-  endDate: Date;
 }
 
 // Define facet data type
@@ -263,7 +251,7 @@ export interface AssistantMessage {
 }
 
 // Interface for main content tabs
-export type TabType = "dashboards" | "chat";
+export type TabType = "chat" | "settings";
 
 export interface TimeRange {
   start: string;

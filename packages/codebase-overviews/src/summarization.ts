@@ -1,5 +1,5 @@
-import { Model, getModelWrapper, logger } from "@triage/common";
-import { generateText } from "ai";
+import { logger } from "@triage/common";
+import { generateText, LanguageModelV1 } from "ai";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -107,7 +107,7 @@ ${params.example}
  * Generate a summary for a specific directory
  */
 export async function generateDirectorySummary(
-  model: Model,
+  llmClient: LanguageModelV1,
   systemDescription: string,
   directory: string,
   dirFileTree: string,
@@ -124,7 +124,7 @@ export async function generateDirectorySummary(
 
   try {
     const { text } = await generateText({
-      model: getModelWrapper(model),
+      model: llmClient,
       system: SUMMARIZATION_SYSTEM_PROMPT,
       prompt,
     });
@@ -140,7 +140,7 @@ export async function generateDirectorySummary(
  * Merge all directory summaries into a final document
  */
 export async function mergeAllSummaries(
-  model: Model,
+  llmClient: LanguageModelV1,
   systemDescription: string,
   summaries: Record<string, string>,
   repoFileTree: string
@@ -155,7 +155,7 @@ export async function mergeAllSummaries(
 
   try {
     const { text } = await generateText({
-      model: getModelWrapper(model),
+      model: llmClient,
       system: SUMMARIZATION_SYSTEM_PROMPT,
       prompt,
     });

@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 
-import { config } from "@triage/config";
 import winston, { transports } from "winston";
 
 // Always use a "logs" directory in the project's root directory.
@@ -17,17 +16,19 @@ const errorLogFile = path.join(logDir, "api.error.log");
 
 function getLogger(): winston.Logger {
   return winston.createLogger({
-    level: config.env === "development" ? "debug" : "info",
+    level: process.env.NODE_ENV === "development" ? "debug" : "info",
     exitOnError: false,
     format: winston.format.combine(
       // Use built-in error formatting to capture stack traces
       winston.format.errors({ stack: true }),
-      winston.format.label({ label: config.processLabel }),
+      winston.format.label({ label: "triage" }),
       winston.format.timestamp({
         format: "YYYY-MM-DD HH:mm:ss",
       }),
       // Use colorize only in development mode
-      config.env === "development" ? winston.format.colorize() : winston.format.uncolorize(),
+      process.env.NODE_ENV === "development"
+        ? winston.format.colorize()
+        : winston.format.uncolorize(),
       winston.format.splat(),
       winston.format.printf(({ level, message, label, timestamp, stack, ...meta }) => {
         // Prefer the stack trace if available

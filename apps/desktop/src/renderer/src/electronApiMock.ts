@@ -1,7 +1,7 @@
+import { AppConfig } from "@renderer/AppConfig.js";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
-  AppConfig,
   FacetData,
   Log,
   LogQueryParams,
@@ -215,8 +215,7 @@ const mockElectronAPI = {
    */
   invokeAgent: async (
     _query: string,
-    _chatHistory: AgentChatMessage[],
-    _options?: { reasonOnly?: boolean }
+    _chatHistory: AgentChatMessage[]
   ): Promise<AgentAssistantMessage> => {
     // Simulate delay
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -328,15 +327,7 @@ The primary issue appears to be in the authentication middleware where token val
   getAppConfig: async (): Promise<AppConfig> => {
     console.info("Mock getAppConfig called");
 
-    return {
-      repoPath: "/Users/luketchang/code/ticketing",
-      githubRepoBaseUrl: "https://github.com/luketchang/ticketing",
-      codebaseOverviewPath: "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-      observabilityPlatform: "datadog",
-      observabilityFeatures: ["logs"],
-      startDate: new Date("2025-04-16T21:00:00Z"),
-      endDate: new Date("2025-04-16T23:59:59Z"),
-    };
+    throw new Error("Not implemented");
   },
 
   /**

@@ -2,7 +2,6 @@
 
 - Root: `pnpm build`, `pnpm lint:fix`,
 - Desktop: `pnpm build`, `pnpm lint:fix`, `pnpm start`
-- Single component test: Not configured yet (add when tests are implemented)
 
 ## Code Style Guidelines
 
@@ -13,9 +12,14 @@
 - **Error Handling**: Use proper try/catch and typed Error objects
 - **Architecture**: Follow modular design in monorepo structure
 - **Components**: Use functional components with proper prop typing
-- **Logging**: For print statements to test code, use console.info (do not use console.log). For actual logging, use logger.info, logger.warn, logger.error (`import logger from 'utils/logger.ts'`)
+- **Logging**: For print statements to test code, use console.info (do not use console.log). For actual logging, use logger.info, logger.warn, logger.error (`import { logger } from '@triage/common'`)
 - **Scripts**: Parse any command line arguments with commander
 - **Making Code Changes**: Do not perform "drive-by" changes of things you notice that are unrelated to the task/question you were asked.
+- **Global variables**: Prefer using variables from closures over defining new singletons
+- **Tailwind CSS**: Group related utilities (layout, typography, colors, etc.); use `className`; prefer Tailwind utility classes over custom CSS; extract patterns to components or use @apply in a CSS file; build responsive design
+- **ShadCN UI**: Import from `@/components/ui`; use provided variants/API; customize via variant props when possible; extend with Tailwind when needed
+- **Radix UI**: Use for unstyled components; follow Radix composition pattern; implement ARIA/keyboard navigation; style with Tailwind; ensure proper event handling
+- **Icons**: Use `lucide-react`
 
 # Cursor Best Practices
 

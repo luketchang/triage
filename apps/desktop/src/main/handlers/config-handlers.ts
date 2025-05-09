@@ -1,69 +1,36 @@
 import { ipcMain } from "electron";
-import { AppConfig } from "../../renderer/src/config.js";
+import { AppConfig, AppConfigStore } from "../../renderer/src/AppConfig.js";
 
 /**
  * Set up all IPC handlers related to configuration
  */
-export function setupConfigHandlers(): void {
+export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
   console.info("Setting up config handlers...");
 
-  // Get the current application configuration
+  // Get all config values for the settings UI
   ipcMain.handle("config:get-app-config", async (): Promise<AppConfig> => {
-    return {
-      repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
-      githubRepoBaseUrl:
-        process.env.GITHUB_REPO_BASE_URL || "https://github.com/luketchang/ticketing",
-      codebaseOverviewPath:
-        process.env.CODEBASE_OVERVIEW_PATH ||
-        "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-      observabilityPlatform: process.env.OBSERVABILITY_PLATFORM || "datadog",
-      observabilityFeatures: process.env.OBSERVABILITY_FEATURES
-        ? process.env.OBSERVABILITY_FEATURES.split(",")
-        : ["logs"],
-      startDate: new Date(process.env.START_DATE || "2025-04-16T21:00:00Z"),
-      endDate: new Date(process.env.END_DATE || "2025-04-16T23:59:59Z"),
-    };
+    try {
+      console.info("Fetching all config values");
+      return appCfgStore.getValues();
+    } catch (error) {
+      console.error("Error fetching config values:", error);
+      throw error;
+    }
   });
 
-  // Update the application configuration
+  // Update all config values
   ipcMain.handle(
     "config:update-app-config",
-    async (_event: any, newConfig: Partial<AppConfig>): Promise<AppConfig> => {
-      // Store updated values in process.env for future access
-      if (newConfig.repoPath) {
-        process.env.REPO_PATH = newConfig.repoPath;
+    async (_event: any, partial: Partial<AppConfig>): Promise<AppConfig> => {
+      try {
+        console.info("Updating config values");
+        await appCfgStore.setValues(partial);
+        // Return updated config
+        return appCfgStore.getValues();
+      } catch (error) {
+        console.error("Error updating config:", error);
+        throw error;
       }
-      if (newConfig.codebaseOverviewPath) {
-        process.env.CODEBASE_OVERVIEW_PATH = newConfig.codebaseOverviewPath;
-      }
-      if (newConfig.observabilityPlatform) {
-        process.env.OBSERVABILITY_PLATFORM = newConfig.observabilityPlatform;
-      }
-      if (newConfig.observabilityFeatures) {
-        process.env.OBSERVABILITY_FEATURES = newConfig.observabilityFeatures.join(",");
-      }
-      if (newConfig.startDate) {
-        process.env.START_DATE = newConfig.startDate.toISOString();
-      }
-      if (newConfig.endDate) {
-        process.env.END_DATE = newConfig.endDate.toISOString();
-      }
-
-      // Return the updated configuration
-      return {
-        repoPath: process.env.REPO_PATH || "/Users/luketchang/code/ticketing",
-        githubRepoBaseUrl:
-          process.env.GITHUB_REPO_BASE_URL || "https://github.com/luketchang/ticketing",
-        codebaseOverviewPath:
-          process.env.CODEBASE_OVERVIEW_PATH ||
-          "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md",
-        observabilityPlatform: process.env.OBSERVABILITY_PLATFORM || "datadog",
-        observabilityFeatures: process.env.OBSERVABILITY_FEATURES
-          ? process.env.OBSERVABILITY_FEATURES.split(",")
-          : ["logs"],
-        startDate: new Date(process.env.START_DATE || "2025-04-16T21:00:00Z"),
-        endDate: new Date(process.env.END_DATE || "2025-04-16T23:59:59Z"),
-      };
     }
   );
 
@@ -74,5 +41,7 @@ export function setupConfigHandlers(): void {
  * Clean up resources used by config handlers
  */
 export function cleanupConfigHandlers(): void {
+  ipcMain.removeHandler("config:get-app-config");
+  ipcMain.removeHandler("config:update-app-config");
   console.info("Config handlers cleanup complete.");
 }

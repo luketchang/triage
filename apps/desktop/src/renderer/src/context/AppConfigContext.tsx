@@ -1,49 +1,50 @@
 import React, { createContext, ReactNode, useEffect, useState } from "react";
-import { AppConfig } from "../config.js";
+import { AppConfig } from "../AppConfig.js";
 import api from "../services/api.js";
 
 type AppConfigContextType = {
-  config: AppConfig | null;
+  appConfig: AppConfig | null;
+  updateAppConfig: (newConfig: Partial<AppConfig>) => Promise<void>;
   isLoading: boolean;
-  updateConfig: (newConfig: Partial<AppConfig>) => Promise<void>;
 };
 
 const AppConfigContext = createContext<AppConfigContextType>({
-  config: null,
+  appConfig: null,
+  updateAppConfig: async () => {},
   isLoading: true,
-  updateConfig: async () => {},
 });
 
 export const AppConfigProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [config, setConfig] = useState<AppConfig | null>(null);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const appConfig = await api.getAppConfig();
-        setConfig(appConfig);
+        const cfgFromApi = await api.getAppConfig();
+        setAppConfig(cfgFromApi);
       } catch (error) {
         console.error("Failed to fetch app config:", error);
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchConfig();
   }, []);
 
-  const updateConfig = async (newConfig: Partial<AppConfig>) => {
+  const updateAppConfig = async (newConfig: Partial<AppConfig>) => {
     try {
-      const updatedConfig = await api.updateAppConfig(newConfig);
-      setConfig(updatedConfig);
+      console.info("Updating app config:", newConfig);
+      const cfgFromApi = await api.updateAppConfig(newConfig);
+      console.info("Updated app config:", cfgFromApi);
+      setAppConfig(cfgFromApi);
     } catch (error) {
       console.error("Failed to update app config:", error);
     }
   };
 
   return (
-    <AppConfigContext.Provider value={{ config, isLoading, updateConfig }}>
+    <AppConfigContext.Provider value={{ appConfig, updateAppConfig, isLoading }}>
       {children}
     </AppConfigContext.Provider>
   );

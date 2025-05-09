@@ -1,4 +1,4 @@
-import { getModelWrapper, logger, timer } from "@triage/common";
+import { logger, timer } from "@triage/common";
 import { CoreMessage, streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
@@ -75,19 +75,11 @@ ${formatFacetValues(logLabelsMap)}
 };
 
 export class Reasoner {
-  private readonly config: TriagePipelineConfig;
-  private readonly logContext: LogSearchAgentResponse;
-  private readonly codeContext: CodeSearchAgentResponse;
-
   constructor(
-    config: TriagePipelineConfig,
-    logContext: LogSearchAgentResponse,
-    codeContext: CodeSearchAgentResponse
-  ) {
-    this.config = config;
-    this.logContext = logContext;
-    this.codeContext = codeContext;
-  }
+    private readonly config: TriagePipelineConfig,
+    private readonly logContext: LogSearchAgentResponse,
+    private readonly codeContext: CodeSearchAgentResponse
+  ) {}
 
   @timer
   async invoke(params: {
@@ -129,7 +121,7 @@ export class Reasoner {
 
     // Stream reasoning response and collect text and tool calls
     const { toolCalls, fullStream } = streamText({
-      model: getModelWrapper(this.config.reasoningModel),
+      model: this.config.reasoningClient,
       messages: params.llmChatHistory,
       maxSteps: params.maxSteps || 1,
       tools: {

@@ -14,3 +14,5 @@ export * from "./llm";
 // Exports from previously services package
 export * from "./mcp-client";
 export * from "./setup";
+
+export * from "./config";

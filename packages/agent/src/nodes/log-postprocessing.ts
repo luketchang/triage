@@ -1,6 +1,6 @@
-import { getModelWrapper, logger, Model, timer } from "@triage/common";
+import { logger, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
-import { generateId, generateText } from "ai";
+import { generateId, generateText, LanguageModelV1 } from "ai";
 
 import {
   AgentStreamUpdate,
@@ -68,13 +68,10 @@ function createPrompt(params: {
 }
 
 export class LogPostprocessor {
-  private llm: Model;
-  private observabilityPlatform: ObservabilityPlatform;
-
-  constructor(llm: Model, observabilityPlatform: ObservabilityPlatform) {
-    this.llm = llm;
-    this.observabilityPlatform = observabilityPlatform;
-  }
+  constructor(
+    private readonly llmClient: LanguageModelV1,
+    private readonly observabilityPlatform: ObservabilityPlatform
+  ) {}
 
   @timer
   async invoke(params: {
@@ -93,7 +90,7 @@ export class LogPostprocessor {
     logger.info(`Log postprocessing prompt:\n${prompt}`);
 
     const { toolCalls } = await generateText({
-      model: getModelWrapper(this.llm),
+      model: this.llmClient,
       system: SYSTEM_PROMPT,
       prompt: prompt,
       tools: {

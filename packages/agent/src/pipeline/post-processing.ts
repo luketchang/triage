@@ -30,7 +30,7 @@ export class PostProcessing {
     }
 
     const logPostprocessor = new LogPostprocessor(
-      this.config.fastModel,
+      this.config.fastClient,
       this.config.observabilityPlatform
     );
 
@@ -59,7 +59,7 @@ export class PostProcessing {
       });
     }
 
-    const codePostprocessor = new CodePostprocessor(this.config.fastModel);
+    const codePostprocessor = new CodePostprocessor(this.config.fastClient);
 
     const codeSearchSteps = this.state.codeSearchSteps;
     const codePostprocessingResponse = await codePostprocessor.invoke({
