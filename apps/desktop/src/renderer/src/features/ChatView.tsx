@@ -196,20 +196,26 @@ function ChatView() {
           )}
         >
           {/* Chat messages */}
-          <ScrollArea className="h-full overflow-y-auto">
-            <div className="flex flex-col min-h-full">
+          <ScrollArea
+            className="h-full overflow-y-auto overflow-x-hidden"
+            type="always"
+            scrollHideDelay={0}
+          >
+            <div className="flex flex-col min-h-full w-full">
+              {/* Spacer to ensure content is scrollable to the top */}
+              <div className="h-48 w-full"></div>
               {messages.map((message) =>
                 message.role === "user" ? (
                   <div
                     key={`user-${message.id}`}
                     className={cn("py-4 px-4 flex flex-col bg-background-assistant")}
                   >
-                    <div className="flex items-end max-w-[90%] mx-auto w-full">
+                    <div className="flex items-start max-w-[90%] mx-auto w-full">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary my-2">
                         <span className="text-white font-medium text-sm">U</span>
                       </div>
-                      <div className="flex-1 overflow-hidden pt-0.5">
-                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3 break-words bg-background-alt p-3 rounded-lg shadow-sm">
+                      <div className="flex-1 overflow-hidden pt-0.5 min-w-0 max-w-full">
+                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3 break-words bg-background-alt p-3 rounded-lg shadow-sm overflow-x-auto overflow-wrap-anywhere min-w-0">
                           <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
                       </div>
