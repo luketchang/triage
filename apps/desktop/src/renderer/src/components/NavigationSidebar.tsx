@@ -30,7 +30,7 @@ function NavigationSidebar({ activeTab, handleTabChange }: NavigationSidebarProp
   // Handle creating a new chat
   const handleCreateChat = async () => {
     // Set chat ID to 0 to indicate a new chat should be created when a message is sent
-    selectChat(0);
+    selectChat(undefined);
   };
 
   // Handle selecting a chat

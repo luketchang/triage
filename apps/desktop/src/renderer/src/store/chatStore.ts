@@ -28,7 +28,7 @@ interface ChatState {
   setNewMessage: (message: string) => void;
   setMessages: (messages: ChatMessage[]) => void;
   selectChat: (chatId: number | undefined) => void;
-  createChat: () => Promise<number>;
+  createChat: () => Promise<number | undefined>;
   loadChats: () => Promise<void>;
   sendMessage: () => Promise<void>;
   clearChat: () => Promise<void>;
@@ -81,7 +81,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  createChat: async () => {
+  createChat: async (): Promise<number | undefined> => {
     try {
       console.info("Creating new chat via API");
       const newChatId = await api.createChat();
@@ -95,7 +95,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return newChatId;
     } catch (error) {
       console.error("Error creating new chat:", error);
-      return 0; // TODO: is this okay?
+      return undefined;
     }
   },
 
@@ -120,7 +120,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // If no chat is selected or it's the "empty" chat (0), create a new one
     if (!chatId || chatId === 0) {
       chatId = await get().createChat();
-      if (!chatId) return; // Failed to create chat
+      if (chatId === undefined) return; // Failed to create chat
     }
 
     // Create a new user message with context items
