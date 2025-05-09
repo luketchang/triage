@@ -2,9 +2,8 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { LanguageModelV1 } from "@ai-sdk/provider";
-import { z } from "zod";
 
-import { LLMCfgSchema } from "./config";
+import { LLMConfig } from "./config";
 
 export enum AnthropicModel {
   CLAUDE_3_7_SONNET_20250219 = "claude-3-7-sonnet-20250219",
@@ -39,10 +38,7 @@ export const VALID_MODELS = [
  * @param llmCfg Configuration containing API keys
  * @returns The appropriate AI SDK model wrapper
  */
-export function getModelWrapper(
-  model: Model,
-  llmCfg: z.infer<typeof LLMCfgSchema>
-): LanguageModelV1 {
+export function getModelWrapper(model: Model, llmCfg: LLMConfig): LanguageModelV1 {
   if (Object.values(AnthropicModel).includes(model as AnthropicModel)) {
     return createAnthropic({
       apiKey: llmCfg.anthropicApiKey || undefined,
