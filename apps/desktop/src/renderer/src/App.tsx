@@ -1,5 +1,4 @@
 // @ts-ignore - Ignoring React module resolution issues
-import { useEffect } from "react";
 import "./electron.d";
 import "./styles/globals.css";
 
@@ -21,17 +20,11 @@ import "./styles/globals.css";
 import { TabType } from "./types/index.js";
 
 // Stores
-import { useChatStore, useUIStore } from "./store/index.js";
+import { useUIStore } from "./store/index.js";
 
 function App(): JSX.Element {
   // Get required state from stores
-  const { loadChats } = useChatStore();
   const { activeTab, showFactsSidebar, setActiveTab, toggleFactsSidebar } = useUIStore();
-
-  // Load chats on initial mount
-  useEffect(() => {
-    loadChats();
-  }, [loadChats]);
 
   // Set up keyboard shortcuts
   useKeyboardShortcuts([
