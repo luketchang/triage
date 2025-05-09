@@ -1,9 +1,8 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
-import { config } from "@triage/config";
 import { Command } from "commander";
-import { Trace, TracesWithPagination } from "../src"; // Adjust import path if needed
-import { DatadogPlatform } from "../src/platforms/datadog"; // Adjust import path if needed
+import { DatadogCfgSchema, DatadogConfig, Trace, TracesWithPagination } from "../src";
+import { DatadogPlatform } from "../src/platforms/datadog";
 
 // Setup command line options
 const program = new Command();
@@ -81,14 +80,14 @@ function displayTraces(tracesWithPagination: TracesWithPagination, platform: str
   }
 }
 
-async function testDatadogTraceFetch(): Promise<void> {
+async function testDatadogTraceFetch(datadogCfg: DatadogConfig): Promise<void> {
   try {
     logger.info("Testing Datadog trace fetching...");
     logger.info(`Query: ${options.query}`);
     logger.info(`Time range: ${options.start} to ${options.end}`);
     logger.info(`Limit: ${options.limit}`);
 
-    const datadogPlatform = new DatadogPlatform();
+    const datadogPlatform = new DatadogPlatform(datadogCfg);
     const tracesResult = await datadogPlatform.fetchTraces({
       query: options.query,
       start: options.start,
@@ -108,20 +107,11 @@ async function main(): Promise<void> {
 
   // Check if platform configs are available
   if (options.platform === "datadog") {
-    if (!config.datadog?.apiKey || !config.datadog?.appKey) {
-      logger.error("Datadog API key and App key are required but not found in config");
-      process.exit(1);
-    }
-  }
-
-  try {
-    // Run tests based on platform selection
-    if (options.platform === "datadog") {
-      await testDatadogTraceFetch();
-    }
-  } catch (error) {
-    logger.error("Error during test execution:", error);
-    process.exit(1);
+    const datadogCfg = DatadogCfgSchema.parse({
+      apiKey: process.env.DATADOG_API_KEY,
+      appKey: process.env.DATADOG_APP_KEY,
+    });
+    await testDatadogTraceFetch(datadogCfg);
   }
 
   logger.info("Trace fetch test completed!");

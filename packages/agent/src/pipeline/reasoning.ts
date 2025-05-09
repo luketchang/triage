@@ -28,10 +28,7 @@ export class Reasoning {
     this.config = config;
     this.state = state;
     this.reasoner = new Reasoner(this.config, preProcessingResults.logs, preProcessingResults.code);
-    this.toolbox = new Toolbox(
-      this.config.observabilityPlatform,
-      new LogSearchAgent(this.config.fastModel, this.config)
-    );
+    this.toolbox = new Toolbox(this.config.observabilityPlatform, new LogSearchAgent(this.config));
   }
 
   async run(): Promise<ReasoningStep> {

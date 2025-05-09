@@ -1,8 +1,11 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
-import { config } from "@triage/config";
+import { AgentConfigStore } from "@triage/agent";
+import { ObservabilityConfigStore } from "@triage/observability";
 import { app, BrowserWindow, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
+import { AppCfgSchema, AppConfigStore } from "../renderer/src/AppConfig.js";
+import { ElectronConfigStore } from "./ElectronConfigStore.js";
 import {
   cleanupAgentHandlers,
   cleanupConfigHandlers,
@@ -13,21 +16,6 @@ import {
   setupDbHandlers,
   setupObservabilityHandlers,
 } from "./handlers/index.js";
-
-// Log the configuration to verify it's correctly loaded
-console.info("Using environment configuration:", {
-  NODE_ENV: config.env,
-  openaiApiKey: config.openaiApiKey ? "Set" : "Not set",
-  anthropicApiKey: config.anthropicApiKey ? "Set" : "Not set",
-  datadog: {
-    apiKey: config.datadog.apiKey ? "Set" : "Not set",
-    appKey: config.datadog.appKey ? "Set" : "Not set",
-  },
-  grafana: {
-    baseUrl: config.grafana.baseUrl,
-    username: config.grafana.username ? "Set" : "Not set",
-  },
-});
 
 /**
  * Create the main application window
@@ -77,6 +65,21 @@ function createWindow(): BrowserWindow {
   return mainWindow;
 }
 
+function initApp(mainWindow: BrowserWindow): void {
+  const configStore = new ElectronConfigStore(AppCfgSchema);
+
+  // Create specialized views for each schema
+  const appCfgStore = new AppConfigStore(configStore);
+  const agentCfgStore = new AgentConfigStore(configStore);
+  const observabilityCfgStore = new ObservabilityConfigStore(configStore);
+
+  // Set up all IPC handlers
+  setupAgentHandlers(mainWindow, agentCfgStore);
+  setupDbHandlers();
+  setupConfigHandlers(appCfgStore);
+  setupObservabilityHandlers(observabilityCfgStore);
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -92,12 +95,7 @@ app.whenReady().then(() => {
   });
 
   const mainWindow = createWindow();
-
-  // Now set up all IPC handlers, with mainWindow available
-  setupAgentHandlers(mainWindow);
-  setupDbHandlers();
-  setupObservabilityHandlers();
-  setupConfigHandlers();
+  initApp(mainWindow);
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
@@ -117,10 +115,10 @@ app.on("window-all-closed", () => {
 
 // Clean up handlers when app quits
 app.on("quit", () => {
-  cleanupDbHandlers();
   cleanupAgentHandlers();
-  cleanupObservabilityHandlers();
+  cleanupDbHandlers();
   cleanupConfigHandlers();
+  cleanupObservabilityHandlers();
 });
 
 // In this file you can include the rest of your app's specific main process

@@ -1,4 +1,4 @@
-import { getModelWrapper, logger, timer } from "@triage/common";
+import { logger, timer } from "@triage/common";
 import { CoreMessage, streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
@@ -84,11 +84,7 @@ ${params.answer}
 }
 
 export class Reviewer {
-  private readonly config: TriagePipelineConfig;
-
-  constructor(config: TriagePipelineConfig) {
-    this.config = config;
-  }
+  constructor(private readonly config: TriagePipelineConfig) {}
 
   @timer
   async invoke(params: {
@@ -107,7 +103,7 @@ export class Reviewer {
     logger.info(`Reviewer prompt: ${prompt}`);
 
     const { fullStream, toolCalls } = streamText({
-      model: getModelWrapper(this.config.fastModel),
+      model: this.config.fastClient,
       prompt: prompt,
       tools: {
         reviewDecision: reviewDecisionToolSchema,

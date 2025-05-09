@@ -1,5 +1,6 @@
-import { logger, Model } from "@triage/common";
+import { logger } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
+import { LanguageModelV1 } from "ai";
 
 import { AgentStreamUpdate, CodeSearchStep, LogSearchStep } from "../types";
 
@@ -9,8 +10,8 @@ import { Reasoning } from "./reasoning";
 import { Review } from "./review";
 
 export type TriagePipelineConfig = {
-  reasoningModel: Model;
-  fastModel: Model;
+  reasoningClient: LanguageModelV1;
+  fastClient: LanguageModelV1;
   observabilityPlatform: ObservabilityPlatform;
   query: string;
   repoPath: string;

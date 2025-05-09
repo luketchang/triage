@@ -1,10 +1,16 @@
 import fs from "fs/promises";
 
-import { GeminiModel, loadFileTree, logger } from "@triage/common";
-import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
+import { GeminiModel, getModelWrapper, loadFileTree, logger } from "@triage/common";
+import {
+  DatadogCfgSchema,
+  getObservabilityPlatform,
+  GrafanaCfgSchema,
+  IntegrationType,
+} from "@triage/observability";
 import { Command as CommanderCommand } from "commander";
 import { z } from "zod";
 
+import { AgentConfig } from "./config";
 import { TriagePipeline, TriagePipelineConfig } from "./pipeline";
 import type { ChatMessage } from "./types";
 import { AgentStreamUpdate, AssistantMessage } from "./types";
@@ -15,13 +21,9 @@ import { AgentStreamUpdate, AssistantMessage } from "./types";
 export interface AgentArgs {
   query: string;
   chatHistory: ChatMessage[];
-  repoPath: string;
-  codebaseOverviewPath: string;
-  observabilityPlatform?: string;
-  observabilityFeatures?: string[];
+  agentCfg: AgentConfig;
   startDate?: Date;
   endDate?: Date;
-  reasonOnly?: boolean;
   onUpdate?: (update: AgentStreamUpdate) => void;
 }
 
@@ -31,49 +33,40 @@ export interface AgentArgs {
 export async function invokeAgent({
   query,
   chatHistory,
-  repoPath,
-  codebaseOverviewPath,
-  observabilityPlatform: platformType = "grafana",
-  observabilityFeatures = ["logs"],
+  agentCfg,
   startDate = new Date("2025-04-01T21:00:00Z"),
   endDate = new Date("2025-04-01T22:00:00Z"),
-  reasonOnly = false,
   onUpdate,
 }: AgentArgs): Promise<AssistantMessage> {
-  // If reasonOnly is true, override observabilityFeatures to be empty
-  if (reasonOnly) {
-    observabilityFeatures = [];
+  if (!agentCfg.codebaseOverviewPath) {
+    throw new Error("Codebase overview path is required");
   }
+  if (!agentCfg.repoPath) {
+    throw new Error("Repo path is required");
+  }
+  const codebaseOverview = await fs.readFile(agentCfg.codebaseOverviewPath, "utf-8");
+  const fileTree = loadFileTree(agentCfg.repoPath);
 
-  logger.info(`Chat history still not being used: ${JSON.stringify(chatHistory)}`);
-
-  const integrationType =
-    platformType === "datadog" ? IntegrationType.DATADOG : IntegrationType.GRAFANA;
-
-  const observabilityPlatform = getObservabilityPlatform(integrationType);
-
+  const observabilityPlatform = getObservabilityPlatform(agentCfg);
   // Get formatted labels map for time range
   const logLabelsMap = await observabilityPlatform.getLogsFacetValues(
     startDate.toISOString(),
     endDate.toISOString()
   );
 
-  // Load the codebase overview
-  const overview = await fs.readFile(codebaseOverviewPath, "utf-8");
+  logger.info(`Chat history still not being used: ${JSON.stringify(chatHistory)}`);
 
   const pipelineConfig: TriagePipelineConfig = {
     query,
-    repoPath,
-    codebaseOverview: overview,
-    fileTree: loadFileTree(repoPath),
+    repoPath: agentCfg.repoPath,
+    codebaseOverview,
+    fileTree,
     logLabelsMap,
-    reasoningModel: GeminiModel.GEMINI_2_5_PRO,
-    fastModel: GeminiModel.GEMINI_2_5_FLASH,
+    reasoningClient: getModelWrapper(agentCfg.reasoningModel, agentCfg),
+    fastClient: getModelWrapper(agentCfg.fastModel, agentCfg),
     observabilityPlatform,
     onUpdate,
   };
-
-  logger.info(`Observability features: ${observabilityFeatures}`);
 
   const pipeline = new TriagePipeline(pipelineConfig);
   const response = await pipeline.run();
@@ -89,7 +82,10 @@ export async function invokeAgent({
 const parseArgs = (): { integration: "datadog" | "grafana"; features: string[] } => {
   const argsSchema = z.object({
     orgId: z.string().optional(),
-    integration: z.enum(["datadog", "grafana"]).default("datadog"),
+    integration: z
+      .enum(["datadog", "grafana"])
+      .default("datadog")
+      .transform((value) => value as IntegrationType),
     features: z
       .string()
       .default("logs")
@@ -115,8 +111,6 @@ async function main(): Promise<void> {
   const endDate = new Date("2025-05-02T03:00:00Z");
 
   const repoPath = "/Users/rob/code/ticketing";
-
-  // Load or generate the codebase overview
   const overviewPath = "/Users/rob/code/triage/repos/ticketing/codebase-analysis.md";
   const bugPath = "/Users/rob/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
 
@@ -133,10 +127,29 @@ async function main(): Promise<void> {
   const response = await invokeAgent({
     query: bug,
     chatHistory,
-    repoPath,
-    codebaseOverviewPath: overviewPath,
-    observabilityPlatform: integration,
-    observabilityFeatures,
+    agentCfg: {
+      repoPath,
+      codebaseOverviewPath: overviewPath,
+      reasoningModel: GeminiModel.GEMINI_2_5_PRO,
+      fastModel: GeminiModel.GEMINI_2_5_FLASH,
+      observabilityPlatform: integration,
+      observabilityFeatures: observabilityFeatures as ("logs" | "spans")[],
+      datadog:
+        integration === "datadog"
+          ? DatadogCfgSchema.parse({
+              apiKey: process.env.DATADOG_API_KEY!,
+              appKey: process.env.DATADOG_APP_KEY!,
+            })
+          : undefined,
+      grafana:
+        integration === "grafana"
+          ? GrafanaCfgSchema.parse({
+              baseUrl: process.env.GRAFANA_BASE_URL!,
+              username: process.env.GRAFANA_USERNAME!,
+              password: process.env.GRAFANA_PASSWORD!,
+            })
+          : undefined,
+    },
     startDate,
     endDate,
     onUpdate: (update) => {
@@ -188,6 +201,7 @@ if (typeof require !== "undefined" && typeof module !== "undefined" && require.m
 }
 
 // Agent package exports
+export * from "./config";
 export * from "./nodes/log-search";
 export * from "./nodes/reasoner";
 export * from "./nodes/reviewer";

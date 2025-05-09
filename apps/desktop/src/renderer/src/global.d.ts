@@ -1,7 +1,7 @@
 // This file provides type definitions for modules without their own type definitions
+import { AppConfig } from "@triage/config";
 import type {
   AgentStreamUpdate,
-  AppConfig,
   AssistantMessage,
   ChatMessage,
   FacetData,
@@ -11,15 +11,6 @@ import type {
   TracesWithPagination,
   UserMessage,
 } from "./types";
-
-// Allow importing components, features, etc. without type errors
-declare module "*/components/*";
-declare module "*/features/*";
-declare module "*/hooks/*";
-declare module "*/icons/*";
-declare module "*/services/*";
-declare module "*/types/*";
-declare module "*/utils/*";
 
 /**
  * Global type declarations for custom window properties
@@ -43,11 +34,7 @@ declare global {
 
   interface ElectronAPI {
     // Agent methods
-    invokeAgent: (
-      query: string,
-      chatHistory: ChatMessage[],
-      options?: { reasonOnly?: boolean }
-    ) => Promise<ChatMessage>;
+    invokeAgent: (query: string, chatHistory: ChatMessage[]) => Promise<ChatMessage>;
     onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => () => void;
     getAppConfig: () => Promise<AppConfig>;
     updateAppConfig: (newConfig: AppConfig) => Promise<AppConfig>;

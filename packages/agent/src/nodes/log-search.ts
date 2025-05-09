@@ -1,6 +1,6 @@
-import { getModelWrapper, logger, Model, timer } from "@triage/common";
+import { logger, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
-import { generateText } from "ai";
+import { generateText, LanguageModelV1 } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
@@ -99,11 +99,11 @@ ${params.codebaseOverview}
 }
 
 class LogSearch {
-  private llm: Model;
+  private llmClient: LanguageModelV1;
   private observabilityPlatform: ObservabilityPlatform;
 
-  constructor(llm: Model, observabilityPlatform: ObservabilityPlatform) {
-    this.llm = llm;
+  constructor(llmClient: LanguageModelV1, observabilityPlatform: ObservabilityPlatform) {
+    this.llmClient = llmClient;
     this.observabilityPlatform = observabilityPlatform;
   }
 
@@ -123,7 +123,7 @@ class LogSearch {
 
     try {
       const { toolCalls, text } = await generateText({
-        model: getModelWrapper(this.llm),
+        model: this.llmClient,
         system: SYSTEM_PROMPT,
         prompt: prompt,
         tools: {
@@ -169,12 +169,10 @@ class LogSearch {
 }
 
 export class LogSearchAgent {
-  private readonly config: TriagePipelineConfig;
   private logSearch: LogSearch;
 
-  constructor(fastModel: Model, config: TriagePipelineConfig) {
-    this.config = config;
-    this.logSearch = new LogSearch(fastModel, this.config.observabilityPlatform);
+  constructor(private readonly config: TriagePipelineConfig) {
+    this.logSearch = new LogSearch(this.config.fastClient, this.config.observabilityPlatform);
   }
 
   @timer

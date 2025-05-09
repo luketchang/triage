@@ -28,8 +28,8 @@ export class PreProcessing {
   constructor(config: TriagePipelineConfig, state: TriagePipelineState) {
     this.config = config;
     this.state = state;
-    this.logSearch = new LogSearchAgent(this.config.fastModel, this.config);
-    this.codeSearch = new CodeSearchAgent(this.config.fastModel);
+    this.logSearch = new LogSearchAgent(this.config);
+    this.codeSearch = new CodeSearchAgent(this.config.fastClient);
   }
 
   async run(): Promise<PreProcessingResults> {

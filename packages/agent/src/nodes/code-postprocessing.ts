@@ -1,7 +1,12 @@
-import { getModelWrapper, logger, Model, timer } from "@triage/common";
-import { generateId, generateText } from "ai";
+import { logger, timer } from "@triage/common";
+import { generateId, generateText, LanguageModelV1 } from "ai";
 
-import { AgentStreamUpdate, CodePostprocessingStep, codePostprocessingToolSchema, CodeSearchStep } from "../types";
+import {
+  AgentStreamUpdate,
+  CodePostprocessingStep,
+  codePostprocessingToolSchema,
+  CodeSearchStep,
+} from "../types";
 
 import { ensureSingleToolCall, formatCodeSearchSteps, normalizeFilePath } from "./utils";
 
@@ -49,11 +54,7 @@ function createPrompt(params: {
 }
 
 export class CodePostprocessor {
-  private llm: Model;
-
-  constructor(llm: Model) {
-    this.llm = llm;
-  }
+  constructor(private readonly llmClient: LanguageModelV1) {}
 
   @timer
   async invoke(params: {
@@ -72,7 +73,7 @@ export class CodePostprocessor {
     logger.info(`Code postprocessing prompt:\n${prompt}`);
 
     const { toolCalls } = await generateText({
-      model: getModelWrapper(this.llm),
+      model: this.llmClient,
       system: SYSTEM_PROMPT,
       prompt: prompt,
       tools: {
