@@ -1,412 +1,13 @@
 import fs from "fs/promises";
 
-import { GeminiModel, loadFileTree, logger, Model, timer } from "@triage/common";
-import {
-  getObservabilityPlatform,
-  IntegrationType,
-  ObservabilityPlatform,
-} from "@triage/observability";
+import { GeminiModel, loadFileTree, logger } from "@triage/common";
+import { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 import { Command as CommanderCommand } from "commander";
-import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
-import { CodePostprocessor } from "./nodes/code-postprocessing";
-import { CodeSearchAgent } from "./nodes/code-search";
-import { LogPostprocessor } from "./nodes/log-postprocessing";
-import { LogSearchAgent } from "./nodes/log-search";
-import { Reasoner } from "./nodes/reasoner";
-import { Reviewer } from "./nodes/reviewer";
-import { formatFacetValues } from "./nodes/utils";
-import type { AgentStep, ChatMessage, CodeRequest, LogRequest, SpanRequest } from "./types";
-import {
-  AgentStreamUpdate,
-  AssistantMessage,
-  CodePostprocessingRequest,
-  LogPostprocessingRequest,
-  ReasoningRequest,
-  ReviewRequest,
-} from "./types";
-
-const INITIAL_LOG_REQUEST: LogRequest = {
-  type: "logRequest",
-  request:
-    "fetch logs relevant to the issue/event that will give you a full picture of the issue/event",
-  reasoning: "",
-};
-
-const INITIAL_CODE_REQUEST: CodeRequest = {
-  type: "codeRequest",
-  request:
-    "fetch code relevant to the issue/event that will give you a full picture of the issue/event",
-  reasoning: "",
-};
-
-export interface TriageAgentState {
-  firstPass: boolean;
-  toolCalls: Array<
-    | LogRequest
-    | CodeRequest
-    | SpanRequest
-    | ReasoningRequest
-    | ReviewRequest
-    | LogPostprocessingRequest
-    | CodePostprocessingRequest
-  >;
-  query: string;
-  repoPath: string;
-  codebaseOverview: string;
-  fileTree: string;
-  logLabelsMap: Map<string, string[]>;
-  spanLabelsMap: Map<string, string[]>;
-  chatHistory: ChatMessage[];
-  agentSteps: AgentStep[];
-  answer: string;
-}
-
-export class TriageAgent {
-  private reasoningModel: Model;
-  private fastModel: Model;
-  private observabilityPlatform: ObservabilityPlatform;
-  private observabilityFeatures: string[];
-
-  constructor(
-    reasoningModel: Model,
-    fastModel: Model,
-    observabilityPlatform: ObservabilityPlatform,
-    observabilityFeatures: string[]
-  ) {
-    this.reasoningModel = reasoningModel;
-    this.fastModel = fastModel;
-    this.observabilityPlatform = observabilityPlatform;
-    this.observabilityFeatures = observabilityFeatures;
-  }
-
-  @timer
-  async processLogRequest(
-    state: TriageAgentState,
-    request: LogRequest,
-    onUpdate?: (update: AgentStreamUpdate) => void
-  ): Promise<Partial<TriageAgentState>> {
-    logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
-
-    const logSearchId = uuidv4();
-
-    if (onUpdate) {
-      onUpdate({ type: "highLevelUpdate", id: logSearchId, stepType: "logSearch" });
-    }
-
-    if (!this.observabilityFeatures.includes("logs")) {
-      logger.info("Log search not enabled, skipping");
-      return {};
-    }
-
-    const logSearchAgent = new LogSearchAgent(this.fastModel, this.observabilityPlatform);
-
-    // Get logSearch steps from both chatHistory (past interactions) and current agentSteps
-    const historyLogSearchSteps = state.chatHistory.flatMap((msg) => {
-      if (msg.role === "assistant" && "steps" in msg) {
-        return msg.steps.filter((step) => step.type === "logSearch");
-      }
-      return [];
-    });
-    const currentLogSearchSteps = state.agentSteps.filter((step) => step.type === "logSearch");
-    const logSearchSteps = [...historyLogSearchSteps, ...currentLogSearchSteps];
-
-    const response = await logSearchAgent.invoke({
-      logSearchId,
-      query: state.query,
-      logRequest: request.request,
-      logLabelsMap: state.logLabelsMap,
-      logSearchSteps,
-      codebaseOverview: state.codebaseOverview,
-      onUpdate,
-    });
-
-    // Check if this is the last tool call in queue and if so, add a reasoning call to the queue
-    const updatedToolCalls = [...state.toolCalls];
-    if (updatedToolCalls.length === 0) {
-      updatedToolCalls.push({ type: "reasoningRequest" });
-    }
-
-    return {
-      agentSteps: [...state.agentSteps, ...response.newLogSearchSteps],
-      toolCalls: updatedToolCalls,
-    };
-  }
-
-  @timer
-  async processCodeRequest(
-    state: TriageAgentState,
-    request: CodeRequest,
-    onUpdate?: (update: AgentStreamUpdate) => void
-  ): Promise<Partial<TriageAgentState>> {
-    logger.info("\n\n" + "=".repeat(25) + " Code Search " + "=".repeat(25));
-
-    const codeSearchId = uuidv4();
-
-    if (onUpdate) {
-      onUpdate({ type: "highLevelUpdate", id: codeSearchId, stepType: "codeSearch" });
-    }
-
-    const codeSearchAgent = new CodeSearchAgent(this.fastModel);
-
-    // Get codeSearch steps from both chatHistory (past interactions) and current agentSteps
-    const historyCodeSearchSteps = state.chatHistory.flatMap((msg) => {
-      if (msg.role === "assistant" && "steps" in msg) {
-        return msg.steps.filter((step) => step.type === "codeSearch");
-      }
-      return [];
-    });
-    const currentCodeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
-    const codeSearchSteps = [...historyCodeSearchSteps, ...currentCodeSearchSteps];
-
-    const response = await codeSearchAgent.invoke({
-      query: state.query,
-      codeRequest: request.request,
-      repoPath: state.repoPath,
-      codeSearchId,
-      codeSearchSteps,
-      onUpdate,
-    });
-
-    const updatedToolCalls = [...state.toolCalls];
-    if (updatedToolCalls.length === 0) {
-      updatedToolCalls.push({ type: "reasoningRequest" });
-    }
-
-    logger.info(`added ${response.newCodeSearchSteps.length} code search steps`);
-
-    return {
-      agentSteps: [...state.agentSteps, ...response.newCodeSearchSteps],
-      toolCalls: updatedToolCalls,
-    };
-  }
-
-  @timer
-  async processReasoningRequest(
-    state: TriageAgentState,
-    onUpdate?: (update: AgentStreamUpdate) => void
-  ): Promise<Partial<TriageAgentState>> {
-    logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
-
-    const reasoningId = uuidv4();
-
-    if (onUpdate) {
-      onUpdate({ type: "highLevelUpdate", id: reasoningId, stepType: "reasoning" });
-    }
-
-    const reasoner = new Reasoner(this.reasoningModel);
-    logger.info(`Chat history: ${JSON.stringify(state.chatHistory)}`);
-    const response = await reasoner.invoke({
-      query: state.query,
-      chatHistory: state.chatHistory,
-      repoPath: state.repoPath,
-      codebaseOverview: state.codebaseOverview,
-      fileTree: state.fileTree,
-      agentSteps: state.agentSteps,
-      logLabelsMap: state.logLabelsMap,
-      spanLabelsMap: state.spanLabelsMap,
-      parentId: reasoningId,
-      onUpdate,
-    });
-
-    logger.info(`Reasoning response: ${JSON.stringify(response)}`);
-
-    // Define base updates
-    const updates: Partial<TriageAgentState> = {
-      firstPass: false,
-    };
-
-    if (response.type === "reasoning") {
-      // TODO: pretty sure this should always hold
-      if (state.toolCalls.length !== 0) {
-        throw new Error("Tool calls should be empty");
-      }
-
-      updates.agentSteps = [...state.agentSteps, response];
-      updates.answer = response.content;
-      updates.toolCalls = [{ type: "reviewRequest" }];
-    } else if (response.type === "toolCalls") {
-      updates.toolCalls = [...state.toolCalls, ...response.toolCalls];
-    }
-
-    return updates;
-  }
-
-  @timer
-  async processReviewRequest(
-    state: TriageAgentState,
-    onUpdate?: (update: AgentStreamUpdate) => void
-  ): Promise<Partial<TriageAgentState>> {
-    logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
-
-    const reviewId = uuidv4();
-
-    if (onUpdate) {
-      onUpdate({ type: "highLevelUpdate", id: reviewId, stepType: "review" });
-    }
-
-    const reviewer = new Reviewer(this.reasoningModel);
-    const response = await reviewer.invoke({
-      query: state.query,
-      chatHistory: state.chatHistory,
-      repoPath: state.repoPath,
-      codebaseOverview: state.codebaseOverview,
-      logLabelsMap: state.logLabelsMap,
-      spanLabelsMap: state.spanLabelsMap,
-      agentSteps: state.agentSteps,
-      answer: state.answer,
-      parentId: reviewId,
-      onUpdate,
-    });
-
-    // Define base updates
-    const updates: Partial<TriageAgentState> = {
-      chatHistory: [...state.chatHistory],
-    };
-
-    if (response.type === "review") {
-      // Add log and code post-processing requests to the queue
-      const postProcessingCalls = [];
-      if (this.observabilityFeatures.includes("logs")) {
-        postProcessingCalls.push({ type: "logPostprocessing" } as LogPostprocessingRequest);
-      }
-      postProcessingCalls.push({ type: "codePostprocessing" } as CodePostprocessingRequest);
-
-      updates.toolCalls = [...state.toolCalls, ...postProcessingCalls];
-    } else if (response.type === "toolCalls") {
-      updates.answer = undefined;
-      updates.toolCalls = [...state.toolCalls, ...response.toolCalls];
-    }
-
-    return updates;
-  }
-
-  @timer
-  async processLogPostprocessingRequest(
-    state: TriageAgentState,
-    onUpdate?: (update: AgentStreamUpdate) => void
-  ): Promise<Partial<TriageAgentState>> {
-    logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
-
-    const logPostprocessingId = uuidv4();
-
-    if (onUpdate) {
-      onUpdate({ type: "highLevelUpdate", id: logPostprocessingId, stepType: "logPostprocessing" });
-    }
-
-    const postprocessor = new LogPostprocessor(this.fastModel, this.observabilityPlatform);
-    const logSearchSteps = state.agentSteps.filter((step) => step.type === "logSearch");
-    const response = await postprocessor.invoke({
-      query: state.query,
-      logLabelsMap: state.logLabelsMap,
-      logSearchSteps,
-      answer: state.answer,
-      parentId: logPostprocessingId,
-      onUpdate,
-    });
-
-    logger.info(`Log postprocessing complete with ${response.facts.length} relevant facts`);
-
-    return {
-      agentSteps: [...state.agentSteps, response],
-    };
-  }
-
-  @timer
-  async processCodePostprocessingRequest(
-    state: TriageAgentState,
-    onUpdate?: (update: AgentStreamUpdate) => void
-  ): Promise<Partial<TriageAgentState>> {
-    logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
-
-    const codePostprocessingId = uuidv4();
-
-    if (onUpdate) {
-      onUpdate({
-        type: "highLevelUpdate",
-        id: codePostprocessingId,
-        stepType: "codePostprocessing",
-      });
-    }
-
-    const postprocessor = new CodePostprocessor(this.fastModel);
-
-    const codeSearchSteps = state.agentSteps.filter((step) => step.type === "codeSearch");
-    const response = await postprocessor.invoke({
-      query: state.query,
-      repoPath: state.repoPath,
-      codebaseOverview: state.codebaseOverview,
-      codeSearchSteps,
-      answer: state.answer,
-      parentId: codePostprocessingId,
-      onUpdate,
-    });
-
-    logger.info(`Code postprocessing complete with ${response.facts.length} relevant facts`);
-
-    return {
-      agentSteps: [...state.agentSteps, response],
-    };
-  }
-
-  async invoke(
-    state: TriageAgentState,
-    options?: { onUpdate?: (update: AgentStreamUpdate) => void }
-  ): Promise<AssistantMessage> {
-    const { onUpdate } = options || {};
-    let currentState = state;
-    let iterationCount = 0;
-    const maxIterations = 50;
-
-    // Process tool calls from the queue until empty or max iterations reached
-    while (currentState.toolCalls.length > 0 && iterationCount < maxIterations) {
-      // Get the next tool call from the queue
-      const [nextToolCall, ...remainingCalls] = currentState.toolCalls;
-
-      // Update the queue in the state
-      currentState = {
-        ...currentState,
-        toolCalls: remainingCalls,
-      };
-
-      // Process the tool call based on its type
-      let stateUpdates: Partial<TriageAgentState> = {};
-
-      if (nextToolCall) {
-        if (nextToolCall.type === "logRequest") {
-          stateUpdates = await this.processLogRequest(currentState, nextToolCall, onUpdate);
-        } else if (nextToolCall.type === "codeRequest") {
-          stateUpdates = await this.processCodeRequest(currentState, nextToolCall, onUpdate);
-        } else if (nextToolCall.type === "reasoningRequest") {
-          stateUpdates = await this.processReasoningRequest(currentState, onUpdate);
-        } else if (nextToolCall.type === "reviewRequest") {
-          stateUpdates = await this.processReviewRequest(currentState, onUpdate);
-        } else if (nextToolCall.type === "logPostprocessing") {
-          stateUpdates = await this.processLogPostprocessingRequest(currentState, onUpdate);
-        } else if (nextToolCall.type === "codePostprocessing") {
-          stateUpdates = await this.processCodePostprocessingRequest(currentState, onUpdate);
-        }
-      }
-
-      // Update the state with the results
-      currentState = {
-        ...currentState,
-        ...stateUpdates,
-      };
-
-      iterationCount++;
-    }
-
-    // Return the final results including post-processing
-    return {
-      role: "assistant",
-      steps: currentState.agentSteps,
-      response: currentState.answer,
-      error: null,
-    };
-  }
-}
+import { TriagePipeline, TriagePipelineConfig } from "./pipeline";
+import type { ChatMessage } from "./types";
+import { AgentStreamUpdate, AssistantMessage } from "./types";
 
 /**
  * Arguments for invoking the agent
@@ -444,6 +45,8 @@ export async function invokeAgent({
     observabilityFeatures = [];
   }
 
+  logger.info(`Chat history still not being used: ${JSON.stringify(chatHistory)}`);
+
   const integrationType =
     platformType === "datadog" ? IntegrationType.DATADOG : IntegrationType.GRAFANA;
 
@@ -454,59 +57,33 @@ export async function invokeAgent({
     startDate.toISOString(),
     endDate.toISOString()
   );
-  logger.info(formatFacetValues(logLabelsMap));
 
   // Load the codebase overview
   const overview = await fs.readFile(codebaseOverviewPath, "utf-8");
 
-  const fileTree = loadFileTree(repoPath);
-
-  let toolCalls: Array<
-    | LogRequest
-    | CodeRequest
-    | SpanRequest
-    | ReasoningRequest
-    | LogPostprocessingRequest
-    | CodePostprocessingRequest
-  > = [];
-  if (observabilityFeatures.includes("logs")) {
-    toolCalls.push(INITIAL_LOG_REQUEST);
-  }
-
-  toolCalls.push(INITIAL_CODE_REQUEST);
-
-  // If no observability features are enabled, start with reasoning
-  if (toolCalls.length === 0) {
-    toolCalls.push({ type: "reasoningRequest" });
-  }
-
-  const state: TriageAgentState = {
-    firstPass: true,
-    toolCalls,
+  const pipelineConfig: TriagePipelineConfig = {
     query,
     repoPath,
     codebaseOverview: overview,
-    fileTree,
+    fileTree: loadFileTree(repoPath),
     logLabelsMap,
-    spanLabelsMap: new Map<string, string[]>(),
-    chatHistory,
-    agentSteps: [],
-    answer: "",
+    reasoningModel: GeminiModel.GEMINI_2_5_PRO,
+    fastModel: GeminiModel.GEMINI_2_5_FLASH,
+    observabilityPlatform,
+    onUpdate,
   };
-
-  const reasoningModel = GeminiModel.GEMINI_2_5_PRO;
-  const fastModel = GeminiModel.GEMINI_2_5_FLASH;
 
   logger.info(`Observability features: ${observabilityFeatures}`);
 
-  const agent = new TriageAgent(
-    reasoningModel,
-    fastModel,
-    observabilityPlatform,
-    observabilityFeatures
-  );
+  const pipeline = new TriagePipeline(pipelineConfig);
+  const response = await pipeline.run();
 
-  return await agent.invoke(state, { onUpdate });
+  return {
+    role: "assistant",
+    steps: [], // TODO: Front-end currently ignores this
+    response: response.answer,
+    error: null,
+  };
 }
 
 const parseArgs = (): { integration: "datadog" | "grafana"; features: string[] } => {
@@ -566,10 +143,16 @@ async function main(): Promise<void> {
       if (update.type === "highLevelUpdate") {
         process.stdout.write(`\nHighLevelUpdate: ${update.stepType}\n`);
       } else if (update.type === "intermediateUpdate") {
-        if (update.step.type === "reasoning") {
-          process.stdout.write(`${update.step.contentChunk}\n`);
-        } else if (update.step.type === "review") {
-          process.stdout.write(`${update.step.contentChunk}\n`);
+        switch (update.step.type) {
+          case "reasoning":
+            process.stdout.write(`${update.step.contentChunk}\n`);
+            break;
+          case "review":
+            process.stdout.write(`${update.step.contentChunk}\n`);
+            break;
+          default:
+            process.stdout.write(`${JSON.stringify(update.step, null, 2)}\n`);
+            break;
         }
       }
     },
@@ -610,4 +193,3 @@ export * from "./nodes/reasoner";
 export * from "./nodes/reviewer";
 export * from "./nodes/utils";
 export * from "./types";
-
