@@ -17,6 +17,7 @@
 - Architecture: Follow modular design in monorepo structure
 - Making Code Changes: Do not perform "drive-by" changes of things you notice that are unrelated to the task/question you were asked.
 - Scripts: Parse any command line arguments with commander
+- Installing Dependencies: If you need to add a dependency, NEVER add it to the workspace root `package.json`. Always add it to the specific `package.json` of the app or package that needs it.
 
 ### UI
 
