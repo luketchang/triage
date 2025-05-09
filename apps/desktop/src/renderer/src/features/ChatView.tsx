@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView.js";
 import FactsSidebar from "../components/FactsSidebar.js";
-import { Button } from "../components/ui/Button.js";
+import { Button } from "../components/ui/Button.jsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/DropdownMenu.js";
 import { ScrollArea } from "../components/ui/ScrollArea.js";
-import { useChat } from "../hooks/use-chat.js";
+import { useChat } from "../hooks/useChat.js";
 import { MoreHorizontalIcon, SendIcon } from "../icons/index.js";
 import { cn } from "../lib/utils.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";

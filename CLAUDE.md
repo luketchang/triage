@@ -9,7 +9,7 @@
 
 - TypeScript: Strict typing required, use explicit return types
 - Imports: Group and sort imports (external libs first, then internal)
-- Naming: camelCase for variables/functions, PascalCase for classes/components/types + React component filenames, kebab-case for other filenames
+- Naming: camelCase for variables/functions, PascalCase for classes/components/types, and PascalCase or camelCase for filenames
 - Error Handling: Use try/catch and typed Error objects
 - Global variables: Prefer using variables from closures over defining new singletons
 - Logging: When printing to test code, use console.info (do not use console.log). For actual logging, use logger.info, logger.warn, logger.error (`import { logger } from '@triage/common'`)

@@ -1,6 +1,6 @@
 // @ts-ignore - Ignoring React module resolution issues
 import React, { useEffect, useState } from "react";
-import { useAppConfig } from "../context/use-app-config.js";
+import { useAppConfig } from "../context/useAppConfig.js";
 import { filepathToGitHubUrl } from "../utils/facts/code.js";
 import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs.js";
 import { ScrollArea } from "./ui/ScrollArea.js";
