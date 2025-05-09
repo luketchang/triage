@@ -16,6 +16,7 @@ export class PostProcessing {
   }
 
   async run(): Promise<void> {
+    // TODO: Run post processing steps in parallel
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
 
     const logPostprocessingId = uuidv4();

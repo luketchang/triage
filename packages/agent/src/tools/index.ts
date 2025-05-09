@@ -63,6 +63,7 @@ export class Toolbox {
   }
 
   private handleLogRequest(toolCall: LogRequest): Promise<LogSearchAgentResponse> {
+    // TODO: Add logLabelsMap to tool call. Not used yet.
     return this.logSearchAgent.invoke({
       logSearchId: uuidv4(),
       query: toolCall.request,

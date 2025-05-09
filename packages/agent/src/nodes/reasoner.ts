@@ -1,4 +1,4 @@
-import { getModelWrapper, logger, Model, timer } from "@triage/common";
+import { getModelWrapper, logger, timer } from "@triage/common";
 import { CoreMessage, streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
@@ -8,7 +8,7 @@ import { logRequestToolSchema, ReasoningStep, RequestToolCalls } from "../types"
 
 import { CodeSearchAgentResponse } from "./code-search";
 import { LogSearchAgentResponse } from "./log-search";
-import { formatCodeContext, formatFacetValues, formatLogContext } from "./utils";
+import { formatCodeSearchSteps, formatFacetValues, formatLogSearchSteps } from "./utils";
 type ReasoningResponse = ReasoningStep | RequestToolCalls;
 
 export const createPrompt = ({
@@ -75,18 +75,15 @@ ${formatFacetValues(logLabelsMap)}
 };
 
 export class Reasoner {
-  private llm: Model;
   private readonly config: TriagePipelineConfig;
   private readonly logContext: LogSearchAgentResponse;
   private readonly codeContext: CodeSearchAgentResponse;
 
   constructor(
-    llm: Model,
     config: TriagePipelineConfig,
     logContext: LogSearchAgentResponse,
     codeContext: CodeSearchAgentResponse
   ) {
-    this.llm = llm;
     this.config = config;
     this.logContext = logContext;
     this.codeContext = codeContext;
@@ -114,11 +111,11 @@ export class Reasoner {
       });
       params.llmChatHistory.push({
         role: "system",
-        content: `<log_context>\n${formatLogContext(this.logContext)}\n</log_context>`,
+        content: `<log_context>\n${formatLogSearchSteps(this.logContext.newLogSearchSteps)}\n</log_context>`,
       });
       params.llmChatHistory.push({
         role: "system",
-        content: `<code_context>\n${formatCodeContext(this.codeContext)}\n</code_context>`,
+        content: `<code_context>\n${formatCodeSearchSteps(this.codeContext.newCodeSearchSteps)}\n</code_context>`,
       });
       params.llmChatHistory.push({
         role: "user",
@@ -132,7 +129,7 @@ export class Reasoner {
 
     // Stream reasoning response and collect text and tool calls
     const { toolCalls, fullStream } = streamText({
-      model: getModelWrapper(this.llm),
+      model: getModelWrapper(this.config.reasoningModel),
       messages: params.llmChatHistory,
       maxSteps: params.maxSteps || 1,
       tools: {
