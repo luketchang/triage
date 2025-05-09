@@ -7,11 +7,15 @@ const KEYTAR_SERVICE_NAME = "triage-desktop";
 type ConfigValue = string | number | boolean | null | undefined;
 
 /**
- * Stores config values using electron-store and keytar (for secrets)
+ * A config store that can store and retrieve config values for a specific schema,
+ * using electron-store and keytar (for secrets)
  */
 export class ElectronConfigStore<T> implements ConfigStore<T> {
+  // Electron-store instance
   private store = new Store<Record<string, ConfigValue>>();
+  // Records which keys to store as secrets in keytar, vs in electron-store
   private keysForSecretsCache = new Set<string>();
+  // In-memory cache of secrets, to avoid calling keytar for every get
   private secretsCache = new Map<string, string | undefined>();
 
   /**
@@ -21,6 +25,11 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
     this.registerSchemaRecursively(schema);
   }
 
+  /**
+   * Records all keys in the schema that should be stored as secrets
+   * @param schema The schema to register
+   * @param parentKey The parent key of the schema, if this is nested
+   */
   private registerSchemaRecursively(schema: z.ZodTypeAny, parentKey: string = ""): void {
     if (schema && schema._def && (schema._def as any).typeName === "ZodObject") {
       const shape = (schema._def as any).shape();
@@ -31,7 +40,6 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
         }
       }
     } else if (schema instanceof z.ZodType && schema._def.description === "secret") {
-      // Record which keys are secrets
       this.keysForSecretsCache.add(parentKey);
     }
   }

@@ -250,7 +250,7 @@ const DatadogIntegration = () => {
   return (
     <IntegrationCard
       title="Datadog"
-      description="Connect to Datadog for monitoring and observability"
+      description="Connect to Datadog to let the AI agent search logs."
       integrationConfig={appConfig?.datadog}
       integrationConfigKey="datadog"
       schema={DatadogCfgSchema}
@@ -258,7 +258,7 @@ const DatadogIntegration = () => {
         {
           key: "apiKey",
           label: "API Key",
-          description: "Datadog API key",
+          description: "Datadog read-only API key",
           type: "password",
         },
         {
@@ -270,7 +270,7 @@ const DatadogIntegration = () => {
         {
           key: "site",
           label: "Site",
-          description: "Datadog site (e.g., datadoghq.com)",
+          description: "Custom Datadog site (if applicable)",
           placeholder: "datadoghq.com",
         },
       ]}
@@ -284,7 +284,7 @@ const GrafanaIntegration = () => {
   return (
     <IntegrationCard
       title="Grafana"
-      description="Connect to Grafana for monitoring and visualization"
+      description="Connect to Grafana to let the AI agent search logs."
       integrationConfig={appConfig?.grafana}
       integrationConfigKey="grafana"
       schema={GrafanaCfgSchema}
@@ -298,7 +298,7 @@ const GrafanaIntegration = () => {
         {
           key: "username",
           label: "Username",
-          description: "Grafana username",
+          description: "Grafana username (read-only)",
         },
         {
           key: "password",
@@ -398,7 +398,7 @@ function SettingsView() {
 
       <ScrollArea className="flex-1 p-6">
         <div className="max-w-3xl mx-auto">
-          <SectionHeader>Code</SectionHeader>
+          <SectionHeader>Your Code</SectionHeader>
           <SettingsGroup>
             <SettingField label="Repository Path" description="Local path to your code repository">
               <Input
@@ -434,7 +434,7 @@ function SettingsView() {
             </SettingField>
           </SettingsGroup>
 
-          <SectionHeader>AI Integration</SectionHeader>
+          <SectionHeader>AI Access</SectionHeader>
           <SettingsGroup>
             <SettingField
               label="Google Gemini API Key"
@@ -462,7 +462,7 @@ function SettingsView() {
             </SettingField>
           </SettingsGroup>
 
-          <SectionHeader>Telemetry Integration</SectionHeader>
+          <SectionHeader>Telemetry Access</SectionHeader>
           <DatadogIntegration />
           <GrafanaIntegration />
         </div>
