@@ -158,6 +158,9 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@types/node@22.15.9)(typescript@5.7.3)))
+      zod:
+        specifier: ^3.24.2
+        version: 3.24.2
     devDependencies:
       '@electron-toolkit/eslint-config-prettier':
         specifier: ^3.0.0
@@ -518,6 +521,9 @@ importers:
       winston-syslog:
         specifier: ^2.7.1
         version: 2.7.1(winston@3.17.0)
+      zod:
+        specifier: ^3.24.2
+        version: 3.24.2
     devDependencies:
       '@types/winston-syslog':
         specifier: ^2.4.3
