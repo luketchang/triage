@@ -1,6 +1,16 @@
 import { Check, PlusCircle, Save, X } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog.js";
 import { Button } from "../components/ui/button.js";
 import { Input } from "../components/ui/input.js";
 import { ScrollArea } from "../components/ui/scroll-area.js";
@@ -46,7 +56,7 @@ const SettingField = ({
   );
 };
 
-const IntegrationCard = <T extends Record<string, any>>({
+const SettingIntegrationCard = <T extends Record<string, any>>({
   title,
   description,
   integrationConfig,
@@ -77,6 +87,7 @@ const IntegrationCard = <T extends Record<string, any>>({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [shouldScroll, setShouldScroll] = useState(false);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
 
   // Apply schema defaults to configuration
   const getInitialConfig = useCallback(() => {
@@ -170,6 +181,7 @@ const IntegrationCard = <T extends Record<string, any>>({
       const newConfig = { [integrationConfigKey]: undefined };
       await updateAppConfig(newConfig);
       setIsVisible(false);
+      setShowRemoveDialog(false);
     } catch (error) {
       console.error(`Failed to remove ${integrationConfigKey} integration:`, error);
     } finally {
@@ -193,6 +205,14 @@ const IntegrationCard = <T extends Record<string, any>>({
           <div className="flex justify-end gap-3">
             <Button
               size="sm"
+              variant="destructiveOutline"
+              onClick={() => setShowRemoveDialog(true)}
+              className="mt-2"
+            >
+              <X className="h-4 w-4 mr-1" /> Remove
+            </Button>
+            <Button
+              size="sm"
               onClick={saveIntegration}
               disabled={isSaving || !fieldsChanged || !allFieldsComplete}
               className="mt-2"
@@ -208,9 +228,6 @@ const IntegrationCard = <T extends Record<string, any>>({
                   Save
                 </>
               )}
-            </Button>
-            <Button size="sm" variant="destructive" onClick={removeIntegration} className="mt-2">
-              <X className="h-4 w-4 mr-1" /> {isSaving ? "Removing..." : "Remove"}
             </Button>
           </div>
         ) : (
@@ -240,6 +257,28 @@ const IntegrationCard = <T extends Record<string, any>>({
               ))}
         </div>
       )}
+
+      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {title} Integration?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete your {title} configuration. To add it back, you'll need to enter any
+              settings again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={removeIntegration}
+              disabled={isSaving}
+              variant="destructiveOutline"
+            >
+              {isSaving ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
@@ -248,9 +287,9 @@ const DatadogIntegration = () => {
   const { appConfig } = useAppConfig();
 
   return (
-    <IntegrationCard
+    <SettingIntegrationCard
       title="Datadog"
-      description="Connect to Datadog to let the AI agent search logs."
+      description="Connect to Datadog to let your AI agent search logs."
       integrationConfig={appConfig?.datadog}
       integrationConfigKey="datadog"
       schema={DatadogCfgSchema}
@@ -282,9 +321,9 @@ const GrafanaIntegration = () => {
   const { appConfig } = useAppConfig();
 
   return (
-    <IntegrationCard
+    <SettingIntegrationCard
       title="Grafana"
-      description="Connect to Grafana to let the AI agent search logs."
+      description="Connect to Grafana to let your AI agent search logs."
       integrationConfig={appConfig?.grafana}
       integrationConfigKey="grafana"
       schema={GrafanaCfgSchema}
