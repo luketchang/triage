@@ -15,11 +15,11 @@ interface FactsSidebarProps {
 }
 
 const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClose }) => {
-  const { config, isLoading } = useAppConfig();
+  const { appConfig, isLoading } = useAppConfig();
 
   const renderCodeFact = (fact: CodePostprocessingFact, index: number) => {
-    if (!config) return null;
-    const githubUrl = filepathToGitHubUrl(config.githubRepoBaseUrl, fact.filepath, {
+    if (!appConfig) return null;
+    const githubUrl = filepathToGitHubUrl(appConfig.githubRepoBaseUrl, fact.filepath, {
       startLine: fact.startLine,
       endLine: fact.endLine,
     });
@@ -58,7 +58,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
           href={githubUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="block text-xs text-blue-400 hover:text-blue-300 hover:underline mt-2 flex items-center gap-1"
+          className="text-xs text-blue-400 hover:text-blue-300 hover:underline mt-2 flex items-center gap-1"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -115,7 +115,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
           href={datadogUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="block text-xs text-purple-400 hover:text-purple-300 hover:underline mt-2 flex items-center gap-1"
+          className="text-xs text-purple-400 hover:text-purple-300 hover:underline mt-2 flex items-center gap-1"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

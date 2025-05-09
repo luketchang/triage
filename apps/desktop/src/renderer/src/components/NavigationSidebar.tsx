@@ -1,41 +1,38 @@
 import { useEffect } from "react";
-import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
 import { FaPlus } from "react-icons/fa";
+import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
 import { TabType } from "../types/index.js";
 import { Button } from "./ui/button.jsx";
 import { ScrollArea } from "./ui/scroll-area.jsx";
 
 // Import stores
-import { useChatStore } from "../store/index.js";
+import { useChatStore, useUIStore } from "../store/index.js";
 
 interface NavigationSidebarProps {
   activeTab: TabType;
-  handleTabChange: (tab: TabType) => void;
 }
 
-function NavigationSidebar({ activeTab, handleTabChange }: NavigationSidebarProps) {
+function NavigationSidebar({ activeTab }: NavigationSidebarProps) {
   // Get state from stores
   const { chats, contextItems, currentChatId, selectChat, loadChats } = useChatStore();
+  const { setActiveTab } = useUIStore();
 
   // Ensure chats are loaded when component mounts
   useEffect(() => {
     loadChats();
   }, [loadChats]);
 
-  // Make sure to keep the chat tab active
-  if (activeTab !== "chat") {
-    handleTabChange("chat");
-  }
-
   // Handle creating a new chat
   const handleCreateChat = async () => {
     // Set chat ID to 0 to indicate a new chat should be created when a message is sent
     selectChat(undefined);
+    setActiveTab("chat");
   };
 
   // Handle selecting a chat
   const handleSelectChat = (chatId: number) => {
     selectChat(chatId);
+    setActiveTab("chat");
   };
 
   return (

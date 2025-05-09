@@ -8,23 +8,18 @@ import NavigationSidebar from "./components/NavigationSidebar.js";
 // Feature Views
 import ChatView from "./features/ChatView.js";
 
-// Custom hooks
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
-
 // Context Provider
 import { AppConfigProvider } from "./context/AppConfigContext.js";
-import ChatView from "./features/ChatView.js";
 import SettingsView from "./features/SettingsView.js";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
 import "./styles/globals.css";
-import { TabType } from "./types/index.js";
 
 // Stores
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
 import { useUIStore } from "./store/index.js";
 
 function App(): JSX.Element {
   // Get required state from stores
-  const { activeTab, showFactsSidebar, setActiveTab, toggleFactsSidebar } = useUIStore();
+  const { activeTab, showFactsSidebar, toggleFactsSidebar } = useUIStore();
 
   // Set up keyboard shortcuts
   useKeyboardShortcuts([
@@ -45,20 +40,16 @@ function App(): JSX.Element {
     }
   };
 
-  const handleSelectChat = (chatId: number) => {
-    setSelectedChatId(chatId);
-  };
-
   return (
     <AppConfigProvider>
       <div className="flex w-full h-full bg-background antialiased">
-        <NavigationSidebar activeTab={activeTab} handleTabChange={setActiveTab} />
+        <NavigationSidebar activeTab={activeTab} />
 
         <div className="flex-1 h-full overflow-hidden flex shadow-sm">
           <div
             className={`${showFactsSidebar ? "flex-1" : "w-full"} h-full overflow-hidden transition-standard`}
           >
-            <ChatView />
+            {renderActiveTabContent()}
           </div>
         </div>
       </div>
