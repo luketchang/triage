@@ -10,11 +10,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../components/ui/alert-dialog.js";
-import { Button } from "../components/ui/button.js";
-import { Input } from "../components/ui/input.js";
-import { ScrollArea } from "../components/ui/scroll-area.js";
-import { useAppConfig } from "../context/useAppConfig.js";
+} from "../components/ui/AlertDialog.js";
+import { Button } from "../components/ui/Button.js";
+import { Input } from "../components/ui/Input.jsx";
+import { ScrollArea } from "../components/ui/ScrollArea.js";
+import { useAppConfig } from "../context/use-app-config.js";
 
 // TODO: temp until we fix imports from @triage/
 export const DatadogCfgSchema = z.object({

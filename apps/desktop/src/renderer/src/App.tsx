@@ -3,7 +3,7 @@ import NavigationSidebar from "./components/NavigationSidebar.js";
 import { AppConfigProvider } from "./context/AppConfigContext.js";
 import ChatView from "./features/ChatView.js";
 import SettingsView from "./features/SettingsView.js";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
+import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts.js";
 import "./styles/globals.css";
 import { TabType } from "./types/index.js";
 
