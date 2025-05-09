@@ -44,7 +44,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   newMessage: "",
   isThinking: false,
   contextItems: [],
-  chatMode: "agent",
   cellManager: null,
   savedMessageIds: new Set<string>(),
 
