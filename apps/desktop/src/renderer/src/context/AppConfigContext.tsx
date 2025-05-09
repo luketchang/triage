@@ -34,9 +34,9 @@ export const AppConfigProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const updateAppConfig = async (newConfig: Partial<AppConfig>) => {
     try {
-      console.log("Updating app config:", newConfig);
+      console.info("Updating app config:", newConfig);
       const cfgFromApi = await api.updateAppConfig(newConfig);
-      console.log("Updated app config:", cfgFromApi);
+      console.info("Updated app config:", cfgFromApi);
       setAppConfig(cfgFromApi);
     } catch (error) {
       console.error("Failed to update app config:", error);
