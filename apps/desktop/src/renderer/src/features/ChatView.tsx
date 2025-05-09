@@ -66,9 +66,13 @@ function ChatView() {
     resizeTextarea();
   }, [newMessage]);
 
-  // Scroll to bottom when messages change
+  // Scroll behavior for messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Auto-scroll only when the last message is from the user
+    const last = messages[messages.length - 1];
+    if (last?.role === "user") {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // Focus input on mount and when thinking state changes
@@ -162,7 +166,7 @@ function ChatView() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Chat header */}
       <div className="flex justify-between items-center py-3 px-4 border-b border-border bg-background-lighter backdrop-blur-sm shadow-sm z-10">
         <h1 className="text-lg font-semibold text-primary">Chat</h1>
@@ -186,31 +190,30 @@ function ChatView() {
         </DropdownMenu>
       </div>
 
-      <div className="flex flex-row flex-nowrap h-full relative">
+      <div className="flex flex-row flex-nowrap flex-1 relative min-h-0">
         {/* Main chat area - takes full width when sidebar closed, 2/3 when open */}
         <div
           className={cn(
-            "transition-all duration-300 ease-in-out h-full overflow-hidden flex-grow",
-            showFactsSidebar ? "pr-[33.333%]" : "w-full",
+            "transition-all duration-300 ease-in-out overflow-hidden flex flex-col h-full min-h-0",
+            showFactsSidebar ? "pr-[33.333%] md:pr-[34%]" : "w-full",
             "bg-background-assistant"
           )}
         >
           {/* Chat messages */}
           <ScrollArea
-            className="h-full overflow-y-auto overflow-x-hidden"
+            className="flex-1 overflow-y-auto overflow-x-hidden scroll-container"
             type="always"
             scrollHideDelay={0}
           >
-            <div className="flex flex-col min-h-full w-full">
-              {/* Spacer to ensure content is scrollable to the top */}
-              <div className="h-48 w-full"></div>
+            <div className="flex flex-col justify-start h-auto w-full">
+              {/* No spacer needed anymore - messages should start at the top */}
               {messages.map((message) =>
                 message.role === "user" ? (
                   <div
                     key={`user-${message.id}`}
                     className={cn("py-4 px-4 flex flex-col bg-background-assistant")}
                   >
-                    <div className="flex items-start max-w-[90%] mx-auto w-full">
+                    <div className="flex items-start max-w-[90%] mx-auto w-full mt-4">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary my-2">
                         <span className="text-white font-medium text-sm">U</span>
                       </div>
@@ -248,7 +251,7 @@ function ChatView() {
         {/* Facts sidebar - fixed position at right side taking 1/3 width */}
         <div
           className={cn(
-            "fixed top-0 right-0 h-full w-1/3 bg-background-sidebar border-l border-border shadow-md transition-transform duration-300 ease-in-out z-10",
+            "fixed top-0 right-0 h-full w-1/3 bg-background-sidebar border-l border-border shadow-md transition-transform duration-300 ease-in-out z-10 pl-3",
             showFactsSidebar ? "translate-x-0" : "translate-x-full"
           )}
         >
