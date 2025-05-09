@@ -1,5 +1,7 @@
 import { z, infer as zInfer } from "zod";
 
+import { LLMToolCall } from "../tools";
+
 const BASIC_REASONING_DESCRIPTION =
   "Intermediate reasoning where you can explain what you see from the given information and what information you need next (if any).";
 
@@ -93,7 +95,7 @@ export interface CodePostprocessingRequest {
 
 export type RequestToolCalls = {
   type: "toolCalls";
-  toolCalls: Array<LogRequest>; // TODO: add other tools
+  toolCalls: Array<LLMToolCall>;
 };
 
 export const rootCauseAnalysisSchema = z.object({
@@ -324,6 +326,19 @@ export type CodePostprocessing = zInfer<typeof codePostprocessingSchema>;
 export const codePostprocessingToolSchema = {
   description: "Postprocess code results.",
   parameters: codePostprocessingSchema,
+};
+
+export const reviewDecisionSchema = z.object({
+  accepted: z
+    .boolean()
+    .describe("True if the root cause analysis provided is complete and accurate"),
+  reasoning: z.string().describe("Reasoning behind your decision"),
+});
+
+export const reviewDecisionToolSchema = {
+  description:
+    "Used to memorialize a deecision on whether a root cause analysis was accurate or not.",
+  parameters: reviewDecisionSchema,
 };
 
 // Generic function to strip reasoning from input objects for storage

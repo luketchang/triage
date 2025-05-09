@@ -34,11 +34,7 @@ declare global {
 
   interface ElectronAPI {
     // Agent methods
-    invokeAgent: (
-      query: string,
-      chatHistory: ChatMessage[],
-      options?: { reasonOnly?: boolean }
-    ) => Promise<ChatMessage>;
+    invokeAgent: (query: string, chatHistory: ChatMessage[]) => Promise<ChatMessage>;
     onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => () => void;
     getAppConfig: () => Promise<AppConfig>;
     updateAppConfig: (newConfig: AppConfig) => Promise<AppConfig>;

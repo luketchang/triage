@@ -54,11 +54,7 @@ function createPrompt(params: {
 }
 
 export class CodePostprocessor {
-  private llmClient: LanguageModelV1;
-
-  constructor(llmClient: LanguageModelV1) {
-    this.llmClient = llmClient;
-  }
+  constructor(private readonly llmClient: LanguageModelV1) {}
 
   @timer
   async invoke(params: {

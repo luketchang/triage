@@ -32,8 +32,7 @@ declare global {
        */
       invokeAgent: (
         query: string,
-        chatHistory: AgentChatMessage[],
-        options?: { reasonOnly?: boolean }
+        chatHistory: AgentChatMessage[]
       ) => Promise<AgentAssistantMessage>;
 
       /**

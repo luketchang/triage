@@ -16,8 +16,7 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
     async (
       _event: any,
       query: string,
-      chatHistory: AgentChatMessage[],
-      options?: { reasonOnly?: boolean }
+      chatHistory: AgentChatMessage[]
     ): Promise<AgentAssistantMessage> => {
       try {
         console.info("Invoking agent with query:", query);
@@ -36,7 +35,6 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
           agentCfg,
           startDate: DEFAULT_START_DATE,
           endDate: DEFAULT_END_DATE,
-          reasonOnly: options?.reasonOnly === true,
           onUpdate: onUpdate,
         });
 
