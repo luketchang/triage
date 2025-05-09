@@ -83,6 +83,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("observability:get-spans-facet-values", start, end),
 
   /**
+   * Create a new chat
+   */
+  createChat: () => ipcRenderer.invoke("db:create-chat"),
+
+  /**
+   * Get all chats
+   */
+  getAllChats: () => ipcRenderer.invoke("db:get-all-chats"),
+
+  /**
    * Save a user message to the database
    * @param message The user message to save
    */
@@ -96,14 +106,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("db:save-assistant-message", message),
 
   /**
-   * Load all messages from the current chat
+   * Load messages from a specific chat
+   * @param chatId Optional chat ID, uses latest chat if not provided
    */
-  loadChatMessages: () => ipcRenderer.invoke("db:get-messages"),
+  loadChatMessages: (chatId?: number) => ipcRenderer.invoke("db:get-messages", chatId),
 
   /**
    * Clear the current chat
+   * @param chatId Optional chat ID, uses latest chat if not provided
    */
-  clearChat: () => ipcRenderer.invoke("db:clear-messages"),
+  clearChat: (chatId?: number) => ipcRenderer.invoke("db:clear-messages", chatId),
 });
 
 /**

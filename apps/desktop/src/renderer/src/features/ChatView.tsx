@@ -2,20 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView.js";
 import FactsSidebar from "../components/FactsSidebar.js";
-import { Button } from "../components/ui/Button.jsx";
+import { Button } from "../components/ui/button.jsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/DropdownMenu.js";
-import { ScrollArea } from "../components/ui/ScrollArea.js";
-import { useChat } from "../hooks/useChat.js";
-import { MoreHorizontalIcon, SendIcon } from "../icons/index.js";
+} from "../components/ui/DropdownMenu.jsx";
+import { ScrollArea } from "../components/ui/ScrollArea.jsx";
+import { MoreHorizontalIcon, SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
+// Import stores and hooks
+import { useChatStore, useUIStore } from "../store/index.js";
+
 function ChatView() {
+  // Get chat state from store
   const {
     messages,
     newMessage,
@@ -25,11 +28,12 @@ function ChatView() {
     contextItems,
     removeContextItem,
     clearChat,
-  } = useChat();
+  } = useChatStore();
+
+  // Get UI state from store
+  const { showFactsSidebar, activeSidebarMessageId, showFactsForMessage } = useUIStore();
 
   // Facts sidebar state
-  const [factsSidebarOpen, setFactsSidebarOpen] = useState(false);
-  const [sidebarMessageId, setSidebarMessageId] = useState<string | null>(null);
   const [logFacts, setLogFacts] = useState<LogPostprocessingFact[]>([]);
   const [codeFacts, setCodeFacts] = useState<CodePostprocessingFact[]>([]);
 
@@ -57,9 +61,13 @@ function ChatView() {
     resizeTextarea();
   }, [newMessage]);
 
-  // Scroll to bottom when messages change
+  // Scroll behavior for messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Auto-scroll only when the last message is from the user
+    const last = messages[messages.length - 1];
+    if (last?.role === "user") {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // Focus input on mount and when thinking state changes
@@ -117,7 +125,7 @@ function ChatView() {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || isThinking) return;
 
-    // Call the send function from the hook
+    // Call the send function from the store
     await sendMessage();
 
     // Reset textarea height after sending
@@ -142,19 +150,18 @@ function ChatView() {
     logFacts: LogPostprocessingFact[],
     codeFacts: CodePostprocessingFact[]
   ) => {
-    setSidebarMessageId(messageId);
     setLogFacts(logFacts);
     setCodeFacts(codeFacts);
-    setFactsSidebarOpen(true);
+    showFactsForMessage(messageId);
   };
 
   // Function to close facts sidebar
   const closeFactsSidebar = () => {
-    setFactsSidebarOpen(false);
+    showFactsForMessage(null);
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Chat header */}
       <div className="flex justify-between items-center py-3 px-4 border-b border-border bg-background-lighter backdrop-blur-sm shadow-sm z-10">
         <h1 className="text-lg font-semibold text-primary">Chat</h1>
@@ -178,30 +185,35 @@ function ChatView() {
         </DropdownMenu>
       </div>
 
-      <div className="flex flex-row flex-nowrap h-full overflow-hidden">
-        {/* Main chat area - takes full width when sidebar closed, 2/3 when open */}
+      <div className="flex flex-1 relative min-h-0 overflow-hidden">
+        {/* Main chat area with conditional right padding when sidebar is open */}
         <div
           className={cn(
-            "transition-all duration-300 ease-in-out h-full overflow-hidden",
-            factsSidebarOpen ? "w-2/3 max-w-2/3 flex-[2]" : "w-full flex-1",
+            "transition-all duration-300 ease-in-out flex flex-col h-full w-full",
+            showFactsSidebar && "md:pr-[calc(33%+24px)]",
             "bg-background-assistant"
           )}
         >
           {/* Chat messages */}
-          <ScrollArea className="h-full overflow-y-auto">
-            <div className="flex flex-col min-h-full">
+          <ScrollArea
+            className="flex-1 overflow-y-auto overflow-x-hidden scroll-container"
+            type="always"
+            scrollHideDelay={0}
+          >
+            <div className="flex flex-col justify-start h-auto w-full">
+              {/* No spacer needed anymore - messages should start at the top */}
               {messages.map((message) =>
                 message.role === "user" ? (
                   <div
                     key={`user-${message.id}`}
                     className={cn("py-4 px-4 flex flex-col bg-background-assistant")}
                   >
-                    <div className="flex items-end max-w-[90%] mx-auto w-full">
+                    <div className="flex items-start max-w-[90%] mx-auto w-full mt-4">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary my-2">
                         <span className="text-white font-medium text-sm">U</span>
                       </div>
-                      <div className="flex-1 overflow-hidden pt-0.5">
-                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3 break-words bg-background-alt p-3 rounded-lg shadow-sm">
+                      <div className="flex-1 overflow-hidden pt-0.5 min-w-0 max-w-full">
+                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3 break-words bg-background-alt p-3 rounded-lg shadow-sm overflow-x-auto overflow-wrap-anywhere min-w-0">
                           <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
                       </div>
@@ -218,7 +230,9 @@ function ChatView() {
                         onShowFacts={(logFactsArr, codeFactsArr) =>
                           openFactsSidebar(message.id, logFactsArr, codeFactsArr)
                         }
-                        activeInFactsSidebar={factsSidebarOpen && sidebarMessageId === message.id}
+                        activeInFactsSidebar={
+                          showFactsSidebar && activeSidebarMessageId === message.id
+                        }
                       />
                     </div>
                   </div>
@@ -229,16 +243,14 @@ function ChatView() {
           </ScrollArea>
         </div>
 
-        {/* Facts sidebar - slides in from right taking 1/3 width */}
+        {/* Facts sidebar - fixed position with transform-based animation */}
         <div
           className={cn(
-            "h-full bg-background-sidebar border-l border-border transition-all duration-300 ease-in-out",
-            factsSidebarOpen ? "w-1/3 max-w-1/3 flex-[1]" : "w-0 opacity-0 overflow-hidden flex-[0]"
+            "fixed top-0 right-0 h-full w-full md:w-[33%] bg-background-sidebar border-l border-border shadow-md transition-transform duration-300 ease-in-out overflow-hidden pl-6 z-10",
+            showFactsSidebar ? "translate-x-0" : "translate-x-full"
           )}
         >
-          {factsSidebarOpen && (
-            <FactsSidebar logFacts={logFacts} codeFacts={codeFacts} onClose={closeFactsSidebar} />
-          )}
+          <FactsSidebar logFacts={logFacts} codeFacts={codeFacts} onClose={closeFactsSidebar} />
         </div>
       </div>
 

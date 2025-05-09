@@ -1,59 +1,57 @@
-import { useState } from "react";
-import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
-import { TabType } from "../types/index.js";
-import { Button } from "./ui/Button.jsx";
-import { ScrollArea } from "./ui/ScrollArea.js";
-
-import { useChat } from "@renderer/hooks/useChat.js";
+import { useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
-// removed unused import
+import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
+import { Button } from "./ui/button.jsx";
+import { ScrollArea } from "./ui/ScrollArea.jsx";
 
-// Define a simple Chat type for chat history
-interface Chat {
-  id: string;
-  title: string;
-  timestamp: Date;
-}
+// Import stores
+import { useChatStore, useUIStore } from "../store/index.js";
 
-interface NavigationSidebarProps {
-  activeTab: TabType;
-  setActiveTab: (tab: TabType) => void;
-}
+function NavigationSidebar() {
+  // Get state from stores
+  const { chats, contextItems, currentChatId, selectChat, loadChats } = useChatStore();
+  const { activeTab, setActiveTab } = useUIStore();
 
-function NavigationSidebar({ activeTab, setActiveTab }: NavigationSidebarProps) {
-  // TODO: Replace with actual chat history functionality
-  const [chatHistory] = useState<Chat[]>([]);
+  // Ensure chats are loaded when component mounts
+  useEffect(() => {
+    loadChats();
+  }, [loadChats]);
 
-  const chatState = useChat();
-  const contextItemsCount = chatState.contextItems.length;
+  // Handle creating a new chat
+  const handleCreateChat = async () => {
+    // Set chat ID to 0 to indicate a new chat should be created when a message is sent
+    selectChat(undefined);
+    setActiveTab("chat");
+  };
+
+  // Handle selecting a chat
+  const handleSelectChat = (chatId: number) => {
+    selectChat(chatId);
+    setActiveTab("chat");
+  };
 
   return (
     <div className="w-60 h-full bg-background-sidebar border-r border-border flex flex-col">
       <div className="p-4 flex flex-col gap-4">
         <div className="text-primary font-bold text-center text-lg">TRIAGE</div>
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-2"
-          onClick={() => {
-            setActiveTab("chat");
-            console.info("New chat");
-          }}
-        >
+        <Button variant="outline" className="w-full justify-start gap-2" onClick={handleCreateChat}>
           <FaPlus size={12} /> New Chat
         </Button>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-2">
-          {chatHistory.length > 0 ? (
-            chatHistory.map((chat) => (
+          {chats.length > 0 ? (
+            chats.map((chat) => (
               <div
                 key={chat.id}
-                className="flex items-center p-2 rounded-md hover:bg-background-lighter cursor-pointer mb-1 text-gray-200 group"
-                onClick={() => console.info(`Clicked chat: ${chat.id}`)}
+                className={`flex items-center p-2 rounded-md hover:bg-background-lighter cursor-pointer mb-1 text-gray-200 group ${
+                  currentChatId === chat.id ? "bg-background-lighter" : ""
+                }`}
+                onClick={() => handleSelectChat(chat.id)}
               >
                 <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white" />
-                <div className="text-sm truncate">{chat.title}</div>
+                <div className="text-sm truncate">Chat {chat.id}</div>
               </div>
             ))
           ) : (
@@ -62,9 +60,9 @@ function NavigationSidebar({ activeTab, setActiveTab }: NavigationSidebarProps) 
         </div>
       </ScrollArea>
 
-      {contextItemsCount > 0 && (
+      {contextItems.length > 0 && (
         <div className="text-xs text-primary p-2 text-center">
-          {contextItemsCount} context item{contextItemsCount !== 1 ? "s" : ""} active
+          {contextItems.length} context item{contextItems.length !== 1 ? "s" : ""} active
         </div>
       )}
 

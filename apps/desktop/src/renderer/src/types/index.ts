@@ -57,6 +57,12 @@ export type {
 
 export { getObservabilityPlatform, IntegrationType } from "@triage/observability";
 
+// Define chat type for chat history
+export interface Chat {
+  id: number;
+  createdAt: Date;
+}
+
 // Define code map type alias
 export type CodeMap = Map<string, string>;
 
