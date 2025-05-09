@@ -15,7 +15,6 @@ import { cn } from "../lib/utils.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
 // Import stores and hooks
-import { useAgentEvents } from "../hooks/useAgentEvents.js";
 import { useChatStore, useUIStore } from "../store/index.js";
 
 function ChatView() {
@@ -29,14 +28,10 @@ function ChatView() {
     contextItems,
     removeContextItem,
     clearChat,
-    cellManager,
   } = useChatStore();
 
   // Get UI state from store
   const { showFactsSidebar, activeSidebarMessageId, showFactsForMessage } = useUIStore();
-
-  // Register for agent events
-  useAgentEvents(cellManager);
 
   // Facts sidebar state
   const [logFacts, setLogFacts] = useState<LogPostprocessingFact[]>([]);

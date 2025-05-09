@@ -1,77 +1,17 @@
 import { HighLevelUpdate, IntermediateUpdate } from "@triage/agent";
-import { create } from "zustand";
-import api from "../services/api.js";
 import { AgentStage, AssistantMessage } from "../types/index.js";
-import { assertStageType } from "../utils/agentDesktopConversion.js";
-import { CellUpdateManager } from "../utils/CellUpdateManager.js";
-
-interface AgentState {
-  // Agent state
-  cellManager: CellUpdateManager | null;
-  isRegistered: boolean;
-
-  // Actions
-  setCellManager: (manager: CellUpdateManager | null) => void;
-  registerAgentUpdates: () => void;
-  unregisterAgentUpdates: () => void;
-}
-
-export const useAgentStore = create<AgentState>((set, get) => ({
-  // Initial state
-  cellManager: null,
-  isRegistered: false,
-
-  // Actions
-  setCellManager: (manager: CellUpdateManager | null) => {
-    const { isRegistered, registerAgentUpdates } = get();
-
-    set({ cellManager: manager });
-
-    // Register for updates if we have a cell manager and aren't already registered
-    if (manager && !isRegistered) {
-      registerAgentUpdates();
-    }
-  },
-
-  registerAgentUpdates: () => {
-    // Don't register if already registered
-    if (get().isRegistered) return;
-
-    const unregister = api.onAgentUpdate((update) => {
-      const { cellManager } = get();
-      if (!cellManager) return;
-
-      console.info("Received agent update:", update);
-
-      // Process the update based on its type
-      if (update.type === "highLevelUpdate") {
-        // A new high-level step is starting
-        handleHighLevelUpdate(cellManager, update);
-      } else if (update.type === "intermediateUpdate") {
-        // An intermediate update for an existing step
-        handleIntermediateUpdate(cellManager, update);
-      }
-    });
-
-    // Store the registered state
-    set({ isRegistered: true });
-
-    // Return cleanup function
-    return unregister;
-  },
-
-  unregisterAgentUpdates: () => {
-    // This would be called when we no longer need agent updates
-    set({ isRegistered: false });
-  },
-}));
+import { assertStageType } from "./agentDesktopConversion.js";
+import { MessageUpdater } from "./MessageUpdater.js";
 
 /**
  * Handle a high-level update from the agent
- * Creates a new step in the cell
+ * Creates a new step in the message
  */
-function handleHighLevelUpdate(cellManager: CellUpdateManager, update: HighLevelUpdate): void {
-  cellManager.queueUpdate((assistantMessage) => {
+export function handleHighLevelUpdate(
+  messageUpdater: MessageUpdater,
+  update: HighLevelUpdate
+): void {
+  messageUpdater.update((assistantMessage) => {
     let newStage: AgentStage;
 
     // Create the appropriate type of step based on stepType
@@ -113,10 +53,10 @@ function handleHighLevelUpdate(cellManager: CellUpdateManager, update: HighLevel
         break;
       default:
         console.warn(`Unknown step type: ${update.stepType}`);
-        return assistantMessage; // Return unchanged cell if we don't recognize the step type
+        return assistantMessage; // Return unchanged message if we don't recognize the step type
     }
 
-    // Add the new step to the cell
+    // Add the new step to the message
     return {
       ...assistantMessage,
       stages: [...assistantMessage.stages, newStage],
@@ -128,11 +68,11 @@ function handleHighLevelUpdate(cellManager: CellUpdateManager, update: HighLevel
  * Handle an intermediate update from the agent
  * Updates the content of an existing step
  */
-function handleIntermediateUpdate(
-  cellManager: CellUpdateManager,
+export function handleIntermediateUpdate(
+  messageUpdater: MessageUpdater,
   update: IntermediateUpdate
 ): void {
-  cellManager.queueUpdate((assistantMessage: AssistantMessage) => {
+  messageUpdater.update((assistantMessage: AssistantMessage) => {
     // Find the step to update
     const stepIndex = assistantMessage.stages.findIndex(
       (stage: AgentStage) => stage.id === update.parentId
@@ -140,7 +80,7 @@ function handleIntermediateUpdate(
 
     if (stepIndex === -1) {
       console.warn(`Step with ID ${update.parentId} not found`);
-      return assistantMessage; // Return unchanged cell if step not found
+      return assistantMessage; // Return unchanged message if step not found
     }
 
     const stage = assistantMessage.stages[stepIndex];
@@ -190,7 +130,7 @@ function handleIntermediateUpdate(
       }
       default:
         console.warn(`Unknown stage type: ${(stage as AgentStage).type}`);
-        return assistantMessage; // Return unchanged cell if unknown step type
+        return assistantMessage; // Return unchanged message if unknown step type
     }
 
     // Create new stages array with the updated step

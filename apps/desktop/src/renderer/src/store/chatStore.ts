@@ -2,8 +2,9 @@ import { create } from "zustand";
 import api from "../services/api.js";
 import { AssistantMessage, Chat, ChatMessage, ContextItem, UserMessage } from "../types/index.js";
 import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
-import { CellUpdateManager } from "../utils/CellUpdateManager.js";
+import { handleHighLevelUpdate, handleIntermediateUpdate } from "../utils/agentUpdateHandlers.js";
 import { generateId } from "../utils/formatters.js";
+import { MessageUpdater } from "../utils/MessageUpdater.js";
 
 // Define the Chat store state
 interface ChatState {
@@ -17,9 +18,16 @@ interface ChatState {
   // Context items for current chat
   contextItems: ContextItem[];
 
-  // Current cell manager for streaming updates
-  cellManager: CellUpdateManager | null;
+  // Current message updater for streaming updates
+  messageUpdater: MessageUpdater | null;
   savedMessageIds: Set<string>;
+
+  // Agent update state
+  isRegisteredForAgentUpdates: boolean;
+
+  // Agent update functions
+  registerForAgentUpdates: () => void;
+  unregisterFromAgentUpdates: () => void;
 
   // Actions
   setNewMessage: (message: string) => void;
@@ -41,8 +49,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   newMessage: "",
   isThinking: false,
   contextItems: [],
-  cellManager: null,
+  messageUpdater: null,
   savedMessageIds: new Set<string>(),
+  isRegisteredForAgentUpdates: false,
 
   // Setters
   setNewMessage: (message: string) => set({ newMessage: message }),
@@ -159,8 +168,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const updatedMessagesWithAssistant = [...updatedMessages, assistantMessage];
     set({ messages: updatedMessagesWithAssistant });
 
-    // Create a cell manager to handle updates
-    const manager = new CellUpdateManager(assistantMessage, (updatedAssistantMessage) => {
+    // Create a message updater to handle updates
+    const updater = new MessageUpdater(assistantMessage, (updatedAssistantMessage) => {
       // Update the assistant message with the updated data
       set((state) => ({
         messages: state.messages.map((message) => {
@@ -175,7 +184,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }));
     });
 
-    set({ cellManager: manager });
+    set({ messageUpdater: updater });
+
+    // Register for agent updates if not already registered
+    get().registerForAgentUpdates();
 
     try {
       // Call the agent API with message
@@ -186,20 +198,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       if (agentMessage && !agentMessage.error) {
         // Update the assistant message with the response
-        manager.queueUpdate((cell) => ({
-          ...cell,
-          response:
-            agentMessage.response || "I processed your request but got no response content.",
-          // preserve existing stages from streaming; do not override here
-          // TODO: once we add back agent steps we should save
-        }));
+        const { messageUpdater } = get();
+        if (messageUpdater) {
+          messageUpdater.update((cell) => ({
+            ...cell,
+            response:
+              agentMessage.response || "I processed your request but got no response content.",
+            // preserve existing stages from streaming; do not override here
+            // TODO: once we add back agent steps we should save
+          }));
+        }
       } else {
         // Handle error response
-        manager.queueUpdate((cell) => ({
-          ...cell,
-          response: "Sorry, I encountered an error processing your request.",
-          error: agentMessage?.error || "Sorry, I encountered an error processing your request.",
-        }));
+        const { messageUpdater } = get();
+        if (messageUpdater) {
+          messageUpdater.update((cell) => ({
+            ...cell,
+            response: "Sorry, I encountered an error processing your request.",
+            error: agentMessage?.error || "Sorry, I encountered an error processing your request.",
+          }));
+        }
       }
     } catch (error) {
       console.error("Error in chat API call:", error);
@@ -213,17 +231,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
             : String(error);
 
       // Update assistant message with error
-      manager.queueUpdate((cell) => ({
-        ...cell,
-        response: "Sorry, I encountered an error processing your request.",
-        error: errorMessage,
-      }));
+      const { messageUpdater } = get();
+      if (messageUpdater) {
+        messageUpdater.update((cell) => ({
+          ...cell,
+          response: "Sorry, I encountered an error processing your request.",
+          error: errorMessage,
+        }));
+      }
     } finally {
-      // Clear thinking state and cell manager
+      // Save assistant message
+      console.log("Saving assistant message", JSON.stringify(get().messageUpdater!.getMessage()));
+      api.saveAssistantMessage(get().messageUpdater!.getMessage());
+
+      // Clear thinking state and message updater
       set({
         isThinking: false,
-        cellManager: null,
+        messageUpdater: null,
       });
+
+      // Unregister from agent updates
+      get().unregisterFromAgentUpdates();
     }
   },
 
@@ -247,4 +275,42 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) => ({
       contextItems: state.contextItems.filter((item) => item.id !== id),
     })),
+
+  /**
+   * Register for agent streaming updates
+   * This is called when a message is sent and a messageUpdater is created
+   */
+  registerForAgentUpdates: () => {
+    // Don't register if already registered
+    if (get().isRegisteredForAgentUpdates) return;
+
+    const unregister = api.onAgentUpdate((update) => {
+      const { messageUpdater } = get();
+      if (!messageUpdater) return;
+
+      console.info("Received agent update:", update);
+
+      // Process the update based on its type
+      if (update.type === "highLevelUpdate") {
+        // A new high-level step is starting
+        handleHighLevelUpdate(messageUpdater, update);
+      } else if (update.type === "intermediateUpdate") {
+        // An intermediate update for an existing step
+        handleIntermediateUpdate(messageUpdater, update);
+      }
+    });
+
+    // Store the registered state
+    set({ isRegisteredForAgentUpdates: true });
+
+    return unregister;
+  },
+
+  /**
+   * Unregister from agent updates
+   * This is called when message processing is complete
+   */
+  unregisterFromAgentUpdates: () => {
+    set({ isRegisteredForAgentUpdates: false });
+  },
 }));
