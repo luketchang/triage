@@ -65,7 +65,7 @@ function createWindow(): BrowserWindow {
   return mainWindow;
 }
 
-function initApp(mainWindow: BrowserWindow): void {
+async function initApp(mainWindow: BrowserWindow): Promise<void> {
   const configStore = new ElectronConfigStore(AppCfgSchema);
 
   // Create specialized views for each schema

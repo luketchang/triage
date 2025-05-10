@@ -31,15 +31,24 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
    * @param parentKey The parent key of the schema, if this is nested
    */
   private registerSchemaRecursively(schema: z.ZodTypeAny, parentKey: string = ""): void {
-    if (schema && schema._def && (schema._def as any).typeName === "ZodObject") {
-      const shape = (schema._def as any).shape();
+    const unwrapped = unwrapSchema(schema);
+    if (isZodObject(unwrapped)) {
+      const shape = (unwrapped._def as any).shape();
       for (const [key, subSchema] of Object.entries(shape)) {
         const fullKey = parentKey ? `${parentKey}.${key}` : key;
-        if (subSchema instanceof z.ZodType) {
-          this.registerSchemaRecursively(subSchema, fullKey);
+        // Check if subSchema is a Zod schema object; we need this beacuse
+        // `subSchema instanceof z.ZodType` isn't working
+        if (subSchema && typeof subSchema === "object" && "_def" in subSchema) {
+          this.registerSchemaRecursively(subSchema as z.ZodTypeAny, fullKey);
         }
       }
-    } else if (schema instanceof z.ZodType && schema._def.description === "secret") {
+    } else if (
+      // This should be true if the schema is defined as a `configSecret`
+      unwrapped &&
+      typeof unwrapped === "object" &&
+      "_def" in unwrapped &&
+      unwrapped._def.description === "secret"
+    ) {
       this.keysForSecretsCache.add(parentKey);
     }
   }
@@ -50,15 +59,7 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
    */
   async getValues<S>(schema?: z.ZodType<S>): Promise<T | S> {
     const actualSchema = schema ?? this.schema;
-    // For debugging
-    console.info("Schema type:", (actualSchema as any)?._def?.typeName);
-
-    // Check if it's a ZodObject by looking at the _def.typeName property
-    if (
-      !actualSchema ||
-      !actualSchema._def ||
-      (actualSchema._def as any).typeName !== "ZodObject"
-    ) {
+    if (!isZodObject(actualSchema)) {
       throw new Error("Schema must be a ZodObject");
     }
     const result: Record<string, any> = {};
@@ -77,25 +78,20 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
     return actualSchema.parse(result);
   }
 
-  private async get<V>(key: string): Promise<V | undefined> {
-    // Try to get from environment variables first
-    const envKey = key.replace(/\./g, "_").toUpperCase();
-    if (process.env[envKey] !== undefined) {
-      return process.env[envKey] as unknown as V;
-    }
-
-    // Then try to get from secure store if it's a secret
+  /**
+   * Get a config value, either from secure store or electron-store
+   */
+  private async get(key: string): Promise<ConfigValue> {
     if (this.keysForSecretsCache.has(key)) {
       if (this.secretsCache.has(key)) {
-        return this.secretsCache.get(key) as unknown as V;
+        return this.secretsCache.get(key) as ConfigValue;
       }
-      const val = await keytar.getPassword(KEYTAR_SERVICE_NAME, key);
-      this.secretsCache.set(key, val ?? undefined);
-      return val as unknown as V;
+      const keytarVal = await keytar.getPassword(KEYTAR_SERVICE_NAME, key);
+      const val = keytarVal ?? undefined;
+      this.secretsCache.set(key, val);
+      return val as ConfigValue;
     }
-
-    // Otherwise get from electron-store
-    return this.store.get(key) as V;
+    return this.store.get(key) as ConfigValue;
   }
 
   /**
@@ -105,49 +101,61 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
    */
   async setValues<S = T>(values: Partial<S>, schema?: z.ZodType<S>): Promise<void> {
     const actualSchema = schema ?? this.schema;
-    if (
-      !actualSchema ||
-      !actualSchema._def ||
-      (actualSchema._def as any).typeName !== "ZodObject"
-    ) {
+    if (!isZodObject(actualSchema)) {
       throw new Error("Schema must be a ZodObject");
     }
     const validatedValues = (actualSchema as any).partial().parse(values);
     for (const [key, value] of Object.entries(validatedValues)) {
-      await this.set(key, value);
-    }
-  }
-  private async set<V>(key: string, value: V): Promise<void> {
-    if (this.keysForSecretsCache.has(key)) {
-      await keytar.setPassword(KEYTAR_SERVICE_NAME, key, value as string);
-      this.secretsCache.set(key, value as string);
-    } else {
-      if (value === undefined || value === null) {
-        this.store.delete(key);
-      } else {
-        this.store.set(key, value as ConfigValue);
-      }
+      await this.set(key, value as ConfigValue);
     }
   }
 
   /**
-   * Log all config values
+   * Set a config value, either from secure store or electron-store
    */
-  async logValues(): Promise<void> {
-    const config = await this.getValues();
-    const logEntries: string[] = ["Configuration:"];
-    for (const [key, value] of Object.entries(config as Record<string, unknown>)) {
-      if (
-        this.schema &&
-        this.schema._def &&
-        (this.schema._def as any).typeName === "ZodObject" &&
-        (this.schema._def as any).shape()[key]?._def?.description === "secret"
-      ) {
-        logEntries.push(`  ${key}: ${value !== undefined && value !== null ? "Set" : "Not set"}`);
+  private async set(key: string, value: ConfigValue): Promise<void> {
+    if (this.keysForSecretsCache.has(key)) {
+      if (!value) {
+        await keytar.deletePassword(KEYTAR_SERVICE_NAME, key);
+        this.secretsCache.delete(key);
       } else {
-        logEntries.push(`  ${key}: ${value}`);
+        await keytar.setPassword(KEYTAR_SERVICE_NAME, key, value as string);
+        this.secretsCache.set(key, value as string);
+      }
+    } else {
+      if (!value) {
+        this.store.delete(key);
+      } else {
+        this.store.set(key, value);
       }
     }
-    console.info(logEntries.join("\n"));
   }
+}
+
+/**
+ * Helper to check if a Zod schema is a ZodObject
+ * @param schema The schema to check
+ * @returns True if the schema is an object, false otherwise
+ */
+function isZodObject(schema: z.ZodTypeAny): boolean {
+  return (
+    schema &&
+    typeof schema === "object" &&
+    "_def" in schema &&
+    (schema._def as any).typeName === "ZodObject"
+  );
+}
+
+/**
+ * Helper to unwrap ZodOptional, ZodNullable, ZodDefault, etc. to get the innermost schema
+ */
+function unwrapSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
+  let current = schema;
+  while (
+    current &&
+    ["ZodOptional", "ZodNullable", "ZodDefault"].includes((current._def as any).typeName)
+  ) {
+    current = (current._def as any).innerType || (current._def as any).schema;
+  }
+  return current;
 }
