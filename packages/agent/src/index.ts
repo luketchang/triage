@@ -25,7 +25,6 @@ export interface AgentArgs {
   agentCfg: AgentConfig;
   startDate?: Date;
   endDate?: Date;
-  reasonOnly?: boolean;
   onUpdate: StreamUpdateFn;
 }
 
