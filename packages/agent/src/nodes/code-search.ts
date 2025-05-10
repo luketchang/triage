@@ -197,60 +197,58 @@ export class CodeSearchAgent {
         );
 
         try {
-          logger.info("Reading code...");
+          logger.info("Making tool calls...");
           for (const toolCall of response) {
-            const result = await this.toolbox.invokeToolCall(toolCall);
-
-            // Error case, propagate error
             let step: CodeSearchStep | null = null;
-            if (typeof result === "string") {
-              if (toolCall.type === "catRequest") {
-                step = {
-                  type: "codeSearch",
-                  timestamp: new Date(),
-                  filepath: toolCall.path,
-                  source: result,
-                };
-              } else if (toolCall.type === "grepRequest") {
-                step = {
-                  type: "codeSearch",
-                  timestamp: new Date(),
-                  filepath: toolCall.file,
-                  source: result,
-                };
-              }
-            } else {
-              if (toolCall.type === "catRequest") {
-                step = {
-                  type: "codeSearch",
-                  timestamp: new Date(),
-                  filepath: toolCall.path,
-                  source: (result as CatRequestResult).content,
-                };
-              } else if (toolCall.type === "grepRequest") {
-                step = {
-                  type: "codeSearch",
-                  timestamp: new Date(),
-                  filepath: toolCall.file,
-                  source: (result as GrepRequestResult).content,
-                };
-              }
-            }
+            try {
+              const result = await this.toolbox.invokeToolCall(toolCall);
 
-            if (this.config.onUpdate) {
-              this.config.onUpdate({
-                type: "intermediateUpdate",
-                id: uuidv4(),
-                parentId: params.codeSearchId,
-                step: step!,
-              });
+              if (toolCall.type === "catRequest") {
+                step = {
+                  type: "codeSearch",
+                  timestamp: new Date(),
+                  filepath: toolCall.path,
+                  content: (result as CatRequestResult).content,
+                };
+              } else if (toolCall.type === "grepRequest") {
+                step = {
+                  type: "codeSearch",
+                  timestamp: new Date(),
+                  filepath: toolCall.file,
+                  content: (result as GrepRequestResult).content,
+                };
+              }
+
+              if (this.config.onUpdate) {
+                this.config.onUpdate({
+                  type: "intermediateUpdate",
+                  id: uuidv4(),
+                  parentId: params.codeSearchId,
+                  step: step!,
+                });
+              }
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              if (toolCall.type === "catRequest") {
+                step = {
+                  type: "codeSearch",
+                  timestamp: new Date(),
+                  filepath: toolCall.path,
+                  content: errorMessage,
+                };
+              } else if (toolCall.type === "grepRequest") {
+                step = {
+                  type: "codeSearch",
+                  timestamp: new Date(),
+                  filepath: toolCall.file,
+                  content: errorMessage,
+                };
+              }
             }
 
             previousCodeSearchSteps.push(step!);
           }
         } catch (error) {
-          // const lastCodeSearchResultsFormatted = formatCodeSearchSteps(newCodeSearchSteps);
-          // logger.info(`Code search results:\n${lastCodeSearchResultsFormatted}`);
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error(`Error executing code search: ${errorMessage}`);
           // TODO: what to do here?

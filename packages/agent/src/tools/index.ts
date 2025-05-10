@@ -114,18 +114,21 @@ export class Toolbox {
       exec(
         `grep ${toolCall.flags ? `-${toolCall.flags}` : ""} ${toolCall.pattern} ${toolCall.file}`,
         (error, stdout, stderr) => {
-          if (error) {
+          // grep returns exit code 1 if no matches are found, but that's not an error for our use case.
+          // error.code === 1 means "no matches"
+          if (error && typeof error.code === "number" && error.code !== 1) {
             logger.error(`Error grepping file ${toolCall.file}: ${error} \n ${stderr}`);
             reject(error);
           } else {
-            resolve({ content: stdout });
+            // If error.code === 1, stdout will be empty (no matches), which is fine.
+            resolve({ content: "No matches found" });
           }
         }
       );
     });
   }
 
-  async invokeToolCall(toolCall: LLMToolCall): Promise<LLMToolCallResult | string> {
+  async invokeToolCall(toolCall: LLMToolCall): Promise<LLMToolCallResult> {
     try {
       switch (toolCall.type) {
         case "logRequest":
@@ -142,7 +145,7 @@ export class Toolbox {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`Error invoking tool call ${toolCall.type}: ${errorMessage}`);
-      return `Error invoking tool call: ${errorMessage}`;
+      throw new Error(`Error invoking tool call: ${errorMessage}`);
     }
   }
 }

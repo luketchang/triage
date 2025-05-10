@@ -34,7 +34,7 @@ async function main(): Promise<void> {
     const codebaseOverview = await fs.readFile(codebaseOverviewPath, "utf-8");
     const fileTree = loadFileTree(repoPath);
     const query = await fs.readFile(
-      "/Users/luketchang/code/triage/repos/ticketing/bugs/order-cancelled-publish-bug.txt",
+      "/Users/luketchang/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt",
       "utf-8"
     );
 

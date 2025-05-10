@@ -17,7 +17,7 @@ export interface LogSearchStep extends BaseAgentStep, LogSearchPair {
 
 export interface CodeSearchPair {
   filepath: string;
-  source: string;
+  content: string; // from either grep or cat
 }
 
 export interface CodeSearchStep extends BaseAgentStep, CodeSearchPair {

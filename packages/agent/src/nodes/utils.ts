@@ -148,7 +148,7 @@ export function formatSingleCodeSearchStep(
   const header = `File: ${step.filepath}`;
   const separator = "-".repeat(header.length);
 
-  let source = step.source;
+  let source = step.content;
   if (options.lineNumbers) {
     const lines = source.split("\n");
     const maxLineNumberWidth = String(lines.length).length;

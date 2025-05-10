@@ -77,7 +77,7 @@ export class Reasoning {
               type: "codeSearch",
               timestamp: new Date(),
               filepath: toolCall.path,
-              source: (result as CatRequestResult).content,
+              content: (result as CatRequestResult).content,
             });
             break;
         }
