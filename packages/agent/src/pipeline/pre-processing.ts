@@ -1,11 +1,13 @@
 import { logger } from "@triage/common";
 import { v4 as uuidv4 } from "uuid";
 
-import { CodeSearchAgent, CodeSearchAgentResponse } from "../nodes/code-search";
+import { CodeSearchAgentResponse } from "../nodes/code-search";
 import { LogSearchAgent, LogSearchAgentResponse } from "../nodes/log-search";
 import { LogRequest } from "../types";
 
-import { TriagePipelineConfig, TriagePipelineState } from ".";
+import { PipelineStateManager } from "./state";
+
+import { TriagePipelineConfig } from ".";
 
 const INITIAL_LOG_REQUEST: LogRequest = {
   type: "logRequest",
@@ -21,40 +23,25 @@ export type PreProcessingResults = {
 
 export class PreProcessing {
   private readonly config: TriagePipelineConfig;
-  private state: TriagePipelineState;
+  private state: PipelineStateManager;
   private logSearch: LogSearchAgent;
-  private codeSearch: CodeSearchAgent;
+  // private codeSearch: CodeSearchAgent;
 
-  constructor(config: TriagePipelineConfig, state: TriagePipelineState) {
+  constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
-    this.logSearch = new LogSearchAgent(this.config);
-    this.codeSearch = new CodeSearchAgent(this.config.fastClient);
+    this.logSearch = new LogSearchAgent(this.config, this.state);
+    // this.codeSearch = new CodeSearchAgent(this.config.fastModel);
   }
 
-  async run(): Promise<PreProcessingResults> {
-    // TODO: lazy return joined promise
+  async run(): Promise<void> {
+    // TODO: add code search and lazy return joined promise
     logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
     const logSearchId = uuidv4();
-    if (this.config.onUpdate) {
-      this.config.onUpdate({ type: "highLevelUpdate", id: logSearchId, stepType: "logSearch" });
-    }
-    const logs = await this.logSearch.invoke({
+    this.state.recordHighLevelStep("logSearch", logSearchId);
+    await this.logSearch.invoke({
       logSearchId,
-      query: this.config.query,
       logRequest: INITIAL_LOG_REQUEST.request,
-      logLabelsMap: this.config.logLabelsMap,
-      logSearchSteps: this.state.logSearchSteps,
-      codebaseOverview: this.config.codebaseOverview,
     });
-    this.state.logSearchSteps = [...this.state.logSearchSteps, ...logs.newLogSearchSteps];
-
-    return {
-      logs,
-      code: {
-        // TODO: re-introduce code search
-        newCodeSearchSteps: [],
-      },
-    };
   }
 }

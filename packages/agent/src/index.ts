@@ -12,8 +12,9 @@ import { z } from "zod";
 
 import { AgentConfig } from "./config";
 import { TriagePipeline, TriagePipelineConfig } from "./pipeline";
+import { PipelineStateManager, StreamUpdateFn } from "./pipeline/state";
 import type { ChatMessage } from "./types";
-import { AgentStreamUpdate, AssistantMessage } from "./types";
+import { AssistantMessage } from "./types";
 
 /**
  * Arguments for invoking the agent
@@ -24,7 +25,8 @@ export interface AgentArgs {
   agentCfg: AgentConfig;
   startDate?: Date;
   endDate?: Date;
-  onUpdate?: (update: AgentStreamUpdate) => void;
+  reasonOnly?: boolean;
+  onUpdate: StreamUpdateFn;
 }
 
 /**
@@ -65,18 +67,34 @@ export async function invokeAgent({
     reasoningClient: getModelWrapper(agentCfg.reasoningModel, agentCfg),
     fastClient: getModelWrapper(agentCfg.fastModel, agentCfg),
     observabilityPlatform,
-    onUpdate,
   };
 
-  const pipeline = new TriagePipeline(pipelineConfig);
-  const response = await pipeline.run();
+  const state = new PipelineStateManager(onUpdate);
+  // Note: We still aren't persisting LLM messages between invocations.
+  // Probably what we want in the future is to delegate the output of the reasoner
+  // to a new agent optimized for follow-up questions.
+  state.initChatHistory(chatHistory);
 
-  return {
-    role: "assistant",
-    steps: [], // TODO: Front-end currently ignores this
-    response: response.answer,
-    error: null,
-  };
+  logger.info(`Observability features: ${agentCfg.observabilityFeatures}`);
+
+  try {
+    const pipeline = new TriagePipeline(pipelineConfig, state);
+    const response = await pipeline.run();
+
+    return {
+      role: "assistant",
+      steps: state.getSteps(),
+      response: response.answer,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      role: "assistant",
+      steps: state.getSteps(),
+      response: null,
+      error: `${error}`,
+    };
+  }
 }
 
 const parseArgs = (): { integration: "datadog" | "grafana"; features: string[] } => {
@@ -206,4 +224,5 @@ export * from "./nodes/log-search";
 export * from "./nodes/reasoner";
 export * from "./nodes/reviewer";
 export * from "./nodes/utils";
+export * from "./pipeline/state";
 export * from "./types";

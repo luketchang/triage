@@ -47,11 +47,15 @@ type GrepRequestResult = {
 
 export type LLMToolCall = ToolCallID & (LogRequest | LogSearchInput | CatRequest | GrepRequest);
 
-type LLMToolCallResult =
+export type LLMToolCallResult =
   | LogSearchAgentResponse
   | LogsWithPagination
   | CatRequestResult
   | GrepRequestResult;
+
+export type LLMToolCallError = { error: string };
+
+export type LLMToolCallResultOrError = LLMToolCallResult | LLMToolCallError;
 
 export class Toolbox {
   private observabilityApi: ObservabilityPlatform;
@@ -66,11 +70,7 @@ export class Toolbox {
     // TODO: Add logLabelsMap to tool call. Not used yet.
     return this.logSearchAgent.invoke({
       logSearchId: uuidv4(),
-      query: toolCall.request,
       logRequest: toolCall.request,
-      logLabelsMap: new Map(),
-      logSearchSteps: [],
-      codebaseOverview: "",
     });
   }
 
@@ -84,12 +84,14 @@ export class Toolbox {
     });
   }
 
-  private handleCatRequest(toolCall: CatRequest): Promise<CatRequestResult> {
-    return new Promise((resolve, reject) => {
+  private handleCatRequest(toolCall: CatRequest): Promise<CatRequestResult | LLMToolCallError> {
+    return new Promise((resolve) => {
       exec(`cat ${toolCall.path}`, (error, stdout, stderr) => {
         if (error) {
           logger.error(`Error reading file ${toolCall.path}: ${error} \n ${stderr}`);
-          reject(error);
+          resolve({
+            error: `${error}`,
+          });
         } else {
           resolve({ content: stdout });
         }
@@ -113,7 +115,7 @@ export class Toolbox {
     });
   }
 
-  async invokeToolCall(toolCall: LLMToolCall): Promise<LLMToolCallResult> {
+  async invokeToolCall(toolCall: LLMToolCall): Promise<LLMToolCallResultOrError> {
     switch (toolCall.type) {
       case "logRequest":
         return this.handleLogRequest(toolCall);

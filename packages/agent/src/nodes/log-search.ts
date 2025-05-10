@@ -1,10 +1,10 @@
 import { logger, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
 import { generateText, LanguageModelV1 } from "ai";
-import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { LogSearchInput, logSearchInputToolSchema, LogSearchStep, TaskComplete } from "../types";
+import { LogSearchStep, PipelineStateManager } from "../pipeline/state";
+import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types";
 
 import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "./utils";
 
@@ -169,40 +169,42 @@ class LogSearch {
 }
 
 export class LogSearchAgent {
+  private readonly config: TriagePipelineConfig;
+  private state: PipelineStateManager;
   private logSearch: LogSearch;
 
-  constructor(private readonly config: TriagePipelineConfig) {
+  constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
+    this.config = config;
+    this.state = state;
     this.logSearch = new LogSearch(this.config.fastClient, this.config.observabilityPlatform);
   }
 
   @timer
   async invoke(params: {
     logSearchId: string;
-    query: string;
     logRequest: string;
-    logLabelsMap: Map<string, string[]>;
-    logSearchSteps: LogSearchStep[];
     maxIters?: number;
-    codebaseOverview: string;
   }): Promise<LogSearchAgentResponse> {
-    // Variable to store the previous query result (initially undefined)
-    let previousLogSearchSteps = params.logSearchSteps;
-    let lastLogSearchStep: LogSearchStep | undefined = undefined;
-
     let response: LogSearchResponse | null = null;
     const maxIters = params.maxIters || MAX_ITERS;
     let currentIter = 0;
-
     let newLogSearchSteps: LogSearchStep[] = [];
+
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
+      const previousLogSearchSteps = this.state.getLogSearchSteps();
+      let lastLogSearchStep: LogSearchStep | undefined = undefined;
+      if (previousLogSearchSteps.length > 0) {
+        lastLogSearchStep = previousLogSearchSteps[previousLogSearchSteps.length - 1];
+      }
+
       response = await this.logSearch.invoke({
-        query: params.query,
+        query: this.config.query,
         logRequest: params.logRequest,
-        logLabelsMap: params.logLabelsMap,
+        logLabelsMap: this.config.logLabelsMap,
         previousLogSearchSteps,
         lastLogSearchStep,
         remainingQueries: maxIters - currentIter,
-        codebaseOverview: params.codebaseOverview,
+        codebaseOverview: this.config.codebaseOverview,
       });
 
       currentIter++;
@@ -228,20 +230,9 @@ export class LogSearchAgent {
             results: logContext,
           };
 
-          if (this.config.onUpdate) {
-            this.config.onUpdate({
-              type: "intermediateUpdate",
-              id: uuidv4(),
-              parentId: params.logSearchId,
-              step: step,
-            });
-          }
-
-          previousLogSearchSteps.push(step);
+          this.state.addIntermediateStep(step, params.logSearchId);
           newLogSearchSteps.push(step);
-          lastLogSearchStep = step;
-
-          const lastLogSearchResultsFormatted = formatLogSearchSteps([lastLogSearchStep]);
+          const lastLogSearchResultsFormatted = formatLogSearchSteps([step]);
           logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);

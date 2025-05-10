@@ -1,14 +1,9 @@
 import { logger, timer } from "@triage/common";
-import { ObservabilityPlatform } from "@triage/observability";
-import { generateId, generateText, LanguageModelV1 } from "ai";
+import { generateText } from "ai";
 
-import {
-  AgentStreamUpdate,
-  LogPostprocessingFact,
-  LogPostprocessingStep,
-  logPostprocessingToolSchema,
-  LogSearchStep,
-} from "../types";
+import { TriagePipelineConfig } from "../pipeline";
+import { LogPostprocessingStep, LogSearchStep, PipelineStateManager } from "../pipeline/state";
+import { LogPostprocessingFact, logPostprocessingToolSchema } from "../types";
 
 import {
   ensureSingleToolCall,
@@ -68,29 +63,29 @@ function createPrompt(params: {
 }
 
 export class LogPostprocessor {
-  constructor(
-    private readonly llmClient: LanguageModelV1,
-    private readonly observabilityPlatform: ObservabilityPlatform
-  ) {}
+  private readonly config: TriagePipelineConfig;
+  private state: PipelineStateManager;
+
+  constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
+    this.config = config;
+    this.state = state;
+  }
 
   @timer
-  async invoke(params: {
-    query: string;
-    logLabelsMap: Map<string, string[]>;
-    logSearchSteps: LogSearchStep[];
-    answer: string;
-    parentId: string;
-    onUpdate?: (update: AgentStreamUpdate) => void;
-  }): Promise<LogPostprocessingStep> {
+  async invoke(params: { parentId: string }): Promise<LogPostprocessingStep> {
     const prompt = createPrompt({
-      ...params,
-      platformSpecificInstructions: this.observabilityPlatform.getLogSearchQueryInstructions(),
+      query: this.config.query,
+      logLabelsMap: this.config.logLabelsMap,
+      logSearchSteps: this.state.getLogSearchSteps(),
+      answer: this.state.getAnswer()!,
+      platformSpecificInstructions:
+        this.config.observabilityPlatform.getLogSearchQueryInstructions(),
     });
 
     logger.info(`Log postprocessing prompt:\n${prompt}`);
 
     const { toolCalls } = await generateText({
-      model: this.llmClient,
+      model: this.config.fastClient,
       system: SYSTEM_PROMPT,
       prompt: prompt,
       tools: {
@@ -123,25 +118,24 @@ export class LogPostprocessor {
     const augmentedFacts: LogPostprocessingFact[] = normalizedFacts.map((fact) => ({
       title: fact.title,
       fact: fact.fact,
-      query: this.observabilityPlatform.addKeywordsToQuery(fact.query, fact.highlightKeywords),
+      query: this.config.observabilityPlatform.addKeywordsToQuery(
+        fact.query,
+        fact.highlightKeywords
+      ),
       start: fact.start,
       end: fact.end,
       limit: fact.limit,
       pageCursor: fact.pageCursor,
     }));
 
-    if (params.onUpdate) {
-      params.onUpdate({
-        type: "intermediateUpdate",
-        step: {
-          type: "logPostprocessing",
-          facts: augmentedFacts,
-          timestamp: new Date(),
-        },
-        id: generateId(),
-        parentId: params.parentId,
-      });
-    }
+    this.state.addIntermediateStep(
+      {
+        type: "logPostprocessing",
+        facts: augmentedFacts,
+        timestamp: new Date(),
+      },
+      params.parentId
+    );
 
     return {
       type: "logPostprocessing",

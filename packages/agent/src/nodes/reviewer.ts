@@ -1,9 +1,9 @@
 import { logger, timer } from "@triage/common";
 import { CoreMessage, streamText } from "ai";
-import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { reviewDecisionToolSchema, ReviewStep } from "../types";
+import { PipelineStateManager, ReviewStep } from "../pipeline/state";
+import { reviewDecisionToolSchema } from "../types";
 
 import { formatFacetValues } from "./utils";
 
@@ -84,23 +84,24 @@ ${params.answer}
 }
 
 export class Reviewer {
-  constructor(private readonly config: TriagePipelineConfig) {}
+  private readonly config: TriagePipelineConfig;
+  private state: PipelineStateManager;
+
+  constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
+    this.config = config;
+    this.state = state;
+  }
 
   @timer
-  async invoke(params: {
-    llmChatHistory: readonly CoreMessage[];
-    answer: string;
-    parentId: string;
-  }): Promise<ReviewStep> {
+  async invoke(params: { parentId: string }): Promise<ReviewStep> {
     logger.info(`Reviewing root cause analysis for query: ${this.config.query}`);
 
     const prompt = createPrompt({
       query: this.config.query,
       logLabelsMap: this.config.logLabelsMap,
-      llmChatHistory: params.llmChatHistory,
-      answer: params.answer,
+      llmChatHistory: this.state.getReasonerChatHistory(),
+      answer: this.state.getAnswer()!,
     });
-    logger.info(`Reviewer prompt: ${prompt}`);
 
     const { fullStream, toolCalls } = streamText({
       model: this.config.fastClient,
@@ -120,20 +121,7 @@ export class Reviewer {
     for await (const part of fullStream) {
       if (part.type === "text-delta") {
         text += part.textDelta;
-
-        if (this.config.onUpdate) {
-          // Always send the text delta with a parent ID for proper rendering
-          this.config.onUpdate({
-            type: "intermediateUpdate",
-            id: uuidv4(),
-            parentId: params.parentId,
-            step: {
-              type: "review",
-              timestamp: new Date(),
-              contentChunk: part.textDelta,
-            },
-          });
-        }
+        this.state.addStreamingStep("review", part.textDelta, params.parentId);
       }
     }
 

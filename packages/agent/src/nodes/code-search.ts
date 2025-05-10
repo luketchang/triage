@@ -1,7 +1,7 @@
 import { collectSourceCode, timer } from "@triage/common";
 import { LanguageModelV1 } from "ai";
 
-import { AgentStreamUpdate, CodeSearchStep } from "../types";
+import { AgentStreamUpdate, CodeSearchStep } from "../pipeline/state";
 
 export interface CodeSearchAgentResponse {
   newCodeSearchSteps: CodeSearchStep[];
