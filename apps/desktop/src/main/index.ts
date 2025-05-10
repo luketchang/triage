@@ -4,7 +4,7 @@ import { ObservabilityConfigStore } from "@triage/observability";
 import { app, BrowserWindow, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
-import { AppCfgSchema, AppConfigStore } from "../renderer/src/AppConfig.js";
+import { AppCfgSchema, AppConfigStore } from "../common/AppConfig.js";
 import { ElectronConfigStore } from "./ElectronConfigStore.js";
 import {
   cleanupAgentHandlers,

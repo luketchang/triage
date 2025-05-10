@@ -1,5 +1,9 @@
-import { AgentAssistantMessage, AgentChatMessage } from "@renderer/types/index.js";
-import { AgentConfigStore, invokeAgent } from "@triage/agent";
+import {
+  AssistantMessage as AgentAssistantMessage,
+  ChatMessage as AgentChatMessage,
+  AgentConfigStore,
+  invokeAgent,
+} from "@triage/agent";
 import { BrowserWindow, ipcMain } from "electron";
 import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../tmp-hardcode.js";
 
