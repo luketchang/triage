@@ -47,7 +47,7 @@ export async function main(): Promise<void> {
   // Validate that the model name is a valid Model from the enum
   if (!VALID_MODELS.includes(modelName)) {
     console.error(`Error: Invalid model name '${modelName}'`);
-    process.exit(1);
+    throw new Error(`Invalid model name '${modelName}'`);
   }
   const model = modelName as Model;
   const systemDescription = options.systemDescription;
@@ -55,13 +55,13 @@ export async function main(): Promise<void> {
   // Verify the directory exists
   if (!fs.existsSync(repoPath)) {
     console.error(`Error: Directory ${repoPath} does not exist`);
-    process.exit(1);
+    throw new Error(`Directory ${repoPath} does not exist`);
   }
 
   try {
-    console.log(`Analyzing codebase at: ${repoPath}`);
-    console.log(`Using model: ${model}`);
-    console.log(`Overview will be saved to: ${path.join(outputDir, "codebase-overview.md")}`);
+    console.info(`Analyzing codebase at: ${repoPath}`);
+    console.info(`Using model: ${model}`);
+    console.info(`Overview will be saved to: ${path.join(outputDir, "codebase-overview.md")}`);
 
     const llmClient = getModelWrapper(model, {
       openaiApiKey: process.env.OPENAI_API_KEY,
@@ -71,12 +71,15 @@ export async function main(): Promise<void> {
     const processor = new CodebaseProcessor(llmClient, repoPath, systemDescription, outputDir);
     await processor.process();
 
-    console.log("Overview generation complete!");
-    console.log(`Overview has been saved to ${path.join(outputDir, "codebase-overview.md")}`);
+    console.info("Overview generation complete!");
+    console.info(`Overview has been saved to ${path.join(outputDir, "codebase-overview.md")}`);
   } catch (error) {
     console.error("Error generating overview:", error);
-    process.exit(1);
+    throw error;
   }
 }
 
-main();
+main().catch((error) => {
+  console.error("Error in main:", error);
+  throw error;
+});
