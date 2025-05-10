@@ -22,12 +22,12 @@ export type PreProcessingResults = {
 };
 
 export class PreProcessing {
-  private readonly config: TriagePipelineConfig;
+  private config: Readonly<TriagePipelineConfig>;
   private state: PipelineStateManager;
   private logSearch: LogSearchAgent;
   // private codeSearch: CodeSearchAgent;
 
-  constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
+  constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
     this.logSearch = new LogSearchAgent(this.config, this.state);

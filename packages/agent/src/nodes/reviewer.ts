@@ -7,7 +7,7 @@ import { reviewDecisionToolSchema } from "../types";
 
 import { formatFacetValues } from "./utils";
 
-function formatLlmChatHistory(llmChatHistory: readonly CoreMessage[]): string {
+function formatLlmChatHistory(llmChatHistory: Readonly<CoreMessage[]>): string {
   return llmChatHistory
     .map((message) => {
       switch (message.role) {
@@ -45,7 +45,7 @@ function formatLlmChatHistory(llmChatHistory: readonly CoreMessage[]): string {
 function createPrompt(params: {
   query: string;
   logLabelsMap: Map<string, string[]>;
-  llmChatHistory: readonly CoreMessage[];
+  llmChatHistory: Readonly<CoreMessage[]>;
   answer: string;
 }): string {
   // Format facet maps
@@ -84,10 +84,10 @@ ${params.answer}
 }
 
 export class Reviewer {
-  private readonly config: TriagePipelineConfig;
+  private config: Readonly<TriagePipelineConfig>;
   private state: PipelineStateManager;
 
-  constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
+  constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
   }

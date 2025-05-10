@@ -9,10 +9,10 @@ import { PipelineStateManager } from "./state";
 import { TriagePipelineConfig } from ".";
 
 export class PostProcessing {
-  private readonly config: TriagePipelineConfig;
+  private config: Readonly<TriagePipelineConfig>;
   private state: PipelineStateManager;
 
-  constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
+  constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
   }

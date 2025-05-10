@@ -63,7 +63,7 @@ function createPrompt(params: {
 }
 
 export class LogPostprocessor {
-  private readonly config: TriagePipelineConfig;
+  private config: Readonly<TriagePipelineConfig>;
   private state: PipelineStateManager;
 
   constructor(config: TriagePipelineConfig, state: PipelineStateManager) {

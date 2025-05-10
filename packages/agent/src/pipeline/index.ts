@@ -30,10 +30,10 @@ export type TriagePipelineResponse = {
 };
 
 export class TriagePipeline {
-  private config: TriagePipelineConfig;
+  private config: Readonly<TriagePipelineConfig>;
   private state: PipelineStateManager;
 
-  constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
+  constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
   }

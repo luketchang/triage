@@ -169,7 +169,7 @@ class LogSearch {
 }
 
 export class LogSearchAgent {
-  private readonly config: TriagePipelineConfig;
+  private config: Readonly<TriagePipelineConfig>;
   private state: PipelineStateManager;
   private logSearch: LogSearch;
 
