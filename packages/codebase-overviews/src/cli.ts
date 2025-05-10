@@ -1,16 +1,21 @@
 #!/usr/bin/env node
 
-import { getModelWrapper, Model, VALID_MODELS } from "@triage/common";
-import { Command } from "commander";
 import fs from "fs";
 import path from "path";
+
+import { getModelWrapper, Model, VALID_MODELS } from "@triage/common";
+import { Command } from "commander";
+import dotenv from "dotenv";
+
 import { CodebaseProcessor } from "./processor";
+
+dotenv.config({ path: path.join(__dirname, "../../../.env") });
 
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), "output");
 /**
  * Main CLI function for generating codebase overviews
  */
-export async function main() {
+export async function main(): Promise<void> {
   const program = new Command();
 
   program

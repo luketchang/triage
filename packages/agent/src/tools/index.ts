@@ -8,7 +8,7 @@ import { z } from "zod";
 import { LogSearchAgent, LogSearchAgentResponse } from "../nodes/log-search";
 import { LogRequest, LogSearchInput } from "../types";
 
-type ToolCallID = {
+export type ToolCallID = {
   toolCallId: string;
 };
 
@@ -21,7 +21,15 @@ export const catRequestSchema = {
   parameters: catRequestParametersSchema,
 };
 
-type CatRequest = z.infer<typeof catRequestParametersSchema> & { type: "catRequest" };
+export type CatRequest = z.infer<typeof catRequestParametersSchema> & { type: "catRequest" };
+
+export const multiCatRequestParametersSchema = z.object({
+  paths: z
+    .array(catRequestParametersSchema)
+    .describe(
+      "Array of file paths to read. Each file path will be read via the cat terminal command."
+    ),
+});
 
 export type CatRequestResult = {
   content: string;
@@ -113,18 +121,24 @@ export class Toolbox {
     });
   }
 
-  async invokeToolCall(toolCall: LLMToolCall): Promise<LLMToolCallResult> {
-    switch (toolCall.type) {
-      case "logRequest":
-        return this.handleLogRequest(toolCall);
-      case "logSearchInput":
-        return this.handleLogSearchRequest(toolCall);
-      case "catRequest":
-        return this.handleCatRequest(toolCall);
-      case "grepRequest":
-        return this.handleGrepRequest(toolCall);
-      default:
-        throw new Error(`Unsupported tool call`);
+  async invokeToolCall(toolCall: LLMToolCall): Promise<LLMToolCallResult | string> {
+    try {
+      switch (toolCall.type) {
+        case "logRequest":
+          return this.handleLogRequest(toolCall);
+        case "logSearchInput":
+          return this.handleLogSearchRequest(toolCall);
+        case "catRequest":
+          return this.handleCatRequest(toolCall);
+        case "grepRequest":
+          return this.handleGrepRequest(toolCall);
+        default:
+          throw new Error(`Unsupported tool call`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Error invoking tool call ${toolCall.type}: ${errorMessage}`);
+      return `Error invoking tool call: ${errorMessage}`;
     }
   }
 }

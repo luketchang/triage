@@ -175,6 +175,7 @@ export class Reasoner {
         type: "toolCalls",
         toolCalls: [],
       };
+
       for (const toolCall of finalizedToolCalls) {
         // TODO: generate these tool calls in toolbox
         switch (toolCall.toolName) {

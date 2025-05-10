@@ -7,7 +7,7 @@ import { LogSearchAgent } from "../nodes/log-search";
 import { Reasoner } from "../nodes/reasoner";
 import { LLMToolCall, Toolbox } from "../tools";
 import { CatRequestResult } from "../tools/index";
-import { LogSearchStep, ReasoningStep } from "../types";
+import { ReasoningStep } from "../types";
 
 import { PreProcessingResults } from "./pre-processing";
 
@@ -59,6 +59,7 @@ export class Reasoning {
         switch (toolCall.type) {
           case "logSearchInput":
             this.state.logSearchSteps.push({
+              type: "logSearch",
               timestamp: new Date(),
               input: {
                 type: "logSearchInput",
@@ -69,7 +70,7 @@ export class Reasoning {
                 pageCursor: toolCall.pageCursor,
               },
               results: result as LogsWithPagination,
-            } as LogSearchStep);
+            });
             break;
           case "catRequest":
             this.state.codeSearchSteps.push({
@@ -109,6 +110,7 @@ export class Reasoning {
           });
         }
       }
+
       toolCalls = [];
 
       const reasoningResponse = await this.reasoner.invoke({
