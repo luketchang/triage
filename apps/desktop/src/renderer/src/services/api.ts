@@ -1,4 +1,4 @@
-import { AppConfig } from "@renderer/AppConfig.js";
+import { AppConfig } from "src/common/AppConfig.js";
 import mockElectronAPI from "../electronApiMock.js";
 import {
   AgentAssistantMessage,

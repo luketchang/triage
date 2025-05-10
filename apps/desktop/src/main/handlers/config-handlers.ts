@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { AppConfig, AppConfigStore } from "../../renderer/src/AppConfig.js";
+import { AppConfig, AppConfigStore } from "../../common/AppConfig.js";
 
 /**
  * Set up all IPC handlers related to configuration

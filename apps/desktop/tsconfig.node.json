@@ -1,24 +1,13 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-  "include": [
-    "electron.vite.config.*",
-    "src/main/**/*",
-    "src/preload/**/*",
-    // TODO: should we really be importing renderer code in main?
-    "src/renderer/src/**/*"
-  ],
+  "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*", "src/common/**/*"],
   "compilerOptions": {
     "composite": true,
     "types": ["electron-vite/node"],
     // Needed for electron-store imports: https://github.com/sindresorhus/electron-store/issues/276#issuecomment-2106343422
     "module": "NodeNext",
     "moduleResolution": "nodenext",
-    "moduleDetection": "force",
-    // TODO: should we really be importing renderer code in main?
-    "baseUrl": ".",
-    "paths": {
-      "@renderer/*": ["src/renderer/src/*"]
-    }
+    "moduleDetection": "force"
   },
   "references": [
     { "path": "../../packages/agent" },

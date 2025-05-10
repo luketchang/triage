@@ -289,7 +289,7 @@ const DatadogIntegration = () => {
   return (
     <SettingIntegrationCard
       title="Datadog"
-      description="Connect to Datadog to let your AI agent search logs."
+      description="Connect to let your AI agent search logs on Datadog."
       integrationConfig={appConfig?.datadog}
       integrationConfigKey="datadog"
       schema={DatadogCfgSchema}
@@ -323,7 +323,7 @@ const GrafanaIntegration = () => {
   return (
     <SettingIntegrationCard
       title="Grafana"
-      description="Connect to Grafana to let your AI agent search logs."
+      description="Connect to let your AI agent search logs on Grafana."
       integrationConfig={appConfig?.grafana}
       integrationConfigKey="grafana"
       schema={GrafanaCfgSchema}
@@ -503,7 +503,7 @@ function SettingsView() {
 
           <SectionHeader>Telemetry Access</SectionHeader>
           <DatadogIntegration />
-          <GrafanaIntegration />
+          {/* <GrafanaIntegration /> */}
         </div>
       </ScrollArea>
     </div>
