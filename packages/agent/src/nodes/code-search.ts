@@ -3,7 +3,14 @@ import { generateText, LanguageModelV1 } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { CatRequest, CatRequestResult, catRequestSchema, Toolbox, ToolCallID } from "../tools";
+import {
+  CatRequestResult,
+  catRequestSchema,
+  GrepRequestResult,
+  grepRequestSchema,
+  LLMToolCall,
+  Toolbox,
+} from "../tools";
 import { CodeSearchStep, TaskComplete } from "../types";
 
 import { formatCodeSearchSteps } from "./utils";
@@ -12,13 +19,7 @@ export interface CodeSearchAgentResponse {
   newCodeSearchSteps: CodeSearchStep[];
 }
 
-export type CatToolCall = ToolCallID & CatRequest;
-export type MultiCatToolCall = {
-  type: "multiCatRequest";
-  catToolCalls: CatToolCall[];
-};
-
-export type CodeSearchResponse = MultiCatToolCall | TaskComplete;
+export type CodeSearchResponse = LLMToolCall[] | TaskComplete;
 
 const MAX_ITERS = 12;
 
@@ -43,6 +44,7 @@ Given a user query about the issue/event, previously gathered code context, your
 
 ## Tips
 - You do not have to follow the given task exactly but you must iterate and find increasingly more relevant context that will eventually help the agent figure out the answer to the user query/issue/event.
+- If you're not sure where to start, use \`grepRequest\` to search for common keywords in the codebase. 
 - Bias towards making many \`grepRequest\` or \`catRequest\` tool calls at once to fetch code. If you are still early on in exploration, you should be making 5-8 \`grepRequest\` or \`catRequest\` calls per iteration. This makes for much more efficient and effective exploration.
 - Your goal is recall over precision so prioritize breadth of search and visiting any even slightly relevant/tangential files to the issue/event. You would rather over-explore and return many files that aren't directly relevant over under-exploring and missing key files.
 - Especially in microservices, the root cause may not be in the service that is failing, but in another service that is interacting with it. Explore code in other services other than the one displaying the symptom and explore very widely.
@@ -104,7 +106,7 @@ export class CodeSearch {
         prompt: prompt,
         tools: {
           catRequest: catRequestSchema,
-          // grepRequest: grepRequestSchema,
+          grepRequest: grepRequestSchema,
         },
         toolChoice: "auto",
       });
@@ -121,28 +123,30 @@ export class CodeSearch {
         };
       }
 
-      let output: MultiCatToolCall = {
-        type: "multiCatRequest",
-        catToolCalls: [],
-      };
+      let outputToolCalls: LLMToolCall[] = [];
       for (const toolCall of toolCalls) {
         if (toolCall.toolName === "catRequest") {
-          output.catToolCalls.push({
+          outputToolCalls.push({
             type: "catRequest",
             toolCallId: toolCall.toolCallId,
             path: toolCall.args.path,
           });
+        } else if (toolCall.toolName === "grepRequest") {
+          outputToolCalls.push({
+            type: "grepRequest",
+            toolCallId: toolCall.toolCallId,
+            pattern: toolCall.args.pattern,
+            file: toolCall.args.file,
+            flags: toolCall.args.flags,
+          });
         }
       }
 
-      return output;
+      return outputToolCalls;
     } catch (error) {
       // TODO: revisit this
       logger.error("Error generating code search output:", error);
-      return {
-        type: "multiCatRequest",
-        catToolCalls: [],
-      };
+      return [];
     }
   }
 }
@@ -175,8 +179,7 @@ export class CodeSearchAgent {
     const maxIters = params.maxIters || MAX_ITERS;
     let currentIter = 0;
 
-    let newCodeSearchSteps: CodeSearchStep[] = [];
-    while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
+    while ((!response || Array.isArray(response)) && currentIter < maxIters) {
       response = await this.codeSearch.invoke({
         query: params.query,
         codeRequest: params.codeRequest,
@@ -188,49 +191,66 @@ export class CodeSearchAgent {
 
       currentIter++;
 
-      if (response.type === "multiCatRequest") {
+      if (Array.isArray(response)) {
         logger.info(
-          `Searching filepaths: ${response.catToolCalls.map((toolCall) => toolCall.path).join("\n")}`
+          `Searching filepaths:\n${response.map((toolCall) => JSON.stringify(toolCall)).join("\n")}`
         );
 
         try {
           logger.info("Reading code...");
-          for (const toolCall of response.catToolCalls) {
+          for (const toolCall of response) {
             const result = await this.toolbox.invokeToolCall(toolCall);
 
+            // Error case, propagate error
+            let step: CodeSearchStep | null = null;
             if (typeof result === "string") {
-              newCodeSearchSteps.push({
-                type: "codeSearch",
-                timestamp: new Date(),
-                filepath: toolCall.path,
-                source: result,
-              });
-            } else {
-              const ctx = result as CatRequestResult;
-              const step: CodeSearchStep = {
-                type: "codeSearch",
-                timestamp: new Date(),
-                filepath: toolCall.path,
-                source: ctx.content,
-              };
-
-              if (this.config.onUpdate) {
-                this.config.onUpdate({
-                  type: "intermediateUpdate",
-                  id: uuidv4(),
-                  parentId: params.codeSearchId,
-                  step,
-                });
+              if (toolCall.type === "catRequest") {
+                step = {
+                  type: "codeSearch",
+                  timestamp: new Date(),
+                  filepath: toolCall.path,
+                  source: result,
+                };
+              } else if (toolCall.type === "grepRequest") {
+                step = {
+                  type: "codeSearch",
+                  timestamp: new Date(),
+                  filepath: toolCall.file,
+                  source: result,
+                };
               }
-
-              previousCodeSearchSteps.push(step);
-              newCodeSearchSteps.push(step);
+            } else {
+              if (toolCall.type === "catRequest") {
+                step = {
+                  type: "codeSearch",
+                  timestamp: new Date(),
+                  filepath: toolCall.path,
+                  source: (result as CatRequestResult).content,
+                };
+              } else if (toolCall.type === "grepRequest") {
+                step = {
+                  type: "codeSearch",
+                  timestamp: new Date(),
+                  filepath: toolCall.file,
+                  source: (result as GrepRequestResult).content,
+                };
+              }
             }
-          }
 
+            if (this.config.onUpdate) {
+              this.config.onUpdate({
+                type: "intermediateUpdate",
+                id: uuidv4(),
+                parentId: params.codeSearchId,
+                step: step!,
+              });
+            }
+
+            previousCodeSearchSteps.push(step!);
+          }
+        } catch (error) {
           // const lastCodeSearchResultsFormatted = formatCodeSearchSteps(newCodeSearchSteps);
           // logger.info(`Code search results:\n${lastCodeSearchResultsFormatted}`);
-        } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error(`Error executing code search: ${errorMessage}`);
           // TODO: what to do here?
@@ -240,14 +260,14 @@ export class CodeSearchAgent {
       }
     }
 
-    if (currentIter >= maxIters && (!response || response.type !== "taskComplete")) {
+    if (currentIter >= maxIters && (!response || Array.isArray(response))) {
       logger.info(
         `Code search reached maximum iterations (${maxIters}). Completing search forcibly.`
       );
     }
 
     return {
-      newCodeSearchSteps,
+      newCodeSearchSteps: previousCodeSearchSteps,
     };
   }
 }

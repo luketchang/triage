@@ -38,7 +38,11 @@ export type CatRequestResult = {
 const grepRequestParametersSchema = z.object({
   pattern: z.string().describe("Regular expression pattern to search for"),
   file: z.string().describe("File or directory to search in"),
-  flags: z.string().describe("Flags to pass to grep"),
+  flags: z
+    .string()
+    .describe(
+      "One or more single-letter grep flags combined without spaces (e.g., 'rni' for -r -n -i). Do not include dashes (e.g., write 'rni', not '-rni' or '--rni')."
+    ),
 });
 
 export const grepRequestSchema = {
@@ -47,9 +51,9 @@ export const grepRequestSchema = {
   parameters: grepRequestParametersSchema,
 };
 
-type GrepRequest = z.infer<typeof grepRequestParametersSchema> & { type: "grepRequest" };
+export type GrepRequest = z.infer<typeof grepRequestParametersSchema> & { type: "grepRequest" };
 
-type GrepRequestResult = {
+export type GrepRequestResult = {
   content: string;
 };
 
