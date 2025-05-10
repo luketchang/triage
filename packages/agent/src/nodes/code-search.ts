@@ -43,9 +43,11 @@ Given a user query about the issue/event, previously gathered code context, your
 
 ## Tips
 - You do not have to follow the given task exactly but you must iterate and find increasingly more relevant context that will eventually help the agent figure out the answer to the user query/issue/event.
-- Bias towards making many \`grepRequest\` and \`catRequest\` tool calls at once to fetch code. If you are still early on in exploration, you should be making 5-8 grep calls per iteration. This makes for much more efficient and effective exploration.
-- Look at the previous code context to see what code you have already fetched and what queries you've tried. Use this knowledge to reason about other potential sources of the issue/event and to inform your next queries as you to keep finding information until the issue/event is resolved.
+- Bias towards making many \`grepRequest\` or \`catRequest\` tool calls at once to fetch code. If you are still early on in exploration, you should be making 5-8 \`grepRequest\` or \`catRequest\` calls per iteration. This makes for much more efficient and effective exploration.
 - Your goal is recall over precision so prioritize breadth of search and visiting any even slightly relevant/tangential files to the issue/event. You would rather over-explore and return many files that aren't directly relevant over under-exploring and missing key files.
+- Especially in microservices, the root cause may not be in the service that is failing, but in another service that is interacting with it. Explore code in other services other than the one displaying the symptom and explore very widely.
+- Look at the previous code context to see what code you have already fetched and what queries you've tried. Use this knowledge to reason about other potential sources of the issue/event and to inform your next queries as you to keep finding information until the issue/event is resolved.
+- Output your reasoning for each tool call outside the tool calls and explain where you are explorign and where you will likely explore next.
 
 ## Rules:
 - Look at the context previously gathered to see what code you have already fetched and what queries you've tried, DO NOT repeat past queries and fetch the same files more than once.
@@ -102,12 +104,16 @@ export class CodeSearch {
         prompt: prompt,
         tools: {
           catRequest: catRequestSchema,
+          // grepRequest: grepRequestSchema,
         },
         toolChoice: "auto",
       });
 
+      logger.info(`Code search output:\n${text}`);
+
       // End loop if no tool calls returned, similar to Reasoner
       if (!toolCalls || toolCalls.length === 0) {
+        logger.info("No more tool calls returned");
         return {
           type: "taskComplete",
           reasoning: text,
@@ -184,7 +190,7 @@ export class CodeSearchAgent {
 
       if (response.type === "multiCatRequest") {
         logger.info(
-          `Searching filepaths: ${response.catToolCalls.map((toolCall) => toolCall.path).join(", ")}`
+          `Searching filepaths: ${response.catToolCalls.map((toolCall) => toolCall.path).join("\n")}`
         );
 
         try {
@@ -217,12 +223,13 @@ export class CodeSearchAgent {
                 });
               }
 
+              previousCodeSearchSteps.push(step);
               newCodeSearchSteps.push(step);
             }
           }
 
-          const lastCodeSearchResultsFormatted = formatCodeSearchSteps(newCodeSearchSteps);
-          logger.info(`Code search results:\n${lastCodeSearchResultsFormatted}`);
+          // const lastCodeSearchResultsFormatted = formatCodeSearchSteps(newCodeSearchSteps);
+          // logger.info(`Code search results:\n${lastCodeSearchResultsFormatted}`);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error(`Error executing code search: ${errorMessage}`);
