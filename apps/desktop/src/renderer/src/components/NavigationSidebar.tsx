@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
 import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
-import { Button } from "./ui/button.jsx";
+import { Button } from "./ui/Button.js";
 import { ScrollArea } from "./ui/ScrollArea.jsx";
 
 // Import stores
