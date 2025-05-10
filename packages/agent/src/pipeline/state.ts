@@ -165,7 +165,6 @@ export class PipelineStateManager {
       toolCallId: toolCall.toolCallId,
       toolName: toolCall.type,
       result: "",
-      // TODO: detect errors and set isError
     };
     if ("error" in result) {
       toolResult.isError = true;
