@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import CellView from "../components/CellView.js";
 import FactsSidebar from "../components/FactsSidebar.js";
-import { Button } from "../components/ui/Button.js";
+import { Button } from "../components/ui/button.jsx";
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -11,8 +11,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/AlertDialog.js";
-import { Button } from "../components/ui/Button.jsx";
-import { Input } from "../components/ui/Input.jsx";
+import { Button } from "../components/ui/button.jsx";
+import { Input } from "../components/ui/input.jsx";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
 import { useAppConfig } from "../context/useAppConfig.js";
 
