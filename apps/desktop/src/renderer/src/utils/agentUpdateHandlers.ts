@@ -96,6 +96,17 @@ export function handleIntermediateUpdate(
         };
         break;
       }
+      case "cat":
+        assertStageType(stage, "codeSearch");
+        updatedStage = {
+          ...stage,
+          retrievedCode: [
+            ...stage.retrievedCode,
+            { filepath: update.step.path, code: update.step.source },
+          ],
+        };
+        break;
+      // TODO: grep
       case "reasoning": {
         assertStageType(stage, "reasoning");
         updatedStage = {
