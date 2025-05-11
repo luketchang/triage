@@ -18,7 +18,12 @@ export interface CodeSearchAgentResponse {
   newCodeSearchSteps: CodeSearchStep[];
 }
 
-export type CodeSearchResponse = LLMToolCall[] | TaskComplete;
+export interface CodeSearchToolCalls {
+  type: "codeSearchToolCalls";
+  toolCalls: LLMToolCall[];
+}
+
+export type CodeSearchResponse = CodeSearchToolCalls | TaskComplete;
 
 const MAX_ITERS = 12;
 
@@ -149,11 +154,17 @@ class CodeSearch {
         }
       }
 
-      return outputToolCalls;
+      return {
+        type: "codeSearchToolCalls",
+        toolCalls: outputToolCalls,
+      };
     } catch (error) {
       // TODO: revisit this
       logger.error("Error generating code search output:", error);
-      return [];
+      return {
+        type: "codeSearchToolCalls",
+        toolCalls: [],
+      };
     }
   }
 }
@@ -180,7 +191,7 @@ export class CodeSearchAgent {
     let currentIter = 0;
     let newCodeSearchSteps: CodeSearchStep[] = [];
 
-    while ((!response || Array.isArray(response)) && currentIter < maxIters) {
+    while ((!response || response.type === "codeSearchToolCalls") && currentIter < maxIters) {
       // Get the latest code search steps from state
       const catSteps = this.state.getCatSteps();
       const grepSteps = this.state.getGrepSteps();
@@ -200,14 +211,14 @@ export class CodeSearchAgent {
 
       currentIter++;
 
-      if (Array.isArray(response)) {
+      if (response.type === "codeSearchToolCalls") {
         logger.info(
-          `Searching filepaths:\n${response.map((toolCall) => JSON.stringify(toolCall)).join("\n")}`
+          `Searching filepaths:\n${response.toolCalls.map((toolCall) => JSON.stringify(toolCall)).join("\n")}`
         );
 
         try {
           logger.info("Making tool calls...");
-          for (const toolCall of response) {
+          for (const toolCall of response.toolCalls) {
             let step: CodeSearchStep | null = null;
             try {
               let result: CatRequestResult | GrepRequestResult | LLMToolCallError;
@@ -297,7 +308,7 @@ export class CodeSearchAgent {
       }
     }
 
-    if (currentIter >= maxIters && (!response || Array.isArray(response))) {
+    if (currentIter >= maxIters && (!response || response.type !== "codeSearchToolCalls")) {
       logger.info(
         `Code search reached maximum iterations (${maxIters}). Completing search forcibly.`
       );
