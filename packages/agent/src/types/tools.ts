@@ -76,7 +76,7 @@ export const logRequestToolSchema = {
   description:
     "A directive to search for/explore specific logs. This should be a specific request for logs related to specific events, services, etc.",
   parameters: logRequestSchema,
-};
+};  
 
 export interface ReasoningRequest {
   type: "reasoningRequest";
@@ -234,20 +234,20 @@ export const traceSearchInputToolSchema = {
   parameters: traceSearchInputSchema,
 };
 
-const catRequestParametersSchema = z.object({
+const catRequestSchema = z.object({
   path: z.string().describe("File path to read"),
 });
 
-export const catRequestSchema = {
+export const catRequestToolSchema = {
   description: "Read a file and return the contents. Works exactly like cat in the terminal.",
-  parameters: catRequestParametersSchema,
+  parameters: catRequestSchema,
 };
 
-export type CatRequest = z.infer<typeof catRequestParametersSchema> & { type: "catRequest" };
+export type CatRequest = z.infer<typeof catRequestSchema> & { type: "catRequest" };
 
-export const multiCatRequestParametersSchema = z.object({
+export const multiCatRequestSchema = z.object({
   paths: z
-    .array(catRequestParametersSchema)
+    .array(catRequestSchema)
     .describe(
       "Array of file paths to read. Each file path will be read via the cat terminal command."
     ),
@@ -258,7 +258,7 @@ export type CatRequestResult = {
   content: string;
 };
 
-const grepRequestParametersSchema = z.object({
+const grepRequestSchema = z.object({
   pattern: z.string().describe("Regular expression pattern to search for"),
   file: z.string().describe("File or directory to search in"),
   flags: z
@@ -268,13 +268,13 @@ const grepRequestParametersSchema = z.object({
     ),
 });
 
-export const grepRequestSchema = {
+export const grepRequestToolSchema = {
   description:
     "Search for a pattern in a file or directory. Works exactly like grep in the terminal.",
-  parameters: grepRequestParametersSchema,
+  parameters: grepRequestSchema,
 };
 
-export type GrepRequest = z.infer<typeof grepRequestParametersSchema> & { type: "grepRequest" };
+export type GrepRequest = z.infer<typeof grepRequestSchema> & { type: "grepRequest" };
 
 export type GrepRequestResult = {
   type: "grepRequestResult";

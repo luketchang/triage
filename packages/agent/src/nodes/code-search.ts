@@ -7,9 +7,9 @@ import { CodeSearchStep, PipelineStateManager } from "../pipeline/state";
 import { LLMToolCall } from "../tools";
 import {
   CatRequestResult,
-  catRequestSchema,
+  catRequestToolSchema,
   GrepRequestResult,
-  grepRequestSchema,
+  grepRequestToolSchema,
   TaskComplete,
 } from "../types";
 
@@ -105,8 +105,8 @@ export class CodeSearch {
         system: SYSTEM_PROMPT,
         prompt: prompt,
         tools: {
-          catRequest: catRequestSchema,
-          grepRequest: grepRequestSchema,
+          catRequest: catRequestToolSchema,
+          grepRequest: grepRequestToolSchema,
         },
         toolChoice: "auto",
       });

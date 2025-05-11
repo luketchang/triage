@@ -4,8 +4,8 @@ import { streamText } from "ai";
 import { TriagePipelineConfig } from "../pipeline";
 import { PipelineStateManager, ReasoningStep } from "../pipeline/state";
 import {
-  catRequestSchema,
-  grepRequestSchema,
+  catRequestToolSchema,
+  grepRequestToolSchema,
   logRequestToolSchema,
   RequestToolCalls,
 } from "../types";
@@ -123,8 +123,8 @@ export class Reasoner {
       maxSteps: params.maxSteps || 1,
       tools: {
         logRequest: logRequestToolSchema,
-        catRequest: catRequestSchema,
-        grepRequest: grepRequestSchema,
+        catRequest: catRequestToolSchema,
+        grepRequest: grepRequestToolSchema,
       },
       toolChoice: "auto",
     });
