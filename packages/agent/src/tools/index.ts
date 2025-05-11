@@ -1,7 +1,9 @@
+import { CodeSearchAgentResponse } from "../nodes/code-search";
 import { LogSearchAgentResponse } from "../nodes/log-search";
 import {
   CatRequest,
   CatRequestResult,
+  CodeRequest,
   GrepRequest,
   GrepRequestResult,
   LogRequest,
@@ -13,17 +15,13 @@ type ToolCallID = {
   toolCallId: string;
 };
 
-// TODO: remove LogRequest, wrong level of abstraction
-export type LLMToolCall = ToolCallID & (LogRequest | LogSearchInput | CatRequest | GrepRequest);
+export type LLMToolCall = ToolCallID & (LogSearchInput | CatRequest | GrepRequest);
 
-export type SubAgentCall = ToolCallID & LogRequest;
+export type SubAgentCall = ToolCallID & (LogRequest | CodeRequest);
 
-// TODO: remove LogSearchAgentResponse, wrong level of abstraction
-export type LLMToolCallResult =
-  | LogSearchAgentResponse
-  | LogSearchResult
-  | CatRequestResult
-  | GrepRequestResult;
+export type LLMToolCallResult = LogSearchResult | CatRequestResult | GrepRequestResult;
+
+export type SubAgentCallResult = LogSearchAgentResponse | CodeSearchAgentResponse;
 
 export type LLMToolCallError = { error: string };
 

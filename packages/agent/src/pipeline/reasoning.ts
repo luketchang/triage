@@ -1,11 +1,10 @@
 import { logger } from "@triage/common";
 import { v4 as uuidv4 } from "uuid";
 
-import { handleCatRequest, handleGrepRequest } from "../code";
+import { CodeSearchAgent } from "../nodes/code-search";
 import { LogSearchAgent } from "../nodes/log-search";
 import { Reasoner } from "../nodes/reasoner";
 import { ReasoningStep } from "../pipeline/state";
-import { LLMToolCallResult } from "../tools";
 
 import { PipelineStateManager } from "./state";
 
@@ -16,12 +15,14 @@ export class Reasoning {
   private state: PipelineStateManager;
   private reasoner: Reasoner;
   private logSearchAgent: LogSearchAgent;
+  private codeSearchAgent: CodeSearchAgent;
 
   constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
     this.reasoner = new Reasoner(this.config, this.state);
     this.logSearchAgent = new LogSearchAgent(this.config, this.state);
+    this.codeSearchAgent = new CodeSearchAgent(this.config, this.state);
   }
 
   async run(): Promise<void> {
@@ -47,22 +48,22 @@ export class Reasoning {
       });
       logger.info(`Reasoning response: ${JSON.stringify(reasoningResponse)}`);
 
-      if (reasoningResponse.type === "toolCalls") {
-        for (const toolCall of reasoningResponse.toolCalls) {
-          let result: LLMToolCallResult;
-          if (toolCall.type === "logRequest") {
-            result = await this.logSearchAgent.invoke({
+      if (reasoningResponse.type === "subAgentCalls") {
+        for (const subAgentCall of reasoningResponse.subAgentCalls) {
+          if (subAgentCall.type === "logRequest") {
+            // TODO: fine to just use intermediate steps?
+            await this.logSearchAgent.invoke({
               logSearchId: uuidv4(),
-              logRequest: toolCall.request,
+              logRequest: subAgentCall.request,
             });
-          } else if (toolCall.type === "catRequest") {
-            result = await handleCatRequest(toolCall);
-          } else if (toolCall.type === "grepRequest") {
-            result = await handleGrepRequest(toolCall);
+          } else if (subAgentCall.type === "codeRequest") {
+            await this.codeSearchAgent.invoke({
+              codeSearchId: uuidv4(),
+              codeRequest: subAgentCall.request,
+            });
           } else {
-            throw new Error(`Unknown tool call type: ${toolCall.type}`);
+            throw new Error(`Unknown tool call type`);
           }
-          this.state.recordToolCall(toolCall, result, reasoningId);
         }
       } else {
         this.state.recordReasonerAssistantMessage(reasoningResponse.content);
