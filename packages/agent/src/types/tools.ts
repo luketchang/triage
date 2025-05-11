@@ -1,6 +1,6 @@
 import { z, infer as zInfer } from "zod";
 
-import { LLMToolCall } from "../tools";
+import { LLMToolCall, SubAgentCall } from "../tools";
 
 const BASIC_REASONING_DESCRIPTION =
   "Intermediate reasoning where you can explain what you see from the given information and what information you need next (if any).";
@@ -96,6 +96,11 @@ export interface CodePostprocessingRequest {
 export type RequestToolCalls = {
   type: "toolCalls";
   toolCalls: Array<LLMToolCall>;
+};
+
+export type RequestSubAgentCalls = {
+  type: "subAgentCalls";
+  subAgentCalls: Array<SubAgentCall>;
 };
 
 export const rootCauseAnalysisSchema = z.object({
@@ -226,20 +231,49 @@ export const traceSearchInputToolSchema = {
   parameters: traceSearchInputSchema,
 };
 
-export const codeSearchInputSchema = z.object({
-  directoryPath: z.string().describe("The directory to search in"),
-  reasoning: z
-    .string()
+const catRequestParametersSchema = z.object({
+  path: z.string().describe("File path to read"),
+});
+
+export const catRequestSchema = {
+  description: "Read a file and return the contents. Works exactly like cat in the terminal.",
+  parameters: catRequestParametersSchema,
+};
+
+export type CatRequest = z.infer<typeof catRequestParametersSchema> & { type: "catRequest" };
+
+export const multiCatRequestParametersSchema = z.object({
+  paths: z
+    .array(catRequestParametersSchema)
     .describe(
-      "Objectively outline what you observe in the code so far as a numbered list. Then enumerate what other services or areas of the code you may want to explore next if you are missing context."
+      "Array of file paths to read. Each file path will be read via the cat terminal command."
     ),
 });
 
-export type CodeSearchInput = zInfer<typeof codeSearchInputSchema> & { type: "codeSearchInput" };
+export type CatRequestResult = {
+  content: string;
+};
 
-export const codeSearchInputToolSchema = {
-  description: "Input parameters for searching code.",
-  parameters: codeSearchInputSchema,
+const grepRequestParametersSchema = z.object({
+  pattern: z.string().describe("Regular expression pattern to search for"),
+  file: z.string().describe("File or directory to search in"),
+  flags: z
+    .string()
+    .describe(
+      "One or more single-letter grep flags combined without spaces (e.g., 'rni' for -r -n -i). Do not include dashes (e.g., write 'rni', not '-rni' or '--rni')."
+    ),
+});
+
+export const grepRequestSchema = {
+  description:
+    "Search for a pattern in a file or directory. Works exactly like grep in the terminal.",
+  parameters: grepRequestParametersSchema,
+};
+
+export type GrepRequest = z.infer<typeof grepRequestParametersSchema> & { type: "grepRequest" };
+
+export type GrepRequestResult = {
+  content: string;
 };
 
 // The intermediate type the LLM outputs, later used to augment original query

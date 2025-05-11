@@ -2,51 +2,27 @@ import { exec } from "child_process";
 
 import { logger } from "@triage/common";
 import { LogsWithPagination, ObservabilityPlatform } from "@triage/observability";
-import { v4 as uuidv4 } from "uuid";
-import { z } from "zod";
 
-import { LogSearchAgent, LogSearchAgentResponse } from "../nodes/log-search";
-import { LogRequest, LogSearchInput } from "../types";
+import { LogSearchAgentResponse } from "../nodes/log-search";
+import {
+  CatRequest,
+  CatRequestResult,
+  GrepRequest,
+  GrepRequestResult,
+  LogRequest,
+  LogSearchInput,
+} from "../types";
 
 type ToolCallID = {
   toolCallId: string;
 };
 
-const catRequestParametersSchema = z.object({
-  path: z.string().describe("File path to read"),
-});
-
-export const catRequestSchema = {
-  description: "Read a file and return the contents. Works exactly like cat in the terminal.",
-  parameters: catRequestParametersSchema,
-};
-
-type CatRequest = z.infer<typeof catRequestParametersSchema> & { type: "catRequest" };
-
-export type CatRequestResult = {
-  content: string;
-};
-
-const grepRequestParametersSchema = z.object({
-  pattern: z.string().describe("Regular expression pattern to search for"),
-  file: z.string().describe("File or directory to search in"),
-  flags: z.string().describe("Flags to pass to grep"),
-});
-
-export const grepRequestSchema = {
-  description:
-    "Search for a pattern in a file or directory. Works exactly like grep in the terminal.",
-  parameters: grepRequestParametersSchema,
-};
-
-type GrepRequest = z.infer<typeof grepRequestParametersSchema> & { type: "grepRequest" };
-
-type GrepRequestResult = {
-  content: string;
-};
-
+// TODO: remove LogRequest, wrong level of abstraction
 export type LLMToolCall = ToolCallID & (LogRequest | LogSearchInput | CatRequest | GrepRequest);
 
+export type SubAgentCall = ToolCallID & LogRequest;
+
+// TODO: remove LogSearchAgentResponse, wrong level of abstraction
 export type LLMToolCallResult =
   | LogSearchAgentResponse
   | LogsWithPagination
@@ -59,19 +35,9 @@ export type LLMToolCallResultOrError = LLMToolCallResult | LLMToolCallError;
 
 export class Toolbox {
   private observabilityApi: ObservabilityPlatform;
-  private logSearchAgent: LogSearchAgent;
 
-  constructor(observabilityApi: ObservabilityPlatform, logSearchAgent: LogSearchAgent) {
+  constructor(observabilityApi: ObservabilityPlatform) {
     this.observabilityApi = observabilityApi;
-    this.logSearchAgent = logSearchAgent;
-  }
-
-  private handleLogRequest(toolCall: LogRequest): Promise<LogSearchAgentResponse> {
-    // TODO: Add logLabelsMap to tool call. Not used yet.
-    return this.logSearchAgent.invoke({
-      logSearchId: uuidv4(),
-      logRequest: toolCall.request,
-    });
   }
 
   private handleLogSearchRequest(toolCall: LogSearchInput): Promise<LogsWithPagination> {
@@ -117,8 +83,6 @@ export class Toolbox {
 
   async invokeToolCall(toolCall: LLMToolCall): Promise<LLMToolCallResultOrError> {
     switch (toolCall.type) {
-      case "logRequest":
-        return this.handleLogRequest(toolCall);
       case "logSearchInput":
         return this.handleLogSearchRequest(toolCall);
       case "catRequest":
