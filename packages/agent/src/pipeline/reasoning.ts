@@ -55,7 +55,6 @@ export class Reasoning {
               logSearchId: uuidv4(),
               logRequest: toolCall.request,
             });
-            this.state.recordToolCall(toolCall, result, reasoningId);
           } else if (toolCall.type === "catRequest") {
             result = await handleCatRequest(toolCall);
           } else if (toolCall.type === "grepRequest") {
