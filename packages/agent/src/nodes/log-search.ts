@@ -216,38 +216,27 @@ export class LogSearchAgent {
           `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`
         );
 
+        logger.info("Fetching logs from observability platform...");
+        const logContext = await handleLogSearchRequest(
+          response,
+          this.config.observabilityPlatform
+        );
+
+        // TODO: centralize the conversion from tool result + toolcall to step
         let step: LogSearchStep;
-        try {
-          logger.info("Fetching logs from observability platform...");
-          const logContext = await handleLogSearchRequest(
-            response,
-            this.config.observabilityPlatform
-          );
-
-          if (logContext.type === "error") {
-            step = {
-              type: "logSearch",
-              timestamp: new Date(),
-              input: response,
-              results: logContext.error,
-            };
-          } else {
-            step = {
-              type: "logSearch",
-              timestamp: new Date(),
-              input: response,
-              results: logContext,
-            };
-          }
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          logger.error(`Error executing log search: ${errorMessage}`);
-
+        if (logContext.type === "error") {
           step = {
             type: "logSearch",
             timestamp: new Date(),
             input: response,
-            results: errorMessage,
+            results: logContext.error,
+          };
+        } else {
+          step = {
+            type: "logSearch",
+            timestamp: new Date(),
+            input: response,
+            results: logContext,
           };
         }
 
