@@ -148,7 +148,10 @@ export const logSearchInputSchema = z.object({
     ),
 });
 
-export type LogSearchResult = LogsWithPagination & { type: "logSearchResult" };
+export type LogSearchResult = LogsWithPagination & {
+  type: "result";
+  toolCallType: "logSearchInput";
+};
 
 // Full LogSearchInput type with reasoning - used when interfacing with LLMs
 export type LogSearchInput = zInfer<typeof logSearchInputSchema> & { type: "logSearchInput" };
@@ -255,7 +258,8 @@ export const multiCatRequestSchema = z.object({
 
 // TODO: remove in place of CatStep
 export type CatRequestResult = {
-  type: "catRequestResult";
+  type: "result";
+  toolCallType: "catRequest";
   content: string;
 };
 
@@ -279,7 +283,8 @@ export type GrepRequest = z.infer<typeof grepRequestSchema> & { type: "grepReque
 
 // TODO: remove in place of GrepStep
 export type GrepRequestResult = {
-  type: "grepRequestResult";
+  type: "result";
+  toolCallType: "grepRequest";
   content: string;
 };
 

@@ -5,6 +5,7 @@ import { ObservabilityPlatform } from "@triage/observability";
 
 import { CodeSearchAgentResponse } from "../nodes/code-search";
 import { LogSearchAgentResponse } from "../nodes/log-search";
+// import { AgentStep } from "../pipeline/state";
 import {
   CatRequest,
   CatRequestResult,
@@ -29,7 +30,7 @@ export type LLMToolCallResult = LogSearchResult | CatRequestResult | GrepRequest
 
 export type SubAgentCallResult = LogSearchAgentResponse | CodeSearchAgentResponse;
 
-export type LLMToolCallError = { type: "error"; error: string };
+export type LLMToolCallError = { type: "error"; toolCallType: LLMToolCall["type"]; error: string };
 
 export type LLMToolCallResultOrError = LLMToolCallResult | LLMToolCallError;
 
@@ -40,9 +41,9 @@ export async function handleCatRequest(
     exec(`cat ${toolCall.path}`, (error, stdout, stderr) => {
       if (error) {
         logger.error(`Error reading file ${toolCall.path}: ${error} \n ${stderr}`);
-        resolve({ type: "error", error: error.message });
+        resolve({ type: "error", toolCallType: "catRequest", error: error.message });
       } else {
-        resolve({ content: stdout, type: "catRequestResult" });
+        resolve({ type: "result", content: stdout, toolCallType: "catRequest" });
       }
     });
   });
@@ -59,10 +60,10 @@ export async function handleGrepRequest(
         // error.code === 1 means "no ma  tches"
         if (error && typeof error.code === "number" && error.code !== 1) {
           logger.error(`Error grepping file ${toolCall.file}: ${error} \n ${stderr}`);
-          resolve({ type: "error", error: error.message });
+          resolve({ type: "error", toolCallType: "grepRequest", error: error.message });
         } else {
           // If error.code === 1, stdout will be empty (no matches), which is fine.
-          resolve({ content: "No matches found", type: "grepRequestResult" });
+          resolve({ type: "result", content: "No matches found", toolCallType: "grepRequest" });
         }
       }
     );
@@ -80,12 +81,13 @@ export async function handleLogSearchRequest(
       end: toolCall.end,
       limit: toolCall.limit,
     });
-    return { type: "logSearchResult", ...logContext };
+    return { type: "result", toolCallType: "logSearchInput", ...logContext };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error(`Error searching logs: ${err}`);
     return {
       type: "error",
+      toolCallType: "logSearchInput",
       error: err.message,
     };
   }
