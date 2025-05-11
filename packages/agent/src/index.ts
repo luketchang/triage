@@ -183,7 +183,6 @@ async function main(): Promise<void> {
             process.stdout.write(`${update.step.contentChunk}\n`);
             break;
           default:
-            process.stdout.write(`${JSON.stringify(update.step, null, 2)}\n`);
             break;
         }
       }
