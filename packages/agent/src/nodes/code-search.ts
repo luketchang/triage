@@ -212,6 +212,7 @@ export class CodeSearchAgent {
                 throw new Error(`Unknown tool call type: ${toolCall.type}`);
               }
 
+              // TODO: fix this double type checking
               if (toolCall.type === "catRequest" && result.type === "catRequestResult") {
                 step = {
                   type: "cat",

@@ -15,7 +15,7 @@ export function handleHighLevelUpdate(
     let newStage: AgentStage;
 
     // Create the appropriate type of step based on stepType
-    switch (update.stepType) {
+    switch (update.stage) {
       case "logSearch":
         newStage = {
           id: update.id,
@@ -52,7 +52,7 @@ export function handleHighLevelUpdate(
         };
         break;
       default:
-        console.warn(`Unknown step type: ${update.stepType}`);
+        console.warn(`Unknown step type: ${update.stage}`);
         return assistantMessage; // Return unchanged message if we don't recognize the step type
     }
 

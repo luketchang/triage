@@ -172,7 +172,7 @@ async function main(): Promise<void> {
     endDate,
     onUpdate: (update) => {
       if (update.type === "highLevelUpdate") {
-        process.stdout.write(`\nHighLevelUpdate: ${update.stepType}\n`);
+        process.stdout.write(`\nHighLevelUpdate: ${update.stage}\n`);
       } else if (update.type === "intermediateUpdate") {
         switch (update.step.type) {
           case "reasoning":

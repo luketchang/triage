@@ -75,6 +75,14 @@ export type AgentStep =
   | CodePostprocessingStep
   | ToolCallStep;
 
+export type AgentStage =
+  | "logSearch"
+  | "codeSearch"
+  | "reasoning"
+  | "review"
+  | "logPostprocessing"
+  | "codePostprocessing";
+
 type StreamingPartial<T> = Omit<T, "content"> & { contentChunk: string };
 
 export type AgentStreamingStep =
@@ -91,7 +99,7 @@ export type AgentStreamUpdate = HighLevelUpdate | IntermediateUpdate;
 
 export type HighLevelUpdate = {
   type: "highLevelUpdate";
-  stepType: AgentStep["type"];
+  stage: AgentStage;
   id: string;
 };
 
@@ -161,10 +169,10 @@ export class PipelineStateManager {
     }
   }
 
-  recordHighLevelStep(stepType: AgentStep["type"], id?: string): void {
+  recordHighLevelStep(stage: AgentStage, id?: string): void {
     this.onUpdate({
       type: "highLevelUpdate",
-      stepType,
+      stage,
       id: id || uuidv4(),
     });
   }
