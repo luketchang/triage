@@ -1,4 +1,4 @@
-import { ChatMessage as AgentChatMessage, AgentStep, LogSearchStep } from "@triage/agent";
+import { ChatMessage as AgentChatMessage, AgentStep } from "@triage/agent";
 import {
   AgentAssistantMessage,
   AgentStage,
@@ -53,6 +53,14 @@ export function convertAgentStepsToStages(steps?: AgentStep[] | null): AgentStag
             queries: [],
           };
           break;
+        case "cat":
+          currentStage = {
+            type: "codeSearch",
+            id: generateId(),
+            retrievedCode: [],
+          };
+          break;
+        // TODO: add grep
         case "reasoning":
           currentStage = {
             type: "reasoning",
@@ -96,8 +104,16 @@ export function convertAgentStepsToStages(steps?: AgentStep[] | null): AgentStag
           assertStageType(currentStage, "logSearch");
           // For logSearch, we collect multiple steps into the queries array
           currentStage.queries.push({
-            input: (step as LogSearchStep).input,
-            results: (step as LogSearchStep).results,
+            input: step.input,
+            results: step.results,
+          });
+          break;
+        case "cat":
+          assertStageType(currentStage, "codeSearch");
+          // For codeSearch, we collect multiple steps into the retrievedCode array
+          currentStage.retrievedCode.push({
+            filepath: step.path,
+            code: step.source,
           });
           break;
         case "reasoning":
@@ -150,6 +166,17 @@ export function convertAgentStagesToSteps(stages?: AgentStage[] | null): AgentSt
             timestamp: new Date(),
             input: query.input,
             results: query.results,
+          });
+        });
+        break;
+      case "codeSearch":
+        // For codeSearch, each retrieved code in the stage becomes a separate codeSearch step
+        stage.retrievedCode.forEach((code) => {
+          steps.push({
+            type: "cat",
+            timestamp: new Date(),
+            path: code.filepath,
+            source: code.code,
           });
         });
         break;
