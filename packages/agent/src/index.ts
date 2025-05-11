@@ -130,7 +130,8 @@ async function main(): Promise<void> {
 
   const repoPath = "/Users/luketchang/code/ticketing";
   const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
-  const bugPath = "/Users/luketchang/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
+  const bugPath =
+    "/Users/luketchang/code/triage/repos/ticketing/bugs/order-cancelled-publish-bug.txt";
 
   const bug = await fs.readFile(bugPath, "utf-8");
 
