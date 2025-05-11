@@ -1,10 +1,9 @@
 import { logger, timer } from "@triage/common";
 import { generateText, LanguageModelV1 } from "ai";
 
-import { handleCatRequest, handleGrepRequest } from "../code";
 import { TriagePipelineConfig } from "../pipeline";
 import { CodeSearchStep, LogSearchStep, PipelineStateManager } from "../pipeline/state";
-import { LLMToolCall } from "../tools";
+import { handleCatRequest, handleGrepRequest, LLMToolCall, LLMToolCallError } from "../tools";
 import {
   CatRequestResult,
   catRequestToolSchema,
@@ -211,7 +210,7 @@ export class CodeSearchAgent {
           for (const toolCall of response) {
             let step: CodeSearchStep | null = null;
             try {
-              let result: CatRequestResult | GrepRequestResult;
+              let result: CatRequestResult | GrepRequestResult | LLMToolCallError;
               if (toolCall.type === "catRequest") {
                 result = await handleCatRequest(toolCall);
               } else if (toolCall.type === "grepRequest") {
@@ -221,7 +220,23 @@ export class CodeSearchAgent {
               }
 
               // TODO: fix this double type checking
-              if (toolCall.type === "catRequest" && result.type === "catRequestResult") {
+              if (toolCall.type === "catRequest" && result.type === "error") {
+                step = {
+                  type: "cat",
+                  timestamp: new Date(),
+                  path: toolCall.path,
+                  source: result.error,
+                };
+              } else if (toolCall.type === "grepRequest" && result.type === "error") {
+                step = {
+                  type: "grep",
+                  timestamp: new Date(),
+                  pattern: toolCall.pattern,
+                  file: toolCall.file,
+                  flags: toolCall.flags,
+                  output: result.error,
+                };
+              } else if (toolCall.type === "catRequest" && result.type === "catRequestResult") {
                 step = {
                   type: "cat",
                   timestamp: new Date(),

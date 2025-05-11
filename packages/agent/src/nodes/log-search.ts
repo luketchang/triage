@@ -4,6 +4,7 @@ import { generateText, LanguageModelV1 } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
 import { LogSearchStep, PipelineStateManager } from "../pipeline/state";
+import { handleLogSearchRequest } from "../tools";
 import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types";
 
 import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "./utils";
@@ -215,40 +216,47 @@ export class LogSearchAgent {
           `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`
         );
 
+        let step: LogSearchStep;
         try {
           logger.info("Fetching logs from observability platform...");
-          const logContext = await this.config.observabilityPlatform.fetchLogs({
-            query: response.query,
-            start: response.start,
-            end: response.end,
-            limit: response.limit,
-          });
+          const logContext = await handleLogSearchRequest(
+            response,
+            this.config.observabilityPlatform
+          );
 
-          const step: LogSearchStep = {
-            type: "logSearch",
-            timestamp: new Date(),
-            input: response,
-            results: logContext,
-          };
-
-          this.state.addIntermediateStep(step, params.logSearchId);
-          newLogSearchSteps.push(step);
-          const lastLogSearchResultsFormatted = formatLogSearchSteps([step]);
-          logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
+          if (logContext.type === "error") {
+            step = {
+              type: "logSearch",
+              timestamp: new Date(),
+              input: response,
+              results: logContext.error,
+            };
+          } else {
+            step = {
+              type: "logSearch",
+              timestamp: new Date(),
+              input: response,
+              results: logContext,
+            };
+          }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error(`Error executing log search: ${errorMessage}`);
 
-          // Store error message in log history (without reasoning)
-          if (response) {
-            lastLogSearchStep = {
-              type: "logSearch",
-              input: response,
-              results: errorMessage,
-              timestamp: new Date(),
-            };
-          }
+          step = {
+            type: "logSearch",
+            timestamp: new Date(),
+            input: response,
+            results: errorMessage,
+          };
         }
+
+        newLogSearchSteps.push(step);
+        lastLogSearchStep = step;
+        this.state.addIntermediateStep(step, params.logSearchId);
+
+        const lastLogSearchResultsFormatted = formatLogSearchSteps([step]);
+        logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
       } else {
         logger.info("Log search complete");
       }
