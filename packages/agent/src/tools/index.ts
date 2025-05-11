@@ -1,7 +1,7 @@
 import { exec } from "child_process";
 
 import { logger } from "@triage/common";
-import { LogsWithPagination, ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityPlatform } from "@triage/observability";
 
 import { LogSearchAgentResponse } from "../nodes/log-search";
 import {
@@ -11,6 +11,7 @@ import {
   GrepRequestResult,
   LogRequest,
   LogSearchInput,
+  LogSearchResult,
 } from "../types";
 
 type ToolCallID = {
@@ -25,7 +26,7 @@ export type SubAgentCall = ToolCallID & LogRequest;
 // TODO: remove LogSearchAgentResponse, wrong level of abstraction
 export type LLMToolCallResult =
   | LogSearchAgentResponse
-  | LogsWithPagination
+  | LogSearchResult
   | CatRequestResult
   | GrepRequestResult;
 
@@ -40,17 +41,33 @@ export class Toolbox {
     this.observabilityApi = observabilityApi;
   }
 
-  private handleLogSearchRequest(toolCall: LogSearchInput): Promise<LogsWithPagination> {
-    return this.observabilityApi.fetchLogs({
-      query: toolCall.query,
-      start: toolCall.start,
-      end: toolCall.end,
-      limit: toolCall.limit,
-      pageCursor: toolCall.pageCursor || undefined,
-    });
+  private async handleLogSearchRequest(
+    toolCall: LogSearchInput
+  ): Promise<LogSearchResult | LLMToolCallError> {
+    try {
+      const logs = await this.observabilityApi.fetchLogs({
+        query: toolCall.query,
+        start: toolCall.start,
+        end: toolCall.end,
+        limit: toolCall.limit,
+        pageCursor: toolCall.pageCursor || undefined,
+      });
+
+      return {
+        type: "logSearchResult",
+        ...logs,
+      };
+    } catch (error) {
+      logger.error(`Error fetching logs: ${error}`);
+      return {
+        error: `${error}`,
+      };
+    }
   }
 
-  private handleCatRequest(toolCall: CatRequest): Promise<CatRequestResult | LLMToolCallError> {
+  private async handleCatRequest(
+    toolCall: CatRequest
+  ): Promise<CatRequestResult | LLMToolCallError> {
     return new Promise((resolve) => {
       exec(`cat ${toolCall.path}`, (error, stdout, stderr) => {
         if (error) {
@@ -59,13 +76,18 @@ export class Toolbox {
             error: `${error}`,
           });
         } else {
-          resolve({ content: stdout });
+          resolve({
+            type: "catRequestResult",
+            content: stdout,
+          });
         }
       });
     });
   }
 
-  private handleGrepRequest(toolCall: GrepRequest): Promise<GrepRequestResult> {
+  private async handleGrepRequest(
+    toolCall: GrepRequest
+  ): Promise<GrepRequestResult | LLMToolCallError> {
     return new Promise((resolve, reject) => {
       exec(
         `grep ${toolCall.flags ? `-${toolCall.flags}` : ""} ${toolCall.pattern} ${toolCall.file}`,
@@ -74,7 +96,10 @@ export class Toolbox {
             logger.error(`Error grepping file ${toolCall.file}: ${error} \n ${stderr}`);
             reject(error);
           } else {
-            resolve({ content: stdout });
+            resolve({
+              type: "grepRequestResult",
+              content: stdout,
+            });
           }
         }
       );

@@ -9,6 +9,7 @@ import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types
 import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "./utils";
 
 export interface LogSearchAgentResponse {
+  type: "logSearchAgentResponse";
   newLogSearchSteps: LogSearchStep[];
 }
 
@@ -260,6 +261,7 @@ export class LogSearchAgent {
     }
 
     return {
+      type: "logSearchAgentResponse",
       newLogSearchSteps,
     };
   }

@@ -1,3 +1,4 @@
+import { LogsWithPagination } from "@triage/observability";
 import { z, infer as zInfer } from "zod";
 
 import { LLMToolCall, SubAgentCall } from "../tools";
@@ -147,6 +148,8 @@ export const logSearchInputSchema = z.object({
     ),
 });
 
+export type LogSearchResult = LogsWithPagination & { type: "logSearchResult" };
+
 // Full LogSearchInput type with reasoning - used when interfacing with LLMs
 export type LogSearchInput = zInfer<typeof logSearchInputSchema> & { type: "logSearchInput" };
 
@@ -251,6 +254,7 @@ export const multiCatRequestParametersSchema = z.object({
 });
 
 export type CatRequestResult = {
+  type: "catRequestResult";
   content: string;
 };
 
@@ -273,6 +277,7 @@ export const grepRequestSchema = {
 export type GrepRequest = z.infer<typeof grepRequestParametersSchema> & { type: "grepRequest" };
 
 export type GrepRequestResult = {
+  type: "grepRequestResult";
   content: string;
 };
 

@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { LogSearchAgent } from "../nodes/log-search";
 import { Reasoner } from "../nodes/reasoner";
 import { ReasoningStep } from "../pipeline/state";
-import { LogRequest } from "../types";
+import { Toolbox } from "../tools";
 
 import { PipelineStateManager } from "./state";
 
@@ -15,12 +15,14 @@ export class Reasoning {
   private state: PipelineStateManager;
   private reasoner: Reasoner;
   private logSearchAgent: LogSearchAgent;
+  private toolbox: Toolbox;
 
   constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
     this.reasoner = new Reasoner(this.config, this.state);
     this.logSearchAgent = new LogSearchAgent(this.config, this.state);
+    this.toolbox = new Toolbox(this.config.observabilityPlatform);
   }
 
   async run(): Promise<void> {
@@ -48,12 +50,16 @@ export class Reasoning {
 
       if (reasoningResponse.type === "toolCalls") {
         for (const toolCall of reasoningResponse.toolCalls) {
-          const result = await this.logSearchAgent.invoke({
-            logSearchId: uuidv4(),
-            logRequest: (toolCall as LogRequest).request,
-          });
-          // TODO: record tool call again
-          this.state.recordToolCall(toolCall, result, reasoningId);
+          if (toolCall.type === "logRequest") {
+            const result = await this.logSearchAgent.invoke({
+              logSearchId: uuidv4(),
+              logRequest: toolCall.request,
+            });
+            this.state.recordToolCall(toolCall, result, reasoningId);
+          } else {
+            const result = await this.toolbox.invokeToolCall(toolCall);
+            this.state.recordToolCall(toolCall, result, reasoningId);
+          }
         }
       } else {
         this.state.recordReasonerAssistantMessage(reasoningResponse.content);
