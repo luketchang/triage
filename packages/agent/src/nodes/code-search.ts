@@ -39,6 +39,7 @@ function createCodeSearchPrompt(params: {
 
   const formattedPreviousCodeSearchSteps = formatCodeSearchSteps(params.previousCodeSearchSteps);
 
+  // TODO: split out last code search steps into its own section
   return `
 Given a user query about the issue/event, previously gathered code context, your task is to fetch additional code that will help you achieve the following: ${params.codeRequest}. You will do so by outputting a one or more \`grepRequest\` or \`catRequest\` tool calls to read code from codebase. If you feel you have enough code for the objective and have thoroughly explored the relevant tangential files, do not output a tool call (no tool calls indicate you are done). The objective you're helping with will usually be a subtask of answering the user query.
 
@@ -80,7 +81,7 @@ ${params.codebaseOverview}
 `;
 }
 
-export class CodeSearch {
+class CodeSearch {
   private llmClient: LanguageModelV1;
 
   constructor(llmClient: LanguageModelV1) {
@@ -119,7 +120,7 @@ export class CodeSearch {
         return {
           type: "taskComplete",
           reasoning: text,
-          summary: "Log search task complete",
+          summary: "Code search task complete",
         };
       }
 
@@ -152,41 +153,42 @@ export class CodeSearch {
 }
 
 export class CodeSearchAgent {
+  private config: Readonly<TriagePipelineConfig>;
+  private state: PipelineStateManager;
   private codeSearch: CodeSearch;
 
-  constructor(
-    private readonly config: TriagePipelineConfig,
-    private readonly state: PipelineStateManager
-  ) {
-    this.codeSearch = new CodeSearch(this.config.fastClient);
+  constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
+    this.config = config;
     this.state = state;
+    this.codeSearch = new CodeSearch(this.config.fastClient);
   }
 
   @timer
   async invoke(params: {
     codeSearchId: string;
-    query: string;
     codeRequest: string;
-    fileTree: string;
-    previousCodeSearchSteps: CodeSearchStep[];
     maxIters?: number;
-    codebaseOverview: string;
   }): Promise<CodeSearchAgentResponse> {
-    // Variable to store the previous query result (initially undefined)
-    let previousCodeSearchSteps = params.previousCodeSearchSteps;
-
     let response: CodeSearchResponse | null = null;
     const maxIters = params.maxIters || MAX_ITERS;
     let currentIter = 0;
+    let newCodeSearchSteps: CodeSearchStep[] = [];
 
     while ((!response || Array.isArray(response)) && currentIter < maxIters) {
+      // Get the latest code search steps from state
+      const catSteps = this.state.getCatSteps();
+      const grepSteps = this.state.getGrepSteps();
+      const previousCodeSearchSteps: CodeSearchStep[] = [...catSteps, ...grepSteps].sort(
+        (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+      );
+
       response = await this.codeSearch.invoke({
-        query: params.query,
+        query: this.config.query,
         codeRequest: params.codeRequest,
-        fileTree: params.fileTree,
+        fileTree: this.config.fileTree,
         previousCodeSearchSteps,
         remainingQueries: maxIters - currentIter,
-        codebaseOverview: params.codebaseOverview,
+        codebaseOverview: this.config.codebaseOverview,
       });
 
       currentIter++;
@@ -209,7 +211,6 @@ export class CodeSearchAgent {
               } else {
                 throw new Error(`Unknown tool call type: ${toolCall.type}`);
               }
-              ``;
 
               if (toolCall.type === "catRequest" && result.type === "catRequestResult") {
                 step = {
@@ -232,6 +233,7 @@ export class CodeSearchAgent {
               }
 
               this.state.addIntermediateStep(step, params.codeSearchId);
+              newCodeSearchSteps.push(step);
             } catch (error) {
               const errorMessage = error instanceof Error ? error.message : String(error);
               if (toolCall.type === "catRequest") {
@@ -254,7 +256,8 @@ export class CodeSearchAgent {
                 throw new Error(`Unknown tool call type: ${toolCall.type}`);
               }
 
-              previousCodeSearchSteps.push(step);
+              this.state.addIntermediateStep(step, params.codeSearchId);
+              newCodeSearchSteps.push(step);
             }
           }
         } catch (error) {
@@ -274,7 +277,7 @@ export class CodeSearchAgent {
     }
 
     return {
-      newCodeSearchSteps: previousCodeSearchSteps,
+      newCodeSearchSteps,
     };
   }
 }

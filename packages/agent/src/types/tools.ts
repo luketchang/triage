@@ -76,7 +76,7 @@ export const logRequestToolSchema = {
   description:
     "A directive to search for/explore specific logs. This should be a specific request for logs related to specific events, services, etc.",
   parameters: logRequestSchema,
-};  
+};
 
 export interface ReasoningRequest {
   type: "reasoningRequest";
@@ -253,6 +253,7 @@ export const multiCatRequestSchema = z.object({
     ),
 });
 
+// TODO: remove in place of CatStep
 export type CatRequestResult = {
   type: "catRequestResult";
   content: string;
@@ -276,6 +277,7 @@ export const grepRequestToolSchema = {
 
 export type GrepRequest = z.infer<typeof grepRequestSchema> & { type: "grepRequest" };
 
+// TODO: remove in place of GrepStep
 export type GrepRequestResult = {
   type: "grepRequestResult";
   content: string;
