@@ -51,7 +51,6 @@ export class Reasoning {
       if (reasoningResponse.type === "subAgentCalls") {
         for (const subAgentCall of reasoningResponse.subAgentCalls) {
           if (subAgentCall.type === "logRequest") {
-            // TODO: fine to just use intermediate steps?
             await this.logSearchAgent.invoke({
               logSearchId: uuidv4(),
               logRequest: subAgentCall.request,
