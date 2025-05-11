@@ -4,7 +4,13 @@ import { v4 as uuidv4 } from "uuid";
 
 import { LLMToolCall, LLMToolCallResultOrError } from "../tools";
 import { ChatMessage } from "../types/message";
-import { CodePostprocessingFact, LogPostprocessingFact, LogSearchInputCore } from "../types/tools";
+import {
+  CatRequest,
+  CodePostprocessingFact,
+  GrepRequest,
+  LogPostprocessingFact,
+  LogSearchInputCore,
+} from "../types/tools";
 
 export interface BaseAgentStep {
   timestamp: Date;
@@ -19,14 +25,17 @@ export interface LogSearchStep extends BaseAgentStep, LogSearchPair {
   type: "logSearch";
 }
 
-export interface CodeSearchPair {
-  filepath: string;
+export interface CatStep extends BaseAgentStep, Omit<CatRequest, "type"> {
+  type: "cat";
   source: string;
 }
 
-export interface CodeSearchStep extends BaseAgentStep, CodeSearchPair {
-  type: "codeSearch";
+export interface GrepStep extends BaseAgentStep, Omit<GrepRequest, "type"> {
+  type: "grep";
+  output: string;
 }
+
+export type CodeSearchStep = CatStep | GrepStep;
 
 export interface ReasoningStep extends BaseAgentStep {
   type: "reasoning";
@@ -57,7 +66,8 @@ export interface ToolCallStep extends BaseAgentStep {
 
 export type AgentStep =
   | LogSearchStep
-  | CodeSearchStep
+  | CatStep
+  | GrepStep
   | ReasoningStep
   | ReviewStep
   | LogPostprocessingStep
@@ -68,7 +78,8 @@ type StreamingPartial<T> = Omit<T, "content"> & { contentChunk: string };
 
 export type AgentStreamingStep =
   | LogSearchStep
-  | CodeSearchStep
+  | CatStep
+  | GrepStep
   | StreamingPartial<ReasoningStep>
   | StreamingPartial<ReviewStep>
   | LogPostprocessingStep
@@ -207,8 +218,12 @@ export class PipelineStateManager {
     return this.steps.filter((step) => step.type === "logSearch");
   }
 
-  getCodeSearchSteps(): CodeSearchStep[] {
-    return this.steps.filter((step) => step.type === "codeSearch");
+  getCatSteps(): CatStep[] {
+    return this.steps.filter((step) => step.type === "cat");
+  }
+
+  getGrepSteps(): GrepStep[] {
+    return this.steps.filter((step) => step.type === "grep");
   }
 
   getReasonerChatHistory(): CoreMessage[] {

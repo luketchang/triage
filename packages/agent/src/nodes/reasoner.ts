@@ -10,7 +10,7 @@ import {
   RequestToolCalls,
 } from "../types";
 
-import { formatCodeSearchSteps, formatFacetValues, formatLogSearchSteps } from "./utils";
+import { formatCatSteps, formatFacetValues, formatLogSearchSteps } from "./utils";
 type ReasoningResponse = ReasoningStep | RequestToolCalls;
 
 export const createPrompt = ({
@@ -89,7 +89,7 @@ export class Reasoner {
   async invoke(params: { parentId: string; maxSteps?: number }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${this.config.query}`);
     const logSearchSteps = this.state.getLogSearchSteps();
-    const codeSearchSteps = this.state.getCodeSearchSteps();
+    const catSteps = this.state.getCatSteps();
 
     if (this.state.getReasonerChatHistory().length == 0) {
       const prompt = createPrompt({
@@ -107,7 +107,7 @@ export class Reasoner {
       });
       this.state.addReasonerChatMessage({
         role: "system",
-        content: `<code_context>\n${formatCodeSearchSteps(codeSearchSteps)}\n</code_context>`,
+        content: `<code_context>\n${formatCatSteps(catSteps)}\n</code_context>`,
       });
       this.state.addReasonerChatMessage({
         role: "user",

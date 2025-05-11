@@ -1,6 +1,6 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
 
-import { AgentStep, ChatMessage, CodeSearchStep, LogSearchStep } from "..";
+import { AgentStep, CatStep, ChatMessage, GrepStep, LogSearchStep } from "..";
 import { LogSearchInput, SpanSearchInput } from "../types/tools";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
@@ -139,13 +139,11 @@ export function formatSingleLogSearchStep(step: LogSearchStep): string {
   return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
 }
 
-export function formatSingleCodeSearchStep(
-  step: CodeSearchStep,
-  options: {
-    lineNumbers?: boolean;
-  } = {}
+export function formatSingleCatStep(
+  step: CatStep,
+  options: { lineNumbers?: boolean } = {}
 ): string {
-  const header = `File: ${step.filepath}`;
+  const header = `File: ${step.path}`;
   const separator = "-".repeat(header.length);
 
   let source = step.source;
@@ -163,6 +161,25 @@ export function formatSingleCodeSearchStep(
   return `${separator}\n${header}\n${separator}\n${source}\n`;
 }
 
+export function formatSingleGrepStep(step: GrepStep): string {
+  // Format input arguments on one line
+  const inputArgs = `grep ${step.pattern} ${step.file}${step.flags ? ` -${step.flags}` : ""}`;
+  const header = `File: ${step.file}`;
+  const separator = "-".repeat(Math.max(header.length, inputArgs.length));
+
+  let source = step.output;
+  const lines = source.split("\n");
+  const maxLineNumberWidth = String(lines.length).length;
+  source = lines
+    .map((line, index) => {
+      const lineNumber = String(index + 1).padStart(maxLineNumberWidth, " ");
+      return `${lineNumber} | ${line}`;
+    })
+    .join("\n");
+
+  return `${separator}\n${inputArgs}\n${header}\n${separator}\n${source}\n`;
+}
+
 export function formatLogSearchSteps(steps: LogSearchStep[]): string {
   return steps
     .map((step) => formatSingleLogSearchStep(step))
@@ -170,14 +187,12 @@ export function formatLogSearchSteps(steps: LogSearchStep[]): string {
     .join("\n\n");
 }
 
-export function formatCodeSearchSteps(
-  steps: CodeSearchStep[],
-  options: { lineNumbers?: boolean } = {}
-): string {
-  return steps
-    .map((step) => formatSingleCodeSearchStep(step, options))
-    .filter(Boolean)
-    .join("\n\n");
+export function formatCatSteps(steps: CatStep[], options?: { lineNumbers?: boolean }): string {
+  return steps.map((step) => formatSingleCatStep(step, options)).join("\n\n");
+}
+
+export function formatGrepSteps(steps: GrepStep[]): string {
+  return steps.map((step) => formatSingleGrepStep(step)).join("\n\n");
 }
 
 export function formatAgentSteps(steps: AgentStep[]): string {
@@ -186,8 +201,10 @@ export function formatAgentSteps(steps: AgentStep[]): string {
     .map((step) => {
       if (step.type === "logSearch") {
         return formatSingleLogSearchStep(step);
-      } else if (step.type === "codeSearch") {
-        return formatSingleCodeSearchStep(step);
+      } else if (step.type === "cat") {
+        return formatSingleCatStep(step);
+      } else if (step.type === "grep") {
+        return formatSingleGrepStep(step);
       }
       return "";
     })

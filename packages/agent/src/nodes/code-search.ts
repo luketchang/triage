@@ -1,7 +1,7 @@
 import { collectSourceCode, timer } from "@triage/common";
 import { LanguageModelV1 } from "ai";
 
-import { AgentStreamUpdate, CodeSearchStep } from "../pipeline/state";
+import { AgentStreamUpdate, CatStep, CodeSearchStep } from "../pipeline/state";
 
 export interface CodeSearchAgentResponse {
   newCodeSearchSteps: CodeSearchStep[];
@@ -17,15 +17,15 @@ export class CodeSearchAgent {
     codeRequest: string;
     repoPath: string;
     codeSearchId: string;
-    codeSearchSteps: CodeSearchStep[];
+    codeSearchSteps: CatStep[];
     onUpdate?: (update: AgentStreamUpdate) => void;
   }): Promise<CodeSearchAgentResponse> {
     const codeMap = collectSourceCode(params.repoPath);
-    const newCodeSearchSteps: CodeSearchStep[] = Array.from(codeMap.entries()).map(
+    const newCodeSearchSteps: CatStep[] = Array.from(codeMap.entries()).map(
       ([filepath, source]) => ({
-        type: "codeSearch",
+        type: "cat",
         timestamp: new Date(),
-        filepath,
+        path: filepath,
         source,
       })
     );
