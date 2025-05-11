@@ -91,15 +91,6 @@ export class Reasoner {
     const logSearchSteps = this.state.getLogSearchSteps();
     const catSteps = this.state.getCatSteps();
 
-    this.state.addReasonerChatMessage({
-      role: "assistant",
-      content: `<log_context>\n${formatLogSearchSteps(logSearchSteps)}\n</log_context>`,
-    });
-    this.state.addReasonerChatMessage({
-      role: "assistant",
-      content: `<code_context>\n${formatCatSteps(catSteps)}\n</code_context>`,
-    });
-
     // Inject system prompt into history
     let chatHistory = this.state.getReasonerChatHistory();
     const prompt = createPrompt({
@@ -112,6 +103,14 @@ export class Reasoner {
         content: prompt,
       },
       ...chatHistory,
+      {
+        role: "assistant",
+        content: `<log_context>\n${formatLogSearchSteps(logSearchSteps)}\n</log_context>`,
+      },
+      {
+        role: "assistant",
+        content: `<code_context>\n${formatCatSteps(catSteps)}\n</code_context>`,
+      },
     ];
 
     logger.info(`Calling LLM with ${chatHistory.length} messages and maxSteps: ${params.maxSteps}`);
