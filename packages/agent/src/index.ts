@@ -1,3 +1,4 @@
+import "dotenv/config";
 import fs from "fs/promises";
 
 import { GeminiModel, getModelWrapper, loadFileTree, logger } from "@triage/common";
@@ -127,9 +128,9 @@ async function main(): Promise<void> {
   const startDate = new Date("2025-05-02T02:00:00Z");
   const endDate = new Date("2025-05-02T03:00:00Z");
 
-  const repoPath = "/Users/rob/code/ticketing";
-  const overviewPath = "/Users/rob/code/triage/repos/ticketing/codebase-analysis.md";
-  const bugPath = "/Users/rob/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
+  const repoPath = "/Users/luketchang/code/ticketing";
+  const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
+  const bugPath = "/Users/luketchang/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
 
   const bug = await fs.readFile(bugPath, "utf-8");
 

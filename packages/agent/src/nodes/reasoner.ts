@@ -91,39 +91,36 @@ export class Reasoner {
     const logSearchSteps = this.state.getLogSearchSteps();
     const catSteps = this.state.getCatSteps();
 
-    if (this.state.getReasonerChatHistory().length == 0) {
-      const prompt = createPrompt({
-        ...params,
-        ...this.config,
-      });
+    this.state.addReasonerChatMessage({
+      role: "assistant",
+      content: `<log_context>\n${formatLogSearchSteps(logSearchSteps)}\n</log_context>`,
+    });
+    this.state.addReasonerChatMessage({
+      role: "assistant",
+      content: `<code_context>\n${formatCatSteps(catSteps)}\n</code_context>`,
+    });
 
-      this.state.addReasonerChatMessage({
+    // Inject system prompt into history
+    let chatHistory = this.state.getReasonerChatHistory();
+    const prompt = createPrompt({
+      ...params,
+      ...this.config,
+    });
+    chatHistory = [
+      {
         role: "system",
         content: prompt,
-      });
-      this.state.addReasonerChatMessage({
-        role: "system",
-        content: `<log_context>\n${formatLogSearchSteps(logSearchSteps)}\n</log_context>`,
-      });
-      this.state.addReasonerChatMessage({
-        role: "system",
-        content: `<code_context>\n${formatCatSteps(catSteps)}\n</code_context>`,
-      });
-      this.state.addReasonerChatMessage({
-        role: "user",
-        content: this.config.query,
-      });
-    }
-    const reasonerChatHistory = this.state.getReasonerChatHistory();
+      },
+      ...chatHistory,
+    ];
 
-    logger.info(
-      `Calling LLM with ${reasonerChatHistory.length} messages and maxSteps: ${params.maxSteps}`
-    );
+    logger.info(`Calling LLM with ${chatHistory.length} messages and maxSteps: ${params.maxSteps}`);
+    logger.info(`Reasoner whole prompt:\n${JSON.stringify(chatHistory, null, 2)}\n`);
 
     // Stream reasoning response and collect text and tool calls
     const { toolCalls, fullStream } = streamText({
       model: this.config.reasoningClient,
-      messages: reasonerChatHistory,
+      messages: chatHistory,
       maxSteps: params.maxSteps || 1,
       tools: {
         logRequest: logRequestToolSchema,
