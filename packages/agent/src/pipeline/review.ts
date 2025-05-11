@@ -1,8 +1,9 @@
 import { logger } from "@triage/common";
-import { CoreMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
 import { Reviewer } from "../nodes/reviewer";
+
+import { PipelineStateManager } from "./state";
 
 import { TriagePipelineConfig } from ".";
 
@@ -12,40 +13,23 @@ type ReviewResult = {
 };
 
 export class Review {
-  private readonly config: TriagePipelineConfig;
+  private config: Readonly<TriagePipelineConfig>;
+  private state: PipelineStateManager;
 
-  constructor(config: TriagePipelineConfig) {
+  constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
     this.config = config;
+    this.state = state;
   }
 
-  async run(llmChatHistory: readonly CoreMessage[], answer: string): Promise<ReviewResult> {
+  async run(): Promise<ReviewResult> {
     logger.info("\n\n" + "=".repeat(25) + " Review " + "=".repeat(25));
 
     const reviewId = uuidv4();
 
-    if (this.config.onUpdate) {
-      this.config.onUpdate({ type: "highLevelUpdate", id: reviewId, stepType: "review" });
-    }
+    this.state.recordHighLevelStep("review", reviewId);
 
-    const reviewer = new Reviewer(this.config);
-    const reviewResults = await reviewer.invoke({
-      llmChatHistory,
-      answer,
-      parentId: reviewId,
-    });
-
-    if (this.config.onUpdate) {
-      this.config.onUpdate({
-        type: "intermediateUpdate",
-        id: uuidv4(),
-        parentId: reviewId,
-        step: {
-          type: "review",
-          timestamp: new Date(),
-          contentChunk: reviewResults.content,
-        },
-      });
-    }
+    const reviewer = new Reviewer(this.config, this.state);
+    const reviewResults = await reviewer.invoke({ parentId: reviewId });
 
     return {
       accepted: reviewResults.accepted ?? false,

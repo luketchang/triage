@@ -1,13 +1,11 @@
 import { logger, timer } from "@triage/common";
-import { CoreMessage, streamText } from "ai";
-import { v4 as uuidv4 } from "uuid";
+import { streamText } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
+import { PipelineStateManager, ReasoningStep } from "../pipeline/state";
 import { catRequestSchema, grepRequestSchema } from "../tools";
-import { logRequestToolSchema, ReasoningStep, RequestToolCalls } from "../types";
+import { logRequestToolSchema, RequestToolCalls } from "../types";
 
-import { CodeSearchAgentResponse } from "./code-search";
-import { LogSearchAgentResponse } from "./log-search";
 import { formatCodeSearchSteps, formatFacetValues, formatLogSearchSteps } from "./utils";
 type ReasoningResponse = ReasoningStep | RequestToolCalls;
 
@@ -75,54 +73,53 @@ ${formatFacetValues(logLabelsMap)}
 };
 
 export class Reasoner {
-  constructor(
-    private readonly config: TriagePipelineConfig,
-    private readonly logContext: LogSearchAgentResponse,
-    private readonly codeContext: CodeSearchAgentResponse
-  ) {}
+  private config: Readonly<TriagePipelineConfig>;
+  private state: PipelineStateManager;
+
+  constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
+    this.config = config;
+    this.state = state;
+  }
 
   @timer
-  async invoke(params: {
-    llmChatHistory: CoreMessage[];
-    parentId: string;
-    maxSteps?: number;
-  }): Promise<ReasoningResponse> {
-    logger.info(
-      `Reasoning about query: ${this.config.query} with ${params.llmChatHistory.length} messages`
-    );
+  async invoke(params: { parentId: string; maxSteps?: number }): Promise<ReasoningResponse> {
+    logger.info(`Reasoning about query: ${this.config.query}`);
+    const logSearchSteps = this.state.getLogSearchSteps();
+    const codeSearchSteps = this.state.getCodeSearchSteps();
 
-    if (params.llmChatHistory.length == 0) {
+    if (this.state.getReasonerChatHistory().length == 0) {
       const prompt = createPrompt({
         ...params,
         ...this.config,
       });
 
-      params.llmChatHistory.push({
+      this.state.addReasonerChatMessage({
         role: "system",
         content: prompt,
       });
-      params.llmChatHistory.push({
+      this.state.addReasonerChatMessage({
         role: "system",
-        content: `<log_context>\n${formatLogSearchSteps(this.logContext.newLogSearchSteps)}\n</log_context>`,
+        content: `<log_context>\n${formatLogSearchSteps(logSearchSteps)}\n</log_context>`,
       });
-      params.llmChatHistory.push({
+      this.state.addReasonerChatMessage({
         role: "system",
-        content: `<code_context>\n${formatCodeSearchSteps(this.codeContext.newCodeSearchSteps)}\n</code_context>`,
+        content: `<code_context>\n${formatCodeSearchSteps(codeSearchSteps)}\n</code_context>`,
       });
-      params.llmChatHistory.push({
+      this.state.addReasonerChatMessage({
         role: "user",
         content: this.config.query,
       });
     }
+    const reasonerChatHistory = this.state.getReasonerChatHistory();
 
     logger.info(
-      `Calling LLM with ${params.llmChatHistory.length} messages and maxSteps: ${params.maxSteps}`
+      `Calling LLM with ${reasonerChatHistory.length} messages and maxSteps: ${params.maxSteps}`
     );
 
     // Stream reasoning response and collect text and tool calls
     const { toolCalls, fullStream } = streamText({
       model: this.config.reasoningClient,
-      messages: params.llmChatHistory,
+      messages: reasonerChatHistory,
       maxSteps: params.maxSteps || 1,
       tools: {
         logRequest: logRequestToolSchema,
@@ -138,18 +135,7 @@ export class Reasoner {
         if (part.type === "text-delta") {
           text += part.textDelta;
           // If this is root cause analysis (no tool calls), stream text as it's generated
-          if (this.config.onUpdate) {
-            this.config.onUpdate({
-              type: "intermediateUpdate",
-              id: uuidv4(),
-              parentId: params.parentId,
-              step: {
-                type: "reasoning",
-                timestamp: new Date(),
-                contentChunk: part.textDelta,
-              },
-            });
-          }
+          this.state.addStreamingStep("reasoning", part.textDelta, params.parentId);
         }
       }
     } catch (error) {

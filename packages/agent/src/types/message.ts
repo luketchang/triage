@@ -1,4 +1,4 @@
-import { AgentStep, AgentStreamingStep } from "./agent";
+import { AgentStep } from "../pipeline/state";
 
 export interface AssistantMessage {
   role: "assistant";
@@ -13,18 +13,3 @@ export interface UserMessage {
 }
 
 export type ChatMessage = UserMessage | AssistantMessage;
-
-export type AgentStreamUpdate = HighLevelUpdate | IntermediateUpdate;
-
-export type HighLevelUpdate = {
-  type: "highLevelUpdate";
-  stepType: AgentStep["type"];
-  id: string;
-};
-
-export type IntermediateUpdate = {
-  type: "intermediateUpdate";
-  id: string;
-  parentId: string;
-  step: AgentStreamingStep;
-};
