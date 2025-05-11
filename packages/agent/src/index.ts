@@ -56,8 +56,6 @@ export async function invokeAgent({
     endDate.toISOString()
   );
 
-  logger.info(`Chat history still not being used: ${JSON.stringify(chatHistory)}`);
-
   const pipelineConfig: TriagePipelineConfig = {
     query,
     repoPath: agentCfg.repoPath,
@@ -70,9 +68,6 @@ export async function invokeAgent({
   };
 
   const state = new PipelineStateManager(onUpdate);
-  // Note: We still aren't persisting LLM messages between invocations.
-  // Probably what we want in the future is to delegate the output of the reasoner
-  // to a new agent optimized for follow-up questions.
   state.initChatHistory(chatHistory);
 
   logger.info(`Observability features: ${agentCfg.observabilityFeatures}`);

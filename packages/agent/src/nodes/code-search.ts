@@ -216,92 +216,60 @@ export class CodeSearchAgent {
           `Searching filepaths:\n${response.toolCalls.map((toolCall) => JSON.stringify(toolCall)).join("\n")}`
         );
 
-        try {
-          logger.info("Making tool calls...");
-          for (const toolCall of response.toolCalls) {
-            let step: CodeSearchStep | null = null;
-            try {
-              let result: CatRequestResult | GrepRequestResult | LLMToolCallError;
-              if (toolCall.type === "catRequest") {
-                result = await handleCatRequest(toolCall);
-              } else if (toolCall.type === "grepRequest") {
-                result = await handleGrepRequest(toolCall);
-              } else {
-                throw new Error(`Unknown tool call type: ${toolCall.type}`);
-              }
-
-              if (toolCall.type === "catRequest") {
-                if (result.type === "error") {
-                  step = {
-                    type: "cat",
-                    timestamp: new Date(),
-                    path: toolCall.path,
-                    source: result.error,
-                  };
-                } else {
-                  step = {
-                    type: "cat",
-                    timestamp: new Date(),
-                    path: toolCall.path,
-                    source: result.content,
-                  };
-                }
-              } else if (toolCall.type === "grepRequest") {
-                if (result.type === "error") {
-                  step = {
-                    type: "grep",
-                    timestamp: new Date(),
-                    pattern: toolCall.pattern,
-                    file: toolCall.file,
-                    flags: toolCall.flags,
-                    output: result.error,
-                  };
-                } else {
-                  step = {
-                    type: "grep",
-                    timestamp: new Date(),
-                    pattern: toolCall.pattern,
-                    file: toolCall.file,
-                    flags: toolCall.flags,
-                    output: result.content,
-                  };
-                }
-              } else {
-                throw new Error(`Unknown tool call type: ${toolCall}`);
-              }
-
-              this.state.addIntermediateStep(step, params.codeSearchId);
-              newCodeSearchSteps.push(step);
-            } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : String(error);
-              if (toolCall.type === "catRequest") {
-                step = {
-                  type: "cat",
-                  timestamp: new Date(),
-                  path: toolCall.path,
-                  source: errorMessage,
-                };
-              } else if (toolCall.type === "grepRequest") {
-                step = {
-                  type: "grep",
-                  timestamp: new Date(),
-                  pattern: toolCall.pattern,
-                  file: toolCall.file,
-                  flags: toolCall.flags,
-                  output: errorMessage,
-                };
-              } else {
-                throw new Error(`Unknown tool call type: ${toolCall.type}`);
-              }
-
-              this.state.addIntermediateStep(step, params.codeSearchId);
-              newCodeSearchSteps.push(step);
-            }
+        for (const toolCall of response.toolCalls) {
+          let result: CatRequestResult | GrepRequestResult | LLMToolCallError;
+          if (toolCall.type === "catRequest") {
+            result = await handleCatRequest(toolCall);
+          } else if (toolCall.type === "grepRequest") {
+            result = await handleGrepRequest(toolCall);
+          } else {
+            throw new Error(`Unknown tool call type: ${toolCall.type}`);
           }
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          logger.error(`Error executing code search: ${errorMessage}`);
-          // TODO: what to do here?
+
+          // TODO: shorten and centralize conversion from tool result + toolcall to step
+          let step: CodeSearchStep;
+          if (toolCall.type === "catRequest") {
+            if (result.type === "error") {
+              step = {
+                type: "cat",
+                timestamp: new Date(),
+                path: toolCall.path,
+                source: result.error,
+              };
+            } else {
+              step = {
+                type: "cat",
+                timestamp: new Date(),
+                path: toolCall.path,
+                source: result.content,
+              };
+            }
+          } else if (toolCall.type === "grepRequest") {
+            if (result.type === "error") {
+              step = {
+                type: "grep",
+                timestamp: new Date(),
+                pattern: toolCall.pattern,
+                file: toolCall.file,
+                flags: toolCall.flags,
+                output: result.error,
+              };
+            } else {
+              step = {
+                type: "grep",
+                timestamp: new Date(),
+                pattern: toolCall.pattern,
+                file: toolCall.file,
+                flags: toolCall.flags,
+                output: result.content,
+              };
+            }
+          } else {
+            throw new Error(`Unknown tool call type: ${toolCall}`);
+          }
+
+          this.state.addIntermediateStep(step, params.codeSearchId);
+          newCodeSearchSteps.push(step);
         }
       } else {
         logger.info("Code search complete");
