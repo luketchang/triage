@@ -1,12 +1,9 @@
 import { logger, timer } from "@triage/common";
-import { generateId, generateText, LanguageModelV1 } from "ai";
+import { generateText } from "ai";
 
-import {
-  AgentStreamUpdate,
-  CodePostprocessingStep,
-  codePostprocessingToolSchema,
-  CodeSearchStep,
-} from "../types";
+import { TriagePipelineConfig } from "../pipeline";
+import { CodePostprocessingStep, CodeSearchStep, PipelineStateManager } from "../pipeline/state";
+import { codePostprocessingToolSchema } from "../types";
 
 import { ensureSingleToolCall, formatCodeSearchSteps, normalizeFilePath } from "./utils";
 
@@ -54,26 +51,30 @@ function createPrompt(params: {
 }
 
 export class CodePostprocessor {
-  constructor(private readonly llmClient: LanguageModelV1) {}
+  private config: Readonly<TriagePipelineConfig>;
+  private state: PipelineStateManager;
+
+  constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
+    this.config = config;
+    this.state = state;
+  }
 
   @timer
-  async invoke(params: {
-    query: string;
-    repoPath: string;
-    codebaseOverview: string;
-    codeSearchSteps: CodeSearchStep[];
-    answer: string;
-    parentId: string;
-    onUpdate?: (update: AgentStreamUpdate) => void;
-  }): Promise<CodePostprocessingStep> {
-    logger.info(`Code postprocessing for query: ${params.query}`);
+  async invoke(params: { parentId: string }): Promise<CodePostprocessingStep> {
+    logger.info(`Code postprocessing for query: ${this.config.query}`);
 
-    const prompt = createPrompt(params);
+    const prompt = createPrompt({
+      query: this.config.query,
+      repoPath: this.config.repoPath,
+      codebaseOverview: this.config.codebaseOverview,
+      codeSearchSteps: this.state.getCodeSearchSteps(),
+      answer: this.state.getAnswer()!,
+    });
 
     logger.info(`Code postprocessing prompt:\n${prompt}`);
 
     const { toolCalls } = await generateText({
-      model: this.llmClient,
+      model: this.config.fastClient,
       system: SYSTEM_PROMPT,
       prompt: prompt,
       tools: {
@@ -98,21 +99,17 @@ export class CodePostprocessor {
     const normalizedFacts =
       toolCall.args.facts?.map((fact) => ({
         ...fact,
-        filepath: normalizeFilePath(fact.filepath, params.repoPath),
+        filepath: normalizeFilePath(fact.filepath, this.config.repoPath),
       })) || [];
 
-    if (params.onUpdate) {
-      params.onUpdate({
-        type: "intermediateUpdate",
-        step: {
-          type: "codePostprocessing",
-          facts: normalizedFacts,
-          timestamp: new Date(),
-        },
-        id: generateId(),
-        parentId: params.parentId,
-      });
-    }
+    this.state.addIntermediateStep(
+      {
+        type: "codePostprocessing",
+        facts: normalizedFacts,
+        timestamp: new Date(),
+      },
+      params.parentId
+    );
 
     return {
       type: "codePostprocessing",

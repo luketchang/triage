@@ -4,13 +4,15 @@ import { v4 as uuidv4 } from "uuid";
 import { CodePostprocessor } from "../nodes/code-postprocessing";
 import { LogPostprocessor } from "../nodes/log-postprocessing";
 
-import { TriagePipelineConfig, TriagePipelineState } from ".";
+import { PipelineStateManager } from "./state";
+
+import { TriagePipelineConfig } from ".";
 
 export class PostProcessing {
-  private readonly config: TriagePipelineConfig;
-  private state: TriagePipelineState;
+  private config: Readonly<TriagePipelineConfig>;
+  private state: PipelineStateManager;
 
-  constructor(config: TriagePipelineConfig, state: TriagePipelineState) {
+  constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
   }
@@ -21,26 +23,11 @@ export class PostProcessing {
 
     const logPostprocessingId = uuidv4();
 
-    if (this.config.onUpdate) {
-      this.config.onUpdate({
-        type: "highLevelUpdate",
-        id: logPostprocessingId,
-        stepType: "logPostprocessing",
-      });
-    }
-
-    const logPostprocessor = new LogPostprocessor(
-      this.config.fastClient,
-      this.config.observabilityPlatform
-    );
+    this.state.recordHighLevelStep("logPostprocessing", logPostprocessingId);
+    const logPostprocessor = new LogPostprocessor(this.config, this.state);
 
     const logPostprocessingResponse = await logPostprocessor.invoke({
-      query: this.config.query,
-      logLabelsMap: this.config.logLabelsMap,
-      logSearchSteps: this.state.logSearchSteps,
-      answer: this.state.answer ?? "",
       parentId: logPostprocessingId,
-      onUpdate: this.config.onUpdate,
     });
 
     logger.info(
@@ -51,25 +38,12 @@ export class PostProcessing {
 
     const codePostprocessingId = uuidv4();
 
-    if (this.config.onUpdate) {
-      this.config.onUpdate({
-        type: "highLevelUpdate",
-        id: codePostprocessingId,
-        stepType: "codePostprocessing",
-      });
-    }
+    this.state.recordHighLevelStep("codePostprocessing", codePostprocessingId);
 
-    const codePostprocessor = new CodePostprocessor(this.config.fastClient);
+    const codePostprocessor = new CodePostprocessor(this.config, this.state);
 
-    const codeSearchSteps = this.state.codeSearchSteps;
     const codePostprocessingResponse = await codePostprocessor.invoke({
-      query: this.config.query,
-      repoPath: this.config.repoPath,
-      codebaseOverview: this.config.codebaseOverview,
-      codeSearchSteps,
-      answer: this.state.answer ?? "",
       parentId: codePostprocessingId,
-      onUpdate: this.config.onUpdate,
     });
 
     logger.info(

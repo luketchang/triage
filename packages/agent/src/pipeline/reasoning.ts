@@ -1,44 +1,37 @@
 import { logger } from "@triage/common";
-import { LogsWithPagination } from "@triage/observability";
-import { CoreMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
 import { LogSearchAgent } from "../nodes/log-search";
 import { Reasoner } from "../nodes/reasoner";
-import { LLMToolCall, Toolbox } from "../tools";
-import { CatRequestResult } from "../tools/index";
-import { LogSearchStep, ReasoningStep } from "../types";
+import { ReasoningStep } from "../pipeline/state";
+import { Toolbox } from "../tools";
 
-import { PreProcessingResults } from "./pre-processing";
+import { PipelineStateManager } from "./state";
 
-import { TriagePipelineConfig, TriagePipelineState } from ".";
+import { TriagePipelineConfig } from ".";
 
 export class Reasoning {
-  private readonly config: TriagePipelineConfig;
-  private state: TriagePipelineState;
+  private config: Readonly<TriagePipelineConfig>;
+  private state: PipelineStateManager;
   private reasoner: Reasoner;
   private toolbox: Toolbox;
-  private llmChatHistory: CoreMessage[] = [];
 
-  constructor(
-    config: TriagePipelineConfig,
-    state: TriagePipelineState,
-    preProcessingResults: PreProcessingResults
-  ) {
+  constructor(config: Readonly<TriagePipelineConfig>, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
-    this.reasoner = new Reasoner(this.config, preProcessingResults.logs, preProcessingResults.code);
-    this.toolbox = new Toolbox(this.config.observabilityPlatform, new LogSearchAgent(this.config));
+    this.reasoner = new Reasoner(this.config, this.state);
+    this.toolbox = new Toolbox(
+      this.config.observabilityPlatform,
+      new LogSearchAgent(this.config, this.state)
+    );
   }
 
-  async run(): Promise<ReasoningStep> {
+  async run(): Promise<void> {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
 
     const reasoningId = uuidv4();
 
-    if (this.config.onUpdate) {
-      this.config.onUpdate({ type: "highLevelUpdate", id: reasoningId, stepType: "reasoning" });
-    }
+    this.state.recordHighLevelStep("reasoning", reasoningId);
 
     let iterationCount = 0;
     const maxIterations = 50;
@@ -49,70 +42,8 @@ export class Reasoning {
       timestamp: new Date(),
     };
 
-    let toolCalls: LLMToolCall[] = [];
-
-    do {
-      for (const toolCall of toolCalls) {
-        const result = await this.toolbox.invokeToolCall(toolCall);
-
-        // TODO: do we even need this?
-        switch (toolCall.type) {
-          case "logSearchInput":
-            this.state.logSearchSteps.push({
-              timestamp: new Date(),
-              input: {
-                type: "logSearchInput",
-                start: toolCall.start,
-                end: toolCall.end,
-                query: toolCall.query,
-                limit: toolCall.limit,
-                pageCursor: toolCall.pageCursor,
-              },
-              results: result as LogsWithPagination,
-            } as LogSearchStep);
-            break;
-          case "catRequest":
-            this.state.codeSearchSteps.push({
-              type: "codeSearch",
-              timestamp: new Date(),
-              filepath: toolCall.path,
-              source: (result as CatRequestResult).content,
-            });
-            break;
-        }
-
-        this.llmChatHistory.push({
-          role: "tool",
-          content: [
-            {
-              type: "tool-result",
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.type,
-              result: result,
-              // TODO: detect errors and set isError
-            },
-          ],
-        });
-
-        // TODO: move this into toolbox
-        if (this.config.onUpdate) {
-          this.config.onUpdate({
-            type: "intermediateUpdate",
-            id: uuidv4(),
-            parentId: reasoningId,
-            step: {
-              type: "reasoning",
-              timestamp: new Date(),
-              // TODO: more user friendly message with tool call details
-              contentChunk: `Tool call ${toolCall.type} completed`,
-            },
-          });
-        }
-      }
-      toolCalls = [];
-
+    while (iterationCount++ < maxIterations) {
       const reasoningResponse = await this.reasoner.invoke({
-        llmChatHistory: this.llmChatHistory,
         parentId: reasoningId,
         maxSteps: maxIterations - iterationCount,
       });
@@ -120,21 +51,16 @@ export class Reasoning {
 
       if (reasoningResponse.type === "toolCalls") {
         for (const toolCall of reasoningResponse.toolCalls) {
-          toolCalls.push(toolCall);
+          const result = await this.toolbox.invokeToolCall(toolCall);
+          this.state.recordToolCall(toolCall, result, reasoningId);
         }
       } else {
-        this.llmChatHistory.push({
-          role: "assistant",
-          content: reasoningResponse.content,
-        });
+        this.state.recordReasonerAssistantMessage(reasoningResponse.content);
         lastReasoningResponse = reasoningResponse;
+        break;
       }
-    } while (iterationCount++ < maxIterations && toolCalls.length > 0);
+    }
 
-    return lastReasoningResponse;
-  }
-
-  getLlmChatHistory(): readonly CoreMessage[] {
-    return this.llmChatHistory;
+    this.state.setAnswer(lastReasoningResponse.content);
   }
 }
