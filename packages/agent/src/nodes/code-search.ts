@@ -219,41 +219,44 @@ export class CodeSearchAgent {
                 throw new Error(`Unknown tool call type: ${toolCall.type}`);
               }
 
-              // TODO: fix this double type checking
-              if (toolCall.type === "catRequest" && result.type === "error") {
-                step = {
-                  type: "cat",
-                  timestamp: new Date(),
-                  path: toolCall.path,
-                  source: result.error,
-                };
-              } else if (toolCall.type === "grepRequest" && result.type === "error") {
-                step = {
-                  type: "grep",
-                  timestamp: new Date(),
-                  pattern: toolCall.pattern,
-                  file: toolCall.file,
-                  flags: toolCall.flags,
-                  output: result.error,
-                };
-              } else if (toolCall.type === "catRequest" && result.type === "catRequestResult") {
-                step = {
-                  type: "cat",
-                  timestamp: new Date(),
-                  path: toolCall.path,
-                  source: result.content,
-                };
-              } else if (toolCall.type === "grepRequest" && result.type === "grepRequestResult") {
-                step = {
-                  type: "grep",
-                  timestamp: new Date(),
-                  pattern: toolCall.pattern,
-                  file: toolCall.file,
-                  flags: toolCall.flags,
-                  output: result.content,
-                };
+              if (toolCall.type === "catRequest") {
+                if (result.type === "error") {
+                  step = {
+                    type: "cat",
+                    timestamp: new Date(),
+                    path: toolCall.path,
+                    source: result.error,
+                  };
+                } else {
+                  step = {
+                    type: "cat",
+                    timestamp: new Date(),
+                    path: toolCall.path,
+                    source: result.content,
+                  };
+                }
+              } else if (toolCall.type === "grepRequest") {
+                if (result.type === "error") {
+                  step = {
+                    type: "grep",
+                    timestamp: new Date(),
+                    pattern: toolCall.pattern,
+                    file: toolCall.file,
+                    flags: toolCall.flags,
+                    output: result.error,
+                  };
+                } else {
+                  step = {
+                    type: "grep",
+                    timestamp: new Date(),
+                    pattern: toolCall.pattern,
+                    file: toolCall.file,
+                    flags: toolCall.flags,
+                    output: result.content,
+                  };
+                }
               } else {
-                throw new Error(`Unknown tool call type: ${toolCall.type}`);
+                throw new Error(`Unknown tool call type: ${toolCall}`);
               }
 
               this.state.addIntermediateStep(step, params.codeSearchId);
