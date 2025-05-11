@@ -3,7 +3,7 @@ import { generateText, LanguageModelV1 } from "ai";
 
 import { handleCatRequest, handleGrepRequest } from "../code";
 import { TriagePipelineConfig } from "../pipeline";
-import { CodeSearchStep, PipelineStateManager } from "../pipeline/state";
+import { CodeSearchStep, LogSearchStep, PipelineStateManager } from "../pipeline/state";
 import { LLMToolCall } from "../tools";
 import {
   CatRequestResult,
@@ -13,7 +13,7 @@ import {
   TaskComplete,
 } from "../types";
 
-import { formatCodeSearchSteps } from "./utils";
+import { formatCodeSearchSteps, formatLogSearchSteps } from "./utils";
 
 export interface CodeSearchAgentResponse {
   newCodeSearchSteps: CodeSearchStep[];
@@ -31,6 +31,7 @@ function createCodeSearchPrompt(params: {
   query: string;
   codeRequest: string;
   fileTree: string;
+  logSearchSteps: LogSearchStep[];
   previousCodeSearchSteps: CodeSearchStep[];
   remainingQueries: number;
   codebaseOverview: string;
@@ -38,6 +39,7 @@ function createCodeSearchPrompt(params: {
   const currentTime = new Date().toISOString();
 
   const formattedPreviousCodeSearchSteps = formatCodeSearchSteps(params.previousCodeSearchSteps);
+  const formattedPreviousLogSearchSteps = formatLogSearchSteps(params.logSearchSteps);
 
   // TODO: split out last code search steps into its own section
   return `
@@ -71,6 +73,10 @@ ${params.query}
 ${params.fileTree}
 </file_tree>
 
+<previous_log_context>
+${formattedPreviousLogSearchSteps}
+</previous_log_context>
+
 <previous_code_context>
 ${formattedPreviousCodeSearchSteps}
 </previous_code_context>
@@ -92,6 +98,7 @@ class CodeSearch {
     query: string;
     codeRequest: string;
     fileTree: string;
+    logSearchSteps: LogSearchStep[];
     previousCodeSearchSteps: CodeSearchStep[];
     remainingQueries: number;
     codebaseOverview: string;
@@ -186,6 +193,7 @@ export class CodeSearchAgent {
         query: this.config.query,
         codeRequest: params.codeRequest,
         fileTree: this.config.fileTree,
+        logSearchSteps: this.state.getLogSearchSteps(),
         previousCodeSearchSteps,
         remainingQueries: maxIters - currentIter,
         codebaseOverview: this.config.codebaseOverview,

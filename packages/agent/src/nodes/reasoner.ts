@@ -87,11 +87,12 @@ export class Reasoner {
     const catSteps = this.state.getCatSteps();
 
     // Inject system prompt into history
-    let chatHistory = this.state.getReasonerChatHistory();
     const prompt = createPrompt({
       ...params,
       ...this.config,
     });
+
+    let chatHistory = this.state.getReasonerChatHistory();
     chatHistory = [
       {
         role: "system",
