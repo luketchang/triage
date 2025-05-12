@@ -24,6 +24,7 @@ interface ChatState {
 
   // Agent update state
   isRegisteredForAgentUpdates: boolean;
+  unregisterAgent: (() => void) | null;
 
   // Agent update functions
   registerForAgentUpdates: () => void;
@@ -49,6 +50,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   newMessage: "",
   isThinking: false,
   contextItems: [],
+  unregisterAgent: null,
   messageUpdater: null,
   savedMessageIds: new Set<string>(),
   isRegisteredForAgentUpdates: false,
@@ -298,10 +300,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     });
 
-    // Store the registered state
-    set({ isRegisteredForAgentUpdates: true });
-
-    return unregister;
+    // Store the registered state and unregister function
+    set({
+      isRegisteredForAgentUpdates: true,
+      unregisterAgent: unregister,
+    });
   },
 
   /**
@@ -309,6 +312,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
    * This is called when message processing is complete
    */
   unregisterFromAgentUpdates: () => {
-    set({ isRegisteredForAgentUpdates: false });
+    // Call the unregister function if it exists
+    const { unregisterAgent } = get();
+    if (unregisterAgent) {
+      unregisterAgent();
+    }
+
+    // Reset the agent update state
+    set({
+      isRegisteredForAgentUpdates: false,
+      unregisterAgent: null,
+    });
   },
 }));
