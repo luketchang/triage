@@ -1,3 +1,4 @@
+import console from "console";
 import "dotenv/config";
 import fs from "fs/promises";
 
@@ -69,6 +70,8 @@ export async function invokeAgent({
 
   const state = new PipelineStateManager(onUpdate);
   state.initChatHistory(chatHistory);
+
+  console.info("Chat history invokeAgent: ", JSON.stringify(chatHistory));
 
   logger.info(`Observability features: ${agentCfg.observabilityFeatures}`);
 

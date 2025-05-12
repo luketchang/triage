@@ -93,6 +93,7 @@ export class Reasoner {
     });
 
     let chatHistory = this.state.getReasonerChatHistory();
+    console.info("Chat history reasoner: ", JSON.stringify(chatHistory));
     chatHistory = [
       {
         role: "system",
