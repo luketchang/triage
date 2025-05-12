@@ -68,13 +68,6 @@ export function convertAgentStepsToStages(steps?: AgentStep[] | null): AgentStag
             content: step.content,
           };
           break;
-        case "review":
-          currentStage = {
-            type: "review",
-            id: generateId(),
-            content: step.content,
-          };
-          break;
         case "logPostprocessing":
           currentStage = {
             type: "logPostprocessing",
@@ -119,10 +112,6 @@ export function convertAgentStepsToStages(steps?: AgentStep[] | null): AgentStag
         case "reasoning":
           assertStageType(currentStage, "reasoning");
           // For reasoning, we just use the content directly (already set when creating the stage)
-          break;
-        case "review":
-          assertStageType(currentStage, "review");
-          // For review, we just use the content directly (already set when creating the stage)
           break;
         case "logPostprocessing":
           assertStageType(currentStage, "logPostprocessing");
@@ -184,14 +173,6 @@ export function convertAgentStagesToSteps(stages?: AgentStage[] | null): AgentSt
         // For reasoning, create a single reasoning step
         steps.push({
           type: "reasoning",
-          timestamp: new Date(),
-          content: stage.content,
-        });
-        break;
-      case "review":
-        // For review, create a single review step
-        steps.push({
-          type: "review",
           timestamp: new Date(),
           content: stage.content,
         });

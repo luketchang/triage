@@ -6,15 +6,6 @@ import { LLMToolCall, SubAgentCall } from "../tools";
 const BASIC_REASONING_DESCRIPTION =
   "Intermediate reasoning where you can explain what you see from the given information and what information you need next (if any).";
 
-const rereviewRequestSchema = z.object({
-  reasoning: z.string().describe("Reasoning process behind your hypothesis."),
-});
-
-export const rereviewRequestToolSchema = {
-  description: "Indicate that you need to re-review the root cause analysis with the same context",
-  parameters: rereviewRequestSchema,
-};
-
 const taskCompleteSchema = z.object({
   reasoning: z.string().describe("Reasoning process behind your findings for the task."),
   summary: z.string().describe("Summary of your findings for the task. Be precise and sequential."),
@@ -80,10 +71,6 @@ export const logRequestToolSchema = {
 
 export interface ReasoningRequest {
   type: "reasoningRequest";
-}
-
-export interface ReviewRequest {
-  type: "reviewRequest";
 }
 
 export interface LogPostprocessingRequest {
@@ -372,19 +359,6 @@ export type CodePostprocessing = zInfer<typeof codePostprocessingSchema>;
 export const codePostprocessingToolSchema = {
   description: "Postprocess code results.",
   parameters: codePostprocessingSchema,
-};
-
-export const reviewDecisionSchema = z.object({
-  accepted: z
-    .boolean()
-    .describe("True if the root cause analysis provided is complete and accurate"),
-  reasoning: z.string().describe("Reasoning behind your decision"),
-});
-
-export const reviewDecisionToolSchema = {
-  description:
-    "Used to memorialize a deecision on whether a root cause analysis was accurate or not.",
-  parameters: reviewDecisionSchema,
 };
 
 // Generic function to strip reasoning from input objects for storage

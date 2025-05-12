@@ -2,12 +2,7 @@ import type { LogsWithPagination } from "@triage/observability";
 import { CoreMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
-import {
-  formatAgentSteps,
-  formatCatSteps,
-  formatCurrentChatHistory,
-  formatLogSearchSteps,
-} from "../nodes/utils";
+import { formatAgentSteps, formatCatSteps, formatLogSearchSteps } from "../nodes/utils";
 import { LLMToolCall, LLMToolCallResultOrError } from "../tools";
 import { ChatMessage } from "../types/message";
 import {
@@ -48,12 +43,6 @@ export interface ReasoningStep extends BaseAgentStep {
   content: string;
 }
 
-export interface ReviewStep extends BaseAgentStep {
-  type: "review";
-  content: string;
-  accepted?: boolean;
-}
-
 export interface LogPostprocessingStep extends BaseAgentStep {
   type: "logPostprocessing";
   facts: LogPostprocessingFact[];
@@ -75,7 +64,6 @@ export type AgentStep =
   | CatStep
   | GrepStep
   | ReasoningStep
-  | ReviewStep
   | LogPostprocessingStep
   | CodePostprocessingStep
   | ToolCallStep;
@@ -84,7 +72,6 @@ export type AgentStage =
   | "logSearch"
   | "codeSearch"
   | "reasoning"
-  | "review"
   | "logPostprocessing"
   | "codePostprocessing";
 
@@ -95,7 +82,6 @@ export type AgentStreamingStep =
   | CatStep
   | GrepStep
   | StreamingPartial<ReasoningStep>
-  | StreamingPartial<ReviewStep>
   | LogPostprocessingStep
   | CodePostprocessingStep
   | ToolCallStep;
@@ -142,7 +128,7 @@ export class PipelineStateManager {
     });
   }
 
-  addStreamingStep(type: "reasoning" | "review", contentChunk: string, parentId: string): void {
+  addStreamingStep(type: "reasoning", contentChunk: string, parentId: string): void {
     this.onUpdate({
       type: "intermediateUpdate",
       id: uuidv4(),
@@ -158,8 +144,8 @@ export class PipelineStateManager {
   addIntermediateStep(step: AgentStep, parentId: string): void {
     this.currSteps.push(step);
 
-    // NOTE: for reasoning and review steps, we don't want to send them to the stream since they are accumulated in chunks already. We just add them to agent local steps.
-    if (step.type !== "reasoning" && step.type !== "review") {
+    // NOTE: for reasoning steps, we don't want to send them to the stream since they are accumulated in chunks already. We just add them to agent local steps.
+    if (step.type !== "reasoning") {
       this.onUpdate({
         type: "intermediateUpdate",
         id: uuidv4(),
@@ -233,11 +219,6 @@ export class PipelineStateManager {
         content: `<log_context>\n${formatLogSearchSteps(logContextSteps)}\n</log_context>\n\n<code_context>\n${formatCatSteps(codeContextSteps)}\n</code_context>`,
       },
     ];
-  }
-
-  getReviewerFormattedMessages(): string {
-    // NOTE: we know at the point reviewer is called, current steps will have context used in reasoner + reasoning output. So messages will show past chat history + current steps including reasoning output.
-    return formatCurrentChatHistory(this.chatHistory, this.currSteps);
   }
 
   getSteps(type: StepsType): AgentStep[] {

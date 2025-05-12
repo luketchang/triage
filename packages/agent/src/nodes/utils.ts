@@ -8,7 +8,6 @@ import {
   GrepStep,
   LogSearchStep,
   ReasoningStep,
-  ReviewStep,
 } from "..";
 import { LogSearchInput, SpanSearchInput } from "../types/tools";
 
@@ -214,10 +213,6 @@ export function formatReasoningStep(step: ReasoningStep): string {
   return `Reasoning: ${step.content}`;
 }
 
-export function formatReviewStep(step: ReviewStep): string {
-  return `Review: ${step.content}`;
-}
-
 export function formatAgentSteps(steps: AgentStep[]): string {
   // Format each step in the original order they were provided
   return steps
@@ -230,8 +225,6 @@ export function formatAgentSteps(steps: AgentStep[]): string {
         return formatSingleGrepStep(step);
       } else if (step.type === "reasoning") {
         return formatReasoningStep(step);
-      } else if (step.type === "review") {
-        return formatReviewStep(step);
       }
       return "";
     })
