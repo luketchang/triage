@@ -236,6 +236,7 @@ export class PipelineStateManager {
   }
 
   getReviewerFormattedMessages(): string {
+    // NOTE: we know at the point reviewer is called, current steps will have context used in reasoner + reasoning output. So messages will show past chat history + current steps including reasoning output.
     return formatCurrentChatHistory(this.chatHistory, this.currSteps);
   }
 

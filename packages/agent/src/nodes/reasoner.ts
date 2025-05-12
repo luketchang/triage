@@ -165,7 +165,6 @@ export class Reasoner {
       }
     }
 
-    logger.info("EXITING REASONER");
     return output;
   }
 }
