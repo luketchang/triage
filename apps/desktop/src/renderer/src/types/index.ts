@@ -195,6 +195,7 @@ export type ContextItem = LogSearchContextItem | SingleTraceContextItem;
 
 export type AgentStage =
   | LogSearchStage
+  | CodeSearchStage
   | ReasoningStage
   | ReviewStage
   | LogPostprocessingStage

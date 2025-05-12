@@ -2,16 +2,11 @@ import { logger, timer } from "@triage/common";
 import { streamText } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { PipelineStateManager, ReasoningStep } from "../pipeline/state";
-import {
-  catRequestSchema,
-  grepRequestSchema,
-  logRequestToolSchema,
-  RequestToolCalls,
-} from "../types";
+import { PipelineStateManager, ReasoningStep, StepsType } from "../pipeline/state";
+import { codeRequestToolSchema, logRequestToolSchema, RequestSubAgentCalls } from "../types";
 
 import { formatCatSteps, formatFacetValues, formatLogSearchSteps } from "./utils";
-type ReasoningResponse = ReasoningStep | RequestToolCalls;
+type ReasoningResponse = ReasoningStep | RequestSubAgentCalls;
 
 export const createPrompt = ({
   query,
@@ -88,15 +83,17 @@ export class Reasoner {
   @timer
   async invoke(params: { parentId: string; maxSteps?: number }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${this.config.query}`);
-    const logSearchSteps = this.state.getLogSearchSteps();
-    const catSteps = this.state.getCatSteps();
+    const logSearchSteps = this.state.getLogSearchSteps(StepsType.CURRENT);
+    const catSteps = this.state.getCatSteps(StepsType.CURRENT);
 
     // Inject system prompt into history
-    let chatHistory = this.state.getReasonerChatHistory();
     const prompt = createPrompt({
       ...params,
       ...this.config,
     });
+
+    let chatHistory = this.state.getChatHistory();
+    console.info("Chat history reasoner: ", JSON.stringify(chatHistory));
     chatHistory = [
       {
         role: "system",
@@ -123,8 +120,7 @@ export class Reasoner {
       maxSteps: params.maxSteps || 1,
       tools: {
         logRequest: logRequestToolSchema,
-        catRequest: catRequestSchema,
-        grepRequest: grepRequestSchema,
+        codeRequest: codeRequestToolSchema,
       },
       toolChoice: "auto",
     });
@@ -158,34 +154,26 @@ export class Reasoner {
       };
     } else {
       output = {
-        type: "toolCalls",
-        toolCalls: [],
+        type: "subAgentCalls",
+        subAgentCalls: [],
       };
       for (const toolCall of finalizedToolCalls) {
         // TODO: generate these tool calls in toolbox
         switch (toolCall.toolName) {
           case "logRequest":
-            output.toolCalls.push({
+            output.subAgentCalls.push({
               type: "logRequest",
               toolCallId: toolCall.toolCallId,
               request: toolCall.args.request,
               reasoning: toolCall.args.reasoning,
             });
             break;
-          case "catRequest":
-            output.toolCalls.push({
-              type: "catRequest",
+          case "codeRequest":
+            output.subAgentCalls.push({
+              type: "codeRequest",
               toolCallId: toolCall.toolCallId,
-              path: toolCall.args.path,
-            });
-            break;
-          case "grepRequest":
-            output.toolCalls.push({
-              type: "grepRequest",
-              toolCallId: toolCall.toolCallId,
-              pattern: toolCall.args.pattern,
-              file: toolCall.args.file,
-              flags: toolCall.args.flags,
+              request: toolCall.args.request,
+              reasoning: toolCall.args.reasoning,
             });
             break;
         }

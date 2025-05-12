@@ -75,6 +75,14 @@ export type AgentStep =
   | CodePostprocessingStep
   | ToolCallStep;
 
+export type AgentStage =
+  | "logSearch"
+  | "codeSearch"
+  | "reasoning"
+  | "review"
+  | "logPostprocessing"
+  | "codePostprocessing";
+
 type StreamingPartial<T> = Omit<T, "content"> & { contentChunk: string };
 
 export type AgentStreamingStep =
@@ -91,7 +99,7 @@ export type AgentStreamUpdate = HighLevelUpdate | IntermediateUpdate;
 
 export type HighLevelUpdate = {
   type: "highLevelUpdate";
-  stepType: AgentStep["type"];
+  stage: AgentStage;
   id: string;
 };
 
@@ -104,10 +112,17 @@ export type IntermediateUpdate = {
 
 export type StreamUpdateFn = (update: AgentStreamUpdate) => void;
 
+export enum StepsType {
+  CURRENT = "current",
+  PREVIOUS = "previous",
+  BOTH = "both",
+}
+
 export class PipelineStateManager {
-  private steps: AgentStep[] = [];
+  private currSteps: AgentStep[] = [];
+  private prevSteps: AgentStep[] = [];
   private onUpdate: StreamUpdateFn;
-  private reasonerChatHistory: CoreMessage[] = [];
+  private chatHistory: CoreMessage[] = [];
   private answer?: string;
 
   constructor(onUpdate: StreamUpdateFn) {
@@ -115,6 +130,9 @@ export class PipelineStateManager {
   }
 
   initChatHistory(chatHistory: ChatMessage[]): void {
+    this.prevSteps = [];
+    this.chatHistory = [];
+
     // If we have chat history, initialize reasonerChatHistory for multi-turn chat
     if (chatHistory.length > 0) {
       // Go through user/assistant message pairs to build proper chat history
@@ -122,11 +140,14 @@ export class PipelineStateManager {
         // Process user messages
         if (message.role === "user") {
           // Add user message to chat history
-          this.reasonerChatHistory.push({
+          this.chatHistory.push({
             role: "user",
             content: message.content,
           });
         } else if (message.role === "assistant") {
+          // Add steps to prevSteps
+          this.prevSteps.push(...message.steps);
+
           // Get all steps from this assistant message
           const logSteps = message.steps.filter(
             (step): step is LogSearchStep => step.type === "logSearch"
@@ -135,7 +156,8 @@ export class PipelineStateManager {
 
           // Add log context as an assistant message (if any)
           if (logSteps.length > 0) {
-            this.reasonerChatHistory.push({
+            console.info("pushing log steps to history", logSteps.length);
+            this.chatHistory.push({
               role: "assistant",
               content: `<log_context>\n${formatLogSearchSteps(logSteps)}\n</log_context>`,
             });
@@ -143,7 +165,8 @@ export class PipelineStateManager {
 
           // Add code context as an assistant message (if any)
           if (catSteps.length > 0) {
-            this.reasonerChatHistory.push({
+            console.info("pushing cat steps to history", catSteps.length);
+            this.chatHistory.push({
               role: "assistant",
               content: `<code_context>\n${formatCatSteps(catSteps)}\n</code_context>`,
             });
@@ -151,7 +174,7 @@ export class PipelineStateManager {
 
           // Add the final assistant response
           if (message.response) {
-            this.reasonerChatHistory.push({
+            this.chatHistory.push({
               role: "assistant",
               content: message.response,
             });
@@ -161,10 +184,10 @@ export class PipelineStateManager {
     }
   }
 
-  recordHighLevelStep(stepType: AgentStep["type"], id?: string): void {
+  recordHighLevelStep(stage: AgentStage, id?: string): void {
     this.onUpdate({
       type: "highLevelUpdate",
-      stepType,
+      stage,
       id: id || uuidv4(),
     });
   }
@@ -186,7 +209,7 @@ export class PipelineStateManager {
     if (step.type === "reasoning" || step.type === "review") {
       throw new Error("Reasoning and review steps are handled in addStreamingReasoningStep");
     }
-    this.steps.push(step);
+    this.currSteps.push(step);
     this.onUpdate({
       type: "intermediateUpdate",
       id: uuidv4(),
@@ -202,7 +225,7 @@ export class PipelineStateManager {
       result,
       timestamp: new Date(),
     };
-    this.steps.push(step);
+    this.currSteps.push(step);
     this.onUpdate({
       type: "intermediateUpdate",
       id: uuidv4(),
@@ -221,7 +244,7 @@ export class PipelineStateManager {
     } else {
       toolResult.result = result;
     }
-    this.reasonerChatHistory.push({
+    this.chatHistory.push({
       role: "tool",
       content: [toolResult],
     });
@@ -233,39 +256,46 @@ export class PipelineStateManager {
       content,
       timestamp: new Date(),
     };
-    this.steps.push(step);
-    this.reasonerChatHistory.push({
+    this.currSteps.push(step);
+    this.chatHistory.push({
       role: "assistant",
       content,
     });
   }
 
   addReasonerChatMessage(message: CoreMessage): void {
-    this.reasonerChatHistory.push(message);
+    this.chatHistory.push(message);
   }
 
   setAnswer(answer: string): void {
     this.answer = answer;
   }
 
-  getSteps(): AgentStep[] {
-    return this.steps;
+  getSteps(type: StepsType): AgentStep[] {
+    switch (type) {
+      case StepsType.CURRENT:
+        return this.currSteps;
+      case StepsType.PREVIOUS:
+        return this.prevSteps;
+      case StepsType.BOTH:
+        return [...this.prevSteps, ...this.currSteps];
+    }
   }
 
-  getLogSearchSteps(): LogSearchStep[] {
-    return this.steps.filter((step) => step.type === "logSearch");
+  getLogSearchSteps(type: StepsType): LogSearchStep[] {
+    return this.getSteps(type).filter((step) => step.type === "logSearch");
   }
 
-  getCatSteps(): CatStep[] {
-    return this.steps.filter((step) => step.type === "cat");
+  getCatSteps(type: StepsType): CatStep[] {
+    return this.getSteps(type).filter((step) => step.type === "cat");
   }
 
-  getGrepSteps(): GrepStep[] {
-    return this.steps.filter((step) => step.type === "grep");
+  getGrepSteps(type: StepsType): GrepStep[] {
+    return this.getSteps(type).filter((step) => step.type === "grep");
   }
 
-  getReasonerChatHistory(): CoreMessage[] {
-    return this.reasonerChatHistory;
+  getChatHistory(): CoreMessage[] {
+    return this.chatHistory;
   }
 
   getAnswer(): string | undefined {
