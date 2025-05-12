@@ -278,7 +278,7 @@ export class PipelineStateManager {
       case StepsType.PREVIOUS:
         return this.prevSteps;
       case StepsType.BOTH:
-        return [...this.currSteps, ...this.prevSteps];
+        return [...this.prevSteps, ...this.currSteps];
     }
   }
 
