@@ -18,25 +18,16 @@ import { getTopLevelDirectories } from "./utils";
  * Main class for processing a codebase to generate an overview
  */
 export class CodebaseProcessor {
-  private llmClient: LanguageModelV1;
-  private repoPath: string;
-  private systemDescription: string;
-  private allowedExtensions: string[];
-  private outputDir: string | undefined;
   private chunkSize: number = 8;
+  private allowedExtensions: string[] = ALLOWED_EXTENSIONS;
 
   constructor(
-    llmClient: LanguageModelV1,
-    repoPath: string,
-    systemDescription = "",
-    outputDir?: string,
+    private readonly llmClient: LanguageModelV1,
+    private readonly repoPath: string,
+    private readonly systemDescription = "",
+    private readonly outputDir?: string,
     options: { chunkSize?: number } = {}
   ) {
-    this.llmClient = llmClient;
-    this.repoPath = repoPath;
-    this.systemDescription = systemDescription;
-    this.allowedExtensions = ALLOWED_EXTENSIONS;
-    this.outputDir = outputDir;
     this.chunkSize = options.chunkSize || 8;
   }
 
