@@ -1,44 +1,24 @@
-import { logger } from "@triage/common";
 import fs from "fs/promises";
-import { globby } from "globby";
 import path from "path";
-import { DEFAULT_IGNORELIST } from "./ignorelist";
+
+import { logger } from "@triage/common";
+import { globby } from "globby";
 
 // Get major directories (top-level directories that aren't ignored)
 export async function getMajorDirectories(repoPath: string): Promise<string[]> {
   try {
-    const entries = await fs.readdir(repoPath, { withFileTypes: true });
-    const majorDirs: string[] = [];
-
-    // Get ignore patterns from .gitignore
-    let ignorePatterns = [...DEFAULT_IGNORELIST];
-    try {
-      const gitignore = await fs.readFile(path.join(repoPath, ".gitignore"), "utf8");
-      ignorePatterns = ignorePatterns.concat(
-        gitignore
-          .split("\n")
-          .map((line) => line.trim())
-          .filter((line) => line && !line.startsWith("#"))
-      );
-    } catch {
-      // .gitignore not present, that's fine
-    }
-
-    // Create a simple matcher function to check if a path is ignored
-    const isIgnored = (dirName: string) => {
-      return ignorePatterns.some((pattern) => {
-        const simplifiedPattern = pattern.replace("**/", "").replace("/**", "");
-        return dirName === simplifiedPattern || dirName.startsWith(simplifiedPattern + "/");
-      });
-    };
-
-    for (const entry of entries) {
-      if (entry.isDirectory() && !isIgnored(entry.name)) {
-        majorDirs.push(path.join(repoPath, entry.name));
-      }
-    }
-
-    return majorDirs;
+    // Use globby to get all top-level directories, respecting .gitignore and .git
+    const dirs = await globby("*", {
+      cwd: repoPath,
+      onlyDirectories: true,
+      gitignore: true,
+      ignore: [".git"],
+      dot: true,
+      absolute: false,
+      followSymbolicLinks: false,
+    });
+    
+    return dirs.map((d) => path.join(repoPath, d));
   } catch (error) {
     logger.error(`Error listing major directories: ${error}`);
     return [];
@@ -46,56 +26,39 @@ export async function getMajorDirectories(repoPath: string): Promise<string[]> {
 }
 
 /**
- * Collects files from a directory, builds a tree structure, and gathers file contents
- * Returns both a file tree and source code map in the same format as the original collectFiles
+ * Creates a file tree structure from a directory, respecting .gitignore patterns
  */
-export async function collectFiles(
+export async function createFileTree(
   directory: string,
-  allowedExtensions: string[],
-  repoRoot: string
-): Promise<{ fileTree: string; pathToSourceCode: Record<string, string> }> {
-  const MAX_FILE_SIZE = 1024 * 1024; // 1MB
-
-  // Collect ignore patterns from .gitignore if present
-  let ignorePatterns = [...DEFAULT_IGNORELIST];
-  try {
-    const gitignore = await fs.readFile(path.join(repoRoot, ".gitignore"), "utf8");
-    ignorePatterns = ignorePatterns.concat(
-      gitignore
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line && !line.startsWith("#"))
-    );
-  } catch {
-    // .gitignore not present, that's fine
-  }
-
-  // For content collection, find files with matching extensions
-  const filePaths = await globby(
-    allowedExtensions.length > 0 ? allowedExtensions.map((ext) => `**/*${ext}`) : ["**/*"],
-    {
+  allowedExtensions: string[]
+): Promise<string> {
+  // Get all directories and files
+  const [dirPaths, filePaths] = await Promise.all([
+    globby("**/*", {
       cwd: directory,
-      ignore: ignorePatterns,
-      onlyFiles: true,
+      onlyDirectories: true,
       dot: true,
       absolute: false,
       followSymbolicLinks: false,
-    }
-  );
-
-  // For directory tree, use globby to get all directories
-  const dirPaths = await globby("**/*", {
-    cwd: directory,
-    ignore: ignorePatterns,
-    onlyDirectories: true,
-    dot: true,
-    absolute: false,
-    followSymbolicLinks: false,
-  });
+      gitignore: true,
+      ignore: [".git"],
+    }),
+    globby(
+      allowedExtensions.length > 0 ? allowedExtensions.map((ext) => `**/*${ext}`) : ["**/*"],
+      {
+        cwd: directory,
+        onlyFiles: true,
+        dot: true,
+        absolute: false,
+        followSymbolicLinks: false,
+        gitignore: true,
+        ignore: [".git"],
+      }
+    ),
+  ]);
 
   // Build the file tree structure
   const fileTreeLines: string[] = [];
-  const pathToSourceCode: Record<string, string> = {};
 
   // Sort paths to ensure parent directories come before their children
   const sortedPaths = [...dirPaths, ...filePaths].sort();
@@ -110,7 +73,36 @@ export async function collectFiles(
     fileTreeLines.push(`${" ".repeat(depth * 2)}${name}${isDirectory ? "/" : ""}`);
   }
 
+  return fileTreeLines.join("\n");
+}
+
+/**
+ * Collects file contents from a directory
+ * Returns a map of relative file paths to their source code
+ */
+export async function collectFiles(
+  directory: string,
+  allowedExtensions: string[],
+  repoRoot: string
+): Promise<Record<string, string>> {
+  const MAX_FILE_SIZE = 1024 * 1024; // 1MB
+
+  // Use globby to find files, respecting .gitignore and .git
+  const filePaths = await globby(
+    allowedExtensions.length > 0 ? allowedExtensions.map((ext) => `**/*${ext}`) : ["**/*"],
+    {
+      cwd: directory,
+      onlyFiles: true,
+      dot: true,
+      absolute: false,
+      followSymbolicLinks: false,
+      gitignore: true,
+      ignore: [".git"],
+    }
+  );
+
   // Collect file contents
+  const pathToSourceCode: Record<string, string> = {};
   for (const filePath of filePaths) {
     try {
       const fullPath = path.join(directory, filePath);
@@ -128,5 +120,5 @@ export async function collectFiles(
     }
   }
 
-  return { fileTree: fileTreeLines.join("\n"), pathToSourceCode };
+  return pathToSourceCode;
 }

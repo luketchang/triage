@@ -52,24 +52,26 @@ export async function handleCatRequest(
 export async function handleGrepRequest(
   toolCall: GrepRequest
 ): Promise<GrepRequestResult | LLMToolCallError> {
-  return new Promise((resolve, _) => {
-    exec(
-      `grep ${toolCall.flags ? `-${toolCall.flags}` : ""} ${toolCall.pattern} ${toolCall.file}`,
-      (error, stdout, stderr) => {
-        // grep returns exit code 1 if no matches are found, but that's not an error for our use case.
-        // error.code === 1 means "no ma  tches"
-        if (error && typeof error.code === "number" && error.code !== 1) {
-          logger.error(`Error grepping file ${toolCall.file}: ${error} \n ${stderr}`);
-          resolve({ type: "error", toolCallType: "grepRequest", error: error.message });
-        } else {
-          // If error.code === 1, stdout will be empty (no matches), which is fine.
-          resolve({ type: "result", content: "No matches found", toolCallType: "grepRequest" });
-        }
+  return new Promise((resolve) => {
+    // Escape or quote inputs to reduce shell injection risk
+    const flags = toolCall.flags ? `-${toolCall.flags}` : "";
+    const pattern = `"${toolCall.pattern.replace(/"/g, '\\"')}"`;
+    const file = `"${toolCall.file.replace(/"/g, '\\"')}"`;
+
+    exec(`grep ${flags} ${pattern} ${file}`, (error, stdout, stderr) => {
+      if (error && typeof error.code === "number" && error.code > 1) {
+        logger.error(`Error grepping file ${toolCall.file}: ${error} \n ${stderr}`);
+        resolve({ type: "error", toolCallType: "grepRequest", error: error.message });
+      } else if (error && error.code === 1) {
+        // No matches found
+        resolve({ type: "result", content: "No matches found", toolCallType: "grepRequest" });
+      } else {
+        // Matches found
+        resolve({ type: "result", content: stdout, toolCallType: "grepRequest" });
       }
-    );
+    });
   });
 }
-
 export async function handleLogSearchRequest(
   toolCall: LogSearchInputCore,
   observabilityPlatform: ObservabilityPlatform

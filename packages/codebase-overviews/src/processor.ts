@@ -1,10 +1,12 @@
-import { chunkArray, logger } from "@triage/common";
-import { LanguageModelV1 } from "ai";
 import * as fs from "fs/promises";
 import * as path from "path";
+
+import { chunkArray, logger } from "@triage/common";
+import { LanguageModelV1 } from "ai";
+
 import { identifyTopLevelServices } from "./service-identification";
 import { generateDirectorySummary, mergeAllSummaries } from "./summarization";
-import { collectFiles, getMajorDirectories } from "./utils";
+import { collectFiles, createFileTree, getMajorDirectories } from "./utils";
 
 /**
  * Main class for processing a codebase to generate an overview
@@ -37,12 +39,8 @@ export class CodebaseProcessor {
    */
   public async process(): Promise<string> {
     try {
-      // Collect files from the repository using the unified collectFiles function
-      const { fileTree: repoFileTree } = await collectFiles(
-        this.repoPath,
-        this.allowedExtensions,
-        this.repoPath
-      );
+      // Create file tree for the repository
+      const repoFileTree = await createFileTree(this.repoPath, this.allowedExtensions);
 
       // Identify service directories
       const serviceDirs = await identifyTopLevelServices(
@@ -71,7 +69,11 @@ export class CodebaseProcessor {
           async (directory: string): Promise<{ directory: string; summary: string }> => {
             logger.info(`Processing directory: ${directory}`);
 
-            const { fileTree: dirFileTree, pathToSourceCode } = await collectFiles(
+            // Create file tree for this directory
+            const dirFileTree = await createFileTree(directory, this.allowedExtensions);
+
+            // Collect file contents
+            const pathToSourceCode = await collectFiles(
               directory,
               this.allowedExtensions,
               this.repoPath
