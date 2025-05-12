@@ -2,10 +2,10 @@ import { logger, timer } from "@triage/common";
 import { streamText } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { PipelineStateManager, ReasoningStep, StepsType } from "../pipeline/state";
+import { PipelineStateManager, ReasoningStep } from "../pipeline/state";
 import { codeRequestToolSchema, logRequestToolSchema, RequestSubAgentCalls } from "../types";
 
-import { formatCatSteps, formatFacetValues, formatLogSearchSteps } from "./utils";
+import { formatFacetValues } from "./utils";
 type ReasoningResponse = ReasoningStep | RequestSubAgentCalls;
 
 export const createPrompt = ({
@@ -83,8 +83,6 @@ export class Reasoner {
   @timer
   async invoke(params: { parentId: string; maxSteps?: number }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${this.config.query}`);
-    const logSearchSteps = this.state.getLogSearchSteps(StepsType.CURRENT);
-    const catSteps = this.state.getCatSteps(StepsType.CURRENT);
 
     // Inject system prompt into history
     const prompt = createPrompt({
@@ -92,23 +90,7 @@ export class Reasoner {
       ...this.config,
     });
 
-    let chatHistory = this.state.getChatHistory();
-    console.info("Chat history reasoner: ", JSON.stringify(chatHistory));
-    chatHistory = [
-      {
-        role: "system",
-        content: prompt,
-      },
-      ...chatHistory,
-      {
-        role: "assistant",
-        content: `<log_context>\n${formatLogSearchSteps(logSearchSteps)}\n</log_context>`,
-      },
-      {
-        role: "assistant",
-        content: `<code_context>\n${formatCatSteps(catSteps)}\n</code_context>`,
-      },
-    ];
+    const chatHistory = this.state.getReasonerMessages(prompt);
 
     logger.info(`Calling LLM with ${chatHistory.length} messages and maxSteps: ${params.maxSteps}`);
     logger.info(`Reasoner whole prompt:\n${JSON.stringify(chatHistory, null, 2)}\n`);
@@ -132,6 +114,8 @@ export class Reasoner {
           text += part.textDelta;
           // If this is root cause analysis (no tool calls), stream text as it's generated
           this.state.addStreamingStep("reasoning", part.textDelta, params.parentId);
+        } else if (part.type === "reasoning") {
+          process.stdout.write(`${part.textDelta}\n`);
         }
       }
     } catch (error) {
@@ -152,6 +136,7 @@ export class Reasoner {
         timestamp: new Date(),
         content: text,
       };
+      this.state.addIntermediateStep(output, params.parentId);
     } else {
       output = {
         type: "subAgentCalls",

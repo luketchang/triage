@@ -28,6 +28,7 @@ function ChatView() {
     contextItems,
     removeContextItem,
     clearChat,
+    unregisterFromAgentUpdates,
   } = useChatStore();
 
   // Get UI state from store
@@ -111,6 +112,14 @@ function ChatView() {
       textareaRef.current.style.height = "28px";
     }
   }, [newMessage]);
+
+  // Cleanup agent update listeners when component unmounts
+  useEffect(() => {
+    return () => {
+      // Ensure we don't have lingering agent update listeners
+      unregisterFromAgentUpdates();
+    };
+  }, [unregisterFromAgentUpdates]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {

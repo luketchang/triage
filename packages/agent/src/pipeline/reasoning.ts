@@ -42,32 +42,36 @@ export class Reasoning {
     };
 
     while (iterationCount++ < maxIterations) {
-      const reasoningResponse = await this.reasoner.invoke({
-        parentId: reasoningId,
-        maxSteps: maxIterations - iterationCount,
-      });
-      logger.info(`Reasoning response: ${JSON.stringify(reasoningResponse)}`);
+      try {
+        const reasoningResponse = await this.reasoner.invoke({
+          parentId: reasoningId,
+          maxSteps: maxIterations - iterationCount,
+        });
+        logger.info(`Reasoning response: ${JSON.stringify(reasoningResponse)}`);
 
-      if (reasoningResponse.type === "subAgentCalls") {
-        for (const subAgentCall of reasoningResponse.subAgentCalls) {
-          if (subAgentCall.type === "logRequest") {
-            await this.logSearchAgent.invoke({
-              logSearchId: uuidv4(),
-              logRequest: subAgentCall.request,
-            });
-          } else if (subAgentCall.type === "codeRequest") {
-            await this.codeSearchAgent.invoke({
-              codeSearchId: uuidv4(),
-              codeRequest: subAgentCall.request,
-            });
-          } else {
-            throw new Error(`Unknown tool call type`);
+        if (reasoningResponse.type === "subAgentCalls") {
+          for (const subAgentCall of reasoningResponse.subAgentCalls) {
+            if (subAgentCall.type === "logRequest") {
+              await this.logSearchAgent.invoke({
+                logSearchId: uuidv4(),
+                logRequest: subAgentCall.request,
+              });
+            } else if (subAgentCall.type === "codeRequest") {
+              await this.codeSearchAgent.invoke({
+                codeSearchId: uuidv4(),
+                codeRequest: subAgentCall.request,
+              });
+            } else {
+              throw new Error(`Unknown tool call type`);
+            }
           }
+        } else {
+          lastReasoningResponse = reasoningResponse;
+          break;
         }
-      } else {
-        this.state.recordReasonerAssistantMessage(reasoningResponse.content);
-        lastReasoningResponse = reasoningResponse;
-        break;
+      } catch (error) {
+        logger.error(`Error during reasoning: ${error}`);
+        throw error;
       }
     }
 

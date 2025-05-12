@@ -67,8 +67,7 @@ export async function invokeAgent({
     observabilityPlatform,
   };
 
-  const state = new PipelineStateManager(onUpdate);
-  state.initChatHistory(chatHistory);
+  const state = new PipelineStateManager(onUpdate, chatHistory);
 
   console.info("Chat history invokeAgent: ", JSON.stringify(chatHistory));
 
