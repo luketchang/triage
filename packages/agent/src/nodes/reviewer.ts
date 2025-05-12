@@ -1,5 +1,5 @@
 import { logger, timer } from "@triage/common";
-import { CoreMessage, streamText } from "ai";
+import { streamText } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
 import { PipelineStateManager, ReviewStep } from "../pipeline/state";
@@ -7,46 +7,11 @@ import { reviewDecisionToolSchema } from "../types";
 
 import { formatFacetValues } from "./utils";
 
-function formatLlmChatHistory(llmChatHistory: Readonly<CoreMessage[]>): string {
-  return llmChatHistory
-    .map((message) => {
-      switch (message.role) {
-        case "user":
-          return `User: ${message.content}`;
-        case "assistant":
-          if (message.content instanceof Array) {
-            const content = message.content
-              .map((part) => {
-                switch (part.type) {
-                  // TODO: confirm these don't co-occur
-                  case "text":
-                    return part.text;
-                  case "tool-call":
-                    return `tool call(id: ${part.toolCallId}, name: ${part.toolName}, args: ${JSON.stringify(part.args)})`;
-                }
-              })
-              .join("");
-            return `Assistant: ${content}`;
-          }
-          return `Assistant: ${message.content}`;
-        case "tool":
-          return message.content
-            .map((result) => {
-              return `Tool result (id: ${result.toolCallId}): ${result.result}`;
-            })
-            .join("\n");
-        case "system":
-          return `System: ${message.content}`;
-      }
-    })
-    .join("\n");
-}
-
 // TODO: include current context in prompt
 function createPrompt(params: {
   query: string;
   logLabelsMap: Map<string, string[]>;
-  llmChatHistory: Readonly<CoreMessage[]>;
+  llmChatHistory: string;
   answer: string;
 }): string {
   // Format facet maps
@@ -75,7 +40,7 @@ ${formattedLogLabels}
 </log_labels>
 
 <llm_chat_history>
-${formatLlmChatHistory(params.llmChatHistory)}
+${params.llmChatHistory}
 </llm_chat_history>
 
 <answer>
@@ -100,7 +65,7 @@ export class Reviewer {
     const prompt = createPrompt({
       query: this.config.query,
       logLabelsMap: this.config.logLabelsMap,
-      llmChatHistory: this.state.getChatHistory(),
+      llmChatHistory: this.state.getReviewerFormattedMessages(),
       answer: this.state.getAnswer()!,
     });
 

@@ -1,6 +1,15 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
 
-import { AgentStep, CatStep, ChatMessage, CodeSearchStep, GrepStep, LogSearchStep } from "..";
+import {
+  AgentStep,
+  CatStep,
+  ChatMessage,
+  CodeSearchStep,
+  GrepStep,
+  LogSearchStep,
+  ReasoningStep,
+  ReviewStep,
+} from "..";
 import { LogSearchInput, SpanSearchInput } from "../types/tools";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
@@ -196,7 +205,17 @@ export function formatGrepSteps(steps: GrepStep[]): string {
 }
 
 export function formatCodeSearchSteps(steps: CodeSearchStep[]): string {
-    return steps.map((step) => step.type == "cat" ? formatSingleCatStep(step) : formatSingleGrepStep(step)).join("\n\n");
+  return steps
+    .map((step) => (step.type == "cat" ? formatSingleCatStep(step) : formatSingleGrepStep(step)))
+    .join("\n\n");
+}
+
+export function formatReasoningStep(step: ReasoningStep): string {
+  return `Reasoning: ${step.content}`;
+}
+
+export function formatReviewStep(step: ReviewStep): string {
+  return `Review: ${step.content}`;
 }
 
 export function formatAgentSteps(steps: AgentStep[]): string {
@@ -209,6 +228,10 @@ export function formatAgentSteps(steps: AgentStep[]): string {
         return formatSingleCatStep(step);
       } else if (step.type === "grep") {
         return formatSingleGrepStep(step);
+      } else if (step.type === "reasoning") {
+        return formatReasoningStep(step);
+      } else if (step.type === "review") {
+        return formatReviewStep(step);
       }
       return "";
     })
@@ -216,12 +239,15 @@ export function formatAgentSteps(steps: AgentStep[]): string {
     .join("\n\n");
 }
 
-export function formatChatHistory(messages: ChatMessage[]): string {
-  if (!messages || messages.length === 0) {
+export function formatCurrentChatHistory(
+  chatHistory: ChatMessage[],
+  currSteps: AgentStep[]
+): string {
+  if (!chatHistory || chatHistory.length === 0) {
     return "No conversation history.";
   }
 
-  return messages
+  const chatHistoryString = chatHistory
     .map((message) => {
       if (message.role === "user") {
         return `User:\n${message.content}`;
@@ -248,6 +274,10 @@ export function formatChatHistory(messages: ChatMessage[]): string {
     })
     .filter(Boolean)
     .join("\n\n");
+
+  const stepsString = formatAgentSteps(currSteps);
+
+  return `${chatHistoryString}\n\n${stepsString}`;
 }
 
 export function normalizeDatadogQueryString(query: string): string {
