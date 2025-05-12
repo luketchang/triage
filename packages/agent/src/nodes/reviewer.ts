@@ -122,6 +122,8 @@ export class Reviewer {
       if (part.type === "text-delta") {
         text += part.textDelta;
         this.state.addStreamingStep("review", part.textDelta, params.parentId);
+      } else if (part.type === "tool-call-delta") {
+        this.state.addStreamingStep("review", part.argsTextDelta, params.parentId);
       }
     }
 
