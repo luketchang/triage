@@ -23,6 +23,13 @@ export function handleHighLevelUpdate(
           queries: [],
         };
         break;
+      case "codeSearch":
+        newStage = {
+          id: update.id,
+          type: "codeSearch",
+          retrievedCode: [],
+        };
+        break;
       case "reasoning":
         newStage = {
           id: update.id,

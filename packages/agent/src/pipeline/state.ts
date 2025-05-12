@@ -195,6 +195,8 @@ export class PipelineStateManager {
       throw new Error("Reasoning and review steps are handled in addStreamingReasoningStep");
     }
     this.steps.push(step);
+
+    console.info("Streaming step:", JSON.stringify(step));
     this.onUpdate({
       type: "intermediateUpdate",
       id: uuidv4(),
