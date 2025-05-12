@@ -3,10 +3,14 @@ import { streamText } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
 import { PipelineStateManager, ReasoningStep } from "../pipeline/state";
-import { catRequestSchema, grepRequestSchema } from "../tools";
-import { logRequestToolSchema, RequestToolCalls } from "../types";
+import {
+  catRequestSchema,
+  grepRequestSchema,
+  logRequestToolSchema,
+  RequestToolCalls,
+} from "../types";
 
-import { formatCodeSearchSteps, formatFacetValues, formatLogSearchSteps } from "./utils";
+import { formatCatSteps, formatFacetValues, formatLogSearchSteps } from "./utils";
 type ReasoningResponse = ReasoningStep | RequestToolCalls;
 
 export const createPrompt = ({
@@ -85,41 +89,37 @@ export class Reasoner {
   async invoke(params: { parentId: string; maxSteps?: number }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${this.config.query}`);
     const logSearchSteps = this.state.getLogSearchSteps();
-    const codeSearchSteps = this.state.getCodeSearchSteps();
+    const catSteps = this.state.getCatSteps();
 
-    if (this.state.getReasonerChatHistory().length == 0) {
-      const prompt = createPrompt({
-        ...params,
-        ...this.config,
-      });
-
-      this.state.addReasonerChatMessage({
+    // Inject system prompt into history
+    let chatHistory = this.state.getReasonerChatHistory();
+    const prompt = createPrompt({
+      ...params,
+      ...this.config,
+    });
+    chatHistory = [
+      {
         role: "system",
         content: prompt,
-      });
-      this.state.addReasonerChatMessage({
-        role: "system",
+      },
+      ...chatHistory,
+      {
+        role: "assistant",
         content: `<log_context>\n${formatLogSearchSteps(logSearchSteps)}\n</log_context>`,
-      });
-      this.state.addReasonerChatMessage({
-        role: "system",
-        content: `<code_context>\n${formatCodeSearchSteps(codeSearchSteps)}\n</code_context>`,
-      });
-      this.state.addReasonerChatMessage({
-        role: "user",
-        content: this.config.query,
-      });
-    }
-    const reasonerChatHistory = this.state.getReasonerChatHistory();
+      },
+      {
+        role: "assistant",
+        content: `<code_context>\n${formatCatSteps(catSteps)}\n</code_context>`,
+      },
+    ];
 
-    logger.info(
-      `Calling LLM with ${reasonerChatHistory.length} messages and maxSteps: ${params.maxSteps}`
-    );
+    logger.info(`Calling LLM with ${chatHistory.length} messages and maxSteps: ${params.maxSteps}`);
+    logger.info(`Reasoner whole prompt:\n${JSON.stringify(chatHistory, null, 2)}\n`);
 
     // Stream reasoning response and collect text and tool calls
     const { toolCalls, fullStream } = streamText({
       model: this.config.reasoningClient,
-      messages: reasonerChatHistory,
+      messages: chatHistory,
       maxSteps: params.maxSteps || 1,
       tools: {
         logRequest: logRequestToolSchema,
