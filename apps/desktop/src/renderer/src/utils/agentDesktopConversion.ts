@@ -293,8 +293,7 @@ export function convertToAgentChatMessages(
     if (message.role === "user") {
       return convertToAgentUserMessage(message);
     } else {
-      const assistantMessage = convertToAgentAssistantMessage(message);
-      return assistantMessage;
+      return convertToAgentAssistantMessage(message);
     }
   });
 }

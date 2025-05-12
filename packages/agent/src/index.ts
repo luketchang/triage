@@ -1,4 +1,3 @@
-import console from "console";
 import "dotenv/config";
 import fs from "fs/promises";
 

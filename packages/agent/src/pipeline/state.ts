@@ -124,7 +124,7 @@ export class PipelineStateManager {
 
   initChatHistory(chatHistory: ChatMessage[]): void {
     this.reasonerChatHistory = [];
-    
+
     // If we have chat history, initialize reasonerChatHistory for multi-turn chat
     if (chatHistory.length > 0) {
       // Go through user/assistant message pairs to build proper chat history
@@ -142,11 +142,10 @@ export class PipelineStateManager {
             (step): step is LogSearchStep => step.type === "logSearch"
           );
           const catSteps = message.steps.filter((step): step is CatStep => step.type === "cat");
-          console.info("Num cat steps: ", catSteps.length);
-          console.info("Cat steps: ", JSON.stringify(catSteps));
 
           // Add log context as an assistant message (if any)
           if (logSteps.length > 0) {
+            console.info("pushing log steps to history", logSteps.length);
             this.reasonerChatHistory.push({
               role: "assistant",
               content: `<log_context>\n${formatLogSearchSteps(logSteps)}\n</log_context>`,
@@ -155,7 +154,7 @@ export class PipelineStateManager {
 
           // Add code context as an assistant message (if any)
           if (catSteps.length > 0) {
-            console.info("PUSHING CAT STEPS TO HISTORY", catSteps.length);
+            console.info("pushing cat steps to history", catSteps.length);
             this.reasonerChatHistory.push({
               role: "assistant",
               content: `<code_context>\n${formatCatSteps(catSteps)}\n</code_context>`,
