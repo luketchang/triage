@@ -192,14 +192,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       // Call the agent API with message
       const agentChatMessages = convertToAgentChatMessages(updatedMessages);
-      console.info(
-        "Agent chat cat messages converted: ",
-        JSON.stringify(
-          agentChatMessages
-            .filter((msg) => msg.role === "assistant")
-            .flatMap((msg) => msg.steps.filter((step) => step.type === "cat"))
-        )
-      );
       const agentMessage = await api.invokeAgent(newMessage, agentChatMessages);
 
       if (agentMessage && !agentMessage.error) {
