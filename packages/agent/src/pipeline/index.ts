@@ -6,7 +6,7 @@ import { PostProcessing } from "./post-processing";
 import { PreProcessing } from "./pre-processing";
 import { Reasoning } from "./reasoning";
 import { Review } from "./review";
-import { AgentStep, PipelineStateManager } from "./state";
+import { AgentStep, PipelineStateManager, StepsType } from "./state";
 
 export type TriagePipelineConfig = {
   reasoningClient: LanguageModelV1;
@@ -67,7 +67,7 @@ export class TriagePipeline {
 
     return {
       answer: this.state.getAnswer()!,
-      steps: this.state.getSteps(),
+      steps: this.state.getSteps(StepsType.CURRENT),
     };
   }
 }

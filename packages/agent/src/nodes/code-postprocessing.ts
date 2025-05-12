@@ -2,7 +2,12 @@ import { logger, timer } from "@triage/common";
 import { generateText } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { CatStep, CodePostprocessingStep, PipelineStateManager } from "../pipeline/state";
+import {
+  CatStep,
+  CodePostprocessingStep,
+  PipelineStateManager,
+  StepsType,
+} from "../pipeline/state";
 import { codePostprocessingToolSchema } from "../types";
 
 import { ensureSingleToolCall, formatCatSteps, normalizeFilePath } from "./utils";
@@ -67,7 +72,7 @@ export class CodePostprocessor {
       query: this.config.query,
       repoPath: this.config.repoPath,
       codebaseOverview: this.config.codebaseOverview,
-      catSteps: this.state.getCatSteps(),
+      catSteps: this.state.getCatSteps(StepsType.CURRENT),
       answer: this.state.getAnswer()!,
     });
 
