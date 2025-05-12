@@ -13,7 +13,7 @@ import { z } from "zod";
 
 import { AgentConfig } from "./config";
 import { TriagePipeline, TriagePipelineConfig } from "./pipeline";
-import { PipelineStateManager, StreamUpdateFn } from "./pipeline/state";
+import { PipelineStateManager, StepsType, StreamUpdateFn } from "./pipeline/state";
 import type { ChatMessage } from "./types";
 import { AssistantMessage } from "./types";
 
@@ -80,14 +80,14 @@ export async function invokeAgent({
 
     return {
       role: "assistant",
-      steps: state.getSteps(),
+      steps: state.getSteps(StepsType.CURRENT),
       response: response.answer,
       error: null,
     };
   } catch (error) {
     return {
       role: "assistant",
-      steps: state.getSteps(),
+      steps: state.getSteps(StepsType.CURRENT),
       response: null,
       error: `${error}`,
     };

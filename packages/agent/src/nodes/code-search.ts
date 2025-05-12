@@ -2,7 +2,7 @@ import { logger, timer } from "@triage/common";
 import { generateText, LanguageModelV1 } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { CodeSearchStep, LogSearchStep, PipelineStateManager } from "../pipeline/state";
+import { CodeSearchStep, LogSearchStep, PipelineStateManager, StepsType } from "../pipeline/state";
 import { handleCatRequest, handleGrepRequest, LLMToolCall, LLMToolCallError } from "../tools";
 import {
   CatRequestResult,
@@ -193,8 +193,8 @@ export class CodeSearchAgent {
 
     while ((!response || response.type === "codeSearchToolCalls") && currentIter < maxIters) {
       // Get the latest code search steps from state
-      const catSteps = this.state.getCatSteps();
-      const grepSteps = this.state.getGrepSteps();
+      const catSteps = this.state.getCatSteps(StepsType.BOTH);
+      const grepSteps = this.state.getGrepSteps(StepsType.BOTH);
       const previousCodeSearchSteps: CodeSearchStep[] = [...catSteps, ...grepSteps].sort(
         (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
       );
@@ -203,7 +203,7 @@ export class CodeSearchAgent {
         query: this.config.query,
         codeRequest: params.codeRequest,
         fileTree: this.config.fileTree,
-        logSearchSteps: this.state.getLogSearchSteps(),
+        logSearchSteps: this.state.getLogSearchSteps(StepsType.BOTH),
         previousCodeSearchSteps,
         remainingQueries: maxIters - currentIter,
         codebaseOverview: this.config.codebaseOverview,

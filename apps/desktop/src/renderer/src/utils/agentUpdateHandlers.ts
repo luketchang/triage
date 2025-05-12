@@ -12,9 +12,13 @@ export function handleHighLevelUpdate(
   update: HighLevelUpdate
 ): void {
   messageUpdater.update((assistantMessage) => {
-    let newStage: AgentStage;
+    const existingStageIndex = assistantMessage.stages.findIndex((stage) => stage.id === update.id);
+    if (existingStageIndex !== -1) {
+      console.warn(`Stage with ID ${update.id} already exists, skipping duplicate`);
+      return assistantMessage;
+    }
 
-    // Create the appropriate type of step based on stepType
+    let newStage: AgentStage;
     switch (update.stage) {
       case "logSearch":
         newStage = {
@@ -60,7 +64,7 @@ export function handleHighLevelUpdate(
         break;
       default:
         console.warn(`Unknown step type: ${update.stage}`);
-        return assistantMessage; // Return unchanged message if we don't recognize the step type
+        return assistantMessage;
     }
 
     // Add the new step to the message

@@ -3,7 +3,7 @@ import { ObservabilityPlatform } from "@triage/observability";
 import { generateText, LanguageModelV1 } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { LogSearchStep, PipelineStateManager } from "../pipeline/state";
+import { LogSearchStep, PipelineStateManager, StepsType } from "../pipeline/state";
 import { handleLogSearchRequest } from "../tools";
 import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types";
 
@@ -193,7 +193,7 @@ export class LogSearchAgent {
     let newLogSearchSteps: LogSearchStep[] = [];
 
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
-      const previousLogSearchSteps = this.state.getLogSearchSteps();
+      const previousLogSearchSteps = this.state.getLogSearchSteps(StepsType.BOTH);
       let lastLogSearchStep: LogSearchStep | undefined = undefined;
       if (previousLogSearchSteps.length > 0) {
         lastLogSearchStep = previousLogSearchSteps[previousLogSearchSteps.length - 1];

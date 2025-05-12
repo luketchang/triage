@@ -2,7 +2,7 @@ import { logger, timer } from "@triage/common";
 import { streamText } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { PipelineStateManager, ReasoningStep } from "../pipeline/state";
+import { PipelineStateManager, ReasoningStep, StepsType } from "../pipeline/state";
 import { codeRequestToolSchema, logRequestToolSchema, RequestSubAgentCalls } from "../types";
 
 import { formatCatSteps, formatFacetValues, formatLogSearchSteps } from "./utils";
@@ -83,8 +83,8 @@ export class Reasoner {
   @timer
   async invoke(params: { parentId: string; maxSteps?: number }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${this.config.query}`);
-    const logSearchSteps = this.state.getLogSearchSteps();
-    const catSteps = this.state.getCatSteps();
+    const logSearchSteps = this.state.getLogSearchSteps(StepsType.CURRENT);
+    const catSteps = this.state.getCatSteps(StepsType.CURRENT);
 
     // Inject system prompt into history
     const prompt = createPrompt({
@@ -92,7 +92,7 @@ export class Reasoner {
       ...this.config,
     });
 
-    let chatHistory = this.state.getReasonerChatHistory();
+    let chatHistory = this.state.getChatHistory();
     console.info("Chat history reasoner: ", JSON.stringify(chatHistory));
     chatHistory = [
       {
