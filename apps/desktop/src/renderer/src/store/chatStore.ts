@@ -191,10 +191,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     try {
       // Call the agent API with message
-      const agentMessage = await api.invokeAgent(
-        newMessage,
-        convertToAgentChatMessages(updatedMessages)
-      );
+      const agentChatMessages = convertToAgentChatMessages(updatedMessages);
+      const agentMessage = await api.invokeAgent(newMessage, agentChatMessages);
 
       if (agentMessage && !agentMessage.error) {
         // Update the assistant message with the response

@@ -9,6 +9,7 @@ import {
   AssistantMessage,
   CodePostprocessingFact,
   CodePostprocessingStage,
+  CodeSearchStage,
   LogPostprocessingFact,
   LogPostprocessingStage,
   LogSearchStage,
@@ -91,6 +92,8 @@ const renderStage = (stage: AgentStage, isActive: boolean = false) => {
   switch (stage.type) {
     case "logSearch":
       return renderLogSearchStage(stage, isActive);
+    case "codeSearch":
+      return renderCodeSearchStage(stage, isActive);
     case "reasoning":
       return renderReasoningStage(stage, isActive);
     case "review":
@@ -114,6 +117,25 @@ const renderLogSearchStage = (stage: LogSearchStage, isActive: boolean = false) 
         >
           <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
             {query.input.query}
+          </div>
+        </div>
+      ))
+    )}
+  </CollapsibleStep>
+);
+
+const renderCodeSearchStage = (stage: CodeSearchStage, isActive: boolean = false) => (
+  <CollapsibleStep title="Code Search" isActive={isActive}>
+    {stage.retrievedCode.length === 0 ? (
+      <em>Searching code...</em>
+    ) : (
+      stage.retrievedCode.map((code, index) => (
+        <div
+          key={`${stage.id}-search-${index}`}
+          className="code-search-item mb-2 p-3 bg-background-lighter rounded-lg"
+        >
+          <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
+            {code.filepath}
           </div>
         </div>
       ))

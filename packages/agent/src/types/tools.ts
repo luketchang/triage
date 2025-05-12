@@ -148,7 +148,10 @@ export const logSearchInputSchema = z.object({
     ),
 });
 
-export type LogSearchResult = LogsWithPagination & { type: "logSearchResult" };
+export type LogSearchResult = LogsWithPagination & {
+  type: "result";
+  toolCallType: "logSearchInput";
+};
 
 // Full LogSearchInput type with reasoning - used when interfacing with LLMs
 export type LogSearchInput = zInfer<typeof logSearchInputSchema> & { type: "logSearchInput" };
@@ -234,31 +237,33 @@ export const traceSearchInputToolSchema = {
   parameters: traceSearchInputSchema,
 };
 
-const catRequestParametersSchema = z.object({
+const catRequestSchema = z.object({
   path: z.string().describe("File path to read"),
 });
 
-export const catRequestSchema = {
+export const catRequestToolSchema = {
   description: "Read a file and return the contents. Works exactly like cat in the terminal.",
-  parameters: catRequestParametersSchema,
+  parameters: catRequestSchema,
 };
 
-export type CatRequest = z.infer<typeof catRequestParametersSchema> & { type: "catRequest" };
+export type CatRequest = z.infer<typeof catRequestSchema> & { type: "catRequest" };
 
-export const multiCatRequestParametersSchema = z.object({
+export const multiCatRequestSchema = z.object({
   paths: z
-    .array(catRequestParametersSchema)
+    .array(catRequestSchema)
     .describe(
       "Array of file paths to read. Each file path will be read via the cat terminal command."
     ),
 });
 
+// TODO: remove in place of CatStep
 export type CatRequestResult = {
-  type: "catRequestResult";
+  type: "result";
+  toolCallType: "catRequest";
   content: string;
 };
 
-const grepRequestParametersSchema = z.object({
+const grepRequestSchema = z.object({
   pattern: z.string().describe("Regular expression pattern to search for"),
   file: z.string().describe("File or directory to search in"),
   flags: z
@@ -268,16 +273,18 @@ const grepRequestParametersSchema = z.object({
     ),
 });
 
-export const grepRequestSchema = {
+export const grepRequestToolSchema = {
   description:
     "Search for a pattern in a file or directory. Works exactly like grep in the terminal.",
-  parameters: grepRequestParametersSchema,
+  parameters: grepRequestSchema,
 };
 
-export type GrepRequest = z.infer<typeof grepRequestParametersSchema> & { type: "grepRequest" };
+export type GrepRequest = z.infer<typeof grepRequestSchema> & { type: "grepRequest" };
 
+// TODO: remove in place of GrepStep
 export type GrepRequestResult = {
-  type: "grepRequestResult";
+  type: "result";
+  toolCallType: "grepRequest";
   content: string;
 };
 

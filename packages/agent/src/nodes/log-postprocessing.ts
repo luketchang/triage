@@ -2,7 +2,12 @@ import { logger, timer } from "@triage/common";
 import { generateText } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { LogPostprocessingStep, LogSearchStep, PipelineStateManager } from "../pipeline/state";
+import {
+  LogPostprocessingStep,
+  LogSearchStep,
+  PipelineStateManager,
+  StepsType,
+} from "../pipeline/state";
 import { LogPostprocessingFact, logPostprocessingToolSchema } from "../types";
 
 import {
@@ -76,7 +81,7 @@ export class LogPostprocessor {
     const prompt = createPrompt({
       query: this.config.query,
       logLabelsMap: this.config.logLabelsMap,
-      logSearchSteps: this.state.getLogSearchSteps(),
+      logSearchSteps: this.state.getLogSearchSteps(StepsType.CURRENT),
       answer: this.state.getAnswer()!,
       platformSpecificInstructions:
         this.config.observabilityPlatform.getLogSearchQueryInstructions(),

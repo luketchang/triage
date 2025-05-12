@@ -1,6 +1,6 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
 
-import { AgentStep, CatStep, ChatMessage, GrepStep, LogSearchStep } from "..";
+import { AgentStep, CatStep, ChatMessage, CodeSearchStep, GrepStep, LogSearchStep } from "..";
 import { LogSearchInput, SpanSearchInput } from "../types/tools";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
@@ -193,6 +193,10 @@ export function formatCatSteps(steps: CatStep[], options?: { lineNumbers?: boole
 
 export function formatGrepSteps(steps: GrepStep[]): string {
   return steps.map((step) => formatSingleGrepStep(step)).join("\n\n");
+}
+
+export function formatCodeSearchSteps(steps: CodeSearchStep[]): string {
+    return steps.map((step) => step.type == "cat" ? formatSingleCatStep(step) : formatSingleGrepStep(step)).join("\n\n");
 }
 
 export function formatAgentSteps(steps: AgentStep[]): string {

@@ -13,7 +13,7 @@ import { z } from "zod";
 
 import { AgentConfig } from "./config";
 import { TriagePipeline, TriagePipelineConfig } from "./pipeline";
-import { PipelineStateManager, StreamUpdateFn } from "./pipeline/state";
+import { PipelineStateManager, StepsType, StreamUpdateFn } from "./pipeline/state";
 import type { ChatMessage } from "./types";
 import { AssistantMessage } from "./types";
 
@@ -56,8 +56,6 @@ export async function invokeAgent({
     endDate.toISOString()
   );
 
-  logger.info(`Chat history still not being used: ${JSON.stringify(chatHistory)}`);
-
   const pipelineConfig: TriagePipelineConfig = {
     query,
     repoPath: agentCfg.repoPath,
@@ -70,10 +68,9 @@ export async function invokeAgent({
   };
 
   const state = new PipelineStateManager(onUpdate);
-  // Note: We still aren't persisting LLM messages between invocations.
-  // Probably what we want in the future is to delegate the output of the reasoner
-  // to a new agent optimized for follow-up questions.
   state.initChatHistory(chatHistory);
+
+  console.info("Chat history invokeAgent: ", JSON.stringify(chatHistory));
 
   logger.info(`Observability features: ${agentCfg.observabilityFeatures}`);
 
@@ -83,14 +80,14 @@ export async function invokeAgent({
 
     return {
       role: "assistant",
-      steps: state.getSteps(),
+      steps: state.getSteps(StepsType.CURRENT),
       response: response.answer,
       error: null,
     };
   } catch (error) {
     return {
       role: "assistant",
-      steps: state.getSteps(),
+      steps: state.getSteps(StepsType.CURRENT),
       response: null,
       error: `${error}`,
     };
@@ -130,7 +127,8 @@ async function main(): Promise<void> {
 
   const repoPath = "/Users/luketchang/code/ticketing";
   const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
-  const bugPath = "/Users/luketchang/code/triage/repos/ticketing/bugs/rabbitmq-bug.txt";
+  const bugPath =
+    "/Users/luketchang/code/triage/repos/ticketing/bugs/order-cancelled-publish-bug.txt";
 
   const bug = await fs.readFile(bugPath, "utf-8");
 
@@ -148,7 +146,7 @@ async function main(): Promise<void> {
     agentCfg: {
       repoPath,
       codebaseOverviewPath: overviewPath,
-      reasoningModel: GeminiModel.GEMINI_2_5_FLASH,
+      reasoningModel: GeminiModel.GEMINI_2_5_PRO,
       fastModel: GeminiModel.GEMINI_2_5_FLASH,
       observabilityPlatform: integration,
       observabilityFeatures: observabilityFeatures as ("logs" | "spans")[],
@@ -172,7 +170,7 @@ async function main(): Promise<void> {
     endDate,
     onUpdate: (update) => {
       if (update.type === "highLevelUpdate") {
-        process.stdout.write(`\nHighLevelUpdate: ${update.stepType}\n`);
+        process.stdout.write(`\nHighLevelUpdate: ${update.stage}\n`);
       } else if (update.type === "intermediateUpdate") {
         switch (update.step.type) {
           case "reasoning":
@@ -182,7 +180,6 @@ async function main(): Promise<void> {
             process.stdout.write(`${update.step.contentChunk}\n`);
             break;
           default:
-            process.stdout.write(`${JSON.stringify(update.step, null, 2)}\n`);
             break;
         }
       }

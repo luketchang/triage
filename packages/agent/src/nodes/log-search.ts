@@ -3,7 +3,8 @@ import { ObservabilityPlatform } from "@triage/observability";
 import { generateText, LanguageModelV1 } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { LogSearchStep, PipelineStateManager } from "../pipeline/state";
+import { LogSearchStep, PipelineStateManager, StepsType } from "../pipeline/state";
+import { handleLogSearchRequest } from "../tools";
 import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types";
 
 import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "./utils";
@@ -192,7 +193,7 @@ export class LogSearchAgent {
     let newLogSearchSteps: LogSearchStep[] = [];
 
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
-      const previousLogSearchSteps = this.state.getLogSearchSteps();
+      const previousLogSearchSteps = this.state.getLogSearchSteps(StepsType.BOTH);
       let lastLogSearchStep: LogSearchStep | undefined = undefined;
       if (previousLogSearchSteps.length > 0) {
         lastLogSearchStep = previousLogSearchSteps[previousLogSearchSteps.length - 1];
@@ -215,40 +216,36 @@ export class LogSearchAgent {
           `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`
         );
 
-        try {
-          logger.info("Fetching logs from observability platform...");
-          const logContext = await this.config.observabilityPlatform.fetchLogs({
-            query: response.query,
-            start: response.start,
-            end: response.end,
-            limit: response.limit,
-          });
+        logger.info("Fetching logs from observability platform...");
+        const logContext = await handleLogSearchRequest(
+          response,
+          this.config.observabilityPlatform
+        );
 
-          const step: LogSearchStep = {
+        // TODO: centralize the conversion from tool result + toolcall to step
+        let step: LogSearchStep;
+        if (logContext.type === "error") {
+          step = {
+            type: "logSearch",
+            timestamp: new Date(),
+            input: response,
+            results: logContext.error,
+          };
+        } else {
+          step = {
             type: "logSearch",
             timestamp: new Date(),
             input: response,
             results: logContext,
           };
-
-          this.state.addIntermediateStep(step, params.logSearchId);
-          newLogSearchSteps.push(step);
-          const lastLogSearchResultsFormatted = formatLogSearchSteps([step]);
-          logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          logger.error(`Error executing log search: ${errorMessage}`);
-
-          // Store error message in log history (without reasoning)
-          if (response) {
-            lastLogSearchStep = {
-              type: "logSearch",
-              input: response,
-              results: errorMessage,
-              timestamp: new Date(),
-            };
-          }
         }
+
+        newLogSearchSteps.push(step);
+        lastLogSearchStep = step;
+        this.state.addIntermediateStep(step, params.logSearchId);
+
+        const lastLogSearchResultsFormatted = formatLogSearchSteps([step]);
+        logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
       } else {
         logger.info("Log search complete");
       }

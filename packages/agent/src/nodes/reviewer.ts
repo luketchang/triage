@@ -42,6 +42,7 @@ function formatLlmChatHistory(llmChatHistory: Readonly<CoreMessage[]>): string {
     .join("\n");
 }
 
+// TODO: include current context in prompt
 function createPrompt(params: {
   query: string;
   logLabelsMap: Map<string, string[]>;
@@ -99,7 +100,7 @@ export class Reviewer {
     const prompt = createPrompt({
       query: this.config.query,
       logLabelsMap: this.config.logLabelsMap,
-      llmChatHistory: this.state.getReasonerChatHistory(),
+      llmChatHistory: this.state.getChatHistory(),
       answer: this.state.getAnswer()!,
     });
 
@@ -122,6 +123,8 @@ export class Reviewer {
       if (part.type === "text-delta") {
         text += part.textDelta;
         this.state.addStreamingStep("review", part.textDelta, params.parentId);
+      } else if (part.type === "tool-call-delta") {
+        this.state.addStreamingStep("review", part.argsTextDelta, params.parentId);
       }
     }
 
