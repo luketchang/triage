@@ -2,9 +2,16 @@ import type { LogsWithPagination } from "@triage/observability";
 import { CoreMessage, ToolResultPart } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
+import { formatCatSteps, formatLogSearchSteps } from "../nodes/utils";
 import { LLMToolCall, LLMToolCallResultOrError } from "../tools";
 import { ChatMessage } from "../types/message";
-import { CodePostprocessingFact, LogPostprocessingFact, LogSearchInputCore } from "../types/tools";
+import {
+  CatRequest,
+  CodePostprocessingFact,
+  GrepRequest,
+  LogPostprocessingFact,
+  LogSearchInputCore,
+} from "../types/tools";
 
 export interface BaseAgentStep {
   timestamp: Date;
@@ -19,14 +26,17 @@ export interface LogSearchStep extends BaseAgentStep, LogSearchPair {
   type: "logSearch";
 }
 
-export interface CodeSearchPair {
-  filepath: string;
+export interface CatStep extends BaseAgentStep, Omit<CatRequest, "type"> {
+  type: "cat";
   source: string;
 }
 
-export interface CodeSearchStep extends BaseAgentStep, CodeSearchPair {
-  type: "codeSearch";
+export interface GrepStep extends BaseAgentStep, Omit<GrepRequest, "type"> {
+  type: "grep";
+  output: string;
 }
+
+export type CodeSearchStep = CatStep | GrepStep;
 
 export interface ReasoningStep extends BaseAgentStep {
   type: "reasoning";
@@ -57,7 +67,8 @@ export interface ToolCallStep extends BaseAgentStep {
 
 export type AgentStep =
   | LogSearchStep
-  | CodeSearchStep
+  | CatStep
+  | GrepStep
   | ReasoningStep
   | ReviewStep
   | LogPostprocessingStep
@@ -68,7 +79,8 @@ type StreamingPartial<T> = Omit<T, "content"> & { contentChunk: string };
 
 export type AgentStreamingStep =
   | LogSearchStep
-  | CodeSearchStep
+  | CatStep
+  | GrepStep
   | StreamingPartial<ReasoningStep>
   | StreamingPartial<ReviewStep>
   | LogPostprocessingStep
@@ -103,10 +115,47 @@ export class PipelineStateManager {
   }
 
   initChatHistory(chatHistory: ChatMessage[]): void {
-    for (const message of chatHistory) {
-      if (message.role === "assistant") {
-        for (const step of message.steps) {
-          this.steps.push(step);
+    // If we have chat history, initialize reasonerChatHistory for multi-turn chat
+    if (chatHistory.length > 0) {
+      // Go through user/assistant message pairs to build proper chat history
+      for (const message of chatHistory) {
+        // Process user messages
+        if (message.role === "user") {
+          // Add user message to chat history
+          this.reasonerChatHistory.push({
+            role: "user",
+            content: message.content,
+          });
+        } else if (message.role === "assistant") {
+          // Get all steps from this assistant message
+          const logSteps = message.steps.filter(
+            (step): step is LogSearchStep => step.type === "logSearch"
+          );
+          const catSteps = message.steps.filter((step): step is CatStep => step.type === "cat");
+
+          // Add log context as an assistant message (if any)
+          if (logSteps.length > 0) {
+            this.reasonerChatHistory.push({
+              role: "assistant",
+              content: `<log_context>\n${formatLogSearchSteps(logSteps)}\n</log_context>`,
+            });
+          }
+
+          // Add code context as an assistant message (if any)
+          if (catSteps.length > 0) {
+            this.reasonerChatHistory.push({
+              role: "assistant",
+              content: `<code_context>\n${formatCatSteps(catSteps)}\n</code_context>`,
+            });
+          }
+
+          // Add the final assistant response
+          if (message.response) {
+            this.reasonerChatHistory.push({
+              role: "assistant",
+              content: message.response,
+            });
+          }
         }
       }
     }
@@ -115,7 +164,7 @@ export class PipelineStateManager {
   recordHighLevelStep(stepType: AgentStep["type"], id?: string): void {
     this.onUpdate({
       type: "highLevelUpdate",
-      stepType: stepType,
+      stepType,
       id: id || uuidv4(),
     });
   }
@@ -142,7 +191,7 @@ export class PipelineStateManager {
       type: "intermediateUpdate",
       id: uuidv4(),
       parentId,
-      step: step,
+      step,
     });
   }
 
@@ -207,8 +256,12 @@ export class PipelineStateManager {
     return this.steps.filter((step) => step.type === "logSearch");
   }
 
-  getCodeSearchSteps(): CodeSearchStep[] {
-    return this.steps.filter((step) => step.type === "codeSearch");
+  getCatSteps(): CatStep[] {
+    return this.steps.filter((step) => step.type === "cat");
+  }
+
+  getGrepSteps(): GrepStep[] {
+    return this.steps.filter((step) => step.type === "grep");
   }
 
   getReasonerChatHistory(): CoreMessage[] {

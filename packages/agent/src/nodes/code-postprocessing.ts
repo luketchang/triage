@@ -2,10 +2,10 @@ import { logger, timer } from "@triage/common";
 import { generateText } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { CodePostprocessingStep, CodeSearchStep, PipelineStateManager } from "../pipeline/state";
+import { CatStep, CodePostprocessingStep, PipelineStateManager } from "../pipeline/state";
 import { codePostprocessingToolSchema } from "../types";
 
-import { ensureSingleToolCall, formatCodeSearchSteps, normalizeFilePath } from "./utils";
+import { ensureSingleToolCall, formatCatSteps, normalizeFilePath } from "./utils";
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from code.
@@ -15,7 +15,7 @@ function createPrompt(params: {
   query: string;
   repoPath: string;
   codebaseOverview: string;
-  codeSearchSteps: CodeSearchStep[];
+  catSteps: CatStep[];
   answer: string;
 }): string {
   return `
@@ -45,7 +45,7 @@ function createPrompt(params: {
   </repo_path>
   
   <previous_code_context>
-  ${formatCodeSearchSteps(params.codeSearchSteps, { lineNumbers: true })}
+  ${formatCatSteps(params.catSteps, { lineNumbers: true })}
   </previous_code_context>
   `;
 }
@@ -67,7 +67,7 @@ export class CodePostprocessor {
       query: this.config.query,
       repoPath: this.config.repoPath,
       codebaseOverview: this.config.codebaseOverview,
-      codeSearchSteps: this.state.getCodeSearchSteps(),
+      catSteps: this.state.getCatSteps(),
       answer: this.state.getAnswer()!,
     });
 
