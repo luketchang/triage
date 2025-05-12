@@ -1,7 +1,7 @@
 import "dotenv/config";
 import fs from "fs/promises";
 
-import { GeminiModel, getModelWrapper, loadFileTree, logger } from "@triage/common";
+import { GeminiModel, getModelWrapper, createFileTree, logger } from "@triage/common";
 import {
   DatadogCfgSchema,
   getObservabilityPlatform,
@@ -47,7 +47,7 @@ export async function invokeAgent({
     throw new Error("Repo path is required");
   }
   const codebaseOverview = await fs.readFile(agentCfg.codebaseOverviewPath, "utf-8");
-  const fileTree = loadFileTree(agentCfg.repoPath);
+  const fileTree = await createFileTree(agentCfg.repoPath);
 
   const observabilityPlatform = getObservabilityPlatform(agentCfg);
   // Get formatted labels map for time range

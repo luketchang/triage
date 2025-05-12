@@ -1,12 +1,12 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 
-import { chunkArray, logger } from "@triage/common";
+import { chunkArray, collectFiles, createFileTree, logger } from "@triage/common";
 import { LanguageModelV1 } from "ai";
 
 import { identifyTopLevelServices } from "./service-identification";
 import { generateDirectorySummary, mergeAllSummaries } from "./summarization";
-import { collectFiles, createFileTree, getMajorDirectories } from "./utils";
+import { getMajorDirectories } from "./utils";
 
 /**
  * Main class for processing a codebase to generate an overview
