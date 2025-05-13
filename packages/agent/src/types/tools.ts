@@ -225,7 +225,7 @@ export const traceSearchInputToolSchema = {
 };
 
 const catRequestSchema = z.object({
-  path: z.string().describe("File path to read"),
+  path: z.string().describe("Absolute file path to read"),
 });
 
 export const catRequestToolSchema = {

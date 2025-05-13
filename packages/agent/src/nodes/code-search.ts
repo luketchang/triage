@@ -48,7 +48,7 @@ function createCodeSearchPrompt(params: {
 
   // TODO: split out last code search steps into its own section
   return `
-Given a user query about the issue/event, previously gathered code context, your task is to fetch additional code that will help you achieve the following: ${params.codeRequest}. You will do so by outputtingm one or more \`grepRequest\` or \`catRequest\` tool calls to read code from codebase. If you feel you have enough code for the objective and have thoroughly explored the relevant tangential files, do not output a tool call (no tool calls indicate you are done). The objective you're helping with will usually be a subtask of answering the user query.
+Given a user query about the issue/event and gathered context from the logs, your task is to fetch additional code that will help you achieve the following: ${params.codeRequest}. You will do so by outputting one or more \`grepRequest\` or \`catRequest\` tool calls to read code from codebase. If you feel you have enough code for the objective and have thoroughly explored the relevant tangential files, do not output a tool call (no tool calls indicate you are done). The objective you're helping with will usually be a subtask of answering the user query.
 
 ## Tips
 - You do not have to follow the given task exactly but you must iterate and find increasingly more relevant context that will eventually help the agent figure out the answer to the user query/issue/event.
