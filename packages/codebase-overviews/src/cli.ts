@@ -62,7 +62,7 @@ export async function main(): Promise<void> {
     const llmClient = getModelWrapper(model, {
       openaiApiKey: process.env.OPENAI_API_KEY,
       anthropicApiKey: process.env.ANTHROPIC_API_KEY,
-      googleApiKey: process.env.GOOGLE_API_KEY,
+      googleApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
     });
     const processor = new CodebaseProcessor(llmClient, repoPath, systemDescription, outputDir);
     await processor.process();
