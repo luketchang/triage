@@ -225,11 +225,6 @@ const api = {
   loadChatMessages: async (chatId: number): Promise<ChatMessage[]> => {
     console.info("[API DEBUG] loadChatMessages called with chatId:", chatId);
 
-    if (!chatId) {
-      console.error("Chat ID must be provided to load messages");
-      return [];
-    }
-
     if (USE_MOCK_API || !isMethodAvailable("loadChatMessages")) {
       console.info("Mock loadChatMessages - not implemented in mock mode");
       return [];
@@ -241,11 +236,6 @@ const api = {
 
   deleteChat: async (chatId: number): Promise<boolean> => {
     console.info("[API DEBUG] deleteChat called for chatId:", chatId);
-
-    if (!chatId) {
-      console.error("Chat ID must be provided to delete chat");
-      return false;
-    }
 
     if (USE_MOCK_API || !isMethodAvailable("deleteChat")) {
       console.info("Mock deleteChat - not implemented in mock mode");

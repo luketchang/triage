@@ -64,11 +64,6 @@ export function setupDbHandlers(): void {
       console.info("IPC: db:save-assistant-message called");
       if (!dbService) return null;
 
-      if (!chatId) {
-        console.error("Chat ID must be provided to save assistant message");
-        return null;
-      }
-
       console.info("Saving assistant message to chat ID:", chatId);
       const messageId = await dbService.saveAssistantMessage(message, chatId);
       console.info("Assistant message saved with ID:", messageId);
@@ -81,11 +76,6 @@ export function setupDbHandlers(): void {
     console.info("IPC: db:get-messages called with chatId:", chatId);
     if (!dbService) return [];
 
-    if (!chatId) {
-      console.error("Chat ID must be provided to get messages");
-      return [];
-    }
-
     console.info("Getting messages for chat ID:", chatId);
     const messages = await dbService.getChatMessages(chatId);
     console.info(`Got ${messages.length} messages`);
@@ -96,11 +86,6 @@ export function setupDbHandlers(): void {
   ipcMain.handle("db:delete-chat", async (_, chatId: number): Promise<boolean> => {
     console.info("IPC: db:delete-chat called");
     if (!dbService) return false;
-
-    if (!chatId) {
-      console.error("Chat ID must be provided to delete chat");
-      return false;
-    }
 
     console.info("Deleting chat ID:", chatId);
     await dbService.deleteChat(chatId);

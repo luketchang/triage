@@ -257,11 +257,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   deleteChat: async (chatId: number) => {
     try {
-      if (!chatId) {
-        console.error("No chat ID provided for deletion");
-        return;
-      }
-
       const success = await api.deleteChat(chatId);
       if (success) {
         // If we're deleting the currently selected chat, reset UI
