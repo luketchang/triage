@@ -101,21 +101,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /**
    * Save an assistant message to the database
    * @param message The assistant message to save
+   * @param chatId The ID of the chat to save to
    */
-  saveAssistantMessage: (message: AssistantMessage) =>
-    ipcRenderer.invoke("db:save-assistant-message", message),
+  saveAssistantMessage: (message: AssistantMessage, chatId: number) =>
+    ipcRenderer.invoke("db:save-assistant-message", message, chatId),
 
   /**
    * Load messages from a specific chat
-   * @param chatId Optional chat ID, uses latest chat if not provided
+   * @param chatId The ID of the chat to load messages from
    */
-  loadChatMessages: (chatId?: number) => ipcRenderer.invoke("db:get-messages", chatId),
+  loadChatMessages: (chatId: number) => ipcRenderer.invoke("db:get-messages", chatId),
 
   /**
-   * Clear the current chat
-   * @param chatId Optional chat ID, uses latest chat if not provided
+   * Delete a chat and all its messages
+   * @param chatId The ID of the chat to delete
    */
-  clearChat: (chatId?: number) => ipcRenderer.invoke("db:clear-messages", chatId),
+  deleteChat: (chatId: number) => ipcRenderer.invoke("db:delete-chat", chatId),
 });
 
 /**

@@ -60,13 +60,9 @@ export function setupDbHandlers(): void {
   // Save assistant message
   ipcMain.handle(
     "db:save-assistant-message",
-    async (_, message: AssistantMessage): Promise<number | null> => {
+    async (_, message: AssistantMessage, chatId: number): Promise<number | null> => {
       console.info("IPC: db:save-assistant-message called");
       if (!dbService) return null;
-
-      // Get chat ID
-      const chatId = await dbService.getLatestChatId();
-      if (!chatId) return null;
 
       console.info("Saving assistant message to chat ID:", chatId);
       const messageId = await dbService.saveAssistantMessage(message, chatId);
@@ -76,31 +72,24 @@ export function setupDbHandlers(): void {
   );
 
   // Get chat messages
-  ipcMain.handle("db:get-messages", async (_, chatId?: number): Promise<ChatMessage[]> => {
+  ipcMain.handle("db:get-messages", async (_, chatId: number): Promise<ChatMessage[]> => {
     console.info("IPC: db:get-messages called with chatId:", chatId);
     if (!dbService) return [];
 
-    // Get the specified chat ID or the latest chat ID if not provided
-    const id = chatId || (await dbService.getLatestChatId());
-    if (!id) return [];
-
-    console.info("Getting messages for chat ID:", id);
-    const messages = await dbService.getChatMessages(id);
+    console.info("Getting messages for chat ID:", chatId);
+    const messages = await dbService.getChatMessages(chatId);
     console.info(`Got ${messages.length} messages`);
     return messages;
   });
 
-  // Clear current chat
-  ipcMain.handle("db:clear-messages", async (_, chatId?: number): Promise<boolean> => {
-    console.info("IPC: db:clear-messages called");
+  // Delete chat and all its messages
+  ipcMain.handle("db:delete-chat", async (_, chatId: number): Promise<boolean> => {
+    console.info("IPC: db:delete-chat called");
     if (!dbService) return false;
 
-    const id = chatId || (await dbService.getLatestChatId());
-    if (!id) return false;
-
-    console.info("Clearing chat ID:", id);
-    await dbService.clearChat(id);
-    console.info("Chat cleared successfully");
+    console.info("Deleting chat ID:", chatId);
+    await dbService.deleteChat(chatId);
+    console.info("Chat deleted successfully");
     return true;
   });
 
@@ -118,6 +107,6 @@ export function cleanupDbHandlers(): void {
   ipcMain.removeHandler("db:save-user-message");
   ipcMain.removeHandler("db:save-assistant-message");
   ipcMain.removeHandler("db:get-messages");
-  ipcMain.removeHandler("db:clear-messages");
+  ipcMain.removeHandler("db:delete-chat");
   console.info("DB handlers cleanup complete.");
 }
