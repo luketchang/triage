@@ -239,23 +239,6 @@ const api = {
     }
   },
 
-  clearChat: async (chatId: number): Promise<boolean> => {
-    console.info("[API DEBUG] clearChat called for chatId:", chatId);
-
-    if (!chatId) {
-      console.error("Chat ID must be provided to clear chat");
-      return false;
-    }
-
-    if (USE_MOCK_API || !isMethodAvailable("clearChat")) {
-      console.info("Mock clearChat - not implemented in mock mode");
-      return false;
-    } else {
-      console.info("Using real electronAPI.clearChat");
-      return window.electronAPI.clearChat(chatId);
-    }
-  },
-
   deleteChat: async (chatId: number): Promise<boolean> => {
     console.info("[API DEBUG] deleteChat called for chatId:", chatId);
 

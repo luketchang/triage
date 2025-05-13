@@ -121,13 +121,6 @@ declare global {
       loadChatMessages: (chatId: number) => Promise<ChatMessage[]>;
 
       /**
-       * Clear messages from a chat (keeping the chat entry)
-       * @param chatId The ID of the chat to clear
-       * @returns Promise with success status
-       */
-      clearChat: (chatId: number) => Promise<boolean>;
-
-      /**
        * Delete a chat and all its messages
        * @param chatId The ID of the chat to delete
        * @returns Promise with success status

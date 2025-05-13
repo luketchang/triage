@@ -113,12 +113,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   loadChatMessages: (chatId: number) => ipcRenderer.invoke("db:get-messages", chatId),
 
   /**
-   * Clear messages from a chat (keeping the chat entry)
-   * @param chatId The ID of the chat to clear
-   */
-  clearChat: (chatId: number) => ipcRenderer.invoke("db:clear-messages", chatId),
-
-  /**
    * Delete a chat and all its messages
    * @param chatId The ID of the chat to delete
    */

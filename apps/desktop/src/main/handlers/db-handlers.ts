@@ -92,22 +92,6 @@ export function setupDbHandlers(): void {
     return messages;
   });
 
-  // Clear current chat (remove messages but keep chat)
-  ipcMain.handle("db:clear-messages", async (_, chatId: number): Promise<boolean> => {
-    console.info("IPC: db:clear-messages called");
-    if (!dbService) return false;
-
-    if (!chatId) {
-      console.error("Chat ID must be provided to clear chat");
-      return false;
-    }
-
-    console.info("Clearing chat ID:", chatId);
-    await dbService.clearChat(chatId);
-    console.info("Chat cleared successfully");
-    return true;
-  });
-
   // Delete chat and all its messages
   ipcMain.handle("db:delete-chat", async (_, chatId: number): Promise<boolean> => {
     console.info("IPC: db:delete-chat called");
@@ -138,7 +122,6 @@ export function cleanupDbHandlers(): void {
   ipcMain.removeHandler("db:save-user-message");
   ipcMain.removeHandler("db:save-assistant-message");
   ipcMain.removeHandler("db:get-messages");
-  ipcMain.removeHandler("db:clear-messages");
   ipcMain.removeHandler("db:delete-chat");
   console.info("DB handlers cleanup complete.");
 }

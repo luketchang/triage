@@ -37,7 +37,6 @@ interface ChatState {
   createChat: () => Promise<number | undefined>;
   loadChats: () => Promise<void>;
   sendMessage: () => Promise<void>;
-  clearChat: () => Promise<void>;
   deleteChat: (chatId: number) => Promise<void>;
   setContextItems: (items: ContextItem[]) => void;
   removeContextItem: (id: string) => void;
@@ -253,26 +252,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       // Unregister from agent updates
       get().unregisterFromAgentUpdates();
-    }
-  },
-
-  clearChat: async () => {
-    try {
-      const { currentChatId } = get();
-      if (!currentChatId) {
-        console.error("No chat selected to clear");
-        return;
-      }
-
-      const success = await api.clearChat(currentChatId);
-      if (success) {
-        set({
-          messages: [],
-          savedMessageIds: new Set(),
-        });
-      }
-    } catch (error) {
-      console.error("Error clearing chat:", error);
     }
   },
 
