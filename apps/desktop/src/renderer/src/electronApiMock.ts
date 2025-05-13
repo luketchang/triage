@@ -629,33 +629,6 @@ The primary issue appears to be in the authentication middleware where token val
     return `${repoPath}/.triage/codebase-overview.md`;
   },
 
-  /**
-   * Mock implementation of getting codebase overview content
-   */
-  getCodebaseOverviewContent: async (filePath: string): Promise<string> => {
-    console.info("Mock getCodebaseOverviewContent called with:", filePath);
-
-    // Simulate some delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Return mock markdown content
-    return (
-      "# Mock Codebase Overview\n\n" +
-      "This is a sample overview generated in mock mode.\n\n" +
-      "## Structure\n\n" +
-      "- `src/` - Source code files\n" +
-      "- `tests/` - Test files\n" +
-      "- `docs/` - Documentation\n\n" +
-      "## Key Components\n\n" +
-      "1. Component A - Description\n" +
-      "2. Component B - Description\n\n" +
-      "## Technologies\n\n" +
-      "- TypeScript\n" +
-      "- React\n" +
-      "- Electron"
-    );
-  },
-
   // Note: onCodebaseOverviewProgress is handled in api.ts with simulation
 };
 

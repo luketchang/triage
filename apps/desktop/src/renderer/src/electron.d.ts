@@ -139,13 +139,6 @@ declare global {
       generateCodebaseOverview: (repoPath: string) => Promise<string>;
 
       /**
-       * Get the content of a codebase overview file
-       * @param filePath Path to the overview file
-       * @returns Promise with the content of the overview file
-       */
-      getCodebaseOverviewContent: (filePath: string) => Promise<string>;
-
-      /**
        * Register for codebase overview progress events
        * @param callback Function called when progress updates are received
        * @returns Function to unsubscribe from events

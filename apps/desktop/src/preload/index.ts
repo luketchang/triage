@@ -125,13 +125,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("codebase:generate-overview", repoPath),
 
   /**
-   * Get the content of a codebase overview file
-   * @param filePath The path to the overview file
-   */
-  getCodebaseOverviewContent: (filePath: string) =>
-    ipcRenderer.invoke("codebase:get-overview-content", filePath),
-
-  /**
    * Register a callback for codebase overview progress events
    * @param callback Function to call when a progress event is received
    */

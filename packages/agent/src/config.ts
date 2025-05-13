@@ -5,7 +5,13 @@ import { z } from "zod";
 
 export const AgentCfgSchema = z.object({
   repoPath: z.string().optional(),
-  codebaseOverviewPath: z.string().optional(),
+  codebaseOverview: z
+    .object({
+      content: z.string(),
+      createdAt: z.date().optional(),
+      commitHash: z.string().optional(),
+    })
+    .optional(),
 
   reasoningModel: z.custom<Model>().default(GeminiModel.GEMINI_2_5_PRO),
   fastModel: z.custom<Model>().default(GeminiModel.GEMINI_2_5_FLASH),

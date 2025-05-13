@@ -82,7 +82,7 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
           }
 
           // Clear dependent fields
-          partial.codebaseOverviewPath = undefined;
+          partial.codebaseOverview = undefined;
           partial.githubRepoBaseUrl = undefined;
 
           // Try to infer GitHub repo URL from git remote

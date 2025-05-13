@@ -2,7 +2,6 @@ import { CodebaseProcessor } from "@triage/codebase-overviews";
 import { GeminiModel, getModelWrapper } from "@triage/common";
 import { BrowserWindow, ipcMain } from "electron";
 import fs from "fs/promises";
-import path from "path";
 import { AppConfigStore } from "../../common/AppConfig.js";
 
 /**
@@ -35,13 +34,6 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
         // Get current configuration to access API keys
         const currentConfig = await appCfgStore.getValues();
 
-        // Set up the output directory in the repo
-        const outputDir = path.join(repoPath, ".triage");
-        await fs.mkdir(outputDir, { recursive: true });
-
-        // The output file path that will be set in the config
-        const outputFilePath = path.join(outputDir, "codebase-overview.md");
-
         // Create LLM client - use the reasoningModel if available, otherwise fallback to Gemini
         const model = currentConfig.reasoningModel || GeminiModel.GEMINI_2_5_PRO;
 
@@ -51,29 +43,28 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
           googleApiKey: currentConfig.googleApiKey,
         });
 
-        // Send progress update before starting
-        window.webContents.send("codebase:overview-progress", {
-          status: "processing",
-          message: "Analyzing repository structure...",
-          progress: 10,
-        });
-
         // Create processor with optimized chunk size
         const processor = new CodebaseProcessor(
           llmClient,
           repoPath,
-          "", // No system description needed
-          outputDir,
-          { chunkSize: 8 }
+          "" // No system description needed
         );
 
         // Generate the overview - unfortunately we can't get progress updates
         // from the processor, so we'll just send a few staged updates
         window.webContents.send("codebase:overview-progress", {
           status: "processing",
-          message: "Collecting and analyzing files...",
-          progress: 30,
+          message: "Analyzing repository structure...",
+          progress: 10,
         });
+
+        setTimeout(() => {
+          window.webContents.send("codebase:overview-progress", {
+            status: "processing",
+            message: "Collecting and analyzing files...",
+            progress: 30,
+          });
+        }, 1000);
 
         setTimeout(() => {
           window.webContents.send("codebase:overview-progress", {
@@ -92,11 +83,15 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
         }, 8000);
 
         // Generate the overview
-        await processor.process();
+        const codebaseOverview = await processor.process();
 
         // Update config with the new overview path
         await appCfgStore.setValues({
-          codebaseOverviewPath: outputFilePath,
+          codebaseOverview: {
+            content: codebaseOverview,
+            createdAt: new Date(),
+            commitHash: "TODO",
+          },
         });
 
         // Send final progress update
@@ -106,7 +101,7 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
           progress: 100,
         });
 
-        return outputFilePath;
+        return codebaseOverview;
       } catch (error: unknown) {
         console.error("Error generating codebase overview:", error);
 
@@ -122,30 +117,6 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
     }
   );
 
-  // Handle retrieval of codebase overview content
-  ipcMain.handle(
-    "codebase:get-overview-content",
-    async (_event: any, filePath: string): Promise<string> => {
-      try {
-        // Validate file path exists
-        try {
-          await fs.access(filePath);
-        } catch (error) {
-          throw new Error(`Overview file does not exist or is not accessible: ${filePath}`);
-        }
-
-        console.info(`Reading codebase overview from: ${filePath}`);
-
-        // Read the file content
-        const content = await fs.readFile(filePath, "utf-8");
-        return content;
-      } catch (error: unknown) {
-        console.error("Error reading codebase overview:", error);
-        throw error;
-      }
-    }
-  );
-
   console.info("All codebase handlers registered.");
 }
 
@@ -154,6 +125,5 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
  */
 export function cleanupCodebaseHandlers(): void {
   ipcMain.removeHandler("codebase:generate-overview");
-  ipcMain.removeHandler("codebase:get-overview-content");
   console.info("Codebase handlers cleanup complete.");
 }

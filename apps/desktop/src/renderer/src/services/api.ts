@@ -285,21 +285,6 @@ const api = {
       return window.electronAPI.onCodebaseOverviewProgress(callback);
     }
   },
-
-  getCodebaseOverviewContent: async (filePath: string): Promise<string> => {
-    if (USE_MOCK_API || !isMethodAvailable("getCodebaseOverviewContent")) {
-      console.info("Using mock getCodebaseOverviewContent");
-      return mockElectronAPI.getCodebaseOverviewContent(filePath);
-    } else {
-      console.info("Using real electronAPI.getCodebaseOverviewContent");
-      try {
-        return window.electronAPI.getCodebaseOverviewContent(filePath);
-      } catch (error) {
-        console.error("Error getting codebase overview content:", error);
-        return "# Error\n\nFailed to load codebase overview content.";
-      }
-    }
-  },
 };
 
 export default api;

@@ -367,17 +367,11 @@ function SettingsView() {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
-  // State for overview generation
+  // State for overview
   const [isGeneratingOverview, setIsGeneratingOverview] = useState<boolean>(false);
   const [overviewProgress, setOverviewProgress] = useState<CodebaseOverviewProgressUpdate | null>(
     null
   );
-
-  // State for codebase overview content
-  const [overviewContent, setOverviewContent] = useState<string>(
-    "The codebase overview content will be shown here when available."
-  );
-  const [isLoadingOverview, setIsLoadingOverview] = useState<boolean>(false);
   const [overviewExpanded, setOverviewExpanded] = useState<boolean>(false);
 
   // Cleanup function reference
@@ -455,6 +449,7 @@ function SettingsView() {
       }
 
       progressCleanupRef.current = api.onCodebaseOverviewProgress((update) => {
+        console.log("progress", update);
         setOverviewProgress(update);
 
         // When complete, refresh the config to get the updated path
@@ -484,32 +479,6 @@ function SettingsView() {
       setIsGeneratingOverview(false);
     }
   };
-
-  // Effect to load codebase overview content when path changes
-  useEffect(() => {
-    if (localConfig?.codebaseOverviewPath && !isGeneratingOverview) {
-      setIsLoadingOverview(true);
-
-      // Automatically expand the overview content when it's first loaded
-      setOverviewExpanded(true);
-
-      // Use the API to get the actual content of the overview file
-      api
-        .getCodebaseOverviewContent(localConfig.codebaseOverviewPath)
-        .then((content) => {
-          setOverviewContent(content);
-        })
-        .catch((error) => {
-          console.error("Error loading overview content:", error);
-          setOverviewContent(
-            "# Error Loading Overview\n\nUnable to load the codebase overview content. This may happen if:\n\n- The file was deleted or moved\n- The file permissions have changed\n- The repository is no longer accessible\n\nTry regenerating the overview by clicking the 'Regenerate' button above."
-          );
-        })
-        .finally(() => {
-          setIsLoadingOverview(false);
-        });
-    }
-  }, [localConfig?.codebaseOverviewPath, isGeneratingOverview]);
 
   if (isLoading || !localConfig) {
     return (
@@ -547,6 +516,59 @@ function SettingsView() {
 
       <ScrollArea className="flex-1 p-6">
         <div className="max-w-3xl mx-auto">
+          <SectionHeader>AI Models</SectionHeader>
+          <SettingsGroup>
+            <SettingField
+              label="OpenAI API Key"
+              description={
+                <>
+                  Get your key from{" "}
+                  <a
+                    href="https://platform.openai.com/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline"
+                  >
+                    OpenAI Dashboard
+                  </a>
+                </>
+              }
+            >
+              <Input
+                type="password"
+                value={localConfig.openaiApiKey || ""}
+                onChange={(e) => handleChange("openaiApiKey", e.target.value)}
+                onBlur={handleBlur}
+                placeholder="..."
+              />
+            </SettingField>
+
+            <SettingField
+              label="Google Gemini API Key"
+              description={
+                <>
+                  Get your key from{" "}
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline"
+                  >
+                    Google AI Studio
+                  </a>
+                </>
+              }
+            >
+              <Input
+                type="password"
+                value={localConfig.googleApiKey || ""}
+                onChange={(e) => handleChange("googleApiKey", e.target.value)}
+                onBlur={handleBlur}
+                placeholder="..."
+              />
+            </SettingField>
+          </SettingsGroup>
+
           <SectionHeader>Your Code</SectionHeader>
           <SettingsGroup>
             <SettingField label="Repository Path" description="Local path to your code repository">
@@ -563,10 +585,13 @@ function SettingsView() {
               description="Helps the AI understand your codebase, making it faster and more reliable at debugging issues"
             >
               <div className="space-y-2">
-                {localConfig.codebaseOverviewPath ? (
+                {localConfig.codebaseOverview ? (
                   <div className="flex items-center justify-between bg-muted p-2 rounded-md">
                     <span className="text-sm text-muted-foreground truncate max-w-[300px]">
-                      Generated at {localConfig.codebaseOverviewPath}
+                      Generated
+                      {localConfig.codebaseOverview.createdAt
+                        ? ` at ${localConfig.codebaseOverview.createdAt.toLocaleString()}`
+                        : " overview available"}
                     </span>
                     <div className="flex gap-2">
                       <Button
@@ -595,7 +620,7 @@ function SettingsView() {
                     </Button>
                   </div>
                 )}
-                {(localConfig.codebaseOverviewPath || isGeneratingOverview) && (
+                {(localConfig.codebaseOverview || isGeneratingOverview) && (
                   <Accordion
                     type="single"
                     collapsible
@@ -618,8 +643,8 @@ function SettingsView() {
                         ) : (
                           <span className="text-sm font-medium">
                             Generated Overview
-                            {overviewContent !== null &&
-                              ` (${overviewContent.split("\n").length} lines)`}
+                            {localConfig.codebaseOverview.content &&
+                              ` (${localConfig.codebaseOverview.content.split("\n").length} lines)`}
                           </span>
                         )}
                       </AccordionTrigger>
@@ -631,15 +656,9 @@ function SettingsView() {
                               {overviewProgress.message}
                             </p>
                           </div>
-                        ) : isLoadingOverview ? (
-                          <div className="flex items-center justify-center p-4">
-                            <span className="text-sm text-muted-foreground">
-                              Loading overview...
-                            </span>
-                          </div>
                         ) : (
                           <div className="prose-sm p-2">
-                            <Markdown>{overviewContent}</Markdown>
+                            <Markdown>{localConfig.codebaseOverview.content}</Markdown>
                           </div>
                         )}
                       </AccordionContent>
@@ -647,34 +666,6 @@ function SettingsView() {
                   </Accordion>
                 )}
               </div>
-            </SettingField>
-          </SettingsGroup>
-
-          <SectionHeader>AI Access</SectionHeader>
-          <SettingsGroup>
-            <SettingField
-              label="Google Gemini API Key"
-              description={
-                <>
-                  Get your API key from{" "}
-                  <a
-                    href="https://aistudio.google.com/app/apikey"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline"
-                  >
-                    Google AI Studio
-                  </a>
-                </>
-              }
-            >
-              <Input
-                type="password"
-                value={localConfig.googleApiKey || ""}
-                onChange={(e) => handleChange("googleApiKey", e.target.value)}
-                onBlur={handleBlur}
-                placeholder="..."
-              />
             </SettingField>
           </SettingsGroup>
 
