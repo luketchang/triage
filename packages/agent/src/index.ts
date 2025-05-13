@@ -138,7 +138,6 @@ async function main(): Promise<void> {
     },
   ];
 
-  // Use invokeAgent instead of duplicating the logic
   const response = await invokeAgent({
     query: bug,
     chatHistory,

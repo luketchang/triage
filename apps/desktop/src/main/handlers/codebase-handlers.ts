@@ -24,13 +24,6 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
 
         console.info(`Generating codebase overview for: ${repoPath}`);
 
-        // Send initial progress update to renderer
-        window.webContents.send("codebase:overview-progress", {
-          status: "started",
-          message: "Starting codebase analysis...",
-          progress: 0,
-        });
-
         // Get current configuration to access API keys
         const currentConfig = await appCfgStore.getValues();
 
@@ -43,58 +36,37 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
           googleApiKey: currentConfig.googleApiKey,
         });
 
-        // Create processor with optimized chunk size
+        // Create processor with progress callback
         const processor = new CodebaseProcessor(
           llmClient,
           repoPath,
-          "" // No system description needed
+          "", // No system description needed
+          {
+            // Forward progress updates to the renderer process
+            onProgress: (update) => {
+              console.info(
+                `Codebase overview progress: ${update.status} (${update.progress}%) - ${update.message}`
+              );
+              // Don't send completed update here; only send it after it's been written
+              if (update.status !== "completed") {
+                window.webContents.send("codebase:overview-progress", update);
+              }
+            },
+          }
         );
 
-        // Generate the overview - unfortunately we can't get progress updates
-        // from the processor, so we'll just send a few staged updates
-        window.webContents.send("codebase:overview-progress", {
-          status: "processing",
-          message: "Analyzing repository structure...",
-          progress: 10,
-        });
-
-        setTimeout(() => {
-          window.webContents.send("codebase:overview-progress", {
-            status: "processing",
-            message: "Collecting and analyzing files...",
-            progress: 30,
-          });
-        }, 1000);
-
-        setTimeout(() => {
-          window.webContents.send("codebase:overview-progress", {
-            status: "processing",
-            message: "Processing directory structures...",
-            progress: 50,
-          });
-        }, 3000);
-
-        setTimeout(() => {
-          window.webContents.send("codebase:overview-progress", {
-            status: "processing",
-            message: "Generating directory summaries...",
-            progress: 70,
-          });
-        }, 8000);
-
-        // Generate the overview
+        // Generate the overview - now with real-time progress updates
         const codebaseOverview = await processor.process();
 
         // Update config with the new overview path
         await appCfgStore.setValues({
           codebaseOverview: {
             content: codebaseOverview,
-            createdAt: new Date(),
-            commitHash: "TODO",
+            createdAt: new Date().toISOString(),
+            commitHash: undefined,
           },
         });
 
-        // Send final progress update
         window.webContents.send("codebase:overview-progress", {
           status: "completed",
           message: "Codebase overview generated successfully!",

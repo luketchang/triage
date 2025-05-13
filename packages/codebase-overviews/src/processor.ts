@@ -15,6 +15,15 @@ import { generateDirectorySummary, mergeAllSummaries } from "./summarization";
 import { getTopLevelDirectories } from "./utils";
 
 /**
+ * Progress update for codebase overview generation
+ */
+export interface CodebaseOverviewProgressUpdate {
+  status: "started" | "processing" | "completed" | "error";
+  message: string;
+  progress: number;
+}
+
+/**
  * Main class for processing a codebase to generate an overview
  */
 export class CodebaseProcessor {
@@ -25,10 +34,23 @@ export class CodebaseProcessor {
     private readonly llmClient: LanguageModelV1,
     private readonly repoPath: string,
     private readonly systemDescription = "",
-    private readonly outputDir?: string,
-    options: { chunkSize?: number } = {}
+    private readonly options: {
+      chunkSize?: number;
+      outputDir?: string;
+      onProgress?: (update: CodebaseOverviewProgressUpdate) => void;
+    } = {}
   ) {
     this.chunkSize = options.chunkSize || 8;
+  }
+
+  /**
+   * Send progress update to the caller if onProgress is provided
+   */
+  private updateProgress(update: CodebaseOverviewProgressUpdate): void {
+    logger.info(`Progress update: ${update.message}`);
+    if (this.options.onProgress) {
+      this.options.onProgress(update);
+    }
   }
 
   /**
@@ -36,6 +58,12 @@ export class CodebaseProcessor {
    */
   public async process(): Promise<string> {
     try {
+      this.updateProgress({
+        status: "processing",
+        message: "Analyzing directory structure...",
+        progress: 5,
+      });
+
       // Create file tree for the repository
       const repoFileTree = await getDirectoryTree(this.repoPath, this.allowedExtensions);
 
@@ -61,10 +89,18 @@ export class CodebaseProcessor {
       const summaries: Record<string, string> = {};
       const directoryChunks = chunkArray(directoriesToProcess, this.chunkSize);
 
-      for (const chunk of directoryChunks) {
+      let completedDirs = 0;
+      const totalDirs = directoriesToProcess.length;
+
+      for (const [_, chunk] of directoryChunks.entries()) {
         const summaryPromises = chunk.map(
           async (directory: string): Promise<{ directory: string; summary: string }> => {
-            logger.info(`Processing directory: ${directory}`);
+            // Update progress before starting directory processing
+            this.updateProgress({
+              status: "processing",
+              message: `Processing directory: ${directory}`,
+              progress: 15 + Math.floor((70 * completedDirs) / totalDirs),
+            });
 
             // Create file tree for this directory
             const dirFileTree = await getDirectoryTree(directory, this.allowedExtensions);
@@ -85,6 +121,8 @@ export class CodebaseProcessor {
               repoFileTree
             );
 
+            completedDirs++;
+
             logger.info(`Summary for ${directory}:\n${summary}`);
             return { directory, summary };
           }
@@ -99,25 +137,41 @@ export class CodebaseProcessor {
       }
 
       // Merge all summaries
-      logger.info("Merging all summaries...");
+      this.updateProgress({
+        status: "processing",
+        message: "Merging all directory summaries (this may take a while)...",
+        progress: 85,
+      });
       const finalDocument = await mergeAllSummaries(
         this.llmClient,
         this.systemDescription,
         summaries,
         repoFileTree
       );
-      logger.info(`Final Document:\n${finalDocument}`);
 
-      // Save the final document to the output directory
-      if (this.outputDir) {
-        await fs.mkdir(this.outputDir, { recursive: true });
-        const outputPath = path.join(this.outputDir, "codebase-overview.md");
+      // Send completed progress update
+      this.updateProgress({
+        status: "completed",
+        message: "Codebase overview generated successfully!",
+        progress: 100,
+      });
+
+      if (this.options.outputDir) {
+        await fs.mkdir(this.options.outputDir, { recursive: true });
+        const outputPath = path.join(this.options.outputDir, "codebase-overview.md");
         await fs.writeFile(outputPath, finalDocument);
         logger.info(`Saved codebase overview to ${outputPath}`);
       }
 
       return finalDocument;
     } catch (error) {
+      // Send error progress update
+      this.updateProgress({
+        status: "error",
+        message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        progress: 0,
+      });
+
       logger.error(`Error processing codebase: ${error}`);
       throw error;
     }

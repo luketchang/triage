@@ -441,6 +441,8 @@ function SettingsView() {
       message: "Starting...",
       progress: 0,
     });
+    // Show the progress bar
+    setOverviewExpanded(true);
 
     try {
       // Register for progress updates
@@ -448,20 +450,14 @@ function SettingsView() {
         progressCleanupRef.current();
       }
 
-      progressCleanupRef.current = api.onCodebaseOverviewProgress((update) => {
-        console.log("progress", update);
+      progressCleanupRef.current = api.onCodebaseOverviewProgress(async (update) => {
         setOverviewProgress(update);
-
         // When complete, refresh the config to get the updated path
         if (update.status === "completed") {
-          setTimeout(async () => {
-            const refreshedConfig = await api.getAppConfig();
-            setLocalConfig(refreshedConfig);
-            setOriginalConfig(refreshedConfig);
-            setIsGeneratingOverview(false);
-
-            // No need to set sample content here anymore as it will be loaded by the useEffect
-          }, 1000);
+          const refreshedConfig = await api.getAppConfig();
+          setLocalConfig(refreshedConfig);
+          setOriginalConfig(refreshedConfig);
+          setIsGeneratingOverview(false);
         } else if (update.status === "error") {
           setIsGeneratingOverview(false);
         }
@@ -587,10 +583,19 @@ function SettingsView() {
               <div className="space-y-2">
                 {localConfig.codebaseOverview ? (
                   <div className="flex items-center justify-between bg-muted p-2 rounded-md">
-                    <span className="text-sm text-muted-foreground truncate max-w-[300px]">
-                      Generated
+                    <span className="text-sm text-muted-foreground truncate max-w-[300px] italic">
+                      {isGeneratingOverview ? "Last generated" : "Generated"}
                       {localConfig.codebaseOverview.createdAt
-                        ? ` at ${localConfig.codebaseOverview.createdAt.toLocaleString()}`
+                        ? ` at ${new Date(localConfig.codebaseOverview.createdAt).toLocaleString(
+                            undefined,
+                            {
+                              year: "numeric",
+                              month: "numeric",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "numeric",
+                            }
+                          )}`
                         : " overview available"}
                     </span>
                     <div className="flex gap-2">

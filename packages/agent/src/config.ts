@@ -8,7 +8,7 @@ export const AgentCfgSchema = z.object({
   codebaseOverview: z
     .object({
       content: z.string(),
-      createdAt: z.date().optional(),
+      createdAt: z.string().optional(), // TODO: change to Date once we add support in electron-store
       commitHash: z.string().optional(),
     })
     .optional(),
