@@ -175,9 +175,6 @@ async function main(): Promise<void> {
           case "reasoning":
             process.stdout.write(`${update.step.contentChunk}\n`);
             break;
-          case "review":
-            process.stdout.write(`${update.step.contentChunk}\n`);
-            break;
           default:
             break;
         }
@@ -218,7 +215,6 @@ if (typeof require !== "undefined" && typeof module !== "undefined" && require.m
 export * from "./config";
 export * from "./nodes/log-search";
 export * from "./nodes/reasoner";
-export * from "./nodes/reviewer";
 export * from "./nodes/utils";
 export * from "./pipeline/state";
 export * from "./types";

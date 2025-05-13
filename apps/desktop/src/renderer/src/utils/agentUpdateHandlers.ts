@@ -41,13 +41,6 @@ export function handleHighLevelUpdate(
           content: "",
         };
         break;
-      case "review":
-        newStage = {
-          id: update.id,
-          type: "review",
-          content: "",
-        };
-        break;
       case "logPostprocessing":
         newStage = {
           id: update.id,
@@ -120,14 +113,6 @@ export function handleIntermediateUpdate(
       // TODO: grep
       case "reasoning": {
         assertStageType(stage, "reasoning");
-        updatedStage = {
-          ...stage,
-          content: stage.content + update.step.contentChunk,
-        };
-        break;
-      }
-      case "review": {
-        assertStageType(stage, "review");
         updatedStage = {
           ...stage,
           content: stage.content + update.step.contentChunk,

@@ -14,7 +14,6 @@ import {
   LogPostprocessingStage,
   LogSearchStage,
   ReasoningStage,
-  ReviewStage,
 } from "../types/index.js";
 import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
 
@@ -96,8 +95,6 @@ const renderStage = (stage: AgentStage, isActive: boolean = false) => {
       return renderCodeSearchStage(stage, isActive);
     case "reasoning":
       return renderReasoningStage(stage, isActive);
-    case "review":
-      return renderReviewStage(stage, isActive);
     case "logPostprocessing":
       return renderLogPostprocessingStage(stage, isActive);
     case "codePostprocessing":
@@ -170,40 +167,6 @@ const CodeBlock = ({ language, value }: { language: string; value: string }) => 
 
 const renderReasoningStage = (stage: ReasoningStage, isActive: boolean = false) => (
   <CollapsibleStep title="Reasoning" isActive={isActive}>
-    <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-      <ReactMarkdown
-        components={{
-          code({ node, inline, className, children, ...props }: CodeProps) {
-            const match = /language-(\w+)/.exec(className || "");
-            return !inline && match ? (
-              <CodeBlock language={match[1]} value={String(children).replace(/\n$/, "")} />
-            ) : (
-              <code
-                className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
-                {...props}
-              >
-                {children}
-              </code>
-            );
-          },
-          p({ children }) {
-            return <p className="mb-4 leading-relaxed">{children}</p>;
-          },
-          pre({ children }) {
-            return (
-              <pre className="overflow-x-auto whitespace-pre-wrap break-words">{children}</pre>
-            );
-          },
-        }}
-      >
-        {stage.content}
-      </ReactMarkdown>
-    </div>
-  </CollapsibleStep>
-);
-
-const renderReviewStage = (stage: ReviewStage, isActive: boolean = false) => (
-  <CollapsibleStep title="Review" isActive={isActive}>
     <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
       <ReactMarkdown
         components={{

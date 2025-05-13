@@ -15,7 +15,6 @@ import {
   LogSearchInputCore,
   LogSearchStep,
   ReasoningStep,
-  ReviewStep,
   TraceSearchInput,
 } from "@triage/agent";
 
@@ -47,7 +46,6 @@ export type {
   LogSearchStep,
   LogsWithPagination,
   ReasoningStep,
-  ReviewStep,
   ServiceLatency,
   Span,
   SpansWithPagination,
@@ -197,7 +195,6 @@ export type AgentStage =
   | LogSearchStage
   | CodeSearchStage
   | ReasoningStage
-  | ReviewStage
   | LogPostprocessingStage
   | CodePostprocessingStage;
 
@@ -215,12 +212,6 @@ export interface CodeSearchStage {
 
 export interface ReasoningStage {
   type: "reasoning";
-  id: string;
-  content: string;
-}
-
-export interface ReviewStage {
-  type: "review";
   id: string;
   content: string;
 }
