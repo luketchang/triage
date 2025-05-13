@@ -241,8 +241,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     } finally {
       // Save assistant message
-      console.log("Saving assistant message", JSON.stringify(get().messageUpdater!.getMessage()));
-      api.saveAssistantMessage(get().messageUpdater!.getMessage(), get().currentChatId!);
+      const state = get();
+      console.log("Saving assistant message", JSON.stringify(state.messageUpdater!.getMessage()));
+      api.saveAssistantMessage(state.messageUpdater!.getMessage(), state.currentChatId!);
 
       // Clear thinking state and message updater
       set({
@@ -251,7 +252,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       });
 
       // Unregister from agent updates
-      get().unregisterFromAgentUpdates();
+      state.unregisterFromAgentUpdates();
     }
   },
 
