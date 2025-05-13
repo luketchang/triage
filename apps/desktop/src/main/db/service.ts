@@ -199,12 +199,11 @@ export class DatabaseService {
 
   async deleteChat(chatId: number): Promise<void> {
     // Delete messages first (due to foreign key constraints)
-    await this.db.delete(schema.userMessages).where(eq(schema.userMessages.chatId, chatId));
-    await this.db
-      .delete(schema.assistantMessages)
-      .where(eq(schema.assistantMessages.chatId, chatId));
-    // Then delete the chat record
-    await this.db.delete(schema.chats).where(eq(schema.chats.id, chatId));
+    await this.db.transaction(async (tx) => {
+      await tx.delete(schema.userMessages).where(eq(schema.userMessages.chatId, chatId));
+      await tx.delete(schema.assistantMessages).where(eq(schema.assistantMessages.chatId, chatId));
+      await tx.delete(schema.chats).where(eq(schema.chats.id, chatId));
+    });
   }
 
   async destroy(): Promise<void> {
