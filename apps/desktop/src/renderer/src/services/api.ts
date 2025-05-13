@@ -207,20 +207,28 @@ const api = {
     }
   },
 
-  saveAssistantMessage: async (message: AssistantMessage): Promise<number | null> => {
-    console.info("[API DEBUG] saveAssistantMessage called");
+  saveAssistantMessage: async (
+    message: AssistantMessage,
+    chatId: number
+  ): Promise<number | null> => {
+    console.info("[API DEBUG] saveAssistantMessage called for chatId:", chatId);
 
     if (USE_MOCK_API || !isMethodAvailable("saveAssistantMessage")) {
       console.info("Mock saveAssistantMessage - not implemented in mock mode");
       return null;
     } else {
       console.info("Using real electronAPI.saveAssistantMessage");
-      return window.electronAPI.saveAssistantMessage(message);
+      return window.electronAPI.saveAssistantMessage(message, chatId);
     }
   },
 
-  loadChatMessages: async (chatId?: number): Promise<ChatMessage[]> => {
+  loadChatMessages: async (chatId: number): Promise<ChatMessage[]> => {
     console.info("[API DEBUG] loadChatMessages called with chatId:", chatId);
+
+    if (!chatId) {
+      console.error("Chat ID must be provided to load messages");
+      return [];
+    }
 
     if (USE_MOCK_API || !isMethodAvailable("loadChatMessages")) {
       console.info("Mock loadChatMessages - not implemented in mock mode");
@@ -231,8 +239,13 @@ const api = {
     }
   },
 
-  clearChat: async (chatId?: number): Promise<boolean> => {
-    console.info("[API DEBUG] clearChat called");
+  clearChat: async (chatId: number): Promise<boolean> => {
+    console.info("[API DEBUG] clearChat called for chatId:", chatId);
+
+    if (!chatId) {
+      console.error("Chat ID must be provided to clear chat");
+      return false;
+    }
 
     if (USE_MOCK_API || !isMethodAvailable("clearChat")) {
       console.info("Mock clearChat - not implemented in mock mode");
@@ -240,6 +253,23 @@ const api = {
     } else {
       console.info("Using real electronAPI.clearChat");
       return window.electronAPI.clearChat(chatId);
+    }
+  },
+
+  deleteChat: async (chatId: number): Promise<boolean> => {
+    console.info("[API DEBUG] deleteChat called for chatId:", chatId);
+
+    if (!chatId) {
+      console.error("Chat ID must be provided to delete chat");
+      return false;
+    }
+
+    if (USE_MOCK_API || !isMethodAvailable("deleteChat")) {
+      console.info("Mock deleteChat - not implemented in mock mode");
+      return false;
+    } else {
+      console.info("Using real electronAPI.deleteChat");
+      return window.electronAPI.deleteChat(chatId);
     }
   },
 };

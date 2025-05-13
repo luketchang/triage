@@ -198,6 +198,17 @@ export class DatabaseService {
   }
 
   async clearChat(chatId: number): Promise<void> {
+    // Delete only the messages for this chat, not the chat record itself
+    await this.db.delete(schema.userMessages).where(eq(schema.userMessages.chatId, chatId));
+    await this.db
+      .delete(schema.assistantMessages)
+      .where(eq(schema.assistantMessages.chatId, chatId));
+  }
+
+  async deleteChat(chatId: number): Promise<void> {
+    // Delete messages first (due to foreign key constraints)
+    await this.clearChat(chatId);
+    // Then delete the chat record
     await this.db.delete(schema.chats).where(eq(schema.chats.id, chatId));
   }
 

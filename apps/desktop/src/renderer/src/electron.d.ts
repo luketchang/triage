@@ -107,23 +107,32 @@ declare global {
 
       /**
        * Save an assistant message to the database
-       * @param message The assistant message to save
-       * @returns Promise with the saved message ID or null if failed
+       * @param message The message to save
+       * @param chatId The ID of the chat to save to
+       * @returns Promise with message ID
        */
-      saveAssistantMessage: (message: AssistantMessage) => Promise<number | null>;
+      saveAssistantMessage: (message: AssistantMessage, chatId: number) => Promise<number | null>;
 
       /**
-       * Load messages from a specific chat
-       * @param chatId Optional chat ID, uses latest chat if not provided
-       * @returns Promise with an array of chat messages
+       * Load messages for a specific chat
+       * @param chatId The ID of the chat to load messages from
+       * @returns Promise with chat messages
        */
-      loadChatMessages: (chatId?: number) => Promise<ChatMessage[]>;
+      loadChatMessages: (chatId: number) => Promise<ChatMessage[]>;
 
       /**
-       * Clear the current chat from database and memory
+       * Clear messages from a chat (keeping the chat entry)
+       * @param chatId The ID of the chat to clear
        * @returns Promise with success status
        */
-      clearChat: (chatId?: number) => Promise<boolean>;
+      clearChat: (chatId: number) => Promise<boolean>;
+
+      /**
+       * Delete a chat and all its messages
+       * @param chatId The ID of the chat to delete
+       * @returns Promise with success status
+       */
+      deleteChat: (chatId: number) => Promise<boolean>;
     };
   }
 }

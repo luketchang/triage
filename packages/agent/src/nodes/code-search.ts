@@ -34,6 +34,7 @@ You are an expert AI assistant that helps engineers debug production issues by s
 function createCodeSearchPrompt(params: {
   query: string;
   codeRequest: string;
+  repoPath: string;
   fileTree: string;
   logSearchSteps: LogSearchStep[];
   previousCodeSearchSteps: CodeSearchStep[];
@@ -60,6 +61,7 @@ Given a user query about the issue/event, previously gathered code context, your
 
 ## Rules:
 - DO NOT read the same files more than once. Look at your previous code context to double check which files you have already read so you do not reread them.
+- Use absolute paths when specifying paths for \`catRequest\` or \`grepRequest\` tool calls.
 
 <remaining_queries>
 ${params.remainingQueries}
@@ -68,6 +70,10 @@ ${params.remainingQueries}
 <current_time>
 ${currentTime}
 </current_time>
+
+<repo_path>
+${params.repoPath}
+</repo_path>
 
 <query>
 ${params.query}
@@ -101,6 +107,7 @@ class CodeSearch {
   async invoke(params: {
     query: string;
     codeRequest: string;
+    repoPath: string;
     fileTree: string;
     logSearchSteps: LogSearchStep[];
     previousCodeSearchSteps: CodeSearchStep[];
@@ -202,6 +209,7 @@ export class CodeSearchAgent {
       response = await this.codeSearch.invoke({
         query: this.config.query,
         codeRequest: params.codeRequest,
+        repoPath: this.config.repoPath,
         fileTree: this.config.fileTree,
         logSearchSteps: this.state.getLogSearchSteps(StepsType.BOTH),
         previousCodeSearchSteps,

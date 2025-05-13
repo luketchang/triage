@@ -38,6 +38,7 @@ interface ChatState {
   loadChats: () => Promise<void>;
   sendMessage: () => Promise<void>;
   clearChat: () => Promise<void>;
+  deleteChat: (chatId: number) => Promise<void>;
   setContextItems: (items: ContextItem[]) => void;
   removeContextItem: (id: string) => void;
 }
@@ -242,7 +243,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } finally {
       // Save assistant message
       console.log("Saving assistant message", JSON.stringify(get().messageUpdater!.getMessage()));
-      api.saveAssistantMessage(get().messageUpdater!.getMessage());
+      api.saveAssistantMessage(get().messageUpdater!.getMessage(), get().currentChatId!);
 
       // Clear thinking state and message updater
       set({
@@ -257,7 +258,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   clearChat: async () => {
     try {
-      const success = await api.clearChat(get().currentChatId);
+      const { currentChatId } = get();
+      if (!currentChatId) {
+        console.error("No chat selected to clear");
+        return;
+      }
+
+      const success = await api.clearChat(currentChatId);
       if (success) {
         set({
           messages: [],
@@ -266,6 +273,32 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     } catch (error) {
       console.error("Error clearing chat:", error);
+    }
+  },
+
+  deleteChat: async (chatId: number) => {
+    try {
+      if (!chatId) {
+        console.error("No chat ID provided for deletion");
+        return;
+      }
+
+      const success = await api.deleteChat(chatId);
+      if (success) {
+        // If we're deleting the currently selected chat, reset UI
+        if (get().currentChatId === chatId) {
+          set({
+            currentChatId: undefined,
+            messages: [],
+            savedMessageIds: new Set(),
+          });
+        }
+
+        // Reload the chat list to update sidebar
+        await get().loadChats();
+      }
+    } catch (error) {
+      console.error("Error deleting chat:", error);
     }
   },
 
