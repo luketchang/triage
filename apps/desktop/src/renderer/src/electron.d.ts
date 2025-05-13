@@ -11,6 +11,7 @@ import {
   AssistantMessage,
   Chat,
   ChatMessage,
+  CodebaseOverviewProgressUpdate,
   FacetData,
   LogQueryParams,
   LogsWithPagination,
@@ -20,9 +21,14 @@ import {
   UserMessage,
 } from "./types";
 
-// Augment the Window interface to include our Electron API
+// Augment `window` to include everyting exposed in `preload/index.ts`
 declare global {
   interface Window {
+    env: {
+      TRACES_ENABLED: boolean;
+      USE_MOCK_API: boolean;
+    };
+
     electronAPI: {
       /**
        * Invoke the agent with a query and return the result
@@ -124,9 +130,29 @@ declare global {
        * @returns Promise with success status
        */
       clearChat: (chatId?: number) => Promise<boolean>;
+
+      /**
+       * Generate a codebase overview for the given repository path
+       * @param repoPath Path to the repository
+       * @returns Promise resolving to the path of the generated overview file
+       */
+      generateCodebaseOverview: (repoPath: string) => Promise<string>;
+
+      /**
+       * Get the content of a codebase overview file
+       * @param filePath Path to the overview file
+       * @returns Promise with the content of the overview file
+       */
+      getCodebaseOverviewContent: (filePath: string) => Promise<string>;
+
+      /**
+       * Register for codebase overview progress events
+       * @param callback Function called when progress updates are received
+       * @returns Function to unsubscribe from events
+       */
+      onCodebaseOverviewProgress: (
+        callback: (update: CodebaseOverviewProgressUpdate) => void
+      ) => () => void;
     };
   }
 }
-
-// This export is needed to make this a module
-export {};

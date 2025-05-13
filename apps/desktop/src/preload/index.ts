@@ -116,6 +116,33 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param chatId Optional chat ID, uses latest chat if not provided
    */
   clearChat: (chatId?: number) => ipcRenderer.invoke("db:clear-messages", chatId),
+
+  /**
+   * Generate a codebase overview for the given repository path
+   * @param repoPath The path to the repository
+   */
+  generateCodebaseOverview: (repoPath: string) =>
+    ipcRenderer.invoke("codebase:generate-overview", repoPath),
+
+  /**
+   * Get the content of a codebase overview file
+   * @param filePath The path to the overview file
+   */
+  getCodebaseOverviewContent: (filePath: string) =>
+    ipcRenderer.invoke("codebase:get-overview-content", filePath),
+
+  /**
+   * Register a callback for codebase overview progress events
+   * @param callback Function to call when a progress event is received
+   */
+  onCodebaseOverviewProgress: (callback: (update: any) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, update: any) => callback(update);
+    ipcRenderer.on("codebase:overview-progress", listener);
+    // Return a function to remove the listener when no longer needed
+    return () => {
+      ipcRenderer.removeListener("codebase:overview-progress", listener);
+    };
+  },
 });
 
 /**

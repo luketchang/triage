@@ -7,6 +7,7 @@ import {
   AssistantMessage,
   Chat,
   ChatMessage,
+  CodebaseOverviewProgressUpdate,
   FacetData,
   LogQueryParams,
   TraceQueryParams,
@@ -240,6 +241,63 @@ const api = {
     } else {
       console.info("Using real electronAPI.clearChat");
       return window.electronAPI.clearChat(chatId);
+    }
+  },
+
+  generateCodebaseOverview: async (repoPath: string): Promise<string> => {
+    if (USE_MOCK_API || !isMethodAvailable("generateCodebaseOverview")) {
+      console.info("Using mock generateCodebaseOverview");
+      return mockElectronAPI.generateCodebaseOverview(repoPath);
+    } else {
+      console.info("Using real electronAPI.generateCodebaseOverview");
+      return window.electronAPI.generateCodebaseOverview(repoPath);
+    }
+  },
+
+  onCodebaseOverviewProgress: (callback: (update: CodebaseOverviewProgressUpdate) => void) => {
+    if (USE_MOCK_API || !isMethodAvailable("onCodebaseOverviewProgress")) {
+      console.info("Mock onCodebaseOverviewProgress - using simulated progress");
+
+      // Simulate progress updates in mock mode
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+
+        if (progress < 100) {
+          callback({
+            status: "processing",
+            message: `Mock processing (${progress}%)...`,
+            progress,
+          });
+        } else {
+          clearInterval(interval);
+          callback({
+            status: "completed",
+            message: "Mock codebase overview complete!",
+            progress: 100,
+          });
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      console.info("Using real electronAPI.onCodebaseOverviewProgress");
+      return window.electronAPI.onCodebaseOverviewProgress(callback);
+    }
+  },
+
+  getCodebaseOverviewContent: async (filePath: string): Promise<string> => {
+    if (USE_MOCK_API || !isMethodAvailable("getCodebaseOverviewContent")) {
+      console.info("Using mock getCodebaseOverviewContent");
+      return mockElectronAPI.getCodebaseOverviewContent(filePath);
+    } else {
+      console.info("Using real electronAPI.getCodebaseOverviewContent");
+      try {
+        return window.electronAPI.getCodebaseOverviewContent(filePath);
+      } catch (error) {
+        console.error("Error getting codebase overview content:", error);
+        return "# Error\n\nFailed to load codebase overview content.";
+      }
     }
   },
 };

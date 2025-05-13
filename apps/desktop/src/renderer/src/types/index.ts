@@ -267,3 +267,12 @@ export interface PostprocessedLogSearchInput extends LogSearchInputCore {
   reasoning?: string;
   summary?: string;
 }
+
+/**
+ * Progress update for codebase overview generation
+ */
+export interface CodebaseOverviewProgressUpdate {
+  status: "started" | "processing" | "completed" | "error";
+  message: string;
+  progress: number;
+}

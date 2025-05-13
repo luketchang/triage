@@ -11,6 +11,7 @@
   },
   "references": [
     { "path": "../../packages/agent" },
+    { "path": "../../packages/codebase-overviews" },
     { "path": "../../packages/common" },
     { "path": "../../packages/config" },
     { "path": "../../packages/observability" }

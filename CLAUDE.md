@@ -8,7 +8,7 @@
 ### General
 
 - TypeScript: Strict typing required, use explicit return types
-- Imports: Group and sort imports (external libs first, then internal)
+- Imports: Group and sort imports (external libs before internal, alphabetical within each group); use NodeNext import statements (name all files as .ts but import all files as .js); avoid dynamic imports
 - Naming: camelCase for variables/functions, PascalCase for classes/components/types, and PascalCase or camelCase for filenames
 - Error Handling: Use try/catch and typed Error objects
 - Global variables: Prefer using variables from closures over defining new singletons

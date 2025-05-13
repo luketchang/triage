@@ -1,6 +1,12 @@
-import { Check, PlusCircle, Save, X } from "lucide-react";
+import { Check, Loader2, PlusCircle, Save, X } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../components/ui/Accordion.js";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,8 +19,12 @@ import {
 } from "../components/ui/AlertDialog.js";
 import { Button } from "../components/ui/Button.jsx";
 import { Input } from "../components/ui/Input.jsx";
+import { Markdown } from "../components/ui/Markdown.js";
+import { Progress } from "../components/ui/Progress.js";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
 import { useAppConfig } from "../context/useAppConfig.js";
+import api from "../services/api.js";
+import { CodebaseOverviewProgressUpdate } from "../types/index.js";
 
 // TODO: temp until we fix imports from @triage/
 export const DatadogCfgSchema = z.object({
@@ -46,7 +56,7 @@ const SettingField = ({
   description?: React.ReactNode;
 }) => {
   return (
-    <div className="grid grid-cols-12 items-center gap-4">
+    <div className="grid grid-cols-12 items-start gap-4">
       <div className="col-span-4">
         <label className="text-sm font-medium text-gray-200">{label}</label>
         {description && <div className="text-xs text-gray-500 mt-1">{description}</div>}
@@ -357,6 +367,22 @@ function SettingsView() {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
+  // State for overview generation
+  const [isGeneratingOverview, setIsGeneratingOverview] = useState<boolean>(false);
+  const [overviewProgress, setOverviewProgress] = useState<CodebaseOverviewProgressUpdate | null>(
+    null
+  );
+
+  // State for codebase overview content
+  const [overviewContent, setOverviewContent] = useState<string>(
+    "The codebase overview content will be shown here when available."
+  );
+  const [isLoadingOverview, setIsLoadingOverview] = useState<boolean>(false);
+  const [overviewExpanded, setOverviewExpanded] = useState<boolean>(false);
+
+  // Cleanup function reference
+  const progressCleanupRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     if (appConfig && !isLoading) {
       const configCopy = { ...appConfig };
@@ -365,6 +391,16 @@ function SettingsView() {
       setHasChanges(false);
     }
   }, [appConfig, isLoading]);
+
+  // Cleanup progress listener on unmount
+  useEffect(() => {
+    return () => {
+      if (progressCleanupRef.current) {
+        progressCleanupRef.current();
+        progressCleanupRef.current = null;
+      }
+    };
+  }, []);
 
   // Update local state only
   const handleChange = (key: string, value: any) => {
@@ -400,6 +436,80 @@ function SettingsView() {
       await saveSettings();
     }
   };
+
+  // Handler for generating overview
+  const handleGenerateOverview = async () => {
+    if (!localConfig.repoPath || isGeneratingOverview) return;
+
+    setIsGeneratingOverview(true);
+    setOverviewProgress({
+      status: "started",
+      message: "Starting...",
+      progress: 0,
+    });
+
+    try {
+      // Register for progress updates
+      if (progressCleanupRef.current) {
+        progressCleanupRef.current();
+      }
+
+      progressCleanupRef.current = api.onCodebaseOverviewProgress((update) => {
+        setOverviewProgress(update);
+
+        // When complete, refresh the config to get the updated path
+        if (update.status === "completed") {
+          setTimeout(async () => {
+            const refreshedConfig = await api.getAppConfig();
+            setLocalConfig(refreshedConfig);
+            setOriginalConfig(refreshedConfig);
+            setIsGeneratingOverview(false);
+
+            // No need to set sample content here anymore as it will be loaded by the useEffect
+          }, 1000);
+        } else if (update.status === "error") {
+          setIsGeneratingOverview(false);
+        }
+      });
+
+      // Start the generation
+      await api.generateCodebaseOverview(localConfig.repoPath);
+    } catch (error) {
+      console.error("Failed to generate codebase overview:", error);
+      setOverviewProgress({
+        status: "error",
+        message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        progress: 0,
+      });
+      setIsGeneratingOverview(false);
+    }
+  };
+
+  // Effect to load codebase overview content when path changes
+  useEffect(() => {
+    if (localConfig?.codebaseOverviewPath && !isGeneratingOverview) {
+      setIsLoadingOverview(true);
+
+      // Automatically expand the overview content when it's first loaded
+      setOverviewExpanded(true);
+
+      // Use the API to get the actual content of the overview file
+      api
+        .getCodebaseOverviewContent(localConfig.codebaseOverviewPath)
+        .then((content) => {
+          setOverviewContent(content);
+        })
+        .catch((error) => {
+          console.error("Error loading overview content:", error);
+          setOverviewContent(
+            "# Error Loading Overview\n\nUnable to load the codebase overview content. This may happen if:\n\n- The file was deleted or moved\n- The file permissions have changed\n- The repository is no longer accessible\n\nTry regenerating the overview by clicking the 'Regenerate' button above."
+          );
+        })
+        .finally(() => {
+          setIsLoadingOverview(false);
+        });
+    }
+  }, [localConfig?.codebaseOverviewPath, isGeneratingOverview]);
 
   if (isLoading || !localConfig) {
     return (
@@ -449,27 +559,94 @@ function SettingsView() {
             </SettingField>
 
             <SettingField
-              label="Codebase Overview Path"
-              description="Path to codebase overview file"
+              label="Codebase Overview"
+              description="Helps the AI understand your codebase, making it faster and more reliable at debugging issues"
             >
-              <Input
-                value={localConfig.codebaseOverviewPath || ""}
-                onChange={(e) => handleChange("codebaseOverviewPath", e.target.value)}
-                onBlur={handleBlur}
-                placeholder="/path/to/overview.md"
-              />
-            </SettingField>
-
-            <SettingField
-              label="GitHub Repo Base URL"
-              description="Base URL for your GitHub repository"
-            >
-              <Input
-                value={localConfig.githubRepoBaseUrl || ""}
-                onChange={(e) => handleChange("githubRepoBaseUrl", e.target.value)}
-                onBlur={handleBlur}
-                placeholder="https://github.com/username/repo"
-              />
+              <div className="space-y-2">
+                {localConfig.codebaseOverviewPath ? (
+                  <div className="flex items-center justify-between bg-muted p-2 rounded-md">
+                    <span className="text-sm text-muted-foreground truncate max-w-[300px]">
+                      Generated at {localConfig.codebaseOverviewPath}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateOverview}
+                        disabled={isGeneratingOverview || !localConfig.repoPath}
+                      >
+                        Regenerate
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between bg-muted p-2 rounded-md">
+                    <span className="text-sm text-muted-foreground">
+                      Generate an overview of your codebase to help the AI debug issues faster and
+                      more reliably.
+                    </span>
+                    <Button
+                      onClick={handleGenerateOverview}
+                      disabled={isGeneratingOverview || !localConfig.repoPath}
+                      variant="outline"
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Generate
+                    </Button>
+                  </div>
+                )}
+                {(localConfig.codebaseOverviewPath || isGeneratingOverview) && (
+                  <Accordion
+                    type="single"
+                    collapsible
+                    value={overviewExpanded ? "overview" : ""}
+                    onValueChange={(value) => setOverviewExpanded(value === "overview")}
+                  >
+                    <AccordionItem
+                      value="overview"
+                      className="border border-border rounded-md bg-background-lighter"
+                    >
+                      <AccordionTrigger
+                        className="px-3 py-2 hover:no-underline"
+                        chevronPosition="left"
+                      >
+                        {isGeneratingOverview ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Generating Overview...</span>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          </div>
+                        ) : (
+                          <span className="text-sm font-medium">
+                            Generated Overview
+                            {overviewContent !== null &&
+                              ` (${overviewContent.split("\n").length} lines)`}
+                          </span>
+                        )}
+                      </AccordionTrigger>
+                      <AccordionContent className="p-3 max-h-[400px] overflow-y-auto">
+                        {isGeneratingOverview && overviewProgress ? (
+                          <div className="mt-2 space-y-2">
+                            <Progress value={overviewProgress.progress} className="h-2" />
+                            <p className="text-xs text-muted-foreground">
+                              {overviewProgress.message}
+                            </p>
+                          </div>
+                        ) : isLoadingOverview ? (
+                          <div className="flex items-center justify-center p-4">
+                            <span className="text-sm text-muted-foreground">
+                              Loading overview...
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="prose-sm p-2">
+                            <Markdown>{overviewContent}</Markdown>
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                )}
+              </div>
             </SettingField>
           </SettingsGroup>
 

@@ -1,8 +1,6 @@
 // @ts-ignore - Ignoring React module resolution issues
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Markdown } from "../components/ui/Markdown.js";
 import { cn } from "../lib/utils.js";
 import {
   AgentStage,
@@ -16,15 +14,6 @@ import {
   ReasoningStage,
 } from "../types/index.js";
 import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
-
-// Add custom type for ReactMarkdown code component props
-interface CodeProps {
-  node?: any;
-  inline?: boolean;
-  className?: string;
-  children?: React.ReactNode;
-  [key: string]: any;
-}
 
 interface CellViewProps {
   message: AssistantMessage;
@@ -140,61 +129,10 @@ const renderCodeSearchStage = (stage: CodeSearchStage, isActive: boolean = false
   </CollapsibleStep>
 );
 
-const CodeBlock = ({ language, value }: { language: string; value: string }) => {
-  return (
-    <div className="relative my-3 rounded-lg overflow-hidden">
-      <div className="absolute top-0 right-0 px-2 py-1 text-xs bg-background-alt text-gray-400 rounded-bl-md">
-        {language}
-      </div>
-      <SyntaxHighlighter
-        language={language}
-        style={vscDarkPlus}
-        customStyle={{
-          margin: 0,
-          borderRadius: "0.5rem",
-          fontSize: "0.875rem",
-          lineHeight: 1.6,
-          padding: "1.5rem 1rem",
-        }}
-        wrapLines={true}
-        wrapLongLines={true}
-      >
-        {value}
-      </SyntaxHighlighter>
-    </div>
-  );
-};
-
 const renderReasoningStage = (stage: ReasoningStage, isActive: boolean = false) => (
   <CollapsibleStep title="Reasoning" isActive={isActive}>
     <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-      <ReactMarkdown
-        components={{
-          code({ node, inline, className, children, ...props }: CodeProps) {
-            const match = /language-(\w+)/.exec(className || "");
-            return !inline && match ? (
-              <CodeBlock language={match[1]} value={String(children).replace(/\n$/, "")} />
-            ) : (
-              <code
-                className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
-                {...props}
-              >
-                {children}
-              </code>
-            );
-          },
-          p({ children }) {
-            return <p className="mb-4 leading-relaxed">{children}</p>;
-          },
-          pre({ children }) {
-            return (
-              <pre className="overflow-x-auto whitespace-pre-wrap break-words">{children}</pre>
-            );
-          },
-        }}
-      >
-        {stage.content}
-      </ReactMarkdown>
+      <Markdown>{stage.content}</Markdown>
     </div>
   </CollapsibleStep>
 );
@@ -357,54 +295,7 @@ function CellView({
         {message.response && message.response !== "Thinking..." && (
           <div className="response-content prose prose-invert max-w-none overflow-wrap-anywhere">
             <div className="text-base leading-relaxed break-words whitespace-pre-wrap overflow-wrap-anywhere min-w-0 max-w-full">
-              <ReactMarkdown
-                components={{
-                  code({ node, inline, className, children, ...props }: CodeProps) {
-                    const match = /language-(\w+)/.exec(className || "");
-                    return !inline && match ? (
-                      <CodeBlock language={match[1]} value={String(children).replace(/\n$/, "")} />
-                    ) : (
-                      <code
-                        className={cn("bg-background-alt px-1 py-0.5 rounded text-sm", className)}
-                        {...props}
-                      >
-                        {children}
-                      </code>
-                    );
-                  },
-                  p({ children }) {
-                    return <p className="mb-4 leading-relaxed">{children}</p>;
-                  },
-                  pre({ children }) {
-                    return (
-                      <pre className="overflow-x-auto whitespace-pre-wrap break-words overflow-wrap-anywhere">
-                        {children}
-                      </pre>
-                    );
-                  },
-                  table({ children }) {
-                    return (
-                      <div className="overflow-x-auto my-4">
-                        <table className="border-collapse border border-border/60">
-                          {children}
-                        </table>
-                      </div>
-                    );
-                  },
-                  th({ children }) {
-                    return (
-                      <th className="border border-border/60 bg-background-lighter p-2 text-left font-medium">
-                        {children}
-                      </th>
-                    );
-                  },
-                  td({ children }) {
-                    return <td className="border border-border/60 p-2">{children}</td>;
-                  },
-                }}
-              >
-                {message.response || ""}
-              </ReactMarkdown>
+              <Markdown className="prose-base">{message.response || ""}</Markdown>
             </div>
 
             {/* Facts button - only shown when facts are available */}

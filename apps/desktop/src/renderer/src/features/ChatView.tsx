@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import { MoreHorizontal as MoreHorizontalIcon } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import CellView from "../components/CellView.js";
 import FactsSidebar from "../components/FactsSidebar.js";
-import { Button } from "../components/ui/Button.js";
+import { Button } from "../components/ui/Button.jsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/DropdownMenu.jsx";
+import { Markdown } from "../components/ui/Markdown.js";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
-import { MoreHorizontalIcon, SendIcon } from "../icons/index.jsx";
+import { SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
@@ -223,7 +224,7 @@ function ChatView() {
                       </div>
                       <div className="flex-1 overflow-hidden pt-0.5 min-w-0 max-w-full">
                         <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3 break-words bg-background-alt p-3 rounded-lg shadow-sm overflow-x-auto overflow-wrap-anywhere min-w-0">
-                          <ReactMarkdown>{message.content}</ReactMarkdown>
+                          <Markdown>{message.content}</Markdown>
                         </div>
                       </div>
                     </div>
