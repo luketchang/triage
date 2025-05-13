@@ -1,150 +1,164 @@
-import { execSync, spawnSync } from "child_process";
-import fs from "fs";
+import fs from "fs/promises";
 import * as path from "path";
 
-import { logger } from "./logger";
+import { globby } from "globby";
+
+export const ALLOWED_EXTENSIONS = [
+  // Compiled Languages
+  ".c",
+  ".cpp",
+  ".cc",
+  ".cxx",
+  ".h",
+  ".hpp",
+  ".hh",
+  ".java",
+  ".cs",
+  ".go",
+  ".rs",
+  ".swift",
+  ".kt",
+  ".kts",
+  ".m",
+  ".mm",
+
+  // Scripting/Interpreted Languages
+  ".py",
+  ".rb",
+  ".pl",
+  ".pm",
+  ".php",
+  ".js",
+  ".ts",
+  ".lua",
+  ".sh",
+  ".bash",
+  ".zsh",
+  ".ps1",
+  ".r",
+  ".jl",
+
+  // Web Templates / UI Logic
+  ".html",
+  ".htm",
+  ".jsx",
+  ".tsx",
+  ".vue",
+
+  // Functional & Other Languages
+  ".hs",
+  ".clj",
+  ".cljs",
+  ".cljc",
+  ".scala",
+  ".dart",
+  ".erl",
+  ".ex",
+  ".exs",
+
+  // Documentation
+  ".md",
+];
+
+export const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 /**
- * Gets the source code from the given file paths.
- * @param filePaths The file paths to get the source code from.
- * @returns A mapping from file paths to their source code.
+ * Creates a string representation of the file tree starting at the given
+ * directory, respecting .gitignore patterns.
+ *
+ * @param directory - The base directory to read from
+ * @param allowedExtensions - An array of file extensions to include in the tree
+ * (useful for excluding certain types of files like build artifacts).
+ * @returns A string representation of the file tree, with each level of the tree
+ * indented with two spaces.
  */
-export function getSourceCodeFromPaths(filePaths: string[]): Map<string, string> {
-  const pathToSourceCode: Map<string, string> = new Map();
+export async function getDirectoryTree(
+  directory: string,
+  allowedExtensions: string[] = ALLOWED_EXTENSIONS
+): Promise<string> {
+  // Get all directories and files
+  const [dirPaths, filePaths] = await Promise.all([
+    globby("**/*", {
+      cwd: directory,
+      onlyDirectories: true,
+      dot: true,
+      absolute: false,
+      followSymbolicLinks: false,
+      gitignore: true,
+      ignore: [".git"],
+    }),
+    globby(allowedExtensions.length > 0 ? allowedExtensions.map((ext) => `**/*${ext}`) : ["**/*"], {
+      cwd: directory,
+      onlyFiles: true,
+      dot: true,
+      absolute: false,
+      followSymbolicLinks: false,
+      gitignore: true,
+      ignore: [".git"],
+    }),
+  ]);
 
-  filePaths.forEach((filePath) => {
-    try {
-      const content = fs.readFileSync(filePath, { encoding: "utf-8" });
-      pathToSourceCode.set(filePath, content);
-    } catch (error) {
-      const errMsg = `Error reading file: ${error}`;
-      pathToSourceCode.set(filePath, errMsg);
-      console.error(`Could not read file ${filePath}: ${error}`);
-      throw error;
+  // Build the file tree structure
+  const fileTreeLines: string[] = [];
+
+  // Sort paths to ensure parent directories come before their children
+  const sortedPaths = [...dirPaths, ...filePaths].sort();
+
+  // Build the tree structure
+  for (const relativePath of sortedPaths) {
+    const pathParts = relativePath.split(path.sep);
+    const depth = pathParts.length - 1;
+    const name = pathParts[pathParts.length - 1];
+    const isDirectory = dirPaths.includes(relativePath);
+
+    fileTreeLines.push(`${" ".repeat(depth * 2)}${name}${isDirectory ? "/" : ""}`);
+  }
+
+  return fileTreeLines.join("\n");
+}
+
+/**
+ * Collects file contents from a directory
+ * Returns a map of relative file paths to their source code
+ */
+export async function getPathToSourceCodeMap(
+  directory: string,
+  repoRoot: string,
+  allowedExtensions: string[] = ALLOWED_EXTENSIONS,
+  maxFileSize: number = MAX_FILE_SIZE
+): Promise<Record<string, string>> {
+  // Use globby to find files, respecting .gitignore and .git
+  const filePaths = await globby(
+    allowedExtensions.length > 0 ? allowedExtensions.map((ext) => `**/*${ext}`) : ["**/*"],
+    {
+      cwd: directory,
+      onlyFiles: true,
+      dot: true,
+      absolute: false,
+      followSymbolicLinks: false,
+      gitignore: true,
+      ignore: [".git"],
     }
-  });
+  );
+
+  // Collect file contents
+  const pathToSourceCode: Record<string, string> = {};
+  for (const filePath of filePaths) {
+    try {
+      const fullPath = path.join(directory, filePath);
+      const relativePath = path.relative(repoRoot, fullPath);
+      const stats = await fs.stat(fullPath);
+
+      if (stats.size <= maxFileSize) {
+        const content = await fs.readFile(fullPath, "utf-8");
+        pathToSourceCode[relativePath] = content;
+      } else {
+        pathToSourceCode[relativePath] = `File too large to include (${stats.size} bytes)`;
+      }
+    } catch (error) {
+      console.error(`Error reading file ${filePath}: ${error}`);
+    }
+  }
 
   return pathToSourceCode;
-}
-
-/**
- * Load the file tree for the given repository path.
- * @param repoPath Path to the repository.
- * @returns File tree string.
- */
-export function loadFileTree(repoPath: string): string {
-  try {
-    // Use the find command to get a list of files.
-    const output = execSync(
-      `find ${repoPath} -type f -not -path "*/node_modules/*" -not -path "*/\\.git/*" | sort`,
-      { encoding: "utf-8" }
-    );
-    return output;
-  } catch (error) {
-    console.error("Failed to load file tree:", error);
-    return "Failed to load file tree";
-  }
-}
-
-/**
- * Searches one directory using ripgrep (rg) and returns a mapping
- * from file paths to their full file contents.
- *
- * @param params - Options for the search.
- *   - directory: Directory to search in.
- *   - content_regex (optional): Regex pattern to match within file contents. Defaults to "." (all content).
- *   - file_path_regex (optional): Glob pattern to filter files by their absolute paths.
- *   - allowedExtensions: An optional array of file extensions to consider.
- *
- * @returns A formatted string mapping file paths to file contents.
- */
-export function ripgrepSearch(params: {
-  directory: string;
-  content_regex?: string;
-  file_path_regex?: string;
-  allowedExtensions?: string[];
-}): string {
-  const {
-    directory,
-    content_regex = ".",
-    file_path_regex,
-    allowedExtensions = [".py", ".ts", ".js", ".java", ".go", ".rs", ".yaml"],
-  } = params;
-
-  // Default content regex to "." if not provided.
-  const effectiveContentRegex = content_regex || ".";
-
-  // Build arguments for the rg command.
-  const args = [effectiveContentRegex, directory];
-  if (file_path_regex) {
-    // Use the -g flag to filter files by their paths.
-    args.push("-g", file_path_regex);
-    logger.info(
-      `Searching in ${directory} with content regex: ${String(effectiveContentRegex)} and file path filter: ${String(file_path_regex)}`
-    );
-  } else {
-    logger.info(`Searching in ${directory} with content regex: ${String(effectiveContentRegex)}`);
-  }
-
-  // Execute the rg command with the constructed arguments.
-  const procResult = spawnSync("rg", args, { encoding: "utf-8" });
-
-  // ripgrep returns exit code 1 when no matches are found.
-  if (procResult.status !== 0 && procResult.status !== 1) {
-    const error = `Error running rg in ${directory}: ${procResult.stderr}`;
-    console.error(error);
-    return `No matches found. ${error}`;
-  }
-
-  const stdout: string = procResult.stdout;
-  const fileMatches: Record<string, string[]> = {};
-  stdout.split("\n").forEach((line) => {
-    const colonIndex = line.indexOf(":");
-    if (colonIndex !== -1) {
-      const filePath = line.slice(0, colonIndex);
-      const contentLine = line.slice(colonIndex + 1);
-      if (!fileMatches[filePath]) {
-        fileMatches[filePath] = [];
-      }
-      fileMatches[filePath].push(contentLine);
-    }
-  });
-
-  // For each matching file, check allowed extensions and read its full content.
-  const resultMap: Record<string, string> = {};
-  for (const filePath in fileMatches) {
-    const ext = path.extname(filePath);
-    if (allowedExtensions.length > 0 && !allowedExtensions.includes(ext)) {
-      continue;
-    }
-    if (resultMap[filePath]) continue;
-    try {
-      const content = fs.readFileSync(filePath, { encoding: "utf-8" });
-      resultMap[filePath] = content;
-    } catch (error) {
-      if (error instanceof Error) {
-        resultMap[filePath] = `Error reading file: ${error.message}`;
-      } else {
-        resultMap[filePath] = "Error reading file: Unknown error";
-      }
-    }
-  }
-
-  return formatCodeMap(new Map(Object.entries(resultMap)));
-}
-
-/**
- * Helper function to pretty-format a mapping of file paths to contents.
- *
- * @param codeMap - Mapping from file path to code content.
- * @returns A formatted string.
- */
-export function formatCodeMap(codeMap: Map<string, string>): string {
-  let formattedOutput = "";
-  for (const [filePath, code] of codeMap.entries()) {
-    const header = `File: ${filePath}`;
-    const separator = "-".repeat(header.length);
-    formattedOutput += `${separator}\n${header}\n${separator}\n${code}\n\n`;
-  }
-  return formattedOutput;
 }
