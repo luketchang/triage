@@ -14,6 +14,7 @@ import {
   ReasoningStage,
 } from "../types/index.js";
 import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/Accordion.js";
 
 interface CellViewProps {
   message: AssistantMessage;
@@ -30,49 +31,46 @@ const CollapsibleStep: React.FC<{
   children: React.ReactNode;
   isActive?: boolean;
 }> = ({ title, children, isActive = false }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to the bottom of content when new content is added
   useEffect(() => {
-    if (!isCollapsed && contentRef.current) {
+    if (contentRef.current) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
   });
 
   return (
-    <div className="step-container border border-border rounded-lg overflow-hidden mb-3 transition-standard shadow-sm">
-      <div
-        className={cn(
-          "step-header cursor-pointer p-2.5 flex justify-between items-center",
-          isActive ? "bg-background-lighter" : "bg-background-lighter"
-        )}
-        onClick={() => setIsCollapsed(!isCollapsed)}
+    <Accordion type="single" collapsible defaultValue="item-1" className="mb-3">
+      <AccordionItem
+        value="item-1"
+        className="border border-border rounded-lg overflow-hidden shadow-sm"
       >
-        <div
-          className={cn(
-            "step-header-content font-medium text-sm",
-            isActive
-              ? "text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine"
-              : "text-white"
-          )}
+        <AccordionTrigger
+          className={cn("p-2.5", isActive ? "bg-background-lighter" : "bg-background-lighter")}
         >
-          <span>{title}</span>
-        </div>
-        <span className="collapse-icon text-xs text-gray-400">{isCollapsed ? "▼" : "▲"}</span>
-      </div>
-      {isCollapsed ? (
-        <div className="min-h-[4px] w-full" />
-      ) : (
-        <div
-          className="step-content p-3 bg-background prose prose-invert max-w-none overflow-auto"
-          ref={contentRef}
-          style={{ maxHeight: "300px" }}
-        >
-          {children}
-        </div>
-      )}
-    </div>
+          <div
+            className={cn(
+              "font-medium text-sm",
+              isActive
+                ? "text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine"
+                : "text-white"
+            )}
+          >
+            {title}
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="p-0">
+          <div
+            className="p-3 bg-background prose prose-invert max-w-none overflow-auto"
+            ref={contentRef}
+            style={{ maxHeight: "300px" }}
+          >
+            {children}
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 };
 
