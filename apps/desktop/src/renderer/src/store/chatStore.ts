@@ -260,8 +260,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const success = await api.deleteChat(chatId);
       if (success) {
+        const state = get();
         // If we're deleting the currently selected chat, reset UI
-        if (get().currentChatId === chatId) {
+        if (state.currentChatId === chatId) {
           set({
             currentChatId: undefined,
             messages: [],
@@ -270,7 +271,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
 
         // Reload the chat list to update sidebar
-        await get().loadChats();
+        await state.loadChats();
       }
     } catch (error) {
       console.error("Error deleting chat:", error);
