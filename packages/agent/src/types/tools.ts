@@ -225,7 +225,7 @@ export const traceSearchInputToolSchema = {
 };
 
 const catRequestSchema = z.object({
-  path: z.string().describe("File path to read"),
+  path: z.string().describe("Absolute file path to read"),
 });
 
 export const catRequestToolSchema = {
@@ -234,14 +234,6 @@ export const catRequestToolSchema = {
 };
 
 export type CatRequest = z.infer<typeof catRequestSchema> & { type: "catRequest" };
-
-export const multiCatRequestSchema = z.object({
-  paths: z
-    .array(catRequestSchema)
-    .describe(
-      "Array of file paths to read. Each file path will be read via the cat terminal command."
-    ),
-});
 
 // TODO: remove in place of CatStep
 export type CatRequestResult = {
@@ -252,17 +244,16 @@ export type CatRequestResult = {
 
 const grepRequestSchema = z.object({
   pattern: z.string().describe("Regular expression pattern to search for"),
-  file: z.string().describe("File or directory to search in"),
   flags: z
     .string()
     .describe(
-      "One or more single-letter grep flags combined without spaces (e.g., 'rni' for -r -n -i). Do not include dashes (e.g., write 'rni', not '-rni' or '--rni')."
+      "One or more single-letter git-grep flags combined without spaces (e.g., 'rni' for -r -n -i). Do not include dashes (e.g., write 'rni', not '-rni' or '--rni')."
     ),
 });
 
 export const grepRequestToolSchema = {
   description:
-    "Search for a pattern in a file or directory. Works exactly like grep in the terminal.",
+    "git-grep: Look for specified patterns in the tracked files in the work tree, blobs registered in the index file, or blobs in given tree objects. Patterns are lists of one or more search expressions separated by newline characters. An empty string as search expression matches all lines.",
   parameters: grepRequestSchema,
 };
 
