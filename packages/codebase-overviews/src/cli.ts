@@ -43,7 +43,6 @@ export async function main(): Promise<void> {
   const modelName = options.model;
   // Validate that the model name is a valid Model from the enum
   if (!VALID_MODELS.includes(modelName)) {
-    console.error(`Error: Invalid model name '${modelName}'`);
     throw new Error(`Invalid model name '${modelName}'`);
   }
   const model = modelName as Model;

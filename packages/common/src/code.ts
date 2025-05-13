@@ -3,14 +3,78 @@ import * as path from "path";
 
 import { globby } from "globby";
 
-const DEFAULT_EXTENSIONS = [".py", ".js", ".ts", ".java", ".go", ".rs", ".yaml", ".cs"];
+export const ALLOWED_EXTENSIONS = [
+  // Compiled Languages
+  ".c",
+  ".cpp",
+  ".cc",
+  ".cxx",
+  ".h",
+  ".hpp",
+  ".hh",
+  ".java",
+  ".cs",
+  ".go",
+  ".rs",
+  ".swift",
+  ".kt",
+  ".kts",
+  ".m",
+  ".mm",
+
+  // Scripting/Interpreted Languages
+  ".py",
+  ".rb",
+  ".pl",
+  ".pm",
+  ".php",
+  ".js",
+  ".ts",
+  ".lua",
+  ".sh",
+  ".bash",
+  ".zsh",
+  ".ps1",
+  ".r",
+  ".jl",
+
+  // Web Templates / UI Logic
+  ".html",
+  ".htm",
+  ".jsx",
+  ".tsx",
+  ".vue",
+
+  // Functional & Other Languages
+  ".hs",
+  ".clj",
+  ".cljs",
+  ".cljc",
+  ".scala",
+  ".dart",
+  ".erl",
+  ".ex",
+  ".exs",
+
+  // Documentation
+  ".md",
+];
+
+export const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 /**
- * Creates a file tree structure from a directory, respecting .gitignore patterns
+ * Creates a string representation of the file tree starting at the given
+ * directory, respecting .gitignore patterns.
+ *
+ * @param directory - The base directory to read from
+ * @param allowedExtensions - An array of file extensions to include in the tree
+ * (useful for excluding certain types of files like build artifacts).
+ * @returns A string representation of the file tree, with each level of the tree
+ * indented with two spaces.
  */
-export async function createFileTree(
+export async function getDirectoryTree(
   directory: string,
-  allowedExtensions: string[] = DEFAULT_EXTENSIONS
+  allowedExtensions: string[] = ALLOWED_EXTENSIONS
 ): Promise<string> {
   // Get all directories and files
   const [dirPaths, filePaths] = await Promise.all([
@@ -57,13 +121,12 @@ export async function createFileTree(
  * Collects file contents from a directory
  * Returns a map of relative file paths to their source code
  */
-export async function collectFiles(
+export async function getPathToSourceCodeMap(
   directory: string,
-  allowedExtensions: string[] = DEFAULT_EXTENSIONS,
-  repoRoot: string
+  repoRoot: string,
+  allowedExtensions: string[] = ALLOWED_EXTENSIONS,
+  maxFileSize: number = MAX_FILE_SIZE
 ): Promise<Record<string, string>> {
-  const MAX_FILE_SIZE = 1024 * 1024; // 1MB
-
   // Use globby to find files, respecting .gitignore and .git
   const filePaths = await globby(
     allowedExtensions.length > 0 ? allowedExtensions.map((ext) => `**/*${ext}`) : ["**/*"],
@@ -86,7 +149,7 @@ export async function collectFiles(
       const relativePath = path.relative(repoRoot, fullPath);
       const stats = await fs.stat(fullPath);
 
-      if (stats.size <= MAX_FILE_SIZE) {
+      if (stats.size <= maxFileSize) {
         const content = await fs.readFile(fullPath, "utf-8");
         pathToSourceCode[relativePath] = content;
       } else {

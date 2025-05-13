@@ -1,12 +1,18 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 
-import { chunkArray, collectFiles, createFileTree, logger } from "@triage/common";
+import {
+  ALLOWED_EXTENSIONS,
+  chunkArray,
+  getDirectoryTree,
+  getPathToSourceCodeMap,
+  logger,
+} from "@triage/common";
 import { LanguageModelV1 } from "ai";
 
 import { identifyTopLevelServices } from "./service-identification";
 import { generateDirectorySummary, mergeAllSummaries } from "./summarization";
-import { getMajorDirectories } from "./utils";
+import { getTopLevelDirectories } from "./utils";
 
 /**
  * Main class for processing a codebase to generate an overview
@@ -29,7 +35,7 @@ export class CodebaseProcessor {
     this.llmClient = llmClient;
     this.repoPath = repoPath;
     this.systemDescription = systemDescription;
-    this.allowedExtensions = [".py", ".js", ".ts", ".java", ".go", ".rs", ".yaml", ".cs"];
+    this.allowedExtensions = ALLOWED_EXTENSIONS;
     this.outputDir = outputDir;
     this.chunkSize = options.chunkSize || 8;
   }
@@ -40,7 +46,7 @@ export class CodebaseProcessor {
   public async process(): Promise<string> {
     try {
       // Create file tree for the repository
-      const repoFileTree = await createFileTree(this.repoPath, this.allowedExtensions);
+      const repoFileTree = await getDirectoryTree(this.repoPath, this.allowedExtensions);
 
       // Identify service directories
       const serviceDirs = await identifyTopLevelServices(
@@ -54,7 +60,7 @@ export class CodebaseProcessor {
         directoriesToProcess = serviceDirs;
         logger.info(`Identified service directories: ${directoriesToProcess}`);
       } else {
-        directoriesToProcess = await getMajorDirectories(this.repoPath);
+        directoriesToProcess = await getTopLevelDirectories(this.repoPath);
         logger.info(
           "No specific service directories identified; falling back to major directories."
         );
@@ -70,13 +76,13 @@ export class CodebaseProcessor {
             logger.info(`Processing directory: ${directory}`);
 
             // Create file tree for this directory
-            const dirFileTree = await createFileTree(directory, this.allowedExtensions);
+            const dirFileTree = await getDirectoryTree(directory, this.allowedExtensions);
 
             // Collect file contents
-            const pathToSourceCode = await collectFiles(
+            const pathToSourceCode = await getPathToSourceCodeMap(
               directory,
-              this.allowedExtensions,
-              this.repoPath
+              this.repoPath,
+              this.allowedExtensions
             );
 
             const summary = await generateDirectorySummary(
