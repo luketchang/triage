@@ -50,16 +50,17 @@ export async function handleCatRequest(
 }
 
 export async function handleGrepRequest(
-  toolCall: GrepRequest
+  toolCall: GrepRequest,
+  repoPath: string
 ): Promise<GrepRequestResult | LLMToolCallError> {
   return new Promise((resolve, _) => {
     exec(
-      `grep ${toolCall.flags ? `-${toolCall.flags}` : ""} ${toolCall.pattern} ${toolCall.file}`,
+      `cd ${repoPath} && git grep ${toolCall.flags ? `-${toolCall.flags}` : ""} -e ${toolCall.pattern}`,
       (error, stdout, stderr) => {
         // grep returns exit code 1 if no matches are found, but that's not an error for our use case.
         // error.code === 1 means "no ma  tches"
         if (error && typeof error.code === "number" && error.code !== 1) {
-          logger.error(`Error grepping file ${toolCall.file}: ${error} \n ${stderr}`);
+          logger.error(`Error grepping patter ${toolCall.pattern}: ${error} \n ${stderr}`);
           resolve({ type: "error", toolCallType: "grepRequest", error: error.message });
         } else {
           // If error.code === 1, stdout will be empty (no matches), which is fine.

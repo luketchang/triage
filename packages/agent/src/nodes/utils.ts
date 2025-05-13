@@ -171,9 +171,8 @@ export function formatSingleCatStep(
 
 export function formatSingleGrepStep(step: GrepStep): string {
   // Format input arguments on one line
-  const inputArgs = `grep ${step.pattern} ${step.file}${step.flags ? ` -${step.flags}` : ""}`;
-  const header = `File: ${step.file}`;
-  const separator = "-".repeat(Math.max(header.length, inputArgs.length));
+  const inputArgs = `git grep ${step.pattern} ${step.flags ? ` -${step.flags}` : ""}`;
+  const separator = "-".repeat(inputArgs.length);
 
   let source = step.output;
   const lines = source.split("\n");
@@ -185,7 +184,7 @@ export function formatSingleGrepStep(step: GrepStep): string {
     })
     .join("\n");
 
-  return `${separator}\n${inputArgs}\n${header}\n${separator}\n${source}\n`;
+  return `${separator}\n${inputArgs}\n${separator}\n${source}\n`;
 }
 
 export function formatLogSearchSteps(steps: LogSearchStep[]): string {
