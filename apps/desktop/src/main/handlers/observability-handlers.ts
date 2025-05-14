@@ -1,6 +1,6 @@
+import { logger } from "@triage/common";
 import { ObservabilityConfigStore } from "@triage/observability";
 import { ipcMain } from "electron";
-import { logger } from "@triage/common";
 import {
   FacetData,
   getObservabilityPlatform,
@@ -50,6 +50,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
         const platform = getObservabilityPlatform(observabilityCfg);
 
         // Call the real platform API
+        logger.info("Getting log facet values for time range:", { start, end });
         const logFacetsMap = await platform.getLogsFacetValues(start, end);
 
         // Convert the Map<string, string[]> to FacetData[] format
@@ -76,6 +77,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
         const platform = getObservabilityPlatform(observabilityCfg);
 
         // Call the real platform API (assuming the method exists)
+        logger.info("Fetching traces for time range:", { start: params.start, end: params.end });
         const result = await platform.fetchTraces({
           query: params.query || "",
           start: params.start,
@@ -101,6 +103,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
         const platform = getObservabilityPlatform(observabilityCfg);
 
         // Call the real platform API (assuming the method exists)
+        logger.info("Getting span facet values for time range:", { start, end });
         const spanFacetsMap = await platform.getSpansFacetValues(start, end);
 
         // Convert the Map<string, string[]> to FacetData[] format
