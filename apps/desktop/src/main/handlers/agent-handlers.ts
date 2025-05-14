@@ -5,6 +5,7 @@ import {
   invokeAgent,
 } from "@triage/agent";
 import { BrowserWindow, ipcMain } from "electron";
+import { logger } from "@triage/common";
 import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../tmp-hardcode.js";
 
 /**
@@ -12,7 +13,7 @@ import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../tmp-hardcode.js";
  * @param window The main browser window for sending updates
  */
 export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentConfigStore): void {
-  console.info("Setting up agent handlers...");
+  logger.info("Setting up agent handlers...");
 
   // Handle agent invocation
   ipcMain.handle(
@@ -23,8 +24,8 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
       chatHistory: AgentChatMessage[]
     ): Promise<AgentAssistantMessage> => {
       try {
-        console.info("Invoking agent with query:", query);
-        console.info("IPC chat history:", chatHistory);
+        logger.info("Invoking agent with query:", query);
+        logger.info("IPC chat history:", chatHistory);
 
         const agentCfg = await agentCfgStore.getValues();
 
@@ -44,13 +45,13 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
 
         return result;
       } catch (error) {
-        console.error("Error invoking agent:", error);
+        logger.error("Error invoking agent:", error);
         throw error;
       }
     }
   );
 
-  console.info("All agent handlers registered.");
+  logger.info("All agent handlers registered.");
 }
 
 /**
@@ -58,5 +59,5 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
  */
 export function cleanupAgentHandlers(): void {
   ipcMain.removeHandler("agent:invoke-agent");
-  console.info("Agent handlers cleanup complete.");
+  logger.info("Agent handlers cleanup complete.");
 }

@@ -2,17 +2,12 @@ import { getGitRemoteUrl } from "@triage/common";
 import { ipcMain } from "electron";
 import fs from "fs/promises";
 import { AppConfig, AppConfigStore } from "../../common/AppConfig.js";
-
-// Define a more specific type for the logger if known, or use a general one
-interface PassedLogger {
-  info: (message: string) => void;
-  // error: (message: string) => void; // Assuming error might also be available
-}
+import { logger } from "@triage/common";
 
 /**
  * Set up all IPC handlers related to configuration
  */
-export function setupConfigHandlers(appCfgStore: AppConfigStore, logger: PassedLogger): void {
+export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
   logger.info("CONFIG_HANDLERS: Entered setupConfigHandlers (via passed logger).");
   logger.info("Setting up config handlers... (via passed logger)");
 
@@ -75,7 +70,7 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore, logger: PassedL
 /**
  * Clean up resources used by config handlers
  */
-export function cleanupConfigHandlers(logger: PassedLogger): void {
+export function cleanupConfigHandlers(): void {
   logger.info("CONFIG_HANDLERS: cleanupConfigHandlers called (via passed logger).");
   ipcMain.removeHandler("config:get-app-config");
   ipcMain.removeHandler("config:update-app-config");

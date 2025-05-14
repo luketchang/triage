@@ -12,14 +12,8 @@ app.setName("triage-desktop");
 async function runMigrations() {
   console.info("🔄 Running migrations...");
 
-  // IMPORTANT: When running with `pnpm db:migrate` (i.e., `electron ./scripts/...`),
-  // app.getName() is "Electron". So app.getPath("userData") will point to
-  // a generic Electron data directory, UNLESS app.setName("your-app-name")
-  // is called *before app ready*, as we are attempting above.
   const userDataPath = app.getPath("userData");
   console.info("💡 Determined userDataPath (after early app.setName):", userDataPath);
-  // To use a specific path for testing (uncomment and modify if needed):
-  // const userDataPath = "/Users/luketchang/Library/Application Support/triage-desktop";
 
   const dbDir = path.join(userDataPath, "db");
   console.info("🔍 Database directory target:", dbDir);

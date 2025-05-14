@@ -1,11 +1,6 @@
 import { ipcMain } from "electron";
 import { DatabaseService } from "../db/service.js";
-
-// Define a more specific type for the logger if known, or use a general one
-interface PassedLogger {
-  info: (message: string) => void;
-  // error: (message: string) => void; // Assuming error might also be available
-}
+import { logger } from "@triage/common";
 
 // Single instance of database service
 let dbService: DatabaseService | null = null;
@@ -13,7 +8,7 @@ let dbService: DatabaseService | null = null;
 /**
  * Set up all IPC handlers related to chat functionality
  */
-export function setupDbHandlers(logger: PassedLogger): void {
+export function setupDbHandlers(): void {
   logger.info("DB_HANDLERS: Entered setupDbHandlers function (via passed logger).");
   logger.info("Setting up chat handlers... (via passed logger)");
 
@@ -127,7 +122,7 @@ export function setupDbHandlers(logger: PassedLogger): void {
 /**
  * Clean up resources used by chat handlers
  */
-export function cleanupDbHandlers(logger: PassedLogger): void {
+export function cleanupDbHandlers(): void {
   logger.info("DB_HANDLERS: cleanupDbHandlers called (via passed logger).");
   if (dbService) {
     dbService.destroy();

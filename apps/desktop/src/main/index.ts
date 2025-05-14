@@ -99,17 +99,17 @@ function initApp(mainWindow: BrowserWindow, logger: { info: (message: string) =>
 
   console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: About to call setupDbHandlers().");
   logger.info("MAIN_INDEX_INITAPP: About to call setupDbHandlers().");
-  setupDbHandlers(logger);
+  setupDbHandlers();
   logger.info("MAIN_INDEX_INITAPP: Returned from setupDbHandlers().");
 
   console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: About to call setupConfigHandlers().");
   logger.info("MAIN_INDEX_INITAPP: About to call setupConfigHandlers().");
-  setupConfigHandlers(appCfgStore, logger);
+  setupConfigHandlers(appCfgStore);
   logger.info("MAIN_INDEX_INITAPP: Returned from setupConfigHandlers().");
 
   console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: About to call setupObservabilityHandlers().");
   logger.info("MAIN_INDEX_INITAPP: About to call setupObservabilityHandlers().");
-  setupObservabilityHandlers(observabilityCfgStore, logger);
+  setupObservabilityHandlers(observabilityCfgStore);
   logger.info("MAIN_INDEX_INITAPP: Returned from setupObservabilityHandlers().");
 }
 
@@ -168,9 +168,9 @@ app.on("quit", () => {
   if (desktopLogger) {
     // Check if logger was initialized
     cleanupAgentHandlers(); // Assuming cleanupAgentHandlers doesn't need logger yet
-    cleanupDbHandlers(desktopLogger);
-    cleanupConfigHandlers(desktopLogger);
-    cleanupObservabilityHandlers(desktopLogger);
+    cleanupDbHandlers();
+    cleanupConfigHandlers();
+    cleanupObservabilityHandlers();
   } else {
     console.error("MAIN_INDEX_DIAGNOSTIC: desktopLogger not initialized at quit.");
     // Fallback or silent fail if logger wasn't set up

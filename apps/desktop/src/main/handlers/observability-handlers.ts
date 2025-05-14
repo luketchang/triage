@@ -1,5 +1,6 @@
 import { ObservabilityConfigStore } from "@triage/observability";
 import { ipcMain } from "electron";
+import { logger } from "@triage/common";
 import {
   FacetData,
   getObservabilityPlatform,
@@ -9,19 +10,10 @@ import {
   TracesWithPagination,
 } from "../../renderer/src/types/index.js";
 
-// Define a more specific type for the logger if known, or use a general one
-interface PassedLogger {
-  info: (message: string) => void;
-  // error: (message: string) => void; // Assuming error might also be available
-}
-
 /**
  * Set up all IPC handlers related to observability (logs, traces)
  */
-export function setupObservabilityHandlers(
-  observabilityCfgStore: ObservabilityConfigStore,
-  logger: PassedLogger
-): void {
+export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityConfigStore): void {
   logger.info("OBSERVABILITY_HANDLERS: Entered setupObservabilityHandlers (via passed logger).");
   logger.info("Setting up observability handlers... (via passed logger)");
 
@@ -147,7 +139,7 @@ export function setupObservabilityHandlers(
 /**
  * Clean up resources used by observability handlers
  */
-export function cleanupObservabilityHandlers(logger: PassedLogger): void {
+export function cleanupObservabilityHandlers(): void {
   logger.info("OBSERVABILITY_HANDLERS: cleanupObservabilityHandlers called (via passed logger).");
   // No specific cleanup needed currently
   logger.info("Observability handlers cleanup complete. (via passed logger)");
