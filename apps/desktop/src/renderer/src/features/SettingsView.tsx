@@ -449,22 +449,14 @@ function SettingsView() {
       if (progressCleanupRef.current) {
         progressCleanupRef.current();
       }
-
       progressCleanupRef.current = api.onCodebaseOverviewProgress(async (update) => {
         setOverviewProgress(update);
-        // When complete, refresh the config to get the updated path
-        if (update.status === "completed") {
-          const refreshedConfig = await api.getAppConfig();
-          setLocalConfig(refreshedConfig);
-          setOriginalConfig(refreshedConfig);
-          setIsGeneratingOverview(false);
-        } else if (update.status === "error") {
-          setIsGeneratingOverview(false);
-        }
       });
-
       // Start the generation
-      await api.generateCodebaseOverview(localConfig.repoPath);
+      const codebaseOverview = await api.generateCodebaseOverview(localConfig.repoPath);
+      setLocalConfig((prev: any) => ({ ...prev, codebaseOverview }));
+      setOriginalConfig((prev: any) => ({ ...prev, codebaseOverview }));
+      setIsGeneratingOverview(false);
     } catch (error) {
       console.error("Failed to generate codebase overview:", error);
       setOverviewProgress({

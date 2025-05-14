@@ -1,5 +1,5 @@
 import { CodebaseProcessor } from "@triage/codebase-overviews";
-import { GeminiModel, getModelWrapper } from "@triage/common";
+import { getModelWrapper } from "@triage/common";
 import { BrowserWindow, ipcMain } from "electron";
 import fs from "fs/promises";
 import { AppConfigStore } from "../../common/AppConfig.js";
@@ -28,8 +28,7 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
         const currentConfig = await appCfgStore.getValues();
 
         // Create LLM client - use the reasoningModel if available, otherwise fallback to Gemini
-        const model = currentConfig.reasoningModel || GeminiModel.GEMINI_2_5_PRO;
-
+        const model = currentConfig.reasoningModel;
         const llmClient = getModelWrapper(model, {
           openaiApiKey: currentConfig.openaiApiKey,
           anthropicApiKey: currentConfig.anthropicApiKey,

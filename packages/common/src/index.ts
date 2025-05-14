@@ -1,5 +1,4 @@
 // Utils package exports
-export * from "./array";
 export * from "./code";
 export * from "./datadog";
 export * from "./formatting";

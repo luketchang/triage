@@ -1,18 +1,18 @@
-import * as fs from "fs/promises";
-import * as path from "path";
+import * as fs from "fs/promises"
+import * as path from "path"
 
 import {
   ALLOWED_EXTENSIONS,
-  chunkArray,
   getDirectoryTree,
   getPathToSourceCodeMap,
   logger,
-} from "@triage/common";
-import { LanguageModelV1 } from "ai";
+} from "@triage/common"
+import { LanguageModelV1 } from "ai"
+import pLimit from "p-limit"
 
-import { identifyTopLevelServices } from "./service-identification";
-import { generateDirectorySummary, mergeAllSummaries } from "./summarization";
-import { getTopLevelDirectories } from "./utils";
+import { identifyTopLevelServices } from "./service-identification"
+import { generateDirectorySummary, mergeAllSummaries } from "./summarization"
+import { getTopLevelDirectories } from "./utils"
 
 /**
  * Progress update for codebase overview generation
@@ -58,6 +58,7 @@ export class CodebaseProcessor {
    */
   public async process(): Promise<string> {
     try {
+      // Show nonzero progress just to indicate that the processor is running
       this.updateProgress({
         status: "processing",
         message: "Analyzing directory structure...",
@@ -87,56 +88,62 @@ export class CodebaseProcessor {
 
       // Process each directory
       const summaries: Record<string, string> = {};
-      const directoryChunks = chunkArray(directoriesToProcess, this.chunkSize);
-
       let completedDirs = 0;
       const totalDirs = directoriesToProcess.length;
+      this.updateProgress({
+        status: "processing",
+        message: "Processing directories...",
+        progress: 15,
+      });
 
-      for (const [_, chunk] of directoryChunks.entries()) {
-        const summaryPromises = chunk.map(
-          async (directory: string): Promise<{ directory: string; summary: string }> => {
-            // Update progress before starting directory processing
-            this.updateProgress({
-              status: "processing",
-              message: `Processing directory: ${directory}`,
-              progress: 15 + Math.floor((70 * completedDirs) / totalDirs),
-            });
+      // Create a limit function with the concurrency specified by chunkSize
+      const limit = pLimit(this.chunkSize);
 
-            // Create file tree for this directory
-            const dirFileTree = await getDirectoryTree(directory, this.allowedExtensions);
+      // Create an array of promises with limited concurrency
+      const promises = directoriesToProcess.map((directory) => {
+        // Return a function that will be executed with limited concurrency
+        return limit(async (): Promise<{ directory: string; summary: string }> => {
+          const directoryTree = await getDirectoryTree(directory, this.allowedExtensions);
 
-            // Collect file contents
-            const pathToSourceCode = await getPathToSourceCodeMap(
-              directory,
-              this.repoPath,
-              this.allowedExtensions
-            );
+          // Collect file contents
+          const pathToSourceCode = await getPathToSourceCodeMap(
+            directory,
+            this.repoPath,
+            this.allowedExtensions
+          );
 
-            const summary = await generateDirectorySummary(
-              this.llmClient,
-              this.systemDescription,
-              directory,
-              dirFileTree,
-              pathToSourceCode,
-              repoFileTree
-            );
+          const summary = await generateDirectorySummary(
+            this.llmClient,
+            this.systemDescription,
+            directory,
+            directoryTree,
+            pathToSourceCode,
+            repoFileTree
+          );
 
-            completedDirs++;
+          completedDirs++;
 
-            logger.info(`Summary for ${directory}:\n${summary}`);
-            return { directory, summary };
-          }
-        );
+          // Show 15-85% progress while processing directories
+          this.updateProgress({
+            status: "processing",
+            message: `Processed directory: ${directory}`,
+            progress: 15 + Math.ceil((70 * completedDirs) / totalDirs),
+          });
+          logger.info(`${summary}`);
+          return { directory, summary };
+        });
+      });
 
-        // Wait for current chunk to complete
-        const summaryResults = await Promise.all(summaryPromises);
-        Object.assign(
-          summaries,
-          Object.fromEntries(summaryResults.map(({ directory, summary }) => [directory, summary]))
-        );
-      }
+      // Wait for all promises to resolve
+      const summaryResults = await Promise.all(promises);
 
-      // Merge all summaries
+      // Convert results to summaries object
+      Object.assign(
+        summaries,
+        Object.fromEntries(summaryResults.map(({ directory, summary }) => [directory, summary]))
+      );
+
+      // Arbitrary choice: show as almost complete
       this.updateProgress({
         status: "processing",
         message: "Merging all directory summaries (this may take a while)...",
@@ -149,7 +156,6 @@ export class CodebaseProcessor {
         repoFileTree
       );
 
-      // Send completed progress update
       this.updateProgress({
         status: "completed",
         message: "Codebase overview generated successfully!",
@@ -165,7 +171,6 @@ export class CodebaseProcessor {
 
       return finalDocument;
     } catch (error) {
-      // Send error progress update
       this.updateProgress({
         status: "error",
         message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
