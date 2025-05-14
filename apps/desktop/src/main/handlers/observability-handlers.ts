@@ -1,4 +1,4 @@
-import { getLogger } from "@triage/common";
+import { logger } from "@triage/common";
 import { ObservabilityConfigStore } from "@triage/observability";
 import { ipcMain } from "electron";
 import {
@@ -14,7 +14,6 @@ import {
  * Set up all IPC handlers related to observability (logs, traces)
  */
 export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityConfigStore): void {
-  const logger = getLogger();
   logger.info("Setting up observability handlers...");
 
   // Fetch logs based on query parameters
@@ -129,7 +128,6 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
  * Clean up resources used by observability handlers
  */
 export function cleanupObservabilityHandlers(): void {
-  const logger = getLogger();
   // Remove all handlers
   ipcMain.removeHandler("observability:fetch-logs");
   ipcMain.removeHandler("observability:get-logs-facet-values");

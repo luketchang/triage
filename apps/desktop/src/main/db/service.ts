@@ -18,10 +18,9 @@ export class DatabaseService {
   private dbPath: string;
 
   constructor() {
-    // Get the user data path from Electron app module
     const userDataPath = app.getPath("userData");
-    // Create db directory within userDataPath if it doesn't exist
     const dbDir = path.join(userDataPath, "db");
+
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }

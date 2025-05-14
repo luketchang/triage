@@ -1,14 +1,13 @@
+import { logger } from "@triage/common";
 import { getGitRemoteUrl } from "@triage/common";
 import { ipcMain } from "electron";
 import fs from "fs/promises";
 import { AppConfig, AppConfigStore } from "../../common/AppConfig.js";
-import { getLogger } from "@triage/common";
 
 /**
  * Set up all IPC handlers related to configuration
  */
 export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
-  const logger = getLogger();
   logger.info("Setting up config handlers...");
 
   // Get all config values for the settings UI
@@ -70,7 +69,6 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
  * Clean up resources used by config handlers
  */
 export function cleanupConfigHandlers(): void {
-  const logger = getLogger();
   ipcMain.removeHandler("config:get-app-config");
   ipcMain.removeHandler("config:update-app-config");
   logger.info("Config handlers cleanup complete.");
