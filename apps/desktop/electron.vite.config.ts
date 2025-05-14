@@ -1,11 +1,36 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
+import { builtinModules } from "module";
 import { resolve } from "path";
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
-    // TODO: should we really be importing renderer code in main?
+    // Add the plugins to prevent incorrect tree-shaking of handlers
+    plugins: [],
+    build: {
+      minify: false, // For easier debugging
+      sourcemap: true,
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, "src/main/index.ts"),
+        },
+        output: {
+          inlineDynamicImports: true,
+          // Ensure all handlers end up in the same chunk
+          manualChunks: undefined,
+          // Make sure we preserve module structure
+          preserveModules: false,
+        },
+        // Only externalize electron and absolute node module imports
+        external: [
+          "electron",
+          /^[^./].+/, // Everything that doesn't start with . or / (node_modules)
+          /^node:.*/,
+          ...builtinModules,
+          ...builtinModules.map((m) => `node:${m}`),
+        ],
+      },
+    },
     resolve: {
       alias: {
         "@renderer": resolve(__dirname, "src/renderer/src"),
