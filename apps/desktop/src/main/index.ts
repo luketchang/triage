@@ -8,10 +8,12 @@ import { AppCfgSchema, AppConfigStore } from "../common/AppConfig.js";
 import { ElectronConfigStore } from "./ElectronConfigStore.js";
 import {
   cleanupAgentHandlers,
+  cleanupCodebaseHandlers,
   cleanupConfigHandlers,
   cleanupDbHandlers,
   cleanupObservabilityHandlers,
   setupAgentHandlers,
+  setupCodebaseHandlers,
   setupConfigHandlers,
   setupDbHandlers,
   setupObservabilityHandlers,
@@ -76,6 +78,7 @@ function initApp(mainWindow: BrowserWindow): void {
   // Set up all IPC handlers
   setupAgentHandlers(mainWindow, agentCfgStore);
   setupDbHandlers();
+  setupCodebaseHandlers(mainWindow, appCfgStore);
   setupConfigHandlers(appCfgStore);
   setupObservabilityHandlers(observabilityCfgStore);
 }
@@ -104,21 +107,23 @@ app.whenReady().then(() => {
   });
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+// Quit when all windows are closed, except on macOS
 app.on("window-all-closed", () => {
+  // On macOS it is common for applications and their menu bar
+  // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-// Clean up handlers when app quits
-app.on("quit", () => {
+// Clean up when quitting
+app.on("will-quit", () => {
+  // Clean up all IPC handlers
   cleanupAgentHandlers();
   cleanupDbHandlers();
   cleanupConfigHandlers();
   cleanupObservabilityHandlers();
+  cleanupCodebaseHandlers();
 });
 
 // In this file you can include the rest of your app's specific main process

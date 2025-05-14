@@ -23,11 +23,11 @@
     "dotenv": "^16.4.7",
     "globby": "^14.1.0",
     "json-stable-stringify": "^1.2.1",
+    "p-limit": "^6.2.0",
     "uuid": "^11.1.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/json-stable-stringify": "^1.2.0",
     "@types/node": "^22",
     "eslint": "^9.20.0",
     "tsx": "^4.15.0",

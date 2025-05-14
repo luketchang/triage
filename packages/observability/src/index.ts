@@ -1,4 +1,3 @@
-// Export interfaces
 export * from "./config";
 export * from "./observability.interface";
 export * from "./types";

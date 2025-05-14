@@ -1,5 +1,3 @@
-// @ts-ignore - Ignoring React module resolution issues
-import "./electron.d";
 import "./styles/globals.css";
 
 // Components

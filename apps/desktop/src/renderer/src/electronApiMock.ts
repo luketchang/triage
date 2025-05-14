@@ -3,6 +3,7 @@ import {
   AgentAssistantMessage,
   AgentChatMessage,
   Chat,
+  CodebaseOverview,
   FacetData,
   Log,
   LogQueryParams,
@@ -615,6 +616,25 @@ The primary issue appears to be in the authentication middleware where token val
     console.info("Mock clearChat - not implemented in mock mode");
     return false;
   },
+
+  /**
+   * Mock implementation of generating a codebase overview
+   */
+  generateCodebaseOverview: async (repoPath: string): Promise<CodebaseOverview> => {
+    console.info("Mock generateCodebaseOverview called with:", repoPath);
+
+    // Simulate some delay
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Just return a mock path
+    return {
+      content: "This is a mock codebase overview",
+      repoPath: `${repoPath}/.triage/codebase-overview.md`,
+      createdAt: new Date(),
+    };
+  },
+
+  // Note: onCodebaseOverviewProgress is handled in api.ts with simulation
 };
 
 export default mockElectronAPI;

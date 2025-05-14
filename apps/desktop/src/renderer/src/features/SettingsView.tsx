@@ -1,6 +1,13 @@
-import { Check, PlusCircle, Save, X } from "lucide-react";
+import { CodebaseOverviewProgressUpdate } from "@triage/codebase-overviews";
+import { Check, Loader2, PlusCircle, Save, X } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../components/ui/Accordion.js";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,9 +20,11 @@ import {
 } from "../components/ui/AlertDialog.js";
 import { Button } from "../components/ui/Button.jsx";
 import { Input } from "../components/ui/Input.jsx";
+import { Markdown } from "../components/ui/Markdown.js";
+import { Progress } from "../components/ui/Progress.js";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
 import { useAppConfig } from "../context/useAppConfig.js";
-
+import api from "../services/api.js";
 // TODO: temp until we fix imports from @triage/
 export const DatadogCfgSchema = z.object({
   apiKey: z.string().optional(),
@@ -46,13 +55,67 @@ const SettingField = ({
   description?: React.ReactNode;
 }) => {
   return (
-    <div className="grid grid-cols-12 items-center gap-4">
+    <div className="grid grid-cols-12 items-start gap-4">
       <div className="col-span-4">
         <label className="text-sm font-medium text-gray-200">{label}</label>
         {description && <div className="text-xs text-gray-500 mt-1">{description}</div>}
       </div>
       <div className="col-span-8">{children}</div>
     </div>
+  );
+};
+
+const DeleteButton = ({
+  title,
+  description,
+  onDelete,
+  buttonText = "Delete",
+  size = "sm",
+}: {
+  title: string;
+  description: string;
+  onDelete: () => Promise<void>;
+  buttonText?: string;
+  size?: "sm" | "default";
+}) => {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete();
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  return (
+    <>
+      <Button size={size} variant="destructiveOutline" onClick={() => setShowDeleteDialog(true)}>
+        <X className="h-4 w-4 mr-1" /> {buttonText}
+      </Button>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {title}?</AlertDialogTitle>
+            <AlertDialogDescription>{description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              variant="destructiveOutline"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
@@ -87,7 +150,6 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [shouldScroll, setShouldScroll] = useState(false);
-  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
 
   // Apply schema defaults to configuration
   const getInitialConfig = useCallback(() => {
@@ -108,7 +170,7 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
   }, [integrationConfig, schema]);
 
   const [localConfig, setLocalConfig] = useState<T>(getInitialConfig());
-  const [originalConfig, setOriginalConfig] = useState<T>(getInitialConfig());
+  const [serverConfig, setServerConfig] = useState<T>(getInitialConfig());
 
   const allFieldsComplete = React.useMemo(() => {
     if (!fields || fields.length === 0) {
@@ -121,8 +183,8 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
   }, [fields, localConfig]);
 
   const fieldsChanged = React.useMemo(() => {
-    return JSON.stringify(localConfig) !== JSON.stringify(originalConfig);
-  }, [localConfig, originalConfig]);
+    return JSON.stringify(localConfig) !== JSON.stringify(serverConfig);
+  }, [localConfig, serverConfig]);
 
   // Re-initialize config when integrationConfig changes
   useEffect(() => {
@@ -130,7 +192,7 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
     if (integrationConfig) {
       const newConfig = getInitialConfig();
       setLocalConfig(newConfig);
-      setOriginalConfig(newConfig);
+      setServerConfig(newConfig);
     }
   }, [integrationConfig, schema, getInitialConfig]);
 
@@ -167,7 +229,7 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
       await updateAppConfig({
         [integrationConfigKey]: configToSave,
       });
-      setOriginalConfig({ ...localConfig });
+      setServerConfig({ ...localConfig });
     } catch (error) {
       console.error(`Failed to save ${integrationConfigKey} integration:`, error);
     } finally {
@@ -175,15 +237,14 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
     }
   };
 
-  const removeIntegration = async () => {
+  const deleteIntegration = async () => {
     setIsSaving(true);
     try {
       const newConfig = { [integrationConfigKey]: undefined };
       await updateAppConfig(newConfig);
       setIsVisible(false);
-      setShowRemoveDialog(false);
     } catch (error) {
-      console.error(`Failed to remove ${integrationConfigKey} integration:`, error);
+      console.error(`Failed to delete ${integrationConfigKey} integration:`, error);
     } finally {
       setIsSaving(false);
     }
@@ -202,20 +263,16 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
           <p className="text-sm text-gray-400">{description}</p>
         </div>
         {isVisible ? (
-          <div className="flex justify-end gap-3">
-            <Button
-              size="sm"
-              variant="destructiveOutline"
-              onClick={() => setShowRemoveDialog(true)}
-              className="mt-2"
-            >
-              <X className="h-4 w-4 mr-1" /> Remove
-            </Button>
+          <div className="mt-2 flex justify-end gap-3">
+            <DeleteButton
+              title={`${title} Integration`}
+              description={`This will delete your ${title} configuration. To add it back, you'll need to enter any settings again.`}
+              onDelete={deleteIntegration}
+            />
             <Button
               size="sm"
               onClick={saveIntegration}
               disabled={isSaving || !fieldsChanged || !allFieldsComplete}
-              className="mt-2"
             >
               {!fieldsChanged && allFieldsComplete ? (
                 <>
@@ -257,28 +314,6 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
               ))}
         </div>
       )}
-
-      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove {title} Integration?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will delete your {title} configuration. To add it back, you'll need to enter any
-              settings again.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={removeIntegration}
-              disabled={isSaving}
-              variant="destructiveOutline"
-            >
-              {isSaving ? "Removing..." : "Remove"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
@@ -352,19 +387,42 @@ const GrafanaIntegration = () => {
 
 function SettingsView() {
   const { appConfig, updateAppConfig, isLoading } = useAppConfig();
+  // Config rendered in the UI. This may be different from the config in the server
+  // if it hasn't been saved yet.
   const [localConfig, setLocalConfig] = useState<any>({});
-  const [originalConfig, setOriginalConfig] = useState<any>({});
+  // Config last retrieved from the server.
+  const [serverConfig, setServerConfig] = useState<any>({});
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
+
+  // State for overview
+  const [isGeneratingOverview, setIsGeneratingOverview] = useState<boolean>(false);
+  const [overviewProgress, setOverviewProgress] = useState<CodebaseOverviewProgressUpdate | null>(
+    null
+  );
+  const [overviewExpanded, setOverviewExpanded] = useState<boolean>(false);
+
+  // Cleanup function reference
+  const progressCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (appConfig && !isLoading) {
       const configCopy = { ...appConfig };
       setLocalConfig(configCopy);
-      setOriginalConfig(configCopy);
+      setServerConfig(configCopy);
       setHasChanges(false);
     }
   }, [appConfig, isLoading]);
+
+  // Cleanup progress listener on unmount
+  useEffect(() => {
+    return () => {
+      if (progressCleanupRef.current) {
+        progressCleanupRef.current();
+        progressCleanupRef.current = null;
+      }
+    };
+  }, []);
 
   // Update local state only
   const handleChange = (key: string, value: any) => {
@@ -375,7 +433,7 @@ function SettingsView() {
     setLocalConfig(updatedConfig);
 
     // Check if the updated localConfig differs from original
-    const isChanged = JSON.stringify(updatedConfig) !== JSON.stringify(originalConfig);
+    const isChanged = JSON.stringify(updatedConfig) !== JSON.stringify(serverConfig);
     setHasChanges(isChanged);
   };
 
@@ -386,7 +444,7 @@ function SettingsView() {
     setIsSaving(true);
     try {
       await updateAppConfig(localConfig);
-      setOriginalConfig({ ...localConfig });
+      setServerConfig({ ...localConfig });
       setHasChanges(false);
     } catch (error) {
       console.error("Failed to save settings:", error);
@@ -398,6 +456,56 @@ function SettingsView() {
   const handleBlur = async () => {
     if (hasChanges) {
       await saveSettings();
+    }
+  };
+
+  const handleGenerateOverview = async () => {
+    if (!localConfig.repoPath || isGeneratingOverview) return;
+
+    setIsGeneratingOverview(true);
+    setOverviewProgress({
+      status: "processing",
+      message: "Generating overview...",
+      progress: 0,
+    });
+    // Show the progress bar
+    setOverviewExpanded(true);
+
+    try {
+      // Register for progress updates
+      if (progressCleanupRef.current) {
+        progressCleanupRef.current();
+      }
+      progressCleanupRef.current = api.onCodebaseOverviewProgress(async (update) => {
+        setOverviewProgress(update);
+      });
+      // Start the generation
+      await api.generateCodebaseOverview(localConfig.repoPath);
+      const newCfg = await api.getAppConfig();
+      setLocalConfig(newCfg);
+      setServerConfig(newCfg);
+      setIsGeneratingOverview(false);
+    } catch (error) {
+      console.error("Failed to generate codebase overview:", error);
+      setOverviewProgress({
+        status: "error",
+        message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        progress: 0,
+      });
+      setIsGeneratingOverview(false);
+    }
+  };
+
+  const handleDeleteOverview = async () => {
+    setIsGeneratingOverview(true);
+    try {
+      await updateAppConfig({ codebaseOverview: undefined });
+      setLocalConfig((prev) => ({ ...prev, codebaseOverview: undefined }));
+      setServerConfig((prev) => ({ ...prev, codebaseOverview: undefined }));
+    } catch (error) {
+      console.error("Failed to delete codebase overview:", error);
+    } finally {
+      setIsGeneratingOverview(false);
     }
   };
 
@@ -437,49 +545,38 @@ function SettingsView() {
 
       <ScrollArea className="flex-1 p-6">
         <div className="max-w-3xl mx-auto">
-          <SectionHeader>Your Code</SectionHeader>
+          <SectionHeader>AI Models</SectionHeader>
           <SettingsGroup>
-            <SettingField label="Repository Path" description="Local path to your code repository">
-              <Input
-                value={localConfig.repoPath || ""}
-                onChange={(e) => handleChange("repoPath", e.target.value)}
-                onBlur={handleBlur}
-                placeholder="/path/to/repo"
-              />
-            </SettingField>
-
             <SettingField
-              label="Codebase Overview Path"
-              description="Path to codebase overview file"
+              label="OpenAI API Key"
+              description={
+                <>
+                  Get your key from{" "}
+                  <a
+                    href="https://platform.openai.com/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline"
+                  >
+                    OpenAI Dashboard
+                  </a>
+                </>
+              }
             >
               <Input
-                value={localConfig.codebaseOverviewPath || ""}
-                onChange={(e) => handleChange("codebaseOverviewPath", e.target.value)}
+                type="password"
+                value={localConfig.openaiApiKey || ""}
+                onChange={(e) => handleChange("openaiApiKey", e.target.value)}
                 onBlur={handleBlur}
-                placeholder="/path/to/overview.md"
+                placeholder="..."
               />
             </SettingField>
 
-            <SettingField
-              label="GitHub Repo Base URL"
-              description="Base URL for your GitHub repository"
-            >
-              <Input
-                value={localConfig.githubRepoBaseUrl || ""}
-                onChange={(e) => handleChange("githubRepoBaseUrl", e.target.value)}
-                onBlur={handleBlur}
-                placeholder="https://github.com/username/repo"
-              />
-            </SettingField>
-          </SettingsGroup>
-
-          <SectionHeader>AI Access</SectionHeader>
-          <SettingsGroup>
             <SettingField
               label="Google Gemini API Key"
               description={
                 <>
-                  Get your API key from{" "}
+                  Get your key from{" "}
                   <a
                     href="https://aistudio.google.com/app/apikey"
                     target="_blank"
@@ -498,6 +595,133 @@ function SettingsView() {
                 onBlur={handleBlur}
                 placeholder="..."
               />
+            </SettingField>
+          </SettingsGroup>
+
+          <SectionHeader>Your Code</SectionHeader>
+          <SettingsGroup>
+            <SettingField label="Repository Path" description="Local path to your code repository">
+              <Input
+                value={localConfig.repoPath || ""}
+                onChange={(e) => handleChange("repoPath", e.target.value)}
+                onBlur={handleBlur}
+                placeholder="/path/to/repo"
+              />
+            </SettingField>
+
+            <SettingField
+              label="Codebase Overview"
+              description="Helps the AI understand your codebase, making it faster and more reliable at debugging issues"
+            >
+              <div className="space-y-4">
+                {serverConfig.codebaseOverview ? (
+                  <>
+                    <div className="flex items-center justify-between bg-muted rounded-md">
+                      <span className="px-1 text-sm text-muted-foreground truncate max-w-[300px] italic">
+                        {isGeneratingOverview ? "Last generated" : "Generated"}
+                        {serverConfig.codebaseOverview.createdAt
+                          ? ` at ${new Date(serverConfig.codebaseOverview.createdAt).toLocaleString(
+                              undefined,
+                              {
+                                year: "numeric",
+                                month: "numeric",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "numeric",
+                              }
+                            )}`
+                          : " overview available"}
+                      </span>
+                      <div className="flex gap-2">
+                        {serverConfig.codebaseOverview.repoPath !== serverConfig.repoPath && (
+                          <DeleteButton
+                            title="Codebase Overview"
+                            description="This will delete your codebase overview. You can regenerate it at any time."
+                            onDelete={handleDeleteOverview}
+                          />
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleGenerateOverview}
+                          disabled={isGeneratingOverview || !serverConfig.repoPath}
+                        >
+                          Regenerate
+                        </Button>
+                      </div>
+                    </div>
+                    {serverConfig.codebaseOverview.repoPath !== serverConfig.repoPath && (
+                      <div className="px-1 text-sm text-primary italic">
+                        Warning: This overview may be out-of-date as it was generated for a
+                        different repository
+                        {serverConfig.codebaseOverview.repoPath
+                          ? `: ${serverConfig.codebaseOverview.repoPath}`
+                          : "."}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between bg-muted p-2 rounded-md">
+                    <span className="text-sm text-muted-foreground">
+                      Generate an overview of your codebase to help the AI debug issues faster and
+                      more reliably.
+                    </span>
+                    <Button
+                      onClick={handleGenerateOverview}
+                      disabled={isGeneratingOverview || !serverConfig.repoPath}
+                      variant="outline"
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Generate
+                    </Button>
+                  </div>
+                )}
+                {(serverConfig.codebaseOverview || isGeneratingOverview) && (
+                  <Accordion
+                    type="single"
+                    collapsible
+                    value={overviewExpanded ? "overview" : ""}
+                    onValueChange={(value) => setOverviewExpanded(value === "overview")}
+                  >
+                    <AccordionItem
+                      value="overview"
+                      className="border border-border rounded-md bg-background-lighter"
+                    >
+                      <AccordionTrigger
+                        className="px-3 py-2 hover:no-underline"
+                        chevronPosition="left"
+                      >
+                        {isGeneratingOverview ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Generating Overview...</span>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          </div>
+                        ) : (
+                          <span className="text-sm font-medium">
+                            Generated Overview
+                            {serverConfig.codebaseOverview.content &&
+                              ` (${serverConfig.codebaseOverview.content.split("\n").length} lines)`}
+                          </span>
+                        )}
+                      </AccordionTrigger>
+                      <AccordionContent className="py-1 px-4 max-h-[400px] overflow-y-auto">
+                        {isGeneratingOverview && overviewProgress ? (
+                          <div className="mt-2 space-y-2">
+                            <Progress value={overviewProgress.progress} className="h-2" />
+                            <p className="text-xs text-muted-foreground">
+                              {overviewProgress.message}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="prose-sm p-2">
+                            <Markdown>{serverConfig.codebaseOverview.content}</Markdown>
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                )}
+              </div>
             </SettingField>
           </SettingsGroup>
 
