@@ -5,7 +5,8 @@ import {
   invokeAgent,
 } from "@triage/agent";
 import { BrowserWindow, ipcMain } from "electron";
-import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../tmp-hardcode.js";
+
+const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
 /**
  * Set up all IPC handlers related to agent functionality
@@ -33,12 +34,15 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
           window.webContents.send("agent:agent-update", update);
         };
 
+        // Calculate date range for last two weeks
+        const endDate = new Date();
+        const startDate = new Date(endDate.getTime() - TWO_WEEKS_MS);
         const result = await invokeAgent({
           query,
           chatHistory,
           agentCfg,
-          startDate: DEFAULT_START_DATE,
-          endDate: DEFAULT_END_DATE,
+          startDate,
+          endDate,
           onUpdate: onUpdate,
         });
 
