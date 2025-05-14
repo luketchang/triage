@@ -1,24 +1,35 @@
-import * as fs from "fs/promises"
-import * as path from "path"
+import * as fs from "fs/promises";
+import * as path from "path";
 
 import {
   ALLOWED_EXTENSIONS,
   getDirectoryTree,
+  getGitCommitHash,
   getPathToSourceCodeMap,
   logger,
-} from "@triage/common"
-import { LanguageModelV1 } from "ai"
-import pLimit from "p-limit"
+} from "@triage/common";
+import { LanguageModelV1 } from "ai";
+import pLimit from "p-limit";
 
-import { identifyTopLevelServices } from "./service-identification"
-import { generateDirectorySummary, mergeAllSummaries } from "./summarization"
-import { getTopLevelDirectories } from "./utils"
+import { identifyTopLevelServices } from "./service-identification";
+import { generateDirectorySummary, mergeAllSummaries } from "./summarization";
+import { getTopLevelDirectories } from "./utils";
+
+/**
+ * The result of codebase overview generation
+ */
+export interface CodebaseOverview {
+  content: string;
+  repoPath: string;
+  createdAt: Date;
+  commitHash?: string;
+}
 
 /**
  * Progress update for codebase overview generation
  */
 export interface CodebaseOverviewProgressUpdate {
-  status: "started" | "processing" | "completed" | "error";
+  status: "processing" | "completed" | "error";
   message: string;
   progress: number;
 }
@@ -27,36 +38,52 @@ export interface CodebaseOverviewProgressUpdate {
  * Main class for processing a codebase to generate an overview
  */
 export class CodebaseProcessor {
-  private chunkSize: number = 8;
   private allowedExtensions: string[] = ALLOWED_EXTENSIONS;
+  private maxConcurrentDirs: number = 8;
 
   constructor(
-    private readonly llmClient: LanguageModelV1,
     private readonly repoPath: string,
-    private readonly systemDescription = "",
+    private readonly llmClient: LanguageModelV1,
     private readonly options: {
-      chunkSize?: number;
+      systemDescription?: string;
       outputDir?: string;
+      maxConcurrentDirs?: number;
       onProgress?: (update: CodebaseOverviewProgressUpdate) => void;
     } = {}
   ) {
-    this.chunkSize = options.chunkSize || 8;
-  }
-
-  /**
-   * Send progress update to the caller if onProgress is provided
-   */
-  private updateProgress(update: CodebaseOverviewProgressUpdate): void {
-    logger.info(`Progress update: ${update.message}`);
-    if (this.options.onProgress) {
-      this.options.onProgress(update);
-    }
+    this.maxConcurrentDirs = options.maxConcurrentDirs || 8;
   }
 
   /**
    * Process the repository to generate a codebase overview
    */
-  public async process(): Promise<string> {
+  public async process(): Promise<CodebaseOverview> {
+    try {
+      await fs.access(this.repoPath);
+    } catch (error) {
+      throw new Error(`Repository path does not exist or is not accessible: ${this.repoPath}`, {
+        cause: error,
+      });
+    }
+
+    const overviewContent = await this.generateOverview();
+
+    let commitHash: string | undefined;
+    try {
+      commitHash = await getGitCommitHash(this.repoPath);
+    } catch (error) {
+      logger.warn("Error getting Git commit hash:", error);
+    }
+
+    return {
+      content: overviewContent,
+      repoPath: this.repoPath,
+      createdAt: new Date(),
+      commitHash,
+    };
+  }
+
+  private async generateOverview(): Promise<string> {
     try {
       // Show nonzero progress just to indicate that the processor is running
       this.updateProgress({
@@ -96,8 +123,8 @@ export class CodebaseProcessor {
         progress: 15,
       });
 
-      // Create a limit function with the concurrency specified by chunkSize
-      const limit = pLimit(this.chunkSize);
+      // Create a limit function with the concurrency specified by maxConcurrentDirs
+      const limit = pLimit(this.maxConcurrentDirs);
 
       // Create an array of promises with limited concurrency
       const promises = directoriesToProcess.map((directory) => {
@@ -114,7 +141,7 @@ export class CodebaseProcessor {
 
           const summary = await generateDirectorySummary(
             this.llmClient,
-            this.systemDescription,
+            this.options.systemDescription || "",
             directory,
             directoryTree,
             pathToSourceCode,
@@ -151,7 +178,7 @@ export class CodebaseProcessor {
       });
       const finalDocument = await mergeAllSummaries(
         this.llmClient,
-        this.systemDescription,
+        this.options.systemDescription || "",
         summaries,
         repoFileTree
       );
@@ -176,9 +203,17 @@ export class CodebaseProcessor {
         message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
         progress: 0,
       });
+      throw new Error(`Error processing codebase`, { cause: error });
+    }
+  }
 
-      logger.error(`Error processing codebase: ${error}`);
-      throw error;
+  /**
+   * Send progress update to the caller if onProgress is provided
+   */
+  private updateProgress(update: CodebaseOverviewProgressUpdate): void {
+    logger.info(`Progress update: ${update.message}`);
+    if (this.options.onProgress) {
+      this.options.onProgress(update);
     }
   }
 }

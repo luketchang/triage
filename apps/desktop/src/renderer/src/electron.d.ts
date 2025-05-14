@@ -11,6 +11,7 @@ import {
   AssistantMessage,
   Chat,
   ChatMessage,
+  CodebaseOverview,
   CodebaseOverviewProgressUpdate,
   FacetData,
   LogQueryParams,
@@ -136,7 +137,7 @@ declare global {
        * @param repoPath Path to the repository
        * @returns Promise resolving to the path of the generated overview file
        */
-      generateCodebaseOverview: (repoPath: string) => Promise<string>;
+      generateCodebaseOverview: (repoPath: string) => Promise<CodebaseOverview>;
 
       /**
        * Register for codebase overview progress events

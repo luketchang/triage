@@ -7,6 +7,7 @@ import {
   AssistantMessage,
   Chat,
   ChatMessage,
+  CodebaseOverview,
   CodebaseOverviewProgressUpdate,
   FacetData,
   LogQueryParams,
@@ -244,7 +245,7 @@ const api = {
     }
   },
 
-  generateCodebaseOverview: async (repoPath: string): Promise<string> => {
+  generateCodebaseOverview: async (repoPath: string): Promise<CodebaseOverview> => {
     if (USE_MOCK_API || !isMethodAvailable("generateCodebaseOverview")) {
       console.info("Using mock generateCodebaseOverview");
       return mockElectronAPI.generateCodebaseOverview(repoPath);

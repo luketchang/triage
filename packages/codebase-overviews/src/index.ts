@@ -1,1 +1,1 @@
-export { CodebaseProcessor } from "./processor";
+export * from "./processor";

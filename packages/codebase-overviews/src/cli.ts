@@ -66,7 +66,8 @@ export async function main(): Promise<void> {
     });
 
     // Create processor with progress callback
-    const processor = new CodebaseProcessor(llmClient, repoPath, systemDescription, {
+    const processor = new CodebaseProcessor(repoPath, llmClient, {
+      systemDescription,
       outputDir,
       onProgress: (update): void => {
         // Create a progress bar for terminal output
@@ -87,7 +88,7 @@ export async function main(): Promise<void> {
 
     const overview = await processor.process();
 
-    console.info(overview);
+    console.info(overview.content);
     console.info("Overview generation complete!");
     console.info(`Overview has been saved to ${path.join(outputDir, "codebase-overview.md")}`);
   } catch (error) {

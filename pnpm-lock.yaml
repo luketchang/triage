@@ -540,6 +540,9 @@ importers:
         specifier: ^3.24.2
         version: 3.24.4
     devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.15.18
       '@types/winston-syslog':
         specifier: ^2.4.3
         version: 2.4.3

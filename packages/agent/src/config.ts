@@ -7,9 +7,17 @@ export const AgentCfgSchema = z.object({
   repoPath: z.string().optional(),
   codebaseOverview: z
     .object({
-      content: z.string(),
-      createdAt: z.string().optional(), // TODO: change to Date once we add support in electron-store
-      commitHash: z.string().optional(),
+      content: z.string().describe("The content of the codebase overview"),
+      repoPath: z
+        .string()
+        .describe("Path to the repo for which the codebase overview was generated")
+        .optional(),
+      // TODO: change to Date once we add support in electron-store
+      createdAt: z.string().describe("When the codebase overview was generated").optional(),
+      commitHash: z
+        .string()
+        .describe("Commit hash of the repo when the codebase overview was generated")
+        .optional(),
     })
     .optional(),
 

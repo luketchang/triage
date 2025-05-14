@@ -1,7 +1,13 @@
 import "dotenv/config";
 import fs from "fs/promises";
 
-import { GeminiModel, getDirectoryTree, getModelWrapper, logger } from "@triage/common";
+import {
+  GeminiModel,
+  getDirectoryTree,
+  getModelWrapper,
+  logger,
+  OpenAIModel,
+} from "@triage/common";
 import {
   DatadogCfgSchema,
   getObservabilityPlatform,
@@ -138,6 +144,7 @@ async function main(): Promise<void> {
     },
   ];
 
+  // TODO: clean up args, we can use Zod to set defaults instead
   const response = await invokeAgent({
     query: bug,
     chatHistory,
@@ -145,7 +152,9 @@ async function main(): Promise<void> {
       repoPath,
       codebaseOverview: {
         content: codebaseOverview,
+        repoPath,
       },
+      balancedModel: OpenAIModel.GPT_4_1,
       reasoningModel: GeminiModel.GEMINI_2_5_PRO,
       fastModel: GeminiModel.GEMINI_2_5_FLASH,
       observabilityPlatform: integration,

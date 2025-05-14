@@ -1,7 +1,6 @@
-import { CodebaseProcessor } from "@triage/codebase-overviews";
+import { CodebaseOverview, CodebaseProcessor } from "@triage/codebase-overviews";
 import { getModelWrapper } from "@triage/common";
 import { BrowserWindow, ipcMain } from "electron";
-import fs from "fs/promises";
 import { AppConfigStore } from "../../common/AppConfig.js";
 
 /**
@@ -13,16 +12,9 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
   // Handle codebase overview generation
   ipcMain.handle(
     "codebase:generate-overview",
-    async (_event: any, repoPath: string): Promise<string> => {
+    async (_event: any, repoPath: string): Promise<CodebaseOverview> => {
       try {
         console.info(`Generating codebase overview for: ${repoPath}`);
-
-        // Validate repo path
-        try {
-          await fs.access(repoPath);
-        } catch (error) {
-          throw new Error(`Repository path does not exist or is not accessible: ${repoPath}`);
-        }
 
         const currentConfig = await appCfgStore.getValues();
         const model = currentConfig.balancedModel;
@@ -32,41 +24,26 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
           googleApiKey: currentConfig.googleApiKey,
         });
 
-        // Create processor with progress callback
-        const processor = new CodebaseProcessor(
-          llmClient,
-          repoPath,
-          "", // No system description needed
-          {
-            // Forward progress updates to the renderer process
-            onProgress: (update) => {
-              console.info(
-                `Codebase overview progress: ${update.status} (${update.progress}%) - ${update.message}`
-              );
-              // Don't send completed update here; only send it after it's been written
-              if (update.status !== "completed") {
-                window.webContents.send("codebase:overview-progress", update);
-              }
-            },
-          }
-        );
-
-        // Generate the overview - now with real-time progress updates
-        const codebaseOverview = await processor.process();
-
-        // Update config with the new overview path
-        await appCfgStore.setValues({
-          codebaseOverview: {
-            content: codebaseOverview,
-            createdAt: new Date().toISOString(),
-            commitHash: undefined,
+        // Generate the overview with real-time progress updates
+        const processor = new CodebaseProcessor(repoPath, llmClient, {
+          // Forward progress updates to the renderer process
+          onProgress: (update) => {
+            console.info(
+              `Codebase overview progress: ${update.status} (${update.progress}%) - ${update.message}`
+            );
+            window.webContents.send("codebase:overview-progress", update);
           },
         });
+        const codebaseOverview = await processor.process();
 
-        window.webContents.send("codebase:overview-progress", {
-          status: "completed",
-          message: "Codebase overview generated successfully!",
-          progress: 100,
+        // Update the config with the new overview
+        await appCfgStore.setValues({
+          codebaseOverview: {
+            content: codebaseOverview.content,
+            repoPath: codebaseOverview.repoPath,
+            createdAt: codebaseOverview.createdAt.toISOString(),
+            commitHash: codebaseOverview.commitHash,
+          },
         });
 
         return codebaseOverview;
