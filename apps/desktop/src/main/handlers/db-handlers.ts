@@ -1,6 +1,7 @@
-import { ipcMain } from "electron";
-import { DatabaseService } from "../db/service.js";
 import { logger } from "@triage/common";
+import { ipcMain } from "electron";
+import { AssistantMessage, UserMessage } from "../db/schema.js";
+import { DatabaseService } from "../db/service.js";
 
 // Single instance of database service
 let dbService: DatabaseService | null = null;
@@ -12,12 +13,7 @@ export function setupDbHandlers(): void {
   logger.info("Setting up database handlers...");
 
   // Initialize database service
-  try {
-    dbService = new DatabaseService();
-  } catch (error) {
-    logger.error("Error initializing DatabaseService:", error);
-    // For now, dbService will remain null, and handlers should check for it.
-  }
+  dbService = new DatabaseService();
 
   // Create a new chat
   ipcMain.handle("db:create-chat", async (): Promise<number | null> => {
@@ -50,25 +46,24 @@ export function setupDbHandlers(): void {
   });
 
   // Save user message
-  ipcMain.handle("db:save-user-message", async (_, message: any): Promise<number | null> => {
-    if (!dbService) return null;
+  ipcMain.handle(
+    "db:save-user-message",
+    async (_, message: UserMessage, chatId: number): Promise<number | null> => {
+      if (!dbService) return null;
 
-    // Get or create chat ID
-    let chatId = await dbService.getLatestChatId();
-    if (!chatId) {
-      chatId = await dbService.createChat();
+      console.info("Saving user message to chat ID:", chatId);
+      const messageId = await dbService.saveUserMessage(message, chatId);
+      return messageId;
     }
-
-    const messageId = await dbService.saveUserMessage(message, chatId);
-    return messageId;
-  });
+  );
 
   // Save assistant message
   ipcMain.handle(
     "db:save-assistant-message",
-    async (_, message: any, chatId: number): Promise<number | null> => {
+    async (_, message: AssistantMessage, chatId: number): Promise<number | null> => {
       if (!dbService) return null;
 
+      console.info("Saving assistant message to chat ID:", chatId);
       const messageId = await dbService.saveAssistantMessage(message, chatId);
       return messageId;
     }
@@ -78,6 +73,7 @@ export function setupDbHandlers(): void {
   ipcMain.handle("db:get-messages", async (_, chatId: number): Promise<any[]> => {
     if (!dbService) return [];
 
+    console.info("Getting messages for chat ID:", chatId);
     const messages = await dbService.getChatMessages(chatId);
     return messages;
   });
@@ -86,6 +82,7 @@ export function setupDbHandlers(): void {
   ipcMain.handle("db:delete-chat", async (_, chatId: number): Promise<boolean> => {
     if (!dbService) return false;
 
+    console.info("Deleting chat with ID:", chatId);
     await dbService.deleteChat(chatId);
     return true;
   });
