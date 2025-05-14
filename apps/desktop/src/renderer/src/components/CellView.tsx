@@ -129,7 +129,7 @@ const renderCodeSearchStage = (stage: CodeSearchStage, isActive: boolean = false
 
 const renderReasoningStage = (stage: ReasoningStage, isActive: boolean = false) => (
   <CollapsibleStep title="Reasoning" isActive={isActive}>
-    <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+    <div className="text-sm leading-relaxed break-words">
       <Markdown>{stage.content}</Markdown>
     </div>
   </CollapsibleStep>
@@ -144,9 +144,7 @@ const renderLogPostprocessingStage = (stage: LogPostprocessingStage, isActive: b
           className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
         >
           <div className="font-medium text-sm">{fact.title || "Log Fact"}</div>
-          <div className="mt-2 text-sm text-gray-300 overflow-x-auto whitespace-pre-wrap break-words">
-            {fact.fact}
-          </div>
+          <div className="mt-2 text-sm text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
         </div>
       ))}
     </div>
@@ -165,9 +163,7 @@ const renderCodePostprocessingStage = (
           className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
         >
           <div className="font-medium text-sm">{fact.title || "Code Fact"}</div>
-          <div className="mt-2 text-sm text-gray-300 overflow-x-auto whitespace-pre-wrap break-words">
-            {fact.fact}
-          </div>
+          <div className="mt-2 text-sm text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
           {fact.filepath && <div className="mt-1 text-xs text-gray-500">{fact.filepath}</div>}
         </div>
       ))}
@@ -291,8 +287,8 @@ function CellView({
 
         {/* Render final response if present */}
         {message.response && message.response !== "Thinking..." && (
-          <div className="response-content prose prose-invert max-w-none overflow-wrap-anywhere">
-            <div className="text-base leading-relaxed break-words whitespace-pre-wrap overflow-wrap-anywhere min-w-0 max-w-full">
+          <div className="response-content prose prose-invert max-w-none">
+            <div className="text-base leading-relaxed break-words min-w-0 max-w-full">
               <Markdown className="prose-base">{message.response || ""}</Markdown>
             </div>
 

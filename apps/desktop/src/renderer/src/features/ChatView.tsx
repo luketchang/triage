@@ -1,35 +1,21 @@
-import { MoreHorizontal as MoreHorizontalIcon } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CellView from "../components/CellView.js";
+import ChatInputArea from "../components/ChatInputArea.js";
 import FactsSidebar from "../components/FactsSidebar.js";
 import { Button } from "../components/ui/Button.jsx";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/DropdownMenu.jsx";
 import { Markdown } from "../components/ui/Markdown.js";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
-import { SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
 // Import stores and hooks
+import { User } from "lucide-react";
 import { useChatStore, useUIStore } from "../store/index.js";
 
 function ChatView() {
   // Get chat state from store
-  const {
-    messages,
-    newMessage,
-    setNewMessage,
-    sendMessage,
-    isThinking,
-    contextItems,
-    removeContextItem,
-    unregisterFromAgentUpdates,
-  } = useChatStore();
+  const { messages, isThinking, contextItems, removeContextItem, unregisterFromAgentUpdates } =
+    useChatStore();
 
   // Get UI state from store
   const { showFactsSidebar, activeSidebarMessageId, showFactsForMessage } = useUIStore();
@@ -39,28 +25,6 @@ function ChatView() {
   const [codeFacts, setCodeFacts] = useState<CodePostprocessingFact[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Auto-resize textarea function
-  const resizeTextarea = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Reset height to default
-    textarea.style.height = "28px";
-
-    // Adjust height based on content
-    const scrollHeight = textarea.scrollHeight;
-    if (scrollHeight > 28) {
-      const newHeight = Math.min(150, scrollHeight);
-      textarea.style.height = `${newHeight}px`;
-    }
-  };
-
-  // Auto-resize textarea when message changes
-  useEffect(() => {
-    resizeTextarea();
-  }, [newMessage]);
 
   // Scroll behavior for messages
   useEffect(() => {
@@ -71,48 +35,6 @@ function ChatView() {
     }
   }, [messages]);
 
-  // Focus input on mount and when thinking state changes
-  useEffect(() => {
-    const focusTimeout = setTimeout(() => {
-      if (textareaRef.current && !isThinking) {
-        textareaRef.current.focus();
-      }
-    }, 10);
-
-    return () => clearTimeout(focusTimeout);
-  }, [isThinking]);
-
-  // Add event listeners for textarea
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Handle paste events
-    const handlePaste = () => {
-      setTimeout(resizeTextarea, 0);
-    };
-
-    // Handle input events
-    const handleInput = () => {
-      resizeTextarea();
-    };
-
-    textarea.addEventListener("paste", handlePaste);
-    textarea.addEventListener("input", handleInput);
-
-    return () => {
-      textarea.removeEventListener("paste", handlePaste);
-      textarea.removeEventListener("input", handleInput);
-    };
-  }, []);
-
-  // Reset textarea height when empty
-  useEffect(() => {
-    if (newMessage === "" && textareaRef.current) {
-      textareaRef.current.style.height = "28px";
-    }
-  }, [newMessage]);
-
   // Cleanup agent update listeners when component unmounts
   useEffect(() => {
     return () => {
@@ -120,32 +42,6 @@ function ChatView() {
       unregisterFromAgentUpdates();
     };
   }, [unregisterFromAgentUpdates]);
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (newMessage.trim()) {
-        handleSendMessage();
-      }
-    }
-  };
-
-  // Send message function
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || isThinking) return;
-
-    // Call the send function from the store
-    await sendMessage();
-
-    // Reset textarea height after sending
-    if (textareaRef.current) {
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.style.height = "28px";
-        }
-      }, 50);
-    }
-  };
 
   // Function to open facts sidebar for a specific message
   const openFactsSidebar = (
@@ -168,21 +64,6 @@ function ChatView() {
       {/* Chat header */}
       <div className="flex justify-between items-center py-3 px-4 border-b border-border bg-background-lighter backdrop-blur-sm shadow-sm z-10">
         <h1 className="text-lg font-semibold text-primary">Chat</h1>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="hover:bg-background-alt h-8 w-8 p-0">
-              <MoreHorizontalIcon className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[150px]">
-            <DropdownMenuItem
-              onClick={() => console.info("Export chat")}
-              className="cursor-pointer"
-            >
-              Export chat
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <div className="flex flex-1 relative min-h-0 overflow-hidden">
@@ -201,19 +82,15 @@ function ChatView() {
             scrollHideDelay={0}
           >
             <div className="flex flex-col justify-start h-auto w-full">
-              {/* No spacer needed anymore - messages should start at the top */}
               {messages.map((message) =>
                 message.role === "user" ? (
-                  <div
-                    key={`user-${message.id}`}
-                    className={cn("py-4 px-4 flex flex-col bg-background-assistant")}
-                  >
-                    <div className="flex items-start max-w-[90%] mx-auto w-full mt-4">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary my-2">
-                        <span className="text-white font-medium text-sm">U</span>
+                  <div key={`user-${message.id}`} className="py-4 px-4 bg-background-assistant">
+                    <div className="flex items-start max-w-[90%] mx-auto w-full">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary my-3">
+                        <User className="h-5 w-5 text-white" />
                       </div>
-                      <div className="flex-1 overflow-hidden pt-0.5 min-w-0 max-w-full">
-                        <div className="prose prose-invert max-w-none prose-p:my-3 prose-headings:mt-6 prose-headings:mb-3 break-words bg-background-alt p-3 rounded-lg shadow-sm overflow-x-auto overflow-wrap-anywhere min-w-0">
+                      <div className="flex-1 overflow-hidden pt-0.5 min-w-0">
+                        <div className="bg-background-alt p-4 rounded-lg shadow-sm">
                           <Markdown>{message.content}</Markdown>
                         </div>
                       </div>
@@ -280,35 +157,7 @@ function ChatView() {
       )}
 
       {/* Input area */}
-      <div className="p-4 border-t border-border bg-background-lighter">
-        <div className="relative max-w-[90%] mx-auto">
-          <textarea
-            ref={textareaRef}
-            className={cn(
-              "w-full p-3 pr-10 bg-background border border-border rounded-lg",
-              "resize-none min-h-[50px] max-h-[200px] outline-none focus-ring",
-              "text-primary-light placeholder:text-gray-500 text-sm shadow-sm"
-            )}
-            placeholder="Type your message here..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            disabled={isThinking}
-          />
-          <Button
-            className="absolute right-2 bottom-4 shadow-sm size-8 p-1"
-            size="sm"
-            onClick={handleSendMessage}
-            disabled={newMessage.trim() === "" || isThinking}
-          >
-            <SendIcon className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-        <div className="mt-1.5 text-xs text-gray-500 text-left max-w-[90%] mx-auto">
-          Press Enter to send, Shift+Enter for new line
-        </div>
-      </div>
+      <ChatInputArea isThinking={isThinking} />
     </div>
   );
 }
