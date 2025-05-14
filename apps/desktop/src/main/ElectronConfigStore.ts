@@ -50,9 +50,6 @@ export class ElectronConfigStore<T> implements ConfigStore<T> {
    */
   async getValues<S>(schema?: z.ZodType<S>): Promise<T | S> {
     const actualSchema = schema ?? this.schema;
-    // For debugging
-    console.info("Schema type:", (actualSchema as any)?._def?.typeName);
-
     // Check if it's a ZodObject by looking at the _def.typeName property
     if (
       !actualSchema ||

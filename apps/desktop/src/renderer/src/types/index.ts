@@ -17,7 +17,7 @@ import {
   ReasoningStep,
   TraceSearchInput,
 } from "@triage/agent";
-
+import { CodebaseOverview, CodebaseOverviewProgressUpdate } from "@triage/codebase-overviews";
 import {
   Log,
   LogsWithPagination,
@@ -36,6 +36,8 @@ export type {
   AgentStep,
   AgentStreamUpdate,
   AgentUserMessage,
+  CodebaseOverview,
+  CodebaseOverviewProgressUpdate,
   CodePostprocessingFact,
   CodePostprocessingStep,
   Log,

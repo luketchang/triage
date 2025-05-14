@@ -64,9 +64,31 @@ export async function main(): Promise<void> {
       anthropicApiKey: process.env.ANTHROPIC_API_KEY,
       googleApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
     });
-    const processor = new CodebaseProcessor(llmClient, repoPath, systemDescription, outputDir);
-    await processor.process();
 
+    // Create processor with progress callback
+    const processor = new CodebaseProcessor(repoPath, llmClient, {
+      systemDescription,
+      outputDir,
+      onProgress: (update): void => {
+        // Create a progress bar for terminal output
+        const progressBarWidth = 30;
+        const progressFilled = Math.floor((update.progress / 100) * progressBarWidth);
+        const progressBar =
+          "[" + "=".repeat(progressFilled) + " ".repeat(progressBarWidth - progressFilled) + "]";
+
+        // Clear the current line and print the progress
+        process.stdout.write(`\r${progressBar} ${update.progress}% - ${update.message}`);
+
+        // Add a newline when complete
+        if (update.status === "completed" || update.status === "error") {
+          process.stdout.write("\n");
+        }
+      },
+    });
+
+    const overview = await processor.process();
+
+    console.info(overview.content);
     console.info("Overview generation complete!");
     console.info(`Overview has been saved to ${path.join(outputDir, "codebase-overview.md")}`);
   } catch (error) {

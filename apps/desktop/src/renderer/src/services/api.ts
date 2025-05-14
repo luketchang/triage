@@ -7,6 +7,8 @@ import {
   AssistantMessage,
   Chat,
   ChatMessage,
+  CodebaseOverview,
+  CodebaseOverviewProgressUpdate,
   FacetData,
   LogQueryParams,
   TraceQueryParams,
@@ -243,6 +245,48 @@ const api = {
     } else {
       console.info("Using real electronAPI.deleteChat");
       return window.electronAPI.deleteChat(chatId);
+    }
+  },
+
+  generateCodebaseOverview: async (repoPath: string): Promise<CodebaseOverview> => {
+    if (USE_MOCK_API || !isMethodAvailable("generateCodebaseOverview")) {
+      console.info("Using mock generateCodebaseOverview");
+      return mockElectronAPI.generateCodebaseOverview(repoPath);
+    } else {
+      console.info("Using real electronAPI.generateCodebaseOverview");
+      return window.electronAPI.generateCodebaseOverview(repoPath);
+    }
+  },
+
+  onCodebaseOverviewProgress: (callback: (update: CodebaseOverviewProgressUpdate) => void) => {
+    if (USE_MOCK_API || !isMethodAvailable("onCodebaseOverviewProgress")) {
+      console.info("Mock onCodebaseOverviewProgress - using simulated progress");
+
+      // Simulate progress updates in mock mode
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+
+        if (progress < 100) {
+          callback({
+            status: "processing",
+            message: `Mock processing (${progress}%)...`,
+            progress,
+          });
+        } else {
+          clearInterval(interval);
+          callback({
+            status: "completed",
+            message: "Mock codebase overview complete!",
+            progress: 100,
+          });
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      console.info("Using real electronAPI.onCodebaseOverviewProgress");
+      return window.electronAPI.onCodebaseOverviewProgress(callback);
     }
   },
 };

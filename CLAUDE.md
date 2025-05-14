@@ -7,13 +7,13 @@
 
 ### General
 
+- Formatting: Follow Prettier config with double quotes, semicolons, es5 trailing commas, 100 char line length, 2 space indentation
 - TypeScript: Strict typing required, use explicit return types
-- Imports: Group and sort imports (external libs first, then internal)
+- Imports: Group and sort imports (external libs before internal, alphabetical within each group); use NodeNext import statements (while all files are TS, import their transpiled version via .js); avoid dynamic imports
 - Naming: camelCase for variables/functions, PascalCase for classes/components/types, and PascalCase or camelCase for filenames
 - Error Handling: Use try/catch and typed Error objects
 - Global variables: Prefer using variables from closures over defining new singletons
 - Logging: When printing to test code, use console.info (do not use console.log). For actual logging, use logger.info, logger.warn, logger.error (`import { logger } from '@triage/common'`)
-- Formatting: Follow Prettier config: double quotes, semicolons, es5 trailing commas, 100 char line length, 2 spaces indentation
 - Architecture: Follow modular design in monorepo structure
 - Making Code Changes: Do not perform "drive-by" changes of things you notice that are unrelated to the task/question you were asked.
 - Scripts: Parse any command line arguments with commander

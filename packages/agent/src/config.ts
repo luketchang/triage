@@ -1,14 +1,25 @@
-import { GeminiModel, LLMCfgSchema, Model } from "@triage/common";
+import { LLMCfgSchema } from "@triage/common";
 import { ConfigStore, DelegatingConfigStore } from "@triage/config";
 import { ObservabilityCfgSchema } from "@triage/observability";
 import { z } from "zod";
 
 export const AgentCfgSchema = z.object({
   repoPath: z.string().optional(),
-  codebaseOverviewPath: z.string().optional(),
-
-  reasoningModel: z.custom<Model>().default(GeminiModel.GEMINI_2_5_PRO),
-  fastModel: z.custom<Model>().default(GeminiModel.GEMINI_2_5_FLASH),
+  codebaseOverview: z
+    .object({
+      content: z.string().describe("The content of the codebase overview"),
+      repoPath: z
+        .string()
+        .describe("Path to the repo for which the codebase overview was generated")
+        .optional(),
+      // TODO: change to Date once we add support in electron-store
+      createdAt: z.string().describe("When the codebase overview was generated").optional(),
+      commitHash: z
+        .string()
+        .describe("Commit hash of the repo when the codebase overview was generated")
+        .optional(),
+    })
+    .optional(),
 
   ...LLMCfgSchema.shape,
   ...ObservabilityCfgSchema.shape,

@@ -14,8 +14,8 @@ export class DelegatingConfigStore<T> implements ConfigStore<T> {
    * @param schema The schema for this config view
    */
   constructor(
-    protected parentStore: ConfigStore<T>,
-    protected schema: z.ZodTypeAny
+    protected readonly parentStore: ConfigStore<T>,
+    public readonly schema: z.ZodTypeAny
   ) {}
 
   /**

@@ -1,7 +1,13 @@
 import "dotenv/config";
 import fs from "fs/promises";
 
-import { GeminiModel, getDirectoryTree, getModelWrapper, logger } from "@triage/common";
+import {
+  GeminiModel,
+  getDirectoryTree,
+  getModelWrapper,
+  logger,
+  OpenAIModel,
+} from "@triage/common";
 import {
   DatadogCfgSchema,
   getObservabilityPlatform,
@@ -40,13 +46,12 @@ export async function invokeAgent({
   endDate = new Date("2025-04-01T22:00:00Z"),
   onUpdate,
 }: AgentArgs): Promise<AssistantMessage> {
-  if (!agentCfg.codebaseOverviewPath) {
-    throw new Error("Codebase overview path is required");
+  if (!agentCfg.codebaseOverview) {
+    throw new Error("Codebase overview is required");
   }
   if (!agentCfg.repoPath) {
     throw new Error("Repo path is required");
   }
-  const codebaseOverview = await fs.readFile(agentCfg.codebaseOverviewPath, "utf-8");
   const fileTree = await getDirectoryTree(agentCfg.repoPath);
 
   const observabilityPlatform = getObservabilityPlatform(agentCfg);
@@ -59,7 +64,7 @@ export async function invokeAgent({
   const pipelineConfig: TriagePipelineConfig = {
     query,
     repoPath: agentCfg.repoPath,
-    codebaseOverview,
+    codebaseOverview: agentCfg.codebaseOverview.content,
     fileTree,
     logLabelsMap,
     reasoningClient: getModelWrapper(agentCfg.reasoningModel, agentCfg),
@@ -126,6 +131,7 @@ async function main(): Promise<void> {
 
   const repoPath = "/Users/luketchang/code/ticketing";
   const overviewPath = "/Users/luketchang/code/triage/repos/ticketing/codebase-analysis.md";
+  const codebaseOverview = await fs.readFile(overviewPath, "utf-8");
   const bugPath =
     "/Users/luketchang/code/triage/repos/ticketing/bugs/order-cancelled-publish-bug.txt";
 
@@ -138,13 +144,17 @@ async function main(): Promise<void> {
     },
   ];
 
-  // Use invokeAgent instead of duplicating the logic
+  // TODO: clean up args, we can use Zod to set defaults instead
   const response = await invokeAgent({
     query: bug,
     chatHistory,
     agentCfg: {
       repoPath,
-      codebaseOverviewPath: overviewPath,
+      codebaseOverview: {
+        content: codebaseOverview,
+        repoPath,
+      },
+      balancedModel: OpenAIModel.GPT_4_1,
       reasoningModel: GeminiModel.GEMINI_2_5_PRO,
       fastModel: GeminiModel.GEMINI_2_5_FLASH,
       observabilityPlatform: integration,

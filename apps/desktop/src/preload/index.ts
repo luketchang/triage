@@ -117,6 +117,26 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param chatId The ID of the chat to delete
    */
   deleteChat: (chatId: number) => ipcRenderer.invoke("db:delete-chat", chatId),
+
+  /**
+   * Generate a codebase overview for the given repository path
+   * @param repoPath The path to the repository
+   */
+  generateCodebaseOverview: (repoPath: string) =>
+    ipcRenderer.invoke("codebase:generate-overview", repoPath),
+
+  /**
+   * Register a callback for codebase overview progress events
+   * @param callback Function to call when a progress event is received
+   */
+  onCodebaseOverviewProgress: (callback: (update: any) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, update: any) => callback(update);
+    ipcRenderer.on("codebase:overview-progress", listener);
+    // Return a function to remove the listener when no longer needed
+    return () => {
+      ipcRenderer.removeListener("codebase:overview-progress", listener);
+    };
+  },
 });
 
 /**

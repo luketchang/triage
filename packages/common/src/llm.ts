@@ -3,7 +3,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { LanguageModelV1 } from "@ai-sdk/provider";
 
-import { LLMConfig } from "./config";
+import { LLMApiKeyConfig } from "./config";
 
 export enum AnthropicModel {
   CLAUDE_3_7_SONNET_20250219 = "claude-3-7-sonnet-20250219",
@@ -16,6 +16,7 @@ export enum OpenAIModel {
   O4_MINI = "o4-mini-2025-04-16",
   O3_MINI = "o3-mini-2025-01-31",
   GPT_4_O = "gpt-4o-2024-08-06",
+  GPT_4_1 = "gpt-4.1-2025-04-14",
   GPT_4_1_MINI = "gpt-4.1-mini-2025-04-14",
 }
 
@@ -38,7 +39,7 @@ export const VALID_MODELS = [
  * @param llmCfg Configuration containing API keys
  * @returns The appropriate AI SDK model wrapper
  */
-export function getModelWrapper(model: Model, llmCfg: LLMConfig): LanguageModelV1 {
+export function getModelWrapper(model: Model, llmCfg: LLMApiKeyConfig): LanguageModelV1 {
   if (Object.values(AnthropicModel).includes(model as AnthropicModel)) {
     return createAnthropic({
       apiKey: llmCfg.anthropicApiKey || undefined,
