@@ -1,4 +1,3 @@
-// @ts-ignore - Ignoring React module resolution issues
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "../components/ui/Markdown.js";
 import { cn } from "../lib/utils.js";
@@ -15,13 +14,6 @@ import {
 } from "../types/index.js";
 import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/Accordion.js";
-
-interface CellViewProps {
-  message: AssistantMessage;
-  isThinking?: boolean;
-  onShowFacts?: (logFacts: LogPostprocessingFact[], codeFacts: CodePostprocessingFact[]) => void;
-  activeInFactsSidebar?: boolean;
-}
 
 /**
  * Collapsible step container component
@@ -74,22 +66,25 @@ const CollapsibleStep: React.FC<{
   );
 };
 
-const renderStage = (stage: AgentStage, isActive: boolean = false) => {
+const GenericStep: React.FC<{ stage: AgentStage; isActive: boolean }> = ({ stage, isActive }) => {
   switch (stage.type) {
     case "logSearch":
-      return renderLogSearchStage(stage, isActive);
+      return <LogSearchStep stage={stage} isActive={isActive} />;
     case "codeSearch":
-      return renderCodeSearchStage(stage, isActive);
+      return <CodeSearchStep stage={stage} isActive={isActive} />;
     case "reasoning":
-      return renderReasoningStage(stage, isActive);
+      return <ReasoningStep stage={stage} isActive={isActive} />;
     case "logPostprocessing":
-      return renderLogPostprocessingStage(stage, isActive);
+      return <LogPostprocessingStep stage={stage} isActive={isActive} />;
     case "codePostprocessing":
-      return renderCodePostprocessingStage(stage, isActive);
+      return <CodePostprocessingStep stage={stage} isActive={isActive} />;
   }
 };
 
-const renderLogSearchStage = (stage: LogSearchStage, isActive: boolean = false) => (
+const LogSearchStep: React.FC<{ stage: LogSearchStage; isActive: boolean }> = ({
+  stage,
+  isActive,
+}) => (
   <CollapsibleStep title="Log Search" isActive={isActive}>
     {stage.queries.length === 0 ? (
       <em>Searching logs...</em>
@@ -108,7 +103,10 @@ const renderLogSearchStage = (stage: LogSearchStage, isActive: boolean = false) 
   </CollapsibleStep>
 );
 
-const renderCodeSearchStage = (stage: CodeSearchStage, isActive: boolean = false) => (
+const CodeSearchStep: React.FC<{ stage: CodeSearchStage; isActive: boolean }> = ({
+  stage,
+  isActive,
+}) => (
   <CollapsibleStep title="Code Search" isActive={isActive}>
     {stage.retrievedCode.length === 0 ? (
       <em>Searching code...</em>
@@ -127,7 +125,10 @@ const renderCodeSearchStage = (stage: CodeSearchStage, isActive: boolean = false
   </CollapsibleStep>
 );
 
-const renderReasoningStage = (stage: ReasoningStage, isActive: boolean = false) => (
+const ReasoningStep: React.FC<{ stage: ReasoningStage; isActive: boolean }> = ({
+  stage,
+  isActive,
+}) => (
   <CollapsibleStep title="Reasoning" isActive={isActive}>
     <div className="text-sm leading-relaxed break-words">
       <Markdown>{stage.content}</Markdown>
@@ -135,7 +136,10 @@ const renderReasoningStage = (stage: ReasoningStage, isActive: boolean = false) 
   </CollapsibleStep>
 );
 
-const renderLogPostprocessingStage = (stage: LogPostprocessingStage, isActive: boolean = false) => (
+const LogPostprocessingStep: React.FC<{ stage: LogPostprocessingStage; isActive: boolean }> = ({
+  stage,
+  isActive,
+}) => (
   <CollapsibleStep title="Log Postprocessing" isActive={isActive}>
     <div className="space-y-3">
       {stage.facts.map((fact, index) => (
@@ -151,10 +155,10 @@ const renderLogPostprocessingStage = (stage: LogPostprocessingStage, isActive: b
   </CollapsibleStep>
 );
 
-const renderCodePostprocessingStage = (
-  stage: CodePostprocessingStage,
-  isActive: boolean = false
-) => (
+const CodePostprocessingStep: React.FC<{ stage: CodePostprocessingStage; isActive: boolean }> = ({
+  stage,
+  isActive,
+}) => (
   <CollapsibleStep title="Code Postprocessing" isActive={isActive}>
     <div className="space-y-3">
       {stage.facts.map((fact, index) => (
@@ -170,6 +174,13 @@ const renderCodePostprocessingStage = (
     </div>
   </CollapsibleStep>
 );
+
+interface CellViewProps {
+  message: AssistantMessage;
+  isThinking?: boolean;
+  onShowFacts?: (logFacts: LogPostprocessingFact[], codeFacts: CodePostprocessingFact[]) => void;
+  activeInFactsSidebar?: boolean;
+}
 
 function CellView({
   message,
@@ -267,7 +278,7 @@ function CellView({
         {/* Render each visible step */}
         {stages.map((stage, index) => (
           <React.Fragment key={stage.id}>
-            {renderStage(stage, isThinking && index === activeStageIndex)}
+            <GenericStep stage={stage} isActive={isThinking && index === activeStageIndex} />
           </React.Fragment>
         ))}
 
