@@ -1,4 +1,4 @@
-import { GeminiModel, LLMCfgSchema, Model } from "@triage/common";
+import { LLMCfgSchema } from "@triage/common";
 import { ConfigStore, DelegatingConfigStore } from "@triage/config";
 import { ObservabilityCfgSchema } from "@triage/observability";
 import { z } from "zod";
@@ -12,9 +12,6 @@ export const AgentCfgSchema = z.object({
       commitHash: z.string().optional(),
     })
     .optional(),
-
-  reasoningModel: z.custom<Model>().default(GeminiModel.GEMINI_2_5_PRO),
-  fastModel: z.custom<Model>().default(GeminiModel.GEMINI_2_5_FLASH),
 
   ...LLMCfgSchema.shape,
   ...ObservabilityCfgSchema.shape,

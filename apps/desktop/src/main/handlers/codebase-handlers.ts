@@ -15,6 +15,8 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
     "codebase:generate-overview",
     async (_event: any, repoPath: string): Promise<string> => {
       try {
+        console.info(`Generating codebase overview for: ${repoPath}`);
+
         // Validate repo path
         try {
           await fs.access(repoPath);
@@ -22,13 +24,8 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
           throw new Error(`Repository path does not exist or is not accessible: ${repoPath}`);
         }
 
-        console.info(`Generating codebase overview for: ${repoPath}`);
-
-        // Get current configuration to access API keys
         const currentConfig = await appCfgStore.getValues();
-
-        // Create LLM client - use the reasoningModel if available, otherwise fallback to Gemini
-        const model = currentConfig.reasoningModel;
+        const model = currentConfig.balancedModel;
         const llmClient = getModelWrapper(model, {
           openaiApiKey: currentConfig.openaiApiKey,
           anthropicApiKey: currentConfig.anthropicApiKey,
