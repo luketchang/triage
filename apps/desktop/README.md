@@ -53,4 +53,4 @@ pnpm build:mac
 
 This will create a macOS app bundle in `dist/mac-arm64/triage.app` directory. It will also create a DMG file at `dist/triage-<version>.dmg`.
 
-You can run packaged application by running `open dist/mac-arm64/triage.app` or by running `open dist/triage-<version>.dmg` then double-clicking the app icon.
+You can run the packaged application by running `open dist/mac-arm64/triage.app` or by running `open dist/triage-<version>.dmg` then double-clicking the app icon.
