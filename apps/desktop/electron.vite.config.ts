@@ -5,8 +5,7 @@ import { resolve } from "path";
 
 export default defineConfig({
   main: {
-    // Add the plugins to prevent incorrect tree-shaking of handlers
-    plugins: [],
+    plugins: [externalizeDepsPlugin()],
     build: {
       minify: false, // For easier debugging
       sourcemap: true,
