@@ -15,11 +15,11 @@ export default defineConfig({
           index: resolve(__dirname, "src/main/index.ts"),
         },
         output: {
-          inlineDynamicImports: true,
+          inlineDynamicImports: false,
           // Ensure all handlers end up in the same chunk
           manualChunks: undefined,
           // Make sure we preserve module structure
-          preserveModules: false,
+          preserveModules: true,
         },
         // Only externalize electron and absolute node module imports
         external: [
@@ -29,6 +29,9 @@ export default defineConfig({
           ...builtinModules,
           ...builtinModules.map((m) => `node:${m}`),
         ],
+        treeshake: {
+          moduleSideEffects: true,
+        },
       },
     },
     resolve: {

@@ -1,6 +1,7 @@
 import BetterSqlite3 from "better-sqlite3";
 import { desc, eq } from "drizzle-orm";
 import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
+import { app } from "electron";
 import fs from "fs";
 import path from "path";
 import { AgentStage, ChatMessage } from "../../renderer/src/types/index.js";
@@ -17,8 +18,10 @@ export class DatabaseService {
   private dbPath: string;
 
   constructor() {
-    // Create db directory in root if it doesn't exist
-    const dbDir = path.join(process.cwd(), "db");
+    // Get the user data path from Electron app module
+    const userDataPath = app.getPath("userData");
+    // Create db directory within userDataPath if it doesn't exist
+    const dbDir = path.join(userDataPath, "db");
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }

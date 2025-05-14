@@ -21,6 +21,14 @@ import {
 } from "./handlers/index.js";
 import { setupDesktopLogger } from "./setup/logger-setup.js";
 
+// Define logger type for clarity, assuming it has an info method
+interface DesktopLoggerType {
+  info: (message: string) => void;
+  error: (message: string) => void; // Assuming it also has error, adjust if not
+}
+
+let desktopLogger: DesktopLoggerType; // Declare here
+
 /**
  * Create the main application window
  */
@@ -69,20 +77,40 @@ function createWindow(): BrowserWindow {
   return mainWindow;
 }
 
-function initApp(mainWindow: BrowserWindow): void {
+function initApp(mainWindow: BrowserWindow, logger: { info: (message: string) => void }): void {
+  console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: Entered initApp function.");
+  logger.info("MAIN_INDEX_INITAPP: Entered initApp function.");
+
   const configStore = new ElectronConfigStore(AppCfgSchema);
+  console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: After new ElectronConfigStore");
 
   // Create specialized views for each schema
   const appCfgStore = new AppConfigStore(configStore);
   const agentCfgStore = new AgentConfigStore(configStore);
   const observabilityCfgStore = new ObservabilityConfigStore(configStore);
+  console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: After creating specialized config stores");
 
   // Set up all IPC handlers
+  console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: About to call setupAgentHandlers().");
+  logger.info("MAIN_INDEX_INITAPP: About to call setupAgentHandlers().");
   setupAgentHandlers(mainWindow, agentCfgStore);
-  setupDbHandlers();
-  setupCodebaseHandlers(mainWindow, appCfgStore);
-  setupConfigHandlers(appCfgStore);
-  setupObservabilityHandlers(observabilityCfgStore);
+  console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: Returned from setupAgentHandlers().");
+  logger.info("MAIN_INDEX_INITAPP: Returned from setupAgentHandlers().");
+
+  console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: About to call setupDbHandlers().");
+  logger.info("MAIN_INDEX_INITAPP: About to call setupDbHandlers().");
+  setupDbHandlers(logger);
+  logger.info("MAIN_INDEX_INITAPP: Returned from setupDbHandlers().");
+
+  console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: About to call setupConfigHandlers().");
+  logger.info("MAIN_INDEX_INITAPP: About to call setupConfigHandlers().");
+  setupConfigHandlers(appCfgStore, logger);
+  logger.info("MAIN_INDEX_INITAPP: Returned from setupConfigHandlers().");
+
+  console.error("MAIN_INDEX_INITAPP_DIAGNOSTIC: About to call setupObservabilityHandlers().");
+  logger.info("MAIN_INDEX_INITAPP: About to call setupObservabilityHandlers().");
+  setupObservabilityHandlers(observabilityCfgStore, logger);
+  logger.info("MAIN_INDEX_INITAPP: Returned from setupObservabilityHandlers().");
 }
 
 // This method will be called when Electron has finished
@@ -90,26 +118,39 @@ function initApp(mainWindow: BrowserWindow): void {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set up the logger early in the app startup
-  const desktopLogger = setupDesktopLogger();
+  desktopLogger = setupDesktopLogger(); // Assign here
   desktopLogger.info("Triage Desktop starting up...");
+  console.error("MAIN_INDEX_DIAGNOSTIC: Immediately after initial desktopLogger.info");
+
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
+  console.error("MAIN_INDEX_DIAGNOSTIC: After electronApp.setAppUserModelId");
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on("browser-window-created", (_, window) => {
+    console.error("MAIN_INDEX_DIAGNOSTIC: 'browser-window-created' event triggered");
     optimizer.watchWindowShortcuts(window);
   });
+  console.error("MAIN_INDEX_DIAGNOSTIC: After app.on('browser-window-created') setup");
 
+  console.error("MAIN_INDEX_DIAGNOSTIC: About to call createWindow()...");
   const mainWindow = createWindow();
-  initApp(mainWindow);
+  console.error("MAIN_INDEX_DIAGNOSTIC: createWindow() returned. About to call initApp()...");
+  initApp(mainWindow, desktopLogger);
+  console.error("MAIN_INDEX_DIAGNOSTIC: initApp() returned.");
 
   app.on("activate", function () {
+    console.error("MAIN_INDEX_DIAGNOSTIC: 'activate' event triggered");
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      console.error("MAIN_INDEX_DIAGNOSTIC: 'activate' event - creating window");
+      createWindow();
+    }
   });
+  console.error("MAIN_INDEX_DIAGNOSTIC: After app.on('activate') setup");
 });
 
 // Quit when all windows are closed, except on macOS
@@ -121,14 +162,21 @@ app.on("window-all-closed", () => {
   }
 });
 
-// Clean up when quitting
-app.on("will-quit", () => {
-  // Clean up all IPC handlers
-  cleanupAgentHandlers();
-  cleanupDbHandlers();
-  cleanupConfigHandlers();
-  cleanupObservabilityHandlers();
-  cleanupCodebaseHandlers();
+// Clean up handlers when app quits
+app.on("quit", () => {
+  console.error("MAIN_INDEX_DIAGNOSTIC: 'quit' event triggered");
+  if (desktopLogger) {
+    // Check if logger was initialized
+    cleanupAgentHandlers(); // Assuming cleanupAgentHandlers doesn't need logger yet
+    cleanupDbHandlers(desktopLogger);
+    cleanupConfigHandlers(desktopLogger);
+    cleanupObservabilityHandlers(desktopLogger);
+  } else {
+    console.error("MAIN_INDEX_DIAGNOSTIC: desktopLogger not initialized at quit.");
+    // Fallback or silent fail if logger wasn't set up
+    cleanupAgentHandlers();
+    // Potentially call other cleanup handlers without logger if they are designed to handle it
+  }
 });
 
 // In this file you can include the rest of your app's specific main process

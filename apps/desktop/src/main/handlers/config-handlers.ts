@@ -3,19 +3,26 @@ import { ipcMain } from "electron";
 import fs from "fs/promises";
 import { AppConfig, AppConfigStore } from "../../common/AppConfig.js";
 
+// Define a more specific type for the logger if known, or use a general one
+interface PassedLogger {
+  info: (message: string) => void;
+  // error: (message: string) => void; // Assuming error might also be available
+}
+
 /**
  * Set up all IPC handlers related to configuration
  */
-export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
-  console.info("Setting up config handlers...");
+export function setupConfigHandlers(appCfgStore: AppConfigStore, logger: PassedLogger): void {
+  logger.info("CONFIG_HANDLERS: Entered setupConfigHandlers (via passed logger).");
+  logger.info("Setting up config handlers... (via passed logger)");
 
   // Get all config values for the settings UI
   ipcMain.handle("config:get-app-config", async (): Promise<AppConfig> => {
     try {
-      console.info("Fetching all config values");
+      logger.info("Fetching all config values (via passed logger)");
       return appCfgStore.getValues();
     } catch (error) {
-      console.error("Error fetching config values:", error);
+      logger.info("Error fetching config values (via passed logger): " + String(error)); // Use logger.info for errors for now
       throw error;
     }
   });
@@ -56,20 +63,21 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
         // Return updated config
         return appCfgStore.getValues();
       } catch (error) {
-        console.error("Error updating config:", error);
+        logger.info("Error updating config (via passed logger): " + String(error)); // Use logger.info for errors for now
         throw error;
       }
     }
   );
 
-  console.info("All config handlers registered.");
+  logger.info("All config handlers registered. (via passed logger)");
 }
 
 /**
  * Clean up resources used by config handlers
  */
-export function cleanupConfigHandlers(): void {
+export function cleanupConfigHandlers(logger: PassedLogger): void {
+  logger.info("CONFIG_HANDLERS: cleanupConfigHandlers called (via passed logger).");
   ipcMain.removeHandler("config:get-app-config");
   ipcMain.removeHandler("config:update-app-config");
-  console.info("Config handlers cleanup complete.");
+  logger.info("Config handlers cleanup complete. (via passed logger)");
 }
