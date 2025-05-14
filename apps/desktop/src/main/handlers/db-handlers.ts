@@ -1,6 +1,6 @@
 import { logger } from "@triage/common";
 import { ipcMain } from "electron";
-import { AssistantMessage, ChatMessage, UserMessage } from "../db/schema.js";
+import { AssistantMessage, ChatMessage, UserMessage } from "../../renderer/src/types/index.js";
 import { DatabaseService } from "../db/service.js";
 
 // Single instance of database service

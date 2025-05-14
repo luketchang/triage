@@ -25,14 +25,14 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
     "config:update-app-config",
     async (_event: any, partial: Partial<AppConfig>): Promise<AppConfig> => {
       try {
-        console.info("Updating config values");
+        logger.info("Updating config values");
 
         // Get current configuration to check for changes
         const currentConfig = await appCfgStore.getValues();
 
         // If repoPath changed, handle special logic
         if (partial.repoPath && partial.repoPath !== currentConfig.repoPath) {
-          console.info(`Repository path changed to: ${partial.repoPath}`);
+          logger.info(`Repository path changed to: ${partial.repoPath}`);
 
           // Check if the path exists
           try {
@@ -44,10 +44,10 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
           // Try to infer GitHub repo URL from git remote
           try {
             const githubUrl = await getGitRemoteUrl(partial.repoPath);
-            console.info(`Inferred GitHub repo URL: ${githubUrl}`);
+            logger.info(`Inferred GitHub repo URL: ${githubUrl}`);
             partial.githubRepoBaseUrl = githubUrl;
           } catch (error) {
-            console.warn(`Error inferring GitHub repo URL: ${error}`);
+            logger.warn(`Error inferring GitHub repo URL: ${error}`);
             partial.githubRepoBaseUrl = undefined;
           }
         }

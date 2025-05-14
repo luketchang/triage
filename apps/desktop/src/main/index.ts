@@ -82,6 +82,7 @@ function initApp(mainWindow: BrowserWindow): void {
 
   // Set up all IPC handlers
   setupAgentHandlers(mainWindow, agentCfgStore);
+  setupCodebaseHandlers(mainWindow, appCfgStore);
   setupDbHandlers();
   setupConfigHandlers(appCfgStore);
   setupObservabilityHandlers(observabilityCfgStore);
@@ -145,6 +146,7 @@ app.on("window-all-closed", () => {
 app.on("quit", () => {
   logger.info("Application quitting, cleaning up handlers");
   cleanupAgentHandlers();
+  cleanupCodebaseHandlers();
   cleanupDbHandlers();
   cleanupConfigHandlers();
   cleanupObservabilityHandlers();
