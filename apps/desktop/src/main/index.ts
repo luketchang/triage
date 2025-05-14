@@ -2,12 +2,13 @@ import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import { AgentConfigStore } from "@triage/agent";
 import { logger } from "@triage/common";
 import { ObservabilityConfigStore } from "@triage/observability";
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, dialog, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
 
 import { AppCfgSchema, AppConfigStore } from "../common/AppConfig.js";
 import { ElectronConfigStore } from "./ElectronConfigStore.js";
+import { migrateDatabaseIfNeeded } from "./db/migrate.js";
 import {
   cleanupAgentHandlers,
   cleanupCodebaseHandlers,
@@ -90,10 +91,24 @@ function initApp(mainWindow: BrowserWindow): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set up the logger early in the app startup
   setupDesktopLogger();
   logger.info("Triage Desktop starting up...");
+
+  // Run database migrations before any DB operations
+  try {
+    logger.info("Running database migrations...");
+    await migrateDatabaseIfNeeded();
+    logger.info("Database migrations completed successfully");
+  } catch (error: unknown) {
+    logger.error("Failed to run database migrations, exiting application");
+    dialog.showErrorBox(
+      "Database Migration Failed",
+      `Triage Desktop could not start because a database migration failed.\n\n${error instanceof Error ? error.message : String(error)}`
+    );
+    app.quit();
+  }
 
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
