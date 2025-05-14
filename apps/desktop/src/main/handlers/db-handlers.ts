@@ -1,6 +1,6 @@
 import { logger } from "@triage/common";
 import { ipcMain } from "electron";
-import { AssistantMessage, UserMessage } from "../db/schema.js";
+import { AssistantMessage, ChatMessage, UserMessage } from "../db/schema.js";
 import { DatabaseService } from "../db/service.js";
 
 // Single instance of database service
@@ -66,7 +66,7 @@ export function setupDbHandlers(): void {
   );
 
   // Get chat messages
-  ipcMain.handle("db:get-messages", async (_, chatId: number): Promise<any[]> => {
+  ipcMain.handle("db:get-messages", async (_, chatId: number): Promise<ChatMessage[]> => {
     if (!dbService) return [];
 
     logger.info("Getting messages for chat ID:", chatId);
