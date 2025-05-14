@@ -15,7 +15,7 @@
 - Global variables: Prefer using variables from closures over defining new singletons
 - Logging: When printing to test code, use console.info (do not use console.log). For actual logging, use logger.info, logger.warn, logger.error (`import { logger } from '@triage/common'`)
 - Architecture: Follow modular design in monorepo structure
-- Making Code Changes: Do not perform "drive-by" changes of things you notice that are unrelated to the task/question you were asked.
+- Making Code Changes: Avoid "drive-by" changes of anything unrelated to what the user asked you to do.
 - Scripts: Parse any command line arguments with commander
 - Installing Dependencies: If you need to add a dependency, NEVER add it to the workspace root `package.json`. Always add it to the specific `package.json` of the app or package that needs it.
 
@@ -25,6 +25,7 @@
 - Zustand: Prefer Zustand for state shared by many components
 - useEffect: Avoid except for external interactions/cleanup (e.g. subscriptions); keep user interaction logic tightly bound in event handlers, keep derived values inline or in useMemo, etc
 - Data fetching: Use React Query
+- CSS: Avoid using `!important` where possible
 - Tailwind CSS: Group related utilities (layout, typography, colors, etc.); use `className`; prefer Tailwind utility classes over custom CSS; extract patterns to components or use @apply in a CSS file; build responsive design
 - ShadCN UI: Import from `@/components/ui`; use provided variants/API; customize via variant props when possible; extend with Tailwind when needed
 - Radix UI: Use for unstyled components; follow Radix composition pattern; implement ARIA/keyboard navigation; style with Tailwind; ensure proper event handling

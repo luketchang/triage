@@ -4,16 +4,9 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { cn } from "../../lib/utils.js";
 
-// Interface for code component props in ReactMarkdown
-export interface CodeProps {
-  node?: any;
-  inline?: boolean;
-  className?: string;
-  children?: React.ReactNode;
-  [key: string]: any;
-}
-
-// Custom code block component for syntax highlighting
+/**
+ * Custom code block component for syntax highlighting
+ */
 export const CodeBlock = ({ language, value }: { language: string; value: string }) => {
   return (
     <div className="relative my-3 rounded-lg overflow-hidden">
@@ -40,14 +33,22 @@ export const CodeBlock = ({ language, value }: { language: string; value: string
   );
 };
 
-export interface MarkdownProps {
+interface MarkdownProps {
   children: string;
   className?: string;
 }
 
+interface CodeProps {
+  node?: any;
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+  [key: string]: any;
+}
+
 export function Markdown({ children, className }: MarkdownProps) {
   return (
-    <div className={cn("prose prose-invert max-w-none", className)}>
+    <div className={cn("prose prose-invert max-w-none markdown-trim-margins", className)}>
       <ReactMarkdown
         components={{
           code({ node, inline, className, children, ...props }: CodeProps) {
@@ -114,7 +115,7 @@ export function Markdown({ children, className }: MarkdownProps) {
           },
           pre({ children }) {
             return (
-              <pre className="my-4 bg-background-alt rounded-lg p-3 text-sm overflow-x-auto whitespace-pre-wrap break-words overflow-wrap-anywhere">
+              <pre className="my-4 bg-background-alt rounded-lg p-3 text-sm overflow-x-auto">
                 {children}
               </pre>
             );
