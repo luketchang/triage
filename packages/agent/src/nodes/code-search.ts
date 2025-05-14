@@ -60,7 +60,7 @@ Given a user query about the issue/event and gathered context from the logs, you
 - Output your reasoning for each tool call outside the tool calls and explain where you are explorign and where you will likely explore next.
 
 ## Rules:
-- All file paths passed to \`catRequest\` must be absolute. Refer directly to paths in the provided file tree and prepend with ${params.repoPath}.
+- All file paths passed to \`catRequest\` must be absolute. Refer directly to paths in the provided file tree or git-grep output and prepend with ${params.repoPath}.
 - DO NOT read the same files more than once. Look at your previous code context to double check which files you have already read so you do not reread them.
 
 <remaining_queries>
