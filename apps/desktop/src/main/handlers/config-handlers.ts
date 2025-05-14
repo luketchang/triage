@@ -8,16 +8,14 @@ import { logger } from "@triage/common";
  * Set up all IPC handlers related to configuration
  */
 export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
-  logger.info("CONFIG_HANDLERS: Entered setupConfigHandlers (via passed logger).");
-  logger.info("Setting up config handlers... (via passed logger)");
+  logger.info("Setting up config handlers...");
 
   // Get all config values for the settings UI
   ipcMain.handle("config:get-app-config", async (): Promise<AppConfig> => {
     try {
-      logger.info("Fetching all config values (via passed logger)");
       return appCfgStore.getValues();
     } catch (error) {
-      logger.info("Error fetching config values (via passed logger): " + String(error)); // Use logger.info for errors for now
+      logger.error("Error fetching config values:", error);
       throw error;
     }
   });
@@ -58,21 +56,20 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
         // Return updated config
         return appCfgStore.getValues();
       } catch (error) {
-        logger.info("Error updating config (via passed logger): " + String(error)); // Use logger.info for errors for now
+        logger.error("Error updating config:", error);
         throw error;
       }
     }
   );
 
-  logger.info("All config handlers registered. (via passed logger)");
+  logger.info("All config handlers registered.");
 }
 
 /**
  * Clean up resources used by config handlers
  */
 export function cleanupConfigHandlers(): void {
-  logger.info("CONFIG_HANDLERS: cleanupConfigHandlers called (via passed logger).");
   ipcMain.removeHandler("config:get-app-config");
   ipcMain.removeHandler("config:update-app-config");
-  logger.info("Config handlers cleanup complete. (via passed logger)");
+  logger.info("Config handlers cleanup complete.");
 }

@@ -25,7 +25,7 @@ const logFormat = winston.format.combine(
  * This should be called early in the app initialization process, before
  * any code that might use the logger is executed.
  */
-export function setupDesktopLogger(): winston.Logger {
+export function setupDesktopLogger(): void {
   // Use Electron's standard user data path for logs
   const logDir = path.join(app.getPath("userData"), "logs");
 
@@ -84,6 +84,4 @@ export function setupDesktopLogger(): winston.Logger {
 
   // Set as the global logger for all packages to use
   setLogger(desktopLogger);
-
-  return desktopLogger;
 }

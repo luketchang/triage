@@ -14,16 +14,13 @@ import {
  * Set up all IPC handlers related to observability (logs, traces)
  */
 export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityConfigStore): void {
-  logger.info("OBSERVABILITY_HANDLERS: Entered setupObservabilityHandlers (via passed logger).");
-  logger.info("Setting up observability handlers... (via passed logger)");
+  logger.info("Setting up observability handlers...");
 
   // Fetch logs based on query parameters
   ipcMain.handle(
     "observability:fetch-logs",
     async (_event: any, params: LogQueryParams): Promise<LogsWithPagination> => {
       try {
-        logger.info("Fetching logs with params (via passed logger): " + JSON.stringify(params));
-
         const observabilityCfg = await observabilityCfgStore.getValues();
         const platform = getObservabilityPlatform(observabilityCfg);
 
@@ -38,7 +35,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
 
         return result;
       } catch (error) {
-        logger.info("Error fetching logs (via passed logger): " + String(error)); // Use logger.info for errors
+        logger.error("Error fetching logs:", error);
         throw error;
       }
     }
@@ -49,11 +46,6 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
     "observability:get-logs-facet-values",
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
-        logger.info(
-          "Getting log facet values for time range (via passed logger): " +
-            JSON.stringify({ start, end })
-        );
-
         const observabilityCfg = await observabilityCfgStore.getValues();
         const platform = getObservabilityPlatform(observabilityCfg);
 
@@ -69,7 +61,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
 
         return facetsArray;
       } catch (error) {
-        logger.info("Error getting log facet values (via passed logger): " + String(error)); // Use logger.info for errors
+        logger.error("Error getting log facet values:", error);
         throw error;
       }
     }
@@ -80,8 +72,6 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
     "observability:fetch-traces",
     async (_event: any, params: TraceQueryParams): Promise<TracesWithPagination> => {
       try {
-        logger.info("Fetching traces with params (via passed logger): " + JSON.stringify(params));
-
         const observabilityCfg = await observabilityCfgStore.getValues();
         const platform = getObservabilityPlatform(observabilityCfg);
 
@@ -96,7 +86,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
 
         return result;
       } catch (error) {
-        logger.info("Error fetching traces (via passed logger): " + String(error)); // Use logger.info for errors
+        logger.error("Error fetching traces:", error);
         throw error;
       }
     }
@@ -107,11 +97,6 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
     "observability:get-spans-facet-values",
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
-        logger.info(
-          "Getting span facet values for time range (via passed logger): " +
-            JSON.stringify({ start, end })
-        );
-
         const observabilityCfg = await observabilityCfgStore.getValues();
         const platform = getObservabilityPlatform(observabilityCfg);
 
@@ -127,20 +112,24 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
 
         return facetsArray;
       } catch (error) {
-        logger.info("Error getting span facet values (via passed logger): " + String(error)); // Use logger.info for errors
+        logger.error("Error getting span facet values:", error);
         throw error;
       }
     }
   );
 
-  logger.info("All observability handlers registered. (via passed logger)");
+  logger.info("All observability handlers registered.");
 }
 
 /**
  * Clean up resources used by observability handlers
  */
 export function cleanupObservabilityHandlers(): void {
-  logger.info("OBSERVABILITY_HANDLERS: cleanupObservabilityHandlers called (via passed logger).");
-  // No specific cleanup needed currently
-  logger.info("Observability handlers cleanup complete. (via passed logger)");
+  // Remove all handlers
+  ipcMain.removeHandler("observability:fetch-logs");
+  ipcMain.removeHandler("observability:get-logs-facet-values");
+  ipcMain.removeHandler("observability:fetch-traces");
+  ipcMain.removeHandler("observability:get-spans-facet-values");
+
+  logger.info("Observability handlers cleanup complete.");
 }
