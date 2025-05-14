@@ -4,6 +4,7 @@ import { ObservabilityConfigStore } from "@triage/observability";
 import { app, BrowserWindow, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
+
 import { AppCfgSchema, AppConfigStore } from "../common/AppConfig.js";
 import { ElectronConfigStore } from "./ElectronConfigStore.js";
 import {
@@ -18,6 +19,7 @@ import {
   setupDbHandlers,
   setupObservabilityHandlers,
 } from "./handlers/index.js";
+import { setupDesktopLogger } from "./setup/logger-setup.js";
 
 /**
  * Create the main application window
@@ -87,6 +89,9 @@ function initApp(mainWindow: BrowserWindow): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // Set up the logger early in the app startup
+  const desktopLogger = setupDesktopLogger();
+  desktopLogger.info("Triage Desktop starting up...");
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
 
