@@ -55,7 +55,7 @@ export async function handleGrepRequest(
 ): Promise<GrepRequestResult | LLMToolCallError> {
   return new Promise((resolve, _) => {
     exec(
-      `cd ${repoPath} && git grep ${toolCall.flags ? `-${toolCall.flags}` : ""} -e ${toolCall.pattern}`,
+      `cd ${repoPath} && git grep ${toolCall.flags ? `-${toolCall.flags}` : ""} -e "${toolCall.pattern}"`,
       (error, stdout, stderr) => {
         // grep returns exit code 1 if no matches are found, but that's not an error for our use case.
         // error.code === 1 means "no ma  tches"
