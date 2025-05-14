@@ -117,6 +117,29 @@ body {
   @apply leading-relaxed text-gray-100;
 }
 
+/* Trim margins at the beginning and end of markdown content */
+.markdown-trim-margins {
+  @apply py-0;
+}
+
+/* Target first and last elements to remove their top/bottom margins */
+.markdown-trim-margins > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-trim-margins > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Remove previous, more limited single-element styles */
+.markdown-single-element {
+  @apply py-0;
+}
+
+.markdown-single-element > div > p:only-child {
+  @apply my-0;
+}
+
 .prose h1,
 .prose h2,
 .prose h3,
@@ -176,28 +199,23 @@ pre > div {
   margin: 0 !important;
 }
 
-/* Fix line wrapping in code blocks */
-.whitespace-pre-wrap {
-  white-space: pre-wrap !important;
-}
-
+/* Only apply these wrapping styles where specifically needed */
 .break-words {
   word-break: break-word !important;
 }
 
-/* Advanced text wrapping for responsive layouts */
+/* Simplified responsive text handling */
 .overflow-wrap-anywhere {
-  overflow-wrap: anywhere !important;
-  word-wrap: break-word !important;
-  word-break: break-word !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
+  overflow-wrap: anywhere;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 /* Force all text containers to respect parent width */
 .prose * {
-  max-width: 100% !important;
-  box-sizing: border-box !important;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Prevent code/pre blocks from causing overflow */
