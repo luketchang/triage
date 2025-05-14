@@ -1,4 +1,4 @@
-import { logger } from "@triage/common";
+import { getLogger } from "@triage/common";
 import BetterSqlite3 from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
@@ -13,6 +13,7 @@ import path from "path";
  * This should be called during app startup before any database operations
  */
 export async function migrateDatabaseIfNeeded(): Promise<void> {
+  const logger = getLogger();
   logger.info("Running database migrations...");
 
   // Get the user data path from Electron app module

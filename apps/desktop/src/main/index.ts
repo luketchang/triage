@@ -1,6 +1,6 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import { AgentConfigStore } from "@triage/agent";
-import { logger } from "@triage/common";
+import { getLogger } from "@triage/common";
 import { ObservabilityConfigStore } from "@triage/observability";
 import { app, BrowserWindow, dialog, shell } from "electron";
 import electronUpdater from "electron-updater";
@@ -72,6 +72,7 @@ function createWindow(): BrowserWindow {
 }
 
 function initApp(mainWindow: BrowserWindow): void {
+  const logger = getLogger();
   logger.info("Initializing application");
 
   const configStore = new ElectronConfigStore(AppCfgSchema);
@@ -94,6 +95,7 @@ function initApp(mainWindow: BrowserWindow): void {
 app.whenReady().then(async () => {
   // Set up the logger early in the app startup
   setupDesktopLogger();
+  const logger = getLogger();
   logger.info("Triage Desktop starting up...");
 
   // Run database migrations before any DB operations
@@ -143,6 +145,7 @@ app.on("window-all-closed", () => {
 
 // Clean up handlers when app quits
 app.on("quit", () => {
+  const logger = getLogger();
   logger.info("Application quitting, cleaning up handlers");
   cleanupAgentHandlers();
   cleanupDbHandlers();

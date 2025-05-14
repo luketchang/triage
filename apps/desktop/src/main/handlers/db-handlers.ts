@@ -1,4 +1,4 @@
-import { logger } from "@triage/common";
+import { getLogger } from "@triage/common";
 import { ipcMain } from "electron";
 import { AssistantMessage, UserMessage } from "../db/schema.js";
 import { DatabaseService } from "../db/service.js";
@@ -10,6 +10,7 @@ let dbService: DatabaseService | null = null;
  * Set up all IPC handlers related to chat functionality
  */
 export function setupDbHandlers(): void {
+  const logger = getLogger();
   logger.info("Setting up database handlers...");
 
   // Initialize database service
@@ -106,5 +107,6 @@ export function cleanupDbHandlers(): void {
   ipcMain.removeHandler("db:get-messages");
   ipcMain.removeHandler("db:delete-chat");
 
+  const logger = getLogger();
   logger.info("Database handlers cleanup complete.");
 }

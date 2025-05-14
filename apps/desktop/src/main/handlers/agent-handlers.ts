@@ -5,7 +5,7 @@ import {
   invokeAgent,
 } from "@triage/agent";
 import { BrowserWindow, ipcMain } from "electron";
-import { logger } from "@triage/common";
+import { getLogger } from "@triage/common";
 import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../tmp-hardcode.js";
 
 /**
@@ -13,6 +13,7 @@ import { DEFAULT_END_DATE, DEFAULT_START_DATE } from "../tmp-hardcode.js";
  * @param window The main browser window for sending updates
  */
 export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentConfigStore): void {
+  const logger = getLogger();
   logger.info("Setting up agent handlers...");
 
   // Handle agent invocation
@@ -58,6 +59,7 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
  * Clean up resources used by agent handlers
  */
 export function cleanupAgentHandlers(): void {
+  const logger = getLogger();
   ipcMain.removeHandler("agent:invoke-agent");
   logger.info("Agent handlers cleanup complete.");
 }
