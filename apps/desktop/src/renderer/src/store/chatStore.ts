@@ -37,7 +37,7 @@ interface ChatState {
   createChat: () => Promise<number | undefined>;
   loadChats: () => Promise<void>;
   sendMessage: () => Promise<void>;
-  clearChat: () => Promise<void>;
+  deleteChat: (chatId: number) => Promise<void>;
   setContextItems: (items: ContextItem[]) => void;
   removeContextItem: (id: string) => void;
 }
@@ -241,8 +241,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     } finally {
       // Save assistant message
-      console.log("Saving assistant message", JSON.stringify(get().messageUpdater!.getMessage()));
-      api.saveAssistantMessage(get().messageUpdater!.getMessage());
+      const state = get();
+      console.log("Saving assistant message", JSON.stringify(state.messageUpdater!.getMessage()));
+      api.saveAssistantMessage(state.messageUpdater!.getMessage(), state.currentChatId!);
 
       // Clear thinking state and message updater
       set({
@@ -251,21 +252,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
       });
 
       // Unregister from agent updates
-      get().unregisterFromAgentUpdates();
+      state.unregisterFromAgentUpdates();
     }
   },
 
-  clearChat: async () => {
+  deleteChat: async (chatId: number) => {
     try {
-      const success = await api.clearChat(get().currentChatId);
+      const success = await api.deleteChat(chatId);
       if (success) {
-        set({
-          messages: [],
-          savedMessageIds: new Set(),
-        });
+        const state = get();
+        // If we're deleting the currently selected chat, reset UI
+        if (state.currentChatId === chatId) {
+          set({
+            currentChatId: undefined,
+            messages: [],
+            savedMessageIds: new Set(),
+          });
+        }
+
+        // Reload the chat list to update sidebar
+        await state.loadChats();
       }
     } catch (error) {
-      console.error("Error clearing chat:", error);
+      console.error("Error deleting chat:", error);
     }
   },
 

@@ -28,7 +28,6 @@ function ChatView() {
     isThinking,
     contextItems,
     removeContextItem,
-    clearChat,
     unregisterFromAgentUpdates,
   } = useChatStore();
 
@@ -148,12 +147,6 @@ function ChatView() {
     }
   };
 
-  const handleClearChat = async () => {
-    if (clearChat) {
-      await clearChat();
-    }
-  };
-
   // Function to open facts sidebar for a specific message
   const openFactsSidebar = (
     messageId: string,
@@ -182,9 +175,6 @@ function ChatView() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[150px]">
-            <DropdownMenuItem onClick={handleClearChat} className="cursor-pointer">
-              Clear chat
-            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => console.info("Export chat")}
               className="cursor-pointer"

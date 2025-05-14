@@ -39,6 +39,7 @@ function createCodeSearchPrompt(params: {
   previousCodeSearchSteps: CodeSearchStep[];
   remainingQueries: number;
   codebaseOverview: string;
+  repoPath: string;
 }): string {
   const currentTime = new Date().toISOString();
 
@@ -47,7 +48,7 @@ function createCodeSearchPrompt(params: {
 
   // TODO: split out last code search steps into its own section
   return `
-Given a user query about the issue/event, previously gathered code context, your task is to fetch additional code that will help you achieve the following: ${params.codeRequest}. You will do so by outputting a one or more \`grepRequest\` or \`catRequest\` tool calls to read code from codebase. If you feel you have enough code for the objective and have thoroughly explored the relevant tangential files, do not output a tool call (no tool calls indicate you are done). The objective you're helping with will usually be a subtask of answering the user query.
+Given a user query about the issue/event and gathered context from the logs, your task is to fetch additional code that will help you achieve the following: ${params.codeRequest}. You will do so by outputting one or more \`grepRequest\` or \`catRequest\` tool calls to read code from codebase. If you feel you have enough code for the objective and have thoroughly explored the relevant tangential files, do not output a tool call (no tool calls indicate you are done). The objective you're helping with will usually be a subtask of answering the user query.
 
 ## Tips
 - You do not have to follow the given task exactly but you must iterate and find increasingly more relevant context that will eventually help the agent figure out the answer to the user query/issue/event.
@@ -59,6 +60,7 @@ Given a user query about the issue/event, previously gathered code context, your
 - Output your reasoning for each tool call outside the tool calls and explain where you are explorign and where you will likely explore next.
 
 ## Rules:
+- All file paths passed to \`catRequest\` must be absolute. Refer directly to paths in the provided file tree or git-grep output and prepend with ${params.repoPath}.
 - DO NOT read the same files more than once. Look at your previous code context to double check which files you have already read so you do not reread them.
 
 <remaining_queries>
@@ -106,6 +108,7 @@ class CodeSearch {
     previousCodeSearchSteps: CodeSearchStep[];
     remainingQueries: number;
     codebaseOverview: string;
+    repoPath: string;
   }): Promise<CodeSearchResponse> {
     const prompt = createCodeSearchPrompt({
       ...params,
@@ -148,7 +151,6 @@ class CodeSearch {
             type: "grepRequest",
             toolCallId: toolCall.toolCallId,
             pattern: toolCall.args.pattern,
-            file: toolCall.args.file,
             flags: toolCall.args.flags,
           });
         }
@@ -207,6 +209,7 @@ export class CodeSearchAgent {
         previousCodeSearchSteps,
         remainingQueries: maxIters - currentIter,
         codebaseOverview: this.config.codebaseOverview,
+        repoPath: this.config.repoPath,
       });
 
       currentIter++;
@@ -221,7 +224,7 @@ export class CodeSearchAgent {
           if (toolCall.type === "catRequest") {
             result = await handleCatRequest(toolCall);
           } else if (toolCall.type === "grepRequest") {
-            result = await handleGrepRequest(toolCall);
+            result = await handleGrepRequest(toolCall, this.config.repoPath);
           } else {
             throw new Error(`Unknown tool call type: ${toolCall.type}`);
           }
@@ -250,7 +253,6 @@ export class CodeSearchAgent {
                 type: "grep",
                 timestamp: new Date(),
                 pattern: toolCall.pattern,
-                file: toolCall.file,
                 flags: toolCall.flags,
                 output: result.error,
               };
@@ -259,7 +261,6 @@ export class CodeSearchAgent {
                 type: "grep",
                 timestamp: new Date(),
                 pattern: toolCall.pattern,
-                file: toolCall.file,
                 flags: toolCall.flags,
                 output: result.content,
               };

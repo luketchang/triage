@@ -197,8 +197,13 @@ export class DatabaseService {
     }
   }
 
-  async clearChat(chatId: number): Promise<void> {
-    await this.db.delete(schema.chats).where(eq(schema.chats.id, chatId));
+  async deleteChat(chatId: number): Promise<void> {
+    // Delete messages first (due to foreign key constraints)
+    await this.db.transaction(async (tx) => {
+      await tx.delete(schema.userMessages).where(eq(schema.userMessages.chatId, chatId));
+      await tx.delete(schema.assistantMessages).where(eq(schema.assistantMessages.chatId, chatId));
+      await tx.delete(schema.chats).where(eq(schema.chats.id, chatId));
+    });
   }
 
   async destroy(): Promise<void> {

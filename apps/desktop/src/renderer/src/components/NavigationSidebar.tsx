@@ -1,7 +1,14 @@
+import { MoreHorizontalIcon, Trash2Icon } from "lucide-react";
 import { useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
 import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
 import { Button } from "./ui/Button.js";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/DropdownMenu.jsx";
 import { ScrollArea } from "./ui/ScrollArea.jsx";
 
 // Import stores
@@ -9,7 +16,7 @@ import { useChatStore, useUIStore } from "../store/index.js";
 
 function NavigationSidebar() {
   // Get state from stores
-  const { chats, contextItems, currentChatId, selectChat, loadChats } = useChatStore();
+  const { chats, contextItems, currentChatId, selectChat, loadChats, deleteChat } = useChatStore();
   const { activeTab, setActiveTab } = useUIStore();
 
   // Ensure chats are loaded when component mounts
@@ -45,13 +52,40 @@ function NavigationSidebar() {
             chats.map((chat) => (
               <div
                 key={chat.id}
-                className={`flex items-center p-2 rounded-md hover:bg-background-lighter cursor-pointer mb-1 text-gray-200 group ${
+                className={`flex items-center justify-between p-2 rounded-md hover:bg-background-lighter mb-1 text-gray-200 group ${
                   currentChatId === chat.id ? "bg-background-lighter" : ""
                 }`}
-                onClick={() => handleSelectChat(chat.id)}
               >
-                <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white" />
-                <div className="text-sm truncate">Chat {chat.id}</div>
+                <div
+                  className="flex items-center flex-grow cursor-pointer"
+                  onClick={() => handleSelectChat(chat.id)}
+                >
+                  <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white" />
+                  <div className="text-sm truncate">Chat {chat.id}</div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 hover:bg-background-alt"
+                    >
+                      <MoreHorizontalIcon className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[150px]">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteChat(chat.id);
+                      }}
+                      className="text-red-500 cursor-pointer flex items-center gap-2"
+                    >
+                      <Trash2Icon className="h-4 w-4" />
+                      Delete chat
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))
           ) : (
