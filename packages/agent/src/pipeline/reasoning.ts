@@ -27,9 +27,7 @@ export class Reasoning {
 
   async run(): Promise<void> {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
-
     const reasoningId = uuidv4();
-
     this.state.recordHighLevelStep("reasoning", reasoningId);
 
     let iterationCount = 0;
@@ -53,12 +51,10 @@ export class Reasoning {
           for (const subAgentCall of reasoningResponse.subAgentCalls) {
             if (subAgentCall.type === "logRequest") {
               await this.logSearchAgent.invoke({
-                logSearchId: uuidv4(),
                 logRequest: subAgentCall.request,
               });
             } else if (subAgentCall.type === "codeRequest") {
               await this.codeSearchAgent.invoke({
-                codeSearchId: uuidv4(),
                 codeRequest: subAgentCall.request,
               });
             } else {
