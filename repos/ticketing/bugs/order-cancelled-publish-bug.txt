@@ -6,4 +6,4 @@ VERSION 2
 Seeing intermittent “order not found” errors in the payments service, which are leading to crashes. One of these occurred sometime in the afternoon (PT) on May 8th. What could be causing this?
 
 VERSION 3
-Seeing intermittent “order not found” errors in the payments service, which are leading to crashes. One of these occurred about 7 days ago. What could be causing this?
+Seeing some “order not found” errors in the payments service, which are leading to crashes. One of these occurred about <X> days ago. What could be causing this?
