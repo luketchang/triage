@@ -13,7 +13,7 @@ const simpleFormat = winston.format.combine(
   winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
   process.env.NODE_ENV === "development" ? winston.format.colorize() : winston.format.uncolorize(),
   winston.format.printf(({ level, message, timestamp, stack }) => {
-    return `${timestamp} ${level}: ${stack || message}`;
+    return `${timestamp} ${level}: ${message}${stack ? `\n${stack}` : ""}`;
   })
 );
 

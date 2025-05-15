@@ -17,7 +17,7 @@ const logFormat = winston.format.combine(
   winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
   winston.format.uncolorize(),
   winston.format.printf(({ level, message, timestamp, stack }) => {
-    return `${timestamp} ${level}: ${stack || message}`;
+    return `${timestamp} ${level}: ${message}${stack ? `\n${stack}` : ""}`;
   })
 );
 
