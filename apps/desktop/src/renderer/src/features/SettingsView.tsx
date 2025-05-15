@@ -119,6 +119,10 @@ const DeleteButton = ({
   );
 };
 
+const test = () => {
+  throw new Error("josh error renderer component");
+};
+
 const SettingIntegrationCard = <T extends Record<string, any>>({
   title,
   description,
@@ -150,6 +154,8 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [shouldScroll, setShouldScroll] = useState(false);
+
+  // test();
 
   // Apply schema defaults to configuration
   const getInitialConfig = useCallback(() => {
@@ -478,6 +484,7 @@ function SettingsView() {
       }
       progressCleanupRef.current = api.onCodebaseOverviewProgress(async (update) => {
         setOverviewProgress(update);
+        throw new Error("josh error renderer async handler");
       });
       // Start the generation
       await api.generateCodebaseOverview(localConfig.repoPath);

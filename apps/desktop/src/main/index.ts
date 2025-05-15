@@ -112,6 +112,8 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  throw new Error("josh error main init");
 });
 
 // Quit when all windows are closed, except on macOS
