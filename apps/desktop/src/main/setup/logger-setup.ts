@@ -7,9 +7,10 @@ import fs from "fs";
 import path from "path";
 
 import { setLogger } from "@triage/common";
-import { app } from "electron";
 import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
+
+import { LOG_DIR } from "../constants.js";
 
 const logFormat = winston.format.combine(
   winston.format.errors({ stack: true }),
@@ -26,15 +27,12 @@ const logFormat = winston.format.combine(
  * any code that might use the logger is executed.
  */
 export function setupDesktopLogger(): void {
-  // Use Electron's standard user data path for logs
-  const logDir = path.join(app.getPath("userData"), "logs");
-
   try {
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
+    if (!fs.existsSync(LOG_DIR)) {
+      fs.mkdirSync(LOG_DIR, { recursive: true });
     }
   } catch (_err) {
-    console.error("Failed to create log directory:", logDir);
+    console.error("Failed to create log directory:", LOG_DIR);
   }
 
   // Configure transports
@@ -47,11 +45,11 @@ export function setupDesktopLogger(): void {
   ];
 
   // Add file transports with rotation if log directory is available
-  if (fs.existsSync(logDir)) {
+  if (fs.existsSync(LOG_DIR)) {
     // Error logs with daily rotation (error level only)
     transports.push(
       new DailyRotateFile({
-        filename: path.join(logDir, "error-%DATE%.log"),
+        filename: path.join(LOG_DIR, "error-%DATE%.log"),
         datePattern: "YYYY-MM-DD",
         level: "error",
         maxSize: "20m",
@@ -63,7 +61,7 @@ export function setupDesktopLogger(): void {
     // Combined logs with daily rotation (all levels)
     transports.push(
       new DailyRotateFile({
-        filename: path.join(logDir, "combined-%DATE%.log"),
+        filename: path.join(LOG_DIR, "combined-%DATE%.log"),
         datePattern: "YYYY-MM-DD",
         level: "info",
         maxSize: "50m",

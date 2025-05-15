@@ -2,9 +2,9 @@ import { logger } from "@triage/common";
 import BetterSqlite3 from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { app } from "electron";
 import fs from "fs";
 import path from "path";
+import { DB_DIR, DB_NAME, MIGRATIONS_DIR } from "../constants.js";
 
 // TODO: we should probably be ensuring backup before migration but skipping for now, should add later
 
@@ -15,19 +15,12 @@ import path from "path";
 export async function migrateDatabaseIfNeeded(): Promise<void> {
   logger.info("Running database migrations...");
 
-  const userDataPath = app.getPath("userData");
-  logger.info(`Using userDataPath: ${userDataPath}`);
-
-  // Create db directory within userDataPath if it doesn't exist
-  const dbDir = path.join(userDataPath, "db");
-  logger.info(`Database directory target: ${dbDir}`);
-
-  if (!fs.existsSync(dbDir)) {
-    logger.info(`Creating database directory: ${dbDir}`);
-    fs.mkdirSync(dbDir, { recursive: true });
+  if (!fs.existsSync(DB_DIR)) {
+    logger.info(`Creating database directory: ${DB_DIR}`);
+    fs.mkdirSync(DB_DIR, { recursive: true });
   }
 
-  const dbPath = path.join(dbDir, "triage-chats.db");
+  const dbPath = path.join(DB_DIR, DB_NAME);
   logger.info(`Database file path: ${dbPath}`);
 
   // Create and configure the SQLite database instance
@@ -37,11 +30,10 @@ export async function migrateDatabaseIfNeeded(): Promise<void> {
   const db = drizzle(sqlite);
 
   // Path to migrations folder
-  const migrationsFolderPath = path.join(app.getAppPath(), "drizzle");
-  logger.info(`Migrations folder path: ${migrationsFolderPath}`);
+  logger.info(`Migrations folder path: ${MIGRATIONS_DIR}`);
 
   // List SQL files for logging purposes
-  const sqlFiles = fs.readdirSync(migrationsFolderPath).filter((f) => f.endsWith(".sql"));
+  const sqlFiles = fs.readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql"));
   if (sqlFiles.length > 0) {
     logger.info(`Found ${sqlFiles.length} SQL migration files:`);
     sqlFiles.forEach((file) => logger.info(`  - ${file}`));
@@ -52,7 +44,7 @@ export async function migrateDatabaseIfNeeded(): Promise<void> {
   // Apply migrations
   logger.info("Applying database migrations...");
   try {
-    migrate(db, { migrationsFolder: migrationsFolderPath });
+    migrate(db, { migrationsFolder: MIGRATIONS_DIR });
     logger.info("Database migrations completed successfully");
   } catch (migrationError) {
     logger.error("Database migration failed:", migrationError);

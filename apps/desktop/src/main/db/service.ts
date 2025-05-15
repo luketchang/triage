@@ -1,10 +1,10 @@
 import BetterSqlite3 from "better-sqlite3";
 import { desc, eq } from "drizzle-orm";
 import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
-import { app } from "electron";
 import fs from "fs";
 import path from "path";
 import { AgentStage, ChatMessage } from "../../renderer/src/types/index.js";
+import { DB_DIR, DB_NAME } from "../constants.js";
 import * as schema from "./schema.js";
 import { AssistantMessage, Chat, UserMessage } from "./schema.js";
 
@@ -18,14 +18,11 @@ export class DatabaseService {
   private dbPath: string;
 
   constructor() {
-    const userDataPath = app.getPath("userData");
-    const dbDir = path.join(userDataPath, "db");
-
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
+    if (!fs.existsSync(DB_DIR)) {
+      fs.mkdirSync(DB_DIR, { recursive: true });
     }
-    this.dbPath = path.join(dbDir, "triage-chats.db");
 
+    this.dbPath = path.join(DB_DIR, DB_NAME);
     console.info("DatabaseService: Initializing with database path:", this.dbPath);
 
     try {
