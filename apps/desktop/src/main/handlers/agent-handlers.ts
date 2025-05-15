@@ -23,13 +23,19 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
     async (
       _event: any,
       query: string,
-      chatHistory: AgentChatMessage[]
+      chatHistory: AgentChatMessage[],
+      metadata: {
+        timezone: string;
+      }
     ): Promise<AgentAssistantMessage> => {
       try {
         logger.info("Invoking agent with query:", query);
         logger.info("IPC chat history:", chatHistory);
 
         const agentCfg = await agentCfgStore.getValues();
+
+        // NOTE: we set timezone every agent call to handle edge cases where timezone changes while app still open
+        agentCfg.timezone = metadata.timezone;
 
         // Send updates to renderer via window
         const onUpdate = (update: any) => {
@@ -39,6 +45,7 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
         // Calculate date range for last two weeks
         const endDate = new Date();
         const startDate = new Date(endDate.getTime() - TWO_WEEKS_MS);
+
         const result = await invokeAgent({
           query,
           chatHistory,

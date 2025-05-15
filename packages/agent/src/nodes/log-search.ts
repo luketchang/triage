@@ -1,6 +1,7 @@
 import { logger, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
 import { generateText, LanguageModelV1 } from "ai";
+import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
@@ -25,6 +26,7 @@ You are an expert AI assistant that helps engineers debug production issues by s
 
 function createLogSearchPrompt(params: {
   query: string;
+  timezone: string;
   logRequest: string;
   previousLogSearchSteps: LogSearchStep[];
   platformSpecificInstructions: string;
@@ -33,7 +35,7 @@ function createLogSearchPrompt(params: {
   remainingQueries: number;
   codebaseOverview: string;
 }): string {
-  const currentTime = new Date().toISOString();
+  const currentTime = DateTime.now().setZone(params.timezone).toISO();
 
   // Format the previous log query result for display
   const formattedLastLogSearchStep = params.lastLogSearchStep
@@ -112,6 +114,7 @@ class LogSearch {
 
   async invoke(params: {
     query: string;
+    timezone: string;
     logRequest: string;
     previousLogSearchSteps: LogSearchStep[];
     lastLogSearchStep?: LogSearchStep;
@@ -202,6 +205,7 @@ export class LogSearchAgent {
 
       response = await this.logSearch.invoke({
         query: this.config.query,
+        timezone: this.config.timezone,
         logRequest: params.logRequest,
         logLabelsMap: this.config.logLabelsMap,
         previousLogSearchSteps,

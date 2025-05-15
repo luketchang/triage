@@ -20,6 +20,7 @@ export const AgentCfgSchema = z.object({
         .optional(),
     })
     .optional(),
+  timezone: z.string().describe("Timezone to use for date formatting"),
 
   ...LLMCfgSchema.shape,
   ...ObservabilityCfgSchema.shape,

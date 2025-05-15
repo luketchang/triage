@@ -24,8 +24,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param query The query to send to the agent
    * @param chatHistory The chat history to send to the agent
    */
-  invokeAgent: (query: string, chatHistory: ChatMessage[]) => {
-    return ipcRenderer.invoke("agent:invoke-agent", query, chatHistory);
+  invokeAgent: (query: string, chatHistory: ChatMessage[], metadata: { timezone: string }) => {
+    return ipcRenderer.invoke("agent:invoke-agent", query, chatHistory, metadata);
   },
 
   /**
