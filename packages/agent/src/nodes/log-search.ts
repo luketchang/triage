@@ -73,6 +73,10 @@ Given all available log labels, a user query about the issue/event, and previous
 ${params.remainingQueries}
 </remaining_queries>
 
+<timezone>
+${params.timezone}
+</timezone>
+
 <current_time>
 ${currentTime}
 </current_time>

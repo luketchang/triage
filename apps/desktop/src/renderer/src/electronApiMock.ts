@@ -211,8 +211,7 @@ const mockElectronAPI = {
    */
   invokeAgent: async (
     _query: string,
-    _chatHistory: AgentChatMessage[],
-    _metadata: { timezone: string }
+    _chatHistory: AgentChatMessage[]
   ): Promise<AgentAssistantMessage> => {
     // Simulate delay
     await new Promise((resolve) => setTimeout(resolve, 2000));

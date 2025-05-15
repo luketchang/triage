@@ -40,10 +40,7 @@ declare global {
        */
       invokeAgent: (
         query: string,
-        chatHistory: AgentChatMessage[],
-        metadata: {
-          timezone: string;
-        }
+        chatHistory: AgentChatMessage[]
       ) => Promise<AgentAssistantMessage>;
 
       /**
