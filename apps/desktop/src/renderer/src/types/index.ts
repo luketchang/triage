@@ -12,7 +12,6 @@ import {
   LogPostprocessingFact,
   LogPostprocessingStep,
   LogSearchInput,
-  LogSearchInputCore,
   LogSearchStep,
   ReasoningStep,
   TraceSearchInput,
@@ -44,7 +43,6 @@ export type {
   LogPostprocessingFact,
   LogPostprocessingStep,
   LogSearchInput,
-  LogSearchInputCore,
   LogSearchStep,
   LogsWithPagination,
   ReasoningStep,
@@ -127,7 +125,7 @@ export interface TraceQueryParams {
 
 // Define LogSearchPair type for storing pairs of search inputs and results
 export interface LogSearchPair {
-  input: LogSearchInputCore;
+  input: LogSearchInput;
   results: LogsWithPagination | string;
 }
 
@@ -264,7 +262,7 @@ export interface TimeRangePreset {
 }
 
 // Define PostprocessedLogSearchInput locally since it's not exported by @triage/agent
-export interface PostprocessedLogSearchInput extends LogSearchInputCore {
+export interface PostprocessedLogSearchInput extends LogSearchInput {
   title?: string;
   reasoning?: string;
   summary?: string;
