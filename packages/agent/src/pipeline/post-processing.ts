@@ -17,19 +17,17 @@ export class PostProcessing {
   }
 
   async run(): Promise<void> {
-    // TODO: Run post processing steps in parallel
     const logPostprocessor = new LogPostprocessor(this.config, this.state);
+    const codePostprocessor = new CodePostprocessor(this.config, this.state);
 
-    const logPostprocessingResponse = await logPostprocessor.invoke();
+    const [logPostprocessingResponse, codePostprocessingResponse] = await Promise.all([
+      logPostprocessor.invoke(),
+      codePostprocessor.invoke(),
+    ]);
 
     logger.info(
       `Log postprocessing complete with ${logPostprocessingResponse.facts.length} relevant facts`
     );
-
-    const codePostprocessor = new CodePostprocessor(this.config, this.state);
-
-    const codePostprocessingResponse = await codePostprocessor.invoke();
-
     logger.info(
       `Code postprocessing complete with ${codePostprocessingResponse.facts.length} relevant facts`
     );
