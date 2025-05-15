@@ -24,9 +24,8 @@ import {
 import { setupDesktopLogger } from "./setup/logger-setup.js";
 
 Sentry.init({
-  dsn: process.env.SENTRY_DSN,
+  dsn: "https://0959c176189c84d818acd95b7add26ac@o4509322414063616.ingest.us.sentry.io/4509322496180224",
   environment: process.env.NODE_ENV,
-  debug: true,
 });
 
 /**

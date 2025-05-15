@@ -4,6 +4,9 @@ import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import { builtinModules } from "module";
 import { resolve } from "path";
 
+const SENTRY_AUTH_TOKEN =
+  "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";
+
 export default defineConfig({
   main: {
     build: {
@@ -36,7 +39,7 @@ export default defineConfig({
     plugins: [
       externalizeDepsPlugin(),
       sentryVitePlugin({
-        authToken: process.env.SENTRY_AUTH_TOKEN,
+        authToken: SENTRY_AUTH_TOKEN,
         org: "triage-hu",
         project: "electron",
       }),
