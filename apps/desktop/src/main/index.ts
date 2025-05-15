@@ -1,11 +1,13 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import { AgentConfigStore } from "@triage/agent";
+import { logger } from "@triage/common";
 import { ObservabilityConfigStore } from "@triage/observability";
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, dialog, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
 import { AppCfgSchema, AppConfigStore } from "../common/AppConfig.js";
 import { ElectronConfigStore } from "./ElectronConfigStore.js";
+import { migrateDatabaseIfNeeded } from "./db/migrate.js";
 import {
   cleanupAgentHandlers,
   cleanupCodebaseHandlers,
@@ -18,6 +20,7 @@ import {
   setupDbHandlers,
   setupObservabilityHandlers,
 } from "./handlers/index.js";
+import { setupDesktopLogger } from "./setup/logger-setup.js";
 
 /**
  * Create the main application window
@@ -68,6 +71,8 @@ function createWindow(): BrowserWindow {
 }
 
 function initApp(mainWindow: BrowserWindow): void {
+  logger.info("Initializing application");
+
   const configStore = new ElectronConfigStore(AppCfgSchema);
 
   // Create specialized views for each schema
@@ -86,7 +91,26 @@ function initApp(mainWindow: BrowserWindow): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Set up the logger early in the app startup
+  setupDesktopLogger();
+
+  logger.info("Triage Desktop starting up...");
+
+  // Run database migrations before any DB operations
+  try {
+    logger.info("Running database migrations...");
+    await migrateDatabaseIfNeeded();
+    logger.info("Database migrations completed successfully");
+  } catch (error: unknown) {
+    logger.error("Failed to run database migrations, exiting application");
+    dialog.showErrorBox(
+      "Database Migration Failed",
+      `Triage Desktop could not start because a database migration failed.\n\n${error instanceof Error ? error.message : String(error)}`
+    );
+    app.quit();
+  }
+
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
 
@@ -103,7 +127,9 @@ app.whenReady().then(() => {
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
 });
 
@@ -116,14 +142,14 @@ app.on("window-all-closed", () => {
   }
 });
 
-// Clean up when quitting
-app.on("will-quit", () => {
-  // Clean up all IPC handlers
+// Clean up handlers when app quits
+app.on("quit", () => {
+  logger.info("Application quitting, cleaning up handlers");
   cleanupAgentHandlers();
+  cleanupCodebaseHandlers();
   cleanupDbHandlers();
   cleanupConfigHandlers();
   cleanupObservabilityHandlers();
-  cleanupCodebaseHandlers();
 });
 
 // In this file you can include the rest of your app's specific main process

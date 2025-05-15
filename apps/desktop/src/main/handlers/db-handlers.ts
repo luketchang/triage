@@ -1,3 +1,4 @@
+import { logger } from "@triage/common";
 import { ipcMain } from "electron";
 import { AssistantMessage, ChatMessage, UserMessage } from "../../renderer/src/types/index.js";
 import { DatabaseService } from "../db/service.js";
@@ -9,50 +10,45 @@ let dbService: DatabaseService | null = null;
  * Set up all IPC handlers related to chat functionality
  */
 export function setupDbHandlers(): void {
-  console.info("Setting up chat handlers...");
+  logger.info("Setting up database handlers...");
 
   // Initialize database service
   dbService = new DatabaseService();
 
   // Create a new chat
   ipcMain.handle("db:create-chat", async (): Promise<number | null> => {
-    console.info("IPC: db:create-chat called");
-    if (!dbService) return null;
+    if (!dbService) {
+      logger.warn("db:create-chat - DB service not available");
+      return null;
+    }
 
-    console.info("Creating a new chat");
+    logger.info("Creating a new chat");
     const chatId = await dbService.createChat();
-    console.info("Created new chat with ID:", chatId);
+    logger.info("Created new chat with ID:", chatId);
     return chatId;
   });
 
   // Get all chats
   ipcMain.handle("db:get-all-chats", async (): Promise<{ id: number; createdAt: string }[]> => {
-    console.info("IPC: db:get-all-chats called");
-    if (!dbService) return [];
+    if (!dbService) {
+      logger.warn("db:get-all-chats - DB service not available");
+      return [];
+    }
 
-    console.info("Getting all chats");
+    logger.info("Getting all chats");
     const chats = await dbService.getAllChats();
-    console.info(`Got ${chats.length} chats`);
+    logger.info(`Got ${chats.length} chats`);
     return chats;
   });
 
   // Save user message
   ipcMain.handle(
     "db:save-user-message",
-    async (_, message: UserMessage): Promise<number | null> => {
-      console.info("IPC: db:save-user-message called with:", message);
+    async (_, message: UserMessage, chatId: number): Promise<number | null> => {
       if (!dbService) return null;
 
-      // Get or create chat ID
-      let chatId = await dbService.getLatestChatId();
-      if (!chatId) {
-        console.info("No existing chat found, creating a new one");
-        chatId = await dbService.createChat();
-      }
-
-      console.info("Saving user message to chat ID:", chatId);
+      logger.info("Saving user message to chat ID:", chatId);
       const messageId = await dbService.saveUserMessage(message, chatId);
-      console.info("User message saved with ID:", messageId);
       return messageId;
     }
   );
@@ -61,52 +57,50 @@ export function setupDbHandlers(): void {
   ipcMain.handle(
     "db:save-assistant-message",
     async (_, message: AssistantMessage, chatId: number): Promise<number | null> => {
-      console.info("IPC: db:save-assistant-message called");
       if (!dbService) return null;
 
-      console.info("Saving assistant message to chat ID:", chatId);
+      logger.info("Saving assistant message to chat ID:", chatId);
       const messageId = await dbService.saveAssistantMessage(message, chatId);
-      console.info("Assistant message saved with ID:", messageId);
       return messageId;
     }
   );
 
   // Get chat messages
   ipcMain.handle("db:get-messages", async (_, chatId: number): Promise<ChatMessage[]> => {
-    console.info("IPC: db:get-messages called with chatId:", chatId);
     if (!dbService) return [];
 
-    console.info("Getting messages for chat ID:", chatId);
+    logger.info("Getting messages for chat ID:", chatId);
     const messages = await dbService.getChatMessages(chatId);
-    console.info(`Got ${messages.length} messages`);
     return messages;
   });
 
   // Delete chat and all its messages
   ipcMain.handle("db:delete-chat", async (_, chatId: number): Promise<boolean> => {
-    console.info("IPC: db:delete-chat called");
     if (!dbService) return false;
 
-    console.info("Deleting chat ID:", chatId);
+    logger.info("Deleting chat with ID:", chatId);
     await dbService.deleteChat(chatId);
-    console.info("Chat deleted successfully");
     return true;
   });
 
-  console.info("All chat handlers registered.");
+  logger.info("All database handlers registered.");
 }
 
 /**
- * Clean up resources used by chat handlers
+ * Clean up resources used by database handlers
  */
 export function cleanupDbHandlers(): void {
   if (dbService) {
     dbService.destroy();
     dbService = null;
   }
+
+  ipcMain.removeHandler("db:create-chat");
+  ipcMain.removeHandler("db:get-all-chats");
   ipcMain.removeHandler("db:save-user-message");
   ipcMain.removeHandler("db:save-assistant-message");
   ipcMain.removeHandler("db:get-messages");
   ipcMain.removeHandler("db:delete-chat");
-  console.info("DB handlers cleanup complete.");
+
+  logger.info("Database handlers cleanup complete.");
 }

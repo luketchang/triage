@@ -1,3 +1,4 @@
+export const MERGE_SUMMARIES_EXAMPLE = `
 **Considering system summary**
 
 The user wants a summary of a system similar to Twitter, formatted like a codebase overview. I'll provide details on the directory structure and explain the system architecture. It could be a microservices setup, possibly using Kafka for event-driven design. Key services might include feed, user, tweet, timeline, and notification services. The structure should be clear for an engineer to review, maintaining accuracy in the components and design choices. I’ll start with a title like "# Social Media Feed Codebase Walkthrough" for consistency.
@@ -18,7 +19,7 @@ Thought for 33 seconds
 
 The Social Feed system is a microservices-based platform for creating, distributing, and interacting with short posts (tweets). It follows an event-driven architecture where services communicate asynchronously through Apache Kafka. The system consists of six main services, each with its own database and responsibility, plus a shared common library:
 
-```
+~~~
 social-feed/
 ├── auth/                  # Authentication service
 ├── client/                # React/Next.js frontend application
@@ -30,17 +31,17 @@ social-feed/
 ├── infra/                 # Kubernetes configuration
 ├── skaffold.yaml          # Development workflow configuration
 └── README.md              # Project documentation
-```
+~~~
 
 ---
 
 ## Service Architecture
 
-### Common Library (`/common`)
+### Common Library (\`/common\`)
 
 The common library provides shared utilities and contracts for all services, ensuring consistency and reducing duplication.
 
-```
+~~~
 common/
 ├── src/
 │   ├── errors/
@@ -60,25 +61,25 @@ common/
 │   ├── middlewares/
 │   │   ├── authenticate.ts        # Validate JWT and attach user
 │   │   ├── error-handler.ts       # Central error handler
-│   │   └── validate-request.ts    # Request `express-validator` integration
+│   │   └── validate-request.ts    # Request \`express-validator\` integration
 │   ├── kafka-wrapper.ts           # Singleton Kafka client
 │   └── index.ts                   # Barrel export
 └── package.json
-```
+~~~
 
 **Key Components:**
 
-- **Error Handling**: Consistent error classes extending `BaseError` for HTTP responses.
-- **Event Contracts**: Abstract `BasePublisher` and `BaseListener` for Kafka topic communication.
+- **Error Handling**: Consistent error classes extending \`BaseError\` for HTTP responses.
+- **Event Contracts**: Abstract \`BasePublisher\` and \`BaseListener\` for Kafka topic communication.
 - **Middlewares**: Reusable Express middlewares for auth and validation.
 
 ---
 
-### Auth Service (`/auth`)
+### Auth Service (\`/auth\`)
 
 Handles user signup, signin, signout, and JWT issuance.
 
-```
+~~~
 auth/
 ├── src/
 │   ├── models/
@@ -94,21 +95,21 @@ auth/
 │   ├── index.ts                   # Service startup (connects to Postgres + Kafka)
 │   └── tracer.ts                  # OpenTelemetry setup
 └── Dockerfile
-```
+~~~
 
 **Key Components:**
 
 - **User Model**: PostgreSQL via TypeORM with hashed passwords.
 - **JWT**: Issues tokens stored in HTTP-only cookies.
-- **Routes**: Typical auth endpoints; emits `user:created` event on signup.
+- **Routes**: Typical auth endpoints; emits \`user:created\` event on signup.
 
 ---
 
-### Users Service (`/users`)
+### Users Service (\`/users\`)
 
 Manages user profiles and follower relationships.
 
-```
+~~~
 users/
 ├── src/
 │   ├── events/
@@ -129,21 +130,21 @@ users/
 │   ├── kafka-wrapper.ts          # Kafka client singleton
 │   └── tracer.ts                 # OpenTelemetry
 └── Dockerfile
-```
+~~~
 
 **Key Components:**
 
 - **Profile Management**: CRUD on user profiles stored in Postgres.
 - **Follower Graph**: Many-to-many table with fast lookups.
-- **Event Integration**: Listens for `user:created` and publishes `user:followed`/`user:unfollowed`.
+- **Event Integration**: Listens for \`user:created\` and publishes \`user:followed\`/\`user:unfollowed\`.
 
 ---
 
-### Tweets Service (`/tweets`)
+### Tweets Service (\`/tweets\`)
 
 Handles tweet creation, deletion, and basic engagement (likes, retweets).
 
-```
+~~~
 tweets/
 ├── src/
 │   ├── events/
@@ -167,7 +168,7 @@ tweets/
 │   ├── kafka-wrapper.ts           # Kafka client
 │   └── tracer.ts
 └── Dockerfile
-```
+~~~
 
 **Key Components:**
 
@@ -177,11 +178,11 @@ tweets/
 
 ---
 
-### Feed Service (`/feed`)
+### Feed Service (\`/feed\`)
 
 Generates and caches personalized timelines using Redis.
 
-```
+~~~
 feed/
 ├── src/
 │   ├── consumers/
@@ -196,7 +197,7 @@ feed/
 │   ├── kafka-wrapper.ts                # Kafka client
 │   └── tracer.ts
 └── Dockerfile
-```
+~~~
 
 **Key Components:**
 
@@ -206,11 +207,11 @@ feed/
 
 ---
 
-### Notifications Service (`/notifications`)
+### Notifications Service (\`/notifications\`)
 
 Delivers in-app and push/email notifications for mentions, likes, and follows.
 
-```
+~~~
 notifications/
 ├── src/
 │   ├── events/
@@ -232,7 +233,7 @@ notifications/
 │   ├── kafka-wrapper.ts         # Kafka client
 │   └── tracer.ts
 └── Dockerfile
-```
+~~~
 
 **Key Components:**
 
@@ -242,11 +243,11 @@ notifications/
 
 ---
 
-### Client Application (`/client`)
+### Client Application (\`/client\`)
 
 A React/Next.js frontend providing the user interface.
 
-```
+~~~
 client/
 ├── api/
 │   └── build-client.ts         # Axios instance with cookie support
@@ -270,21 +271,21 @@ client/
 │   ├── notifications.tsx
 │   └── _app.tsx
 └── next.config.js
-```
+~~~
 
 **Key Components:**
 
 - **Pages**: Server- and client-side rendering with Next.js.
 - **Reusable Components**: Tweet cards, feed lists, nav header.
-- **Auth Flow**: Stores JWT in cookies, uses `useRequest` for protected endpoints.
+- **Auth Flow**: Stores JWT in cookies, uses \`useRequest\` for protected endpoints.
 
 ---
 
-### Infrastructure (`/infra`)
+### Infrastructure (\`/infra\`)
 
 Kubernetes manifests for deploying all services and dependencies.
 
-```
+~~~
 infra/
 ├── k8s/
 │   ├── auth-depl.yaml
@@ -300,21 +301,21 @@ infra/
 │   ├── configmaps.yaml          # Shared config (Kafka brokers, Redis URL)
 │   └── ingress.yaml             # Ingress rules for API/gateway and client
 └── README.md
-```
+~~~
 
 **Key Components:**
 
 - **Service Deployments**: One Deployment + Service per microservice.
 - **Stateful Sets**: Zookeeper, Kafka, Postgres, Redis, MongoDB.
-- **Ingress**: Routes API calls (`/api/*`) and static client assets.
+- **Ingress**: Routes API calls (\`/api/*\`) and static client assets.
 
 ---
 
 ## Development Workflow
 
-The `skaffold.yaml` file automates build-and-deploy cycles during development:
+The \`skaffold.yaml\` file automates build-and-deploy cycles during development:
 
-```yaml
+~~~yaml
 apiVersion: skaffold/v2beta13
 kind: Config
 build:
@@ -334,7 +335,7 @@ deploy:
   kubectl:
     manifests:
       - infra/k8s/*.yaml
-```
+~~~
 
 Skaffold watches file changes and rebuilds/redeploys the affected service, streamlining local iteration.
 
@@ -347,32 +348,32 @@ All services exchange events via Kafka topics defined in the common library. Her
 1. **User Signup**
 
    - Client calls Auth service → creates a user in Postgres.
-   - Auth publishes `user:created`.
+   - Auth publishes \`user:created\`.
    - Users service listens, creates a profile record.
 
 2. **Follow User**
 
-   - Client calls Users → inserts into `follow` table.
-   - Users publishes `user:followed`.
+   - Client calls Users → inserts into \`follow\` table.
+   - Users publishes \`user:followed\`.
    - Feed service listens and updates both users’ Redis timelines.
    - Notifications service listens, creates a follow notification.
 
 3. **Create Tweet**
 
    - Client calls Tweets → writes a record in Postgres + S3 uploads.
-   - Tweets publishes `tweet:created`.
+   - Tweets publishes \`tweet:created\`.
    - Feed service consumes it, adds tweet IDs to followers’ Redis sets.
-   - Notifications service detects `@mentions` in text and creates mention notifications.
+   - Notifications service detects \`@mentions\` in text and creates mention notifications.
 
 4. **Like Tweet**
 
    - Client calls Tweets like endpoint → increments like count.
-   - Tweets publishes `tweet:liked`.
+   - Tweets publishes \`tweet:liked\`.
    - Notifications service listens, sends a like notification to the author.
 
 5. **Fetch Timeline**
 
-   - Client requests `/api/feed/:userId`.
+   - Client requests \`/api/feed/:userId\`.
    - Feed service reads the user’s sorted set from Redis, returns tweet details via bulk-fetch from Tweets service.
 
 This asynchronous, event-driven design decouples services, allowing each to scale independently while keeping data eventually consistent.
@@ -389,3 +390,4 @@ The Social Feed system demonstrates a modern microservices architecture for a hi
 - **Polished UX**: Next.js provides fast server/client rendering and SEO.
 
 The combination of TypeScript, Express, PostgreSQL, Kafka, Redis, and Kubernetes yields a robust, scalable, and maintainable platform for real-time social media feeds.
+`;

@@ -197,7 +197,7 @@ const api = {
   },
 
   // Chat persistence methods
-  saveUserMessage: async (message: UserMessage): Promise<number | null> => {
+  saveUserMessage: async (message: UserMessage, chatId: number): Promise<number | null> => {
     console.info("[API DEBUG] saveUserMessage called");
 
     if (USE_MOCK_API || !isMethodAvailable("saveUserMessage")) {
@@ -205,7 +205,7 @@ const api = {
       return null;
     } else {
       console.info("Using real electronAPI.saveUserMessage");
-      return window.electronAPI.saveUserMessage(message);
+      return window.electronAPI.saveUserMessage(message, chatId);
     }
   },
 

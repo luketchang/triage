@@ -96,7 +96,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * Save a user message to the database
    * @param message The user message to save
    */
-  saveUserMessage: (message: UserMessage) => ipcRenderer.invoke("db:save-user-message", message),
+  saveUserMessage: (message: UserMessage, chatId: number) =>
+    ipcRenderer.invoke("db:save-user-message", message, chatId),
 
   /**
    * Save an assistant message to the database

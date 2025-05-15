@@ -152,7 +152,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Save the user message
     try {
-      await api.saveUserMessage(userMessage);
+      await api.saveUserMessage(userMessage, chatId);
     } catch (error) {
       console.error("Error saving user message:", error);
     }

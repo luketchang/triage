@@ -16,6 +16,8 @@ An Electron application with React and TypeScript
 
 The application uses SQLite with Drizzle ORM for data persistence. Database schema is defined in `electron/db/schema.ts`.
 
+- **Automatic migrations**: The application will automatically apply any generated migrations when it starts up. This is how users will receive the latest schema when there is an update.
+
 - **Generate migrations**: After changing the schema, generate migration files:
 
   ```bash
@@ -24,7 +26,7 @@ The application uses SQLite with Drizzle ORM for data persistence. Database sche
 
   This creates SQL migration files in the `drizzle` directory.
 
-- **Apply migrations**: Run migrations to update the database schema:
+- **Apply manual migrations**: Run migrations to update the database schema:
 
   ```bash
   pnpm db:migrate
@@ -40,3 +42,15 @@ The application uses SQLite with Drizzle ORM for data persistence. Database sche
   5. Restart the application to use the updated schema
 
 The database file is stored in `db/triage-chats.db` relative to the application working directory.
+
+## Using Packaged Binary
+
+To build and run the packaged binary, run the following command in `apps/desktop` (for MacOS):
+
+```bash
+pnpm build:mac
+```
+
+This will create a macOS app bundle in `dist/mac-arm64/triage.app` directory. It will also create a DMG file at `dist/triage-<version>.dmg`.
+
+You can run the packaged application by running `open dist/mac-arm64/triage.app` or by running `open dist/triage-<version>.dmg` then double-clicking the app icon.

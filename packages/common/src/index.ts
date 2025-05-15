@@ -5,6 +5,7 @@ export * from "./formatting";
 export * from "./git";
 export * from "./llm";
 export * from "./logger";
+export { default as logger } from "./logger-shim";
 export * from "./mcp-client";
 export * from "./mcp-utils";
 export * from "./parse";
