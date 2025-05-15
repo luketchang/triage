@@ -5,12 +5,24 @@ import { app } from "electron";
 import fs from "fs";
 import path from "path";
 
+export const MIGRATIONS_DIR = path.join(app.getAppPath(), "drizzle");
+export const DB_DIR = path.join(app.getPath("userData"), "db");
+export const DB_NAME = "triage-chats.db";
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 async function runMigrations() {
   console.info("🔄 Running migrations...");
 
-  const dbPath = path.join(process.cwd(), "db", "triage-chats.db");
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+  // Create db directory within userDataPath if it doesn't exist
+  console.info(`Database directory target: ${DB_DIR}`);
+
+  if (!fs.existsSync(DB_DIR)) {
+    console.info(`Creating database directory: ${DB_DIR}`);
+    fs.mkdirSync(DB_DIR, { recursive: true });
+  }
+
+  const dbPath = path.join(DB_DIR, DB_NAME);
+  console.info(`Database file path: ${dbPath}`);
 
   const sqlite = new BetterSqlite3(dbPath);
   sqlite.pragma("foreign_keys = ON");

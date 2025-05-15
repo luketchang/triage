@@ -1,3 +1,4 @@
+import { logger } from "@triage/common";
 import { ObservabilityConfigStore } from "@triage/observability";
 import { ipcMain } from "electron";
 import {
@@ -13,15 +14,13 @@ import {
  * Set up all IPC handlers related to observability (logs, traces)
  */
 export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityConfigStore): void {
-  console.info("Setting up observability handlers...");
+  logger.info("Setting up observability handlers...");
 
   // Fetch logs based on query parameters
   ipcMain.handle(
     "observability:fetch-logs",
     async (_event: any, params: LogQueryParams): Promise<LogsWithPagination> => {
       try {
-        console.info("Fetching logs with params:", params);
-
         const observabilityCfg = await observabilityCfgStore.getValues();
         const platform = getObservabilityPlatform(observabilityCfg);
 
@@ -36,7 +35,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
 
         return result;
       } catch (error) {
-        console.error("Error fetching logs:", error);
+        logger.error("Error fetching logs:", error);
         throw error;
       }
     }
@@ -47,12 +46,11 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
     "observability:get-logs-facet-values",
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
-        console.info("Getting log facet values for time range:", { start, end });
-
         const observabilityCfg = await observabilityCfgStore.getValues();
         const platform = getObservabilityPlatform(observabilityCfg);
 
         // Call the real platform API
+        logger.info("Getting log facet values for time range:", { start, end });
         const logFacetsMap = await platform.getLogsFacetValues(start, end);
 
         // Convert the Map<string, string[]> to FacetData[] format
@@ -64,7 +62,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
 
         return facetsArray;
       } catch (error) {
-        console.error("Error getting log facet values:", error);
+        logger.error("Error getting log facet values:", error);
         throw error;
       }
     }
@@ -75,12 +73,11 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
     "observability:fetch-traces",
     async (_event: any, params: TraceQueryParams): Promise<TracesWithPagination> => {
       try {
-        console.info("Fetching traces with params:", params);
-
         const observabilityCfg = await observabilityCfgStore.getValues();
         const platform = getObservabilityPlatform(observabilityCfg);
 
         // Call the real platform API (assuming the method exists)
+        logger.info("Fetching traces for time range:", { start: params.start, end: params.end });
         const result = await platform.fetchTraces({
           query: params.query || "",
           start: params.start,
@@ -91,7 +88,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
 
         return result;
       } catch (error) {
-        console.error("Error fetching traces:", error);
+        logger.error("Error fetching traces:", error);
         throw error;
       }
     }
@@ -102,12 +99,11 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
     "observability:get-spans-facet-values",
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
-        console.info("Getting span facet values for time range:", { start, end });
-
         const observabilityCfg = await observabilityCfgStore.getValues();
         const platform = getObservabilityPlatform(observabilityCfg);
 
         // Call the real platform API (assuming the method exists)
+        logger.info("Getting span facet values for time range:", { start, end });
         const spanFacetsMap = await platform.getSpansFacetValues(start, end);
 
         // Convert the Map<string, string[]> to FacetData[] format
@@ -119,19 +115,24 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
 
         return facetsArray;
       } catch (error) {
-        console.error("Error getting span facet values:", error);
+        logger.error("Error getting span facet values:", error);
         throw error;
       }
     }
   );
 
-  console.info("All observability handlers registered.");
+  logger.info("All observability handlers registered.");
 }
 
 /**
  * Clean up resources used by observability handlers
  */
 export function cleanupObservabilityHandlers(): void {
-  // No specific cleanup needed currently
-  console.info("Observability handlers cleanup complete.");
+  // Remove all handlers
+  ipcMain.removeHandler("observability:fetch-logs");
+  ipcMain.removeHandler("observability:get-logs-facet-values");
+  ipcMain.removeHandler("observability:fetch-traces");
+  ipcMain.removeHandler("observability:get-spans-facet-values");
+
+  logger.info("Observability handlers cleanup complete.");
 }

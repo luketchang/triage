@@ -110,7 +110,7 @@ declare global {
        * @param message The user message to save
        * @returns Promise with the saved message ID or null if failed
        */
-      saveUserMessage: (message: UserMessage) => Promise<number | null>;
+      saveUserMessage: (message: UserMessage, chatId: number) => Promise<number | null>;
 
       /**
        * Save an assistant message to the database

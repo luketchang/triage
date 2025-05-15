@@ -1,5 +1,5 @@
 import { CodebaseOverview, CodebaseProcessor } from "@triage/codebase-overviews";
-import { getModelWrapper } from "@triage/common";
+import { getModelWrapper, logger } from "@triage/common";
 import { BrowserWindow, ipcMain } from "electron";
 import { AppConfigStore } from "../../common/AppConfig.js";
 
@@ -7,14 +7,14 @@ import { AppConfigStore } from "../../common/AppConfig.js";
  * Set up all IPC handlers related to codebase processing
  */
 export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppConfigStore): void {
-  console.info("Setting up codebase handlers...");
+  logger.info("Setting up codebase handlers...");
 
   // Handle codebase overview generation
   ipcMain.handle(
     "codebase:generate-overview",
     async (_event: any, repoPath: string): Promise<CodebaseOverview> => {
       try {
-        console.info(`Generating codebase overview for: ${repoPath}`);
+        logger.info(`Generating codebase overview for: ${repoPath}`);
 
         const currentConfig = await appCfgStore.getValues();
         const model = currentConfig.balancedModel;
@@ -28,7 +28,7 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
         const processor = new CodebaseProcessor(repoPath, llmClient, {
           // Forward progress updates to the renderer process
           onProgress: (update) => {
-            console.info(
+            logger.info(
               `Codebase overview progress: ${update.status} (${update.progress}%) - ${update.message}`
             );
             window.webContents.send("codebase:overview-progress", update);
@@ -48,7 +48,7 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
 
         return codebaseOverview;
       } catch (error: unknown) {
-        console.error("Error generating codebase overview:", error);
+        logger.error("Error generating codebase overview:", error);
 
         // Send error to renderer
         window.webContents.send("codebase:overview-progress", {
@@ -62,7 +62,7 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
     }
   );
 
-  console.info("All codebase handlers registered.");
+  logger.info("All codebase handlers registered.");
 }
 
 /**
@@ -70,5 +70,5 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
  */
 export function cleanupCodebaseHandlers(): void {
   ipcMain.removeHandler("codebase:generate-overview");
-  console.info("Codebase handlers cleanup complete.");
+  logger.info("Codebase handlers cleanup complete.");
 }

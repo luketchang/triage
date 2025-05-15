@@ -1,3 +1,4 @@
+import { logger } from "@triage/common";
 import { getGitRemoteUrl } from "@triage/common";
 import { ipcMain } from "electron";
 import fs from "fs/promises";
@@ -7,15 +8,14 @@ import { AppConfig, AppConfigStore } from "../../common/AppConfig.js";
  * Set up all IPC handlers related to configuration
  */
 export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
-  console.info("Setting up config handlers...");
+  logger.info("Setting up config handlers...");
 
   // Get all config values for the settings UI
   ipcMain.handle("config:get-app-config", async (): Promise<AppConfig> => {
     try {
-      console.info("Fetching all config values");
       return appCfgStore.getValues();
     } catch (error) {
-      console.error("Error fetching config values:", error);
+      logger.error("Error fetching config values:", error);
       throw error;
     }
   });
@@ -25,14 +25,14 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
     "config:update-app-config",
     async (_event: any, partial: Partial<AppConfig>): Promise<AppConfig> => {
       try {
-        console.info("Updating config values");
+        logger.info("Updating config values");
 
         // Get current configuration to check for changes
         const currentConfig = await appCfgStore.getValues();
 
         // If repoPath changed, handle special logic
         if (partial.repoPath && partial.repoPath !== currentConfig.repoPath) {
-          console.info(`Repository path changed to: ${partial.repoPath}`);
+          logger.info(`Repository path changed to: ${partial.repoPath}`);
 
           // Check if the path exists
           try {
@@ -44,10 +44,10 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
           // Try to infer GitHub repo URL from git remote
           try {
             const githubUrl = await getGitRemoteUrl(partial.repoPath);
-            console.info(`Inferred GitHub repo URL: ${githubUrl}`);
+            logger.info(`Inferred GitHub repo URL: ${githubUrl}`);
             partial.githubRepoBaseUrl = githubUrl;
           } catch (error) {
-            console.warn(`Error inferring GitHub repo URL: ${error}`);
+            logger.warn(`Error inferring GitHub repo URL: ${error}`);
             partial.githubRepoBaseUrl = undefined;
           }
         }
@@ -56,13 +56,13 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
         // Return updated config
         return appCfgStore.getValues();
       } catch (error) {
-        console.error("Error updating config:", error);
+        logger.error("Error updating config:", error);
         throw error;
       }
     }
   );
 
-  console.info("All config handlers registered.");
+  logger.info("All config handlers registered.");
 }
 
 /**
@@ -71,5 +71,5 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
 export function cleanupConfigHandlers(): void {
   ipcMain.removeHandler("config:get-app-config");
   ipcMain.removeHandler("config:update-app-config");
-  console.info("Config handlers cleanup complete.");
+  logger.info("Config handlers cleanup complete.");
 }

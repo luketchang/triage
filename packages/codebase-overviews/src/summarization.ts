@@ -1,7 +1,7 @@
 import { logger } from "@triage/common";
 import { generateText, LanguageModelV1 } from "ai";
-import { readFileSync } from "fs";
-import { join } from "path";
+
+import { MERGE_SUMMARIES_EXAMPLE } from "./examples/merge-summaries-example";
 
 /**
  * System prompt specific to the code summarization tasks
@@ -10,19 +10,6 @@ export const SUMMARIZATION_SYSTEM_PROMPT = `
 You are an expert AI assistant that helps analyze codebases and generate comprehensive technical overviews. 
 Your task is to generate detailed summaries of code components and create a unified walkthrough of the entire system.
 `;
-
-/**
- * Loads the example merge summary file
- */
-function loadMergeSummaryExample(): string {
-  try {
-    const examplePath = join(__dirname, "../examples/merge-summaries-example.md");
-    return readFileSync(examplePath, "utf-8");
-  } catch (error) {
-    logger.warn("Failed to load merge summary example:", error);
-    return "";
-  }
-}
 
 /**
  * Generates a prompt for directory summary
@@ -75,10 +62,6 @@ export function createMergeSummariesPrompt(params: {
   for (const [directory, summary] of Object.entries(params.summaries)) {
     summariesStr += `Walkthrough for ${directory}:\n${summary}\n\n`;
   }
-
-  const exampleSection = params.example
-    ? `\nHere is an example of a well-formatted codebase walkthrough to use as a reference:\n\n${params.example}\n\n`
-    : "";
 
   return `
 Create a comprehensive, technically detailed codebase walkthrough based on the component analyses provided. Your walkthrough should provide an in-depth understanding of the entire system's architecture, implementation details, and component interactions. Your response should be well formatted using markdown and easily digestible by an engineer navigating the codebase.
@@ -145,7 +128,7 @@ export async function mergeAllSummaries(
   summaries: Record<string, string>,
   repoFileTree: string
 ): Promise<string> {
-  const example = loadMergeSummaryExample();
+  const example = MERGE_SUMMARIES_EXAMPLE;
   const prompt = createMergeSummariesPrompt({
     systemDescription,
     repoFileTree,
