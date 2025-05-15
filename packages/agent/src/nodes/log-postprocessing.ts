@@ -34,7 +34,7 @@ function createPrompt(params: {
   Rules:
   - A log postprocessing tool call will specify a list of facts. Each fact will have a fact description, a query copied from the previous log context section, a new narrowed time range, and a list of keywords from the log line content that are highlighted in the log search query to support the fact.
   - The new time range should zoom in on the most relevant set of logs to support the fact.
-  - The list of highlighted keywords should have strings with log line content that is in the logs that support the fact. Note that the keywords themselves may be generic. They only serve to highlight the _logs_ that support the fact in the context of the issue, who's attributes may actually be specific to the fact and issue.
+  - The list of highlighted keywords should have strings with log line content that is in the logs that support the fact. Note that the keywords themselves may be generic. They only serve to highlight the _logs_ that support the fact in the context of the issue, whose attributes may actually be specific to the fact and issue.
     - Example: The fact highlights that "ticket1" had its expiration acknowledged. The highlight keyword is just a matcher on the log line content for the right log even though the attributes tell you the full story.
       - Log: [2025-05-02T02:20:22.098Z] INFO [orders] Expiration complete event acknowledged [attributes: data={"orderId":"68142be32a9e4d001970b8e4","price":100,"id":"68142bb37df7bb001968b3f0","title":"ticket1","userId":"68142baa2efd310019a49d48","version":1}, level="info", service="orders", timestamp="2025-05-02T02:20:22.098Z"]
       - Fact: order expiration for "ticket1" was acknowledged

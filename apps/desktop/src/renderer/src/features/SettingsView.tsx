@@ -687,10 +687,7 @@ function SettingsView() {
                       value="overview"
                       className="border border-border rounded-md bg-background-lighter"
                     >
-                      <AccordionTrigger
-                        className="px-3 py-2 hover:no-underline"
-                        chevronPosition="left"
-                      >
+                      <AccordionTrigger className="px-3 py-2 hover:no-underline">
                         {isGeneratingOverview ? (
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium">Generating Overview...</span>
