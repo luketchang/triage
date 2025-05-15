@@ -1,6 +1,7 @@
 import { logger, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
 import { generateText, LanguageModelV1 } from "ai";
+import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
 import { LogSearchStep, PipelineStateManager, StepsType } from "../pipeline/state";
@@ -183,11 +184,11 @@ export class LogSearchAgent {
   }
 
   @timer
-  async invoke(params: {
-    logSearchId: string;
-    logRequest: string;
-    maxIters?: number;
-  }): Promise<LogSearchAgentResponse> {
+  async invoke(params: { logRequest: string; maxIters?: number }): Promise<LogSearchAgentResponse> {
+    logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
+    const logSearchId = uuidv4();
+    this.state.recordHighLevelStep("logSearch", logSearchId);
+
     let response: LogSearchResponse | null = null;
     const maxIters = params.maxIters || MAX_ITERS;
     let currentIter = 0;
@@ -243,7 +244,7 @@ export class LogSearchAgent {
 
         newLogSearchSteps.push(step);
         lastLogSearchStep = step;
-        this.state.addIntermediateStep(step, params.logSearchId);
+        this.state.addIntermediateStep(step, logSearchId);
 
         const lastLogSearchResultsFormatted = formatLogSearchSteps([step]);
         logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);

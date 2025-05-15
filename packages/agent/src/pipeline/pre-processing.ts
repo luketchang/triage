@@ -1,6 +1,3 @@
-import { logger } from "@triage/common";
-import { v4 as uuidv4 } from "uuid";
-
 import { CodeSearchAgent, CodeSearchAgentResponse } from "../nodes/code-search";
 import { LogSearchAgent, LogSearchAgentResponse } from "../nodes/log-search";
 
@@ -34,19 +31,11 @@ export class PreProcessing {
 
   async run(): Promise<void> {
     // TODO: add code search and lazy return joined promise
-    logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
-    const logSearchId = uuidv4();
-    this.state.recordHighLevelStep("logSearch", logSearchId);
     await this.logSearch.invoke({
-      logSearchId,
       logRequest: INITIAL_LOG_REQUEST,
     });
 
-    logger.info("\n\n" + "=".repeat(25) + " Code Search " + "=".repeat(25));
-    const codeSearchId = uuidv4();
-    this.state.recordHighLevelStep("codeSearch", codeSearchId);
     await this.codeSearch.invoke({
-      codeSearchId,
       codeRequest: INITIAL_CODE_REQUEST,
     });
   }

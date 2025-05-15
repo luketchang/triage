@@ -1,5 +1,6 @@
 import { logger, timer } from "@triage/common";
 import { generateText } from "ai";
+import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
 import {
@@ -77,7 +78,11 @@ export class LogPostprocessor {
   }
 
   @timer
-  async invoke(params: { parentId: string }): Promise<LogPostprocessingStep> {
+  async invoke(): Promise<LogPostprocessingStep> {
+    logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
+    const logPostprocessingId = uuidv4();
+    this.state.recordHighLevelStep("logPostprocessing", logPostprocessingId);
+
     const prompt = createPrompt({
       query: this.config.query,
       logLabelsMap: this.config.logLabelsMap,
@@ -139,7 +144,7 @@ export class LogPostprocessor {
         facts: augmentedFacts,
         timestamp: new Date(),
       },
-      params.parentId
+      logPostprocessingId
     );
 
     return {
