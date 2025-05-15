@@ -3,6 +3,7 @@ import { getGitRemoteUrl } from "@triage/common";
 import { ipcMain } from "electron";
 import fs from "fs/promises";
 import { AppConfig, AppConfigStore } from "../../common/AppConfig.js";
+import { registerHandler } from "./register-util.js";
 
 /**
  * Set up all IPC handlers related to configuration
@@ -11,7 +12,7 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
   logger.info("Setting up config handlers...");
 
   // Get all config values for the settings UI
-  ipcMain.handle("config:get-app-config", async (): Promise<AppConfig> => {
+  registerHandler("config:get-app-config", async (): Promise<AppConfig> => {
     try {
       return appCfgStore.getValues();
     } catch (error) {
@@ -21,7 +22,7 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
   });
 
   // Update all config values
-  ipcMain.handle(
+  registerHandler(
     "config:update-app-config",
     async (_event: any, partial: Partial<AppConfig>): Promise<AppConfig> => {
       try {
