@@ -19,7 +19,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
 
   const renderCodeFact = (fact: CodePostprocessingFact, index: number) => {
     if (!appConfig) return null;
-    const githubUrl = filepathToGitHubUrl(appConfig.githubRepoBaseUrl, fact.filepath, {
+    const githubUrl = filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, fact.filepath, {
       startLine: fact.startLine,
       endLine: fact.endLine,
     });
