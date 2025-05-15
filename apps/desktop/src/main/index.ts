@@ -82,8 +82,8 @@ function initApp(mainWindow: BrowserWindow): void {
 
   // Set up all IPC handlers
   setupAgentHandlers(mainWindow, agentCfgStore);
-  setupCodebaseHandlers(mainWindow, appCfgStore);
   setupDbHandlers();
+  setupCodebaseHandlers(mainWindow, appCfgStore);
   setupConfigHandlers(appCfgStore);
   setupObservabilityHandlers(observabilityCfgStore);
 }
