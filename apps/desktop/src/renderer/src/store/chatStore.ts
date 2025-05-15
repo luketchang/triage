@@ -202,10 +202,6 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     });
 
     try {
-      // NOTE: we must get timezone in the renderer process due to its access to access to local system settings
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      console.info("Using timezone:", timezone);
-
       // Call the agent API with message
       const agentChatMessages = convertToAgentChatMessages(updatedMessages);
       const agentMessage = await api.invokeAgent(userInput, agentChatMessages);

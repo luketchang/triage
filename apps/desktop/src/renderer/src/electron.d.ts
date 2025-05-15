@@ -35,7 +35,6 @@ declare global {
        * Invoke the agent with a query and return the result
        * @param query The query to send to the agent
        * @param chatHistory The chat history to send to the agent
-       * @param metadata Metadata for the agent invocation
        * @returns Promise with the agent response
        */
       invokeAgent: (
