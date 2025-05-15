@@ -43,6 +43,8 @@
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-switch": "^1.1.2",
     "@radix-ui/react-tabs": "^1.1.1",
+    "@sentry/electron": "^6.6.0",
+    "@sentry/vite-plugin": "^3.4.0",
     "@triage/agent": "workspace:*",
     "@triage/codebase-overviews": "workspace:*",
     "@triage/common": "workspace:*",

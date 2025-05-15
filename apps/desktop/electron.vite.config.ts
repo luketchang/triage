@@ -1,10 +1,22 @@
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import react from "@vitejs/plugin-react";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import { resolve } from "path";
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    build: {
+      sourcemap: true,
+    },
+    plugins: [
+      externalizeDepsPlugin(),
+      // Put the Sentry vite plugin after all other plugins
+      sentryVitePlugin({
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        org: "triage-hu",
+        project: "electron",
+      }),
+    ],
     // TODO: should we really be importing renderer code in main?
     resolve: {
       alias: {
@@ -13,7 +25,15 @@ export default defineConfig({
     },
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [
+      externalizeDepsPlugin(),
+      // Put the Sentry vite plugin after all other plugins
+      sentryVitePlugin({
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        org: "triage-hu",
+        project: "electron",
+      }),
+    ],
     // preload script must output cjs, so we need this override since output format is esm by default
     build: {
       minify: false,
@@ -26,6 +46,7 @@ export default defineConfig({
           entryFileNames: "[name].cjs",
         },
       },
+      sourcemap: true,
     },
     resolve: {
       alias: {

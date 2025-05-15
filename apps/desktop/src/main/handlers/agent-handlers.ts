@@ -5,6 +5,7 @@ import {
   invokeAgent,
 } from "@triage/agent";
 import { BrowserWindow, ipcMain } from "electron";
+import { registerHandler } from "./register-util.js";
 
 const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -16,7 +17,7 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
   console.info("Setting up agent handlers...");
 
   // Handle agent invocation
-  ipcMain.handle(
+  registerHandler(
     "agent:invoke-agent",
     async (
       _event: any,

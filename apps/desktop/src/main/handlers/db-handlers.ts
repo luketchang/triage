@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
 import { AssistantMessage, ChatMessage, UserMessage } from "../../renderer/src/types/index.js";
 import { DatabaseService } from "../db/service.js";
-
+import { registerHandler } from "./register-util.js";
 // Single instance of database service
 let dbService: DatabaseService | null = null;
 
@@ -15,7 +15,7 @@ export function setupDbHandlers(): void {
   dbService = new DatabaseService();
 
   // Create a new chat
-  ipcMain.handle("db:create-chat", async (): Promise<number | null> => {
+  registerHandler("db:create-chat", async (): Promise<number | null> => {
     console.info("IPC: db:create-chat called");
     if (!dbService) return null;
 
@@ -26,7 +26,7 @@ export function setupDbHandlers(): void {
   });
 
   // Get all chats
-  ipcMain.handle("db:get-all-chats", async (): Promise<{ id: number; createdAt: string }[]> => {
+  registerHandler("db:get-all-chats", async (): Promise<{ id: number; createdAt: string }[]> => {
     console.info("IPC: db:get-all-chats called");
     if (!dbService) return [];
 
@@ -37,7 +37,7 @@ export function setupDbHandlers(): void {
   });
 
   // Save user message
-  ipcMain.handle(
+  registerHandler(
     "db:save-user-message",
     async (_, message: UserMessage): Promise<number | null> => {
       console.info("IPC: db:save-user-message called with:", message);
@@ -58,7 +58,7 @@ export function setupDbHandlers(): void {
   );
 
   // Save assistant message
-  ipcMain.handle(
+  registerHandler(
     "db:save-assistant-message",
     async (_, message: AssistantMessage, chatId: number): Promise<number | null> => {
       console.info("IPC: db:save-assistant-message called");
@@ -72,7 +72,7 @@ export function setupDbHandlers(): void {
   );
 
   // Get chat messages
-  ipcMain.handle("db:get-messages", async (_, chatId: number): Promise<ChatMessage[]> => {
+  registerHandler("db:get-messages", async (_, chatId: number): Promise<ChatMessage[]> => {
     console.info("IPC: db:get-messages called with chatId:", chatId);
     if (!dbService) return [];
 
@@ -83,7 +83,7 @@ export function setupDbHandlers(): void {
   });
 
   // Delete chat and all its messages
-  ipcMain.handle("db:delete-chat", async (_, chatId: number): Promise<boolean> => {
+  registerHandler("db:delete-chat", async (_, chatId: number): Promise<boolean> => {
     console.info("IPC: db:delete-chat called");
     if (!dbService) return false;
 

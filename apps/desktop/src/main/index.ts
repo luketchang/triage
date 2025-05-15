@@ -1,4 +1,5 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
+import * as Sentry from "@sentry/electron";
 import { AgentConfigStore } from "@triage/agent";
 import { ObservabilityConfigStore } from "@triage/observability";
 import { app, BrowserWindow, shell } from "electron";
@@ -18,6 +19,12 @@ import {
   setupDbHandlers,
   setupObservabilityHandlers,
 } from "./handlers/index.js";
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+  debug: true,
+});
 
 /**
  * Create the main application window

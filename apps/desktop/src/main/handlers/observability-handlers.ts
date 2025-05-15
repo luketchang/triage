@@ -1,5 +1,4 @@
 import { ObservabilityConfigStore } from "@triage/observability";
-import { ipcMain } from "electron";
 import {
   FacetData,
   getObservabilityPlatform,
@@ -8,7 +7,7 @@ import {
   TraceQueryParams,
   TracesWithPagination,
 } from "../../renderer/src/types/index.js";
-
+import { registerHandler } from "./register-util.js";
 /**
  * Set up all IPC handlers related to observability (logs, traces)
  */
@@ -16,7 +15,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
   console.info("Setting up observability handlers...");
 
   // Fetch logs based on query parameters
-  ipcMain.handle(
+  registerHandler(
     "observability:fetch-logs",
     async (_event: any, params: LogQueryParams): Promise<LogsWithPagination> => {
       try {
@@ -43,7 +42,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
   );
 
   // Get log facet values for a given time range
-  ipcMain.handle(
+  registerHandler(
     "observability:get-logs-facet-values",
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
@@ -71,7 +70,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
   );
 
   // Fetch traces based on query parameters
-  ipcMain.handle(
+  registerHandler(
     "observability:fetch-traces",
     async (_event: any, params: TraceQueryParams): Promise<TracesWithPagination> => {
       try {
@@ -98,7 +97,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
   );
 
   // Get span facet values for a given time range
-  ipcMain.handle(
+  registerHandler(
     "observability:get-spans-facet-values",
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
