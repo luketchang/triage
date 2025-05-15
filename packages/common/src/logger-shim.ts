@@ -1,4 +1,3 @@
-// logger-shim.ts
 import { Logger } from "winston";
 
 import { getLogger } from "./logger";
