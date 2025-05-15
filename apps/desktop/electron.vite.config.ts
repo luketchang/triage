@@ -7,7 +7,7 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      minify: false, // For easier debugging
+      minify: true,
       sourcemap: true,
       rollupOptions: {
         input: {
