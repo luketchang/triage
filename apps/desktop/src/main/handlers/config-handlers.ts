@@ -11,8 +11,8 @@ export function setupConfigHandlers(appCfgStore: AppConfigStore): void {
   console.info("Setting up config handlers...");
 
   // Get all config values for the settings UI
-  ipcMain.handle("config:get-app-config", async (): Promise<AppConfig> => {
-    throw new Error("josh error ipc 2");
+  registerHandler("config:get-app-config", async (): Promise<AppConfig> => {
+    throw new Error("josh error ipc 3");
     try {
       console.info("Fetching all config values");
       return appCfgStore.getValues();
