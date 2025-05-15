@@ -30,7 +30,7 @@ async function runMigrations() {
   const db = drizzle(sqlite);
 
   migrate(db, {
-    migrationsFolder: MIGRATIONS_DIR,
+    migrationsFolder: path.join(path.dirname(new URL(import.meta.url).pathname), "..", "drizzle"),
   });
 
   console.info("✅ Migrations complete.");
