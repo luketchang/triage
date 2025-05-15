@@ -48,19 +48,21 @@ export class Reasoning {
         logger.info(`Reasoning response: ${JSON.stringify(reasoningResponse)}`);
 
         if (reasoningResponse.type === "subAgentCalls") {
-          for (const subAgentCall of reasoningResponse.subAgentCalls) {
-            if (subAgentCall.type === "logRequest") {
-              await this.logSearchAgent.invoke({
-                logRequest: subAgentCall.request,
-              });
-            } else if (subAgentCall.type === "codeRequest") {
-              await this.codeSearchAgent.invoke({
-                codeRequest: subAgentCall.request,
-              });
-            } else {
-              throw new Error(`Unknown tool call type`);
-            }
-          }
+          await Promise.all(
+            reasoningResponse.subAgentCalls.map((subAgentCall) => {
+              if (subAgentCall.type === "logRequest") {
+                return this.logSearchAgent.invoke({
+                  logRequest: subAgentCall.request,
+                });
+              } else if (subAgentCall.type === "codeRequest") {
+                return this.codeSearchAgent.invoke({
+                  codeRequest: subAgentCall.request,
+                });
+              } else {
+                throw new Error(`Unknown tool call type`);
+              }
+            })
+          );
         } else {
           lastReasoningResponse = reasoningResponse;
           break;
