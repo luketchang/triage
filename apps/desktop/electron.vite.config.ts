@@ -1,3 +1,4 @@
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import react from "@vitejs/plugin-react";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import { builtinModules } from "module";
@@ -5,7 +6,6 @@ import { resolve } from "path";
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
     build: {
       minify: true,
       sourcemap: true,
@@ -33,6 +33,14 @@ export default defineConfig({
         },
       },
     },
+    plugins: [
+      externalizeDepsPlugin(),
+      sentryVitePlugin({
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        org: "triage-hu",
+        project: "electron",
+      }),
+    ],
     resolve: {
       alias: {
         "@renderer": resolve(__dirname, "src/renderer/src"),
@@ -40,7 +48,6 @@ export default defineConfig({
     },
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
     // preload script must output cjs, so we need this override since output format is esm by default
     build: {
       minify: true,
@@ -53,7 +60,17 @@ export default defineConfig({
           entryFileNames: "[name].cjs",
         },
       },
+      sourcemap: true,
     },
+    plugins: [
+      externalizeDepsPlugin(),
+      // Put the Sentry vite plugin after all other plugins
+      sentryVitePlugin({
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        org: "triage-hu",
+        project: "electron",
+      }),
+    ],
     resolve: {
       alias: {
         "@renderer": resolve(__dirname, "src/renderer/src"),
