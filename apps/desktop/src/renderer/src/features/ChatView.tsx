@@ -12,11 +12,12 @@ import { User } from "lucide-react";
 import { useChatStore, useUIStore } from "../store/index.js";
 
 function ChatView() {
-  // Get chat state from store
-  const { messages, isThinking, unregisterFromAgentUpdates } = useChatStore();
-
-  // Get UI state from store
-  const { showFactsSidebar, activeSidebarMessageId, showFactsForMessage } = useUIStore();
+  const messages = useChatStore.use.messages();
+  const isThinking = useChatStore.use.isThinking();
+  const unregisterFromAgentUpdates = useChatStore.use.unregisterFromAgentUpdates();
+  const showFactsSidebar = useUIStore.use.showFactsSidebar();
+  const activeSidebarMessageId = useUIStore.use.activeSidebarMessageId();
+  const showFactsForMessage = useUIStore.use.showFactsForMessage();
 
   // Facts sidebar state
   const [logFacts, setLogFacts] = useState<LogPostprocessingFact[]>([]);
@@ -24,9 +25,8 @@ function ChatView() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll behavior for messages
+  // Auto-scroll only when the last message is from the user
   useEffect(() => {
-    // Auto-scroll only when the last message is from the user
     const last = messages[messages.length - 1];
     if (last?.role === "user") {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -34,12 +34,7 @@ function ChatView() {
   }, [messages]);
 
   // Cleanup agent update listeners when component unmounts
-  useEffect(() => {
-    return () => {
-      // Ensure we don't have lingering agent update listeners
-      unregisterFromAgentUpdates();
-    };
-  }, [unregisterFromAgentUpdates]);
+  useEffect(() => unregisterFromAgentUpdates, [unregisterFromAgentUpdates]);
 
   // Function to open facts sidebar for a specific message
   const openFactsSidebar = (

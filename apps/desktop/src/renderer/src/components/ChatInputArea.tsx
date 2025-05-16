@@ -9,7 +9,9 @@ interface ChatInputAreaProps {
 }
 
 function ChatInputArea({ isThinking }: ChatInputAreaProps) {
-  const { userInput, setUserInput, sendMessage } = useChatStore();
+  const userInput = useChatStore.use.userInput();
+  const setUserInput = useChatStore.use.setUserInput();
+  const sendMessage = useChatStore.use.sendMessage();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea function

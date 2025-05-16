@@ -2,6 +2,7 @@ import { MoreHorizontalIcon, Trash2Icon } from "lucide-react";
 import { useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
 import { ChatIcon, SettingsIcon } from "../icons/index.jsx";
+import { useChatStore, useUIStore } from "../store/index.js";
 import { Button } from "./ui/Button.js";
 import {
   DropdownMenu,
@@ -11,13 +12,14 @@ import {
 } from "./ui/DropdownMenu.jsx";
 import { ScrollArea } from "./ui/ScrollArea.jsx";
 
-// Import stores
-import { useChatStore, useUIStore } from "../store/index.js";
-
 function NavigationSidebar() {
-  // Get state from stores
-  const { chats, currentChatId, selectChat, loadChats, deleteChat } = useChatStore();
-  const { activeTab, setActiveTab } = useUIStore();
+  const chats = useChatStore.use.chats();
+  const currentChatId = useChatStore.use.currentChatId();
+  const selectChat = useChatStore.use.selectChat();
+  const loadChats = useChatStore.use.loadChats();
+  const deleteChat = useChatStore.use.deleteChat();
+  const activeTab = useUIStore.use.activeTab();
+  const setActiveTab = useUIStore.use.setActiveTab();
 
   // Ensure chats are loaded when component mounts
   useEffect(() => {

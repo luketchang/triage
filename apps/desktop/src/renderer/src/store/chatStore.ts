@@ -5,6 +5,7 @@ import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { handleHighLevelUpdate, handleIntermediateUpdate } from "../utils/agentUpdateHandlers.js";
 import { generateId } from "../utils/formatters.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
+import { createSelectors } from "./util.js";
 
 interface ChatState {
   // Chat data
@@ -29,7 +30,7 @@ interface ChatState {
   sendMessage: () => Promise<void>;
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
+const useChatStoreBase = create<ChatState>((set, get) => ({
   // Initial state
   chats: [],
   currentChatId: undefined,
@@ -170,7 +171,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Handle streamed updates from the agent
     const updater = new MessageUpdater(assistantMessage, (updatedAssistantMessage) => {
-      // Update the assistant message with the updated data
+      // Update the latest assistant message with the updated data
       set((state) => ({
         messages: state.messages.map((message) => {
           if (message.role === "assistant" && message.id === assistantMessage.id) {
@@ -264,3 +265,4 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
   },
 }));
+export const useChatStore = createSelectors(useChatStoreBase);

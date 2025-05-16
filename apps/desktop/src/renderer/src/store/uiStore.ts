@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createSelectors } from "./util";
 
 // Interface for main content tabs
 export type TabType = "chat" | "settings";
@@ -17,7 +18,7 @@ interface UIState {
   showFactsForMessage: (messageId: string | null) => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+const useUIStoreBase = create<UIState>((set) => ({
   // Initial state
   activeTab: "chat",
   showFactsSidebar: false,
@@ -37,3 +38,4 @@ export const useUIStore = create<UIState>((set) => ({
       showFactsSidebar: messageId !== null,
     }),
 }));
+export const useUIStore = createSelectors(useUIStoreBase);
