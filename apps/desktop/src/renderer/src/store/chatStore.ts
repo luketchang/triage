@@ -10,18 +10,14 @@ interface ChatState {
   // Chat data
   chats: Chat[];
   currentChatId: number | undefined;
+
+  // Chat-specific state
   messages: ChatMessage[];
   newMessage: string;
   isThinking: boolean;
-
-  // Current message updater for streaming updates
-  messageUpdater: MessageUpdater | null;
-
-  // Agent update state
   unregisterAgent: (() => void) | null;
 
   // Agent update functions
-  registerForAgentUpdates: () => void;
   unregisterFromAgentUpdates: () => void;
 
   // Actions
@@ -41,7 +37,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   newMessage: "",
   isThinking: false,
   unregisterAgent: null,
-  messageUpdater: null,
 
   loadChats: async () => {
     try {
@@ -173,7 +168,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const updatedMessagesWithAssistant = [...updatedMessages, assistantMessage];
     set({ messages: updatedMessagesWithAssistant });
 
-    // Create a message updater to handle updates
+    // Handle streamed updates from the agent
     const updater = new MessageUpdater(assistantMessage, (updatedAssistantMessage) => {
       // Update the assistant message with the updated data
       set((state) => ({
@@ -188,11 +183,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }),
       }));
     });
-
-    set({ messageUpdater: updater });
-
-    // Register for agent updates if not already registered
-    get().registerForAgentUpdates();
+    const unregister = api.onAgentUpdate((update) => {
+      console.info("Received agent update:", update);
+      if (update.type === "highLevelUpdate") {
+        // A new high-level step is starting
+        handleHighLevelUpdate(updater, update);
+      } else if (update.type === "intermediateUpdate") {
+        // An intermediate update for an existing step
+        handleIntermediateUpdate(updater, update);
+      }
+    });
+    set({
+      unregisterAgent: unregister,
+    });
 
     try {
       // Call the agent API with message
@@ -201,89 +204,47 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       if (agentMessage && !agentMessage.error) {
         // Update the assistant message with the response
-        const { messageUpdater } = get();
-        if (messageUpdater) {
-          messageUpdater.update((cell) => ({
-            ...cell,
-            response:
-              agentMessage.response || "I processed your request but got no response content.",
-            // preserve existing stages from streaming; do not override here
-            // TODO: once we add back agent steps we should save
-          }));
-        }
+        updater.update((cell) => ({
+          ...cell,
+          response: agentMessage.response || "I processed your request but got no response.",
+          // preserve existing stages from streaming; do not override here
+          // TODO: once we add back agent steps we should save
+        }));
       } else {
         // Handle error response
-        const { messageUpdater } = get();
-        if (messageUpdater) {
-          messageUpdater.update((cell) => ({
-            ...cell,
-            response: "Sorry, there was an error processing your request.",
-            error: agentMessage?.error || "Sorry, there was an error processing your request.",
-          }));
-        }
+        updater.update((cell) => ({
+          ...cell,
+          response: "Sorry, there was an error processing your request.",
+          error: agentMessage?.error || "Sorry, there was an error processing your request.",
+        }));
       }
     } catch (error) {
       console.error("Error in chat API call:", error);
-
-      // Get error message string
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : typeof error === "object" && error !== null
-            ? JSON.stringify(error)
-            : String(error);
-
-      // Update assistant message with error
-      const { messageUpdater } = get();
-      if (messageUpdater) {
-        messageUpdater.update((cell) => ({
-          ...cell,
-          response: "Sorry, I encountered an error processing your request.",
-          error: errorMessage,
-        }));
-      }
+      // Handle error response
+      updater.update((cell) => ({
+        ...cell,
+        response: "Sorry, there was an error processing your request.",
+        error:
+          error instanceof Error
+            ? error.message
+            : typeof error === "object" && error !== null
+              ? JSON.stringify(error)
+              : String(error),
+      }));
     } finally {
       // Save assistant message
       const state = get();
-      console.log("Saving assistant message", JSON.stringify(state.messageUpdater!.getMessage()));
-      api.saveAssistantMessage(state.messageUpdater!.getMessage(), state.currentChatId!);
+      console.log("Saving assistant message", JSON.stringify(updater.getMessage()));
+      api.saveAssistantMessage(updater.getMessage(), state.currentChatId!);
 
       // Clear thinking state and message updater
       set({
         isThinking: false,
-        messageUpdater: null,
       });
 
       // Unregister from agent updates
       state.unregisterFromAgentUpdates();
     }
-  },
-
-  /**
-   * Register for agent streaming updates
-   * This is called when a message is sent and a messageUpdater is created
-   */
-  registerForAgentUpdates: () => {
-    const unregister = api.onAgentUpdate((update) => {
-      const { messageUpdater } = get();
-      if (!messageUpdater) return;
-
-      console.info("Received agent update:", update);
-
-      // Process the update based on its type
-      if (update.type === "highLevelUpdate") {
-        // A new high-level step is starting
-        handleHighLevelUpdate(messageUpdater, update);
-      } else if (update.type === "intermediateUpdate") {
-        // An intermediate update for an existing step
-        handleIntermediateUpdate(messageUpdater, update);
-      }
-    });
-
-    // Store the registered state and unregister function
-    set({
-      unregisterAgent: unregister,
-    });
   },
 
   /**
