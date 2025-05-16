@@ -1,24 +1,29 @@
+import { User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import CellView from "../components/CellView.js";
 import ChatInputArea from "../components/ChatInputArea.js";
 import FactsSidebar from "../components/FactsSidebar.js";
-import { Button } from "../components/ui/Button.jsx";
 import { Markdown } from "../components/ui/Markdown.js";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
 import { cn } from "../lib/utils.js";
+import { useChatStore, useUIStore } from "../store/index.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
-// Import stores and hooks
-import { User } from "lucide-react";
-import { useChatStore, useUIStore } from "../store/index.js";
-
 function ChatView() {
-  // Get chat state from store
-  const { messages, isThinking, contextItems, removeContextItem, unregisterFromAgentUpdates } =
-    useChatStore();
-
-  // Get UI state from store
-  const { showFactsSidebar, activeSidebarMessageId, showFactsForMessage } = useUIStore();
+  const currentChatId = useChatStore((state) => state.currentChatId);
+  const messages = useChatStore((state) =>
+    state.currentChatId !== undefined
+      ? state.chatDetailsById[state.currentChatId]?.messages
+      : undefined
+  );
+  const isThinking = useChatStore((state) =>
+    state.currentChatId !== undefined
+      ? state.chatDetailsById[state.currentChatId]?.isThinking
+      : false
+  );
+  const showFactsSidebar = useUIStore.use.showFactsSidebar();
+  const activeSidebarMessageId = useUIStore.use.activeSidebarMessageId();
+  const showFactsForMessage = useUIStore.use.showFactsForMessage();
 
   // Facts sidebar state
   const [logFacts, setLogFacts] = useState<LogPostprocessingFact[]>([]);
@@ -26,22 +31,14 @@ function ChatView() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll behavior for messages
+  // Auto-scroll only when the last message is from the user
   useEffect(() => {
-    // Auto-scroll only when the last message is from the user
+    if (!messages) return;
     const last = messages[messages.length - 1];
     if (last?.role === "user") {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
-
-  // Cleanup agent update listeners when component unmounts
-  useEffect(() => {
-    return () => {
-      // Ensure we don't have lingering agent update listeners
-      unregisterFromAgentUpdates();
-    };
-  }, [unregisterFromAgentUpdates]);
 
   // Function to open facts sidebar for a specific message
   const openFactsSidebar = (
@@ -82,7 +79,7 @@ function ChatView() {
             scrollHideDelay={0}
           >
             <div className="flex flex-col justify-start h-auto w-full">
-              {messages.map((message) =>
+              {messages?.map((message) =>
                 message.role === "user" ? (
                   <div key={`user-${message.id}`} className="py-4 px-4 bg-background-assistant">
                     <div className="flex items-start max-w-[90%] mx-auto w-full">
@@ -131,33 +128,7 @@ function ChatView() {
         </div>
       </div>
 
-      {/* Context items display */}
-      {contextItems && contextItems.length > 0 && (
-        <div className="px-4 py-2 border-t border-border bg-background-lighter">
-          <div className="flex flex-wrap gap-2 max-w-[75%] mx-auto">
-            {contextItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center bg-background-alt rounded-lg px-2 py-1 text-xs gap-2 shadow-sm"
-              >
-                <span className="text-xs font-medium text-primary-dark">{item.type}</span>
-                <span className="text-gray-300 truncate max-w-[160px]">{item.title}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-4 w-4 p-0 ml-1 hover:bg-background-lighter text-gray-400 hover:text-white"
-                  onClick={() => removeContextItem(item.id)}
-                >
-                  ×
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Input area */}
-      <ChatInputArea isThinking={isThinking} />
+      <ChatInputArea />
     </div>
   );
 }

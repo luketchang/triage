@@ -1,23 +1,15 @@
-import "./styles/globals.css";
-
-// Components
 import NavigationSidebar from "./components/NavigationSidebar.js";
-
-// Feature Views
-import ChatView from "./features/ChatView.js";
-
-// Context Provider
 import { AppConfigProvider } from "./context/AppConfigContext.js";
+import ChatView from "./features/ChatView.js";
 import SettingsView from "./features/SettingsView.js";
-import "./styles/globals.css";
-
-// Stores
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts.js";
 import { useUIStore } from "./store/index.js";
+import "./styles/globals.css";
 
 function App(): JSX.Element {
-  // Get required state from stores
-  const { activeTab, showFactsSidebar, toggleFactsSidebar } = useUIStore();
+  const activeTab = useUIStore.use.activeTab();
+  const showFactsSidebar = useUIStore.use.showFactsSidebar();
+  const toggleFactsSidebar = useUIStore.use.toggleFactsSidebar();
 
   // Set up keyboard shortcuts
   useKeyboardShortcuts([

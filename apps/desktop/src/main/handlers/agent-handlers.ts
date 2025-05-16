@@ -56,6 +56,10 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
     }
   );
 
+  window.on("close", () => {
+    ipcMain.removeAllListeners("agent:invoke-agent");
+  });
+
   logger.info("All agent handlers registered.");
 }
 

@@ -1,111 +1,41 @@
 import { create } from "zustand";
 import api from "../services/api.js";
-import { AssistantMessage, Chat, ChatMessage, ContextItem, UserMessage } from "../types/index.js";
+import { AssistantMessage, Chat, ChatMessage, UserMessage } from "../types/index.js";
 import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { handleHighLevelUpdate, handleIntermediateUpdate } from "../utils/agentUpdateHandlers.js";
 import { generateId } from "../utils/formatters.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
+import { createSelectors } from "./util.js";
 
-// Define the Chat store state
-interface ChatState {
-  // Chat data
-  messages: ChatMessage[];
-  currentChatId: number | undefined;
-  chats: Chat[];
-  newMessage: string;
-  isThinking: boolean;
-
-  // Context items for current chat
-  contextItems: ContextItem[];
-
-  // Current message updater for streaming updates
-  messageUpdater: MessageUpdater | null;
-  savedMessageIds: Set<string>;
-
-  // Agent update state
-  isRegisteredForAgentUpdates: boolean;
-  unregisterAgent: (() => void) | null;
-
-  // Agent update functions
-  registerForAgentUpdates: () => void;
-  unregisterFromAgentUpdates: () => void;
-
-  // Actions
-  setNewMessage: (message: string) => void;
-  setMessages: (messages: ChatMessage[]) => void;
-  selectChat: (chatId: number | undefined) => void;
-  createChat: () => Promise<number | undefined>;
-  loadChats: () => Promise<void>;
-  sendMessage: () => Promise<void>;
-  deleteChat: (chatId: number) => Promise<void>;
-  setContextItems: (items: ContextItem[]) => void;
-  removeContextItem: (id: string) => void;
+export const NO_CHAT_SELECTED = -1;
+export interface ChatDetails {
+  messages?: ChatMessage[];
+  userInput?: string;
+  isThinking?: boolean;
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
+interface ChatState {
+  // List of all chats
+  chats: Chat[];
+  // The currently selected chat
+  currentChatId: number;
+  // Chat details by chatId, only loaded when selected
+  chatDetailsById: Record<number, ChatDetails>;
+
+  // Actions
+  loadChats: () => Promise<void>;
+  createChat: () => Promise<Chat | undefined>;
+  selectChat: (chatId: number | undefined) => void;
+  deleteChat: (chatId: number) => Promise<boolean>;
+  setUserInput: (message: string) => void;
+  sendMessage: () => Promise<void>;
+}
+
+const useChatStoreBase = create<ChatState>((set, get) => ({
   // Initial state
-  messages: [],
-  currentChatId: undefined,
   chats: [],
-  newMessage: "",
-  isThinking: false,
-  contextItems: [],
-  unregisterAgent: null,
-  messageUpdater: null,
-  savedMessageIds: new Set<string>(),
-  isRegisteredForAgentUpdates: false,
-
-  // Setters
-  setNewMessage: (message: string) => set({ newMessage: message }),
-
-  setMessages: (messages: ChatMessage[]) => set({ messages }),
-
-  selectChat: async (chatId: number | undefined) => {
-    set({ currentChatId: chatId });
-
-    // If selecting empty chat (0) or undefined, clear messages
-    if (!chatId || chatId === 0) {
-      set({ messages: [] });
-      return;
-    }
-
-    // Otherwise, load messages for the selected chat
-    try {
-      const savedMessages = await api.loadChatMessages(chatId);
-      if (savedMessages && savedMessages.length > 0) {
-        const savedIds = new Set<string>();
-        savedMessages.forEach((msg) => savedIds.add(msg.id));
-
-        set({
-          messages: savedMessages,
-          savedMessageIds: savedIds,
-        });
-      } else {
-        set({ messages: [] });
-      }
-    } catch (error) {
-      console.error("Error loading saved messages:", error);
-      set({ messages: [] });
-    }
-  },
-
-  createChat: async (): Promise<number | undefined> => {
-    try {
-      console.info("Creating new chat via API");
-      const newChatId = await api.createChat();
-
-      console.info("Created new chat with ID:", newChatId);
-      set({ currentChatId: newChatId });
-
-      // Refresh the chat list
-      await get().loadChats();
-
-      return newChatId;
-    } catch (error) {
-      console.error("Error creating new chat:", error);
-      return undefined;
-    }
-  },
+  currentChatId: NO_CHAT_SELECTED,
+  chatDetailsById: {},
 
   loadChats: async () => {
     try {
@@ -116,48 +46,104 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
+  createChat: async (): Promise<Chat | undefined> => {
+    try {
+      const newChat = await api.createChat();
+      console.info("Created new chat with ID:", newChat.id);
+      set((state) => ({
+        chats: [newChat, ...state.chats],
+        currentChatId: newChat.id,
+      }));
+      return newChat;
+    } catch (error) {
+      console.error("Error creating new chat:", error);
+      return undefined;
+    }
+  },
+
+  selectChat: async (chatId: number | undefined) => {
+    set({ currentChatId: chatId });
+    // Load messages for selected chat if not already loaded
+    if (chatId && get().chatDetailsById[chatId] === undefined) {
+      try {
+        const messages = await api.loadChatMessages(chatId);
+        set((state) => ({
+          chatDetailsById: {
+            ...state.chatDetailsById,
+            [chatId]: {
+              messages,
+              userInput: "",
+              isThinking: false,
+            },
+          },
+        }));
+      } catch (error) {
+        console.error("Error loading saved messages:", error);
+      }
+    }
+  },
+
+  deleteChat: async (chatId: number) => {
+    let success = false;
+    try {
+      success = await api.deleteChat(chatId);
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+    }
+    if (success) {
+      set((state) => {
+        const newChatDetailsById = { ...state.chatDetailsById };
+        delete newChatDetailsById[chatId];
+        return {
+          currentChatId: state.currentChatId === chatId ? NO_CHAT_SELECTED : state.currentChatId,
+          chats: state.chats.filter((chat) => chat.id !== chatId),
+          chatDetailsById: newChatDetailsById,
+        };
+      });
+    }
+    return success;
+  },
+
+  setUserInput: (message: string) => {
+    set((state) => ({
+      chatDetailsById: {
+        ...state.chatDetailsById,
+        [state.currentChatId]: {
+          ...state.chatDetailsById[state.currentChatId],
+          userInput: message,
+        },
+      },
+    }));
+  },
+
   sendMessage: async () => {
-    const { newMessage, messages, currentChatId, contextItems, isThinking } = get();
+    const { currentChatId, chatDetailsById } = get();
+    const chatDetails = chatDetailsById[currentChatId];
+    const { userInput, messages, isThinking } = chatDetails;
 
     // Don't send if there's no message or if we're already thinking
-    if (!newMessage.trim() || isThinking) return;
+    if (!userInput?.trim() || isThinking) return;
 
     let chatId = currentChatId;
-    let updatedMessages = [...messages];
-
-    // If no chat is selected or it's the "empty" chat (0), create a new one
-    if (!chatId || chatId === 0) {
-      chatId = await get().createChat();
-      if (chatId === undefined) return; // Failed to create chat
+    // If no chat is selected, create a new one
+    if (chatId === NO_CHAT_SELECTED) {
+      const chat = await get().createChat();
+      if (!chat) return; // Failed to create chat
+      chatId = chat.id;
     }
 
-    // Create a new user message with context items
+    // Create a new user and assistant message
     const userMessage: UserMessage = {
       id: generateId(),
       role: "user",
       timestamp: new Date(),
-      content: newMessage,
-      contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
+      content: userInput,
     };
-
-    updatedMessages = [...updatedMessages, userMessage];
-
-    // Update state with new message and clear input/context
-    set({
-      messages: updatedMessages,
-      newMessage: "",
-      contextItems: [],
-      isThinking: true,
-    });
-
-    // Save the user message
     try {
       await api.saveUserMessage(userMessage, chatId);
     } catch (error) {
       console.error("Error saving user message:", error);
     }
-
-    // Create assistant message
     const assistantMessage: AssistantMessage = {
       id: generateId(),
       role: "assistant",
@@ -165,172 +151,109 @@ export const useChatStore = create<ChatState>((set, get) => ({
       response: "Thinking...",
       stages: [],
     };
-
-    // Add assistant message to chat
+    const updatedMessages = [...(messages || []), userMessage];
     const updatedMessagesWithAssistant = [...updatedMessages, assistantMessage];
-    set({ messages: updatedMessagesWithAssistant });
 
-    // Create a message updater to handle updates
-    const updater = new MessageUpdater(assistantMessage, (updatedAssistantMessage) => {
-      // Update the assistant message with the updated data
-      set((state) => ({
-        messages: state.messages.map((message) => {
-          if (message.role === "assistant" && message.id === assistantMessage.id) {
-            return {
-              ...message,
-              ...updatedAssistantMessage,
-            };
-          }
-          return message;
-        }),
-      }));
+    // Update state with new user/assistant message and clear input
+    set((state) => {
+      const newChatDetailsById = {
+        ...state.chatDetailsById,
+        [chatId]: {
+          ...state.chatDetailsById[chatId],
+          messages: updatedMessagesWithAssistant,
+          userInput: "",
+          isThinking: true,
+        },
+      };
+      // If no chat was selected when the message was sent, we need to clear the
+      // user input on the "new chat" screen.
+      if (currentChatId === NO_CHAT_SELECTED) {
+        delete newChatDetailsById[NO_CHAT_SELECTED];
+      }
+      return { chatDetailsById: newChatDetailsById };
     });
 
-    set({ messageUpdater: updater });
-
-    // Register for agent updates if not already registered
-    get().registerForAgentUpdates();
+    // Handle streamed updates from the agent
+    const updater = new MessageUpdater(assistantMessage, (updatedAssistantMessage) => {
+      set((state) => ({
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [chatId]: {
+            ...state.chatDetailsById[chatId],
+            // Update the last assistant message in this chat with updatedAssistantMessage
+            messages: state.chatDetailsById[chatId].messages!.map((message) =>
+              message.role === "assistant" && message.id === assistantMessage.id
+                ? { ...message, ...updatedAssistantMessage }
+                : message
+            ),
+          },
+        },
+      }));
+    });
+    const unregisterUpdater = api.onAgentUpdate((update) => {
+      console.info("Received agent update:", update);
+      if (update.type === "highLevelUpdate") {
+        // A new high-level step is starting
+        handleHighLevelUpdate(updater, update);
+      } else if (update.type === "intermediateUpdate") {
+        // An intermediate update for an existing step
+        handleIntermediateUpdate(updater, update);
+      }
+    });
 
     try {
       // Call the agent API with message
       const agentChatMessages = convertToAgentChatMessages(updatedMessages);
-      const agentMessage = await api.invokeAgent(newMessage, agentChatMessages);
+      const agentMessage = await api.invokeAgent(userInput, agentChatMessages);
 
       if (agentMessage && !agentMessage.error) {
         // Update the assistant message with the response
-        const { messageUpdater } = get();
-        if (messageUpdater) {
-          messageUpdater.update((cell) => ({
-            ...cell,
-            response:
-              agentMessage.response || "I processed your request but got no response content.",
-            // preserve existing stages from streaming; do not override here
-            // TODO: once we add back agent steps we should save
-          }));
-        }
+        updater.update((cell) => ({
+          ...cell,
+          response: agentMessage.response || "I processed your request but got no response.",
+          // preserve existing stages from streaming; do not override here
+          // TODO: once we add back agent steps we should save
+        }));
       } else {
         // Handle error response
-        const { messageUpdater } = get();
-        if (messageUpdater) {
-          messageUpdater.update((cell) => ({
-            ...cell,
-            response: "Sorry, I encountered an error processing your request.",
-            error: agentMessage?.error || "Sorry, I encountered an error processing your request.",
-          }));
-        }
+        updater.update((cell) => ({
+          ...cell,
+          response: "Sorry, there was an error processing your request.",
+          error: agentMessage?.error || "Sorry, there was an error processing your request.",
+        }));
       }
     } catch (error) {
       console.error("Error in chat API call:", error);
-
-      // Get error message string
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : typeof error === "object" && error !== null
-            ? JSON.stringify(error)
-            : String(error);
-
-      // Update assistant message with error
-      const { messageUpdater } = get();
-      if (messageUpdater) {
-        messageUpdater.update((cell) => ({
-          ...cell,
-          response: "Sorry, I encountered an error processing your request.",
-          error: errorMessage,
-        }));
-      }
+      // Handle error response
+      updater.update((cell) => ({
+        ...cell,
+        response: "Sorry, there was an error processing your request.",
+        error:
+          error instanceof Error
+            ? error.message
+            : typeof error === "object" && error !== null
+              ? JSON.stringify(error)
+              : String(error),
+      }));
     } finally {
       // Save assistant message
-      const state = get();
-      console.log("Saving assistant message", JSON.stringify(state.messageUpdater!.getMessage()));
-      api.saveAssistantMessage(state.messageUpdater!.getMessage(), state.currentChatId!);
+      console.log("Saving assistant message", JSON.stringify(updater.getMessage()));
+      api.saveAssistantMessage(updater.getMessage(), chatId);
 
-      // Clear thinking state and message updater
-      set({
-        isThinking: false,
-        messageUpdater: null,
-      });
+      // Clear thinking state for chat
+      set((state) => ({
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [chatId]: {
+            ...state.chatDetailsById[chatId],
+            isThinking: false,
+          },
+        },
+      }));
 
       // Unregister from agent updates
-      state.unregisterFromAgentUpdates();
+      unregisterUpdater();
     }
-  },
-
-  deleteChat: async (chatId: number) => {
-    try {
-      const success = await api.deleteChat(chatId);
-      if (success) {
-        const state = get();
-        // If we're deleting the currently selected chat, reset UI
-        if (state.currentChatId === chatId) {
-          set({
-            currentChatId: undefined,
-            messages: [],
-            savedMessageIds: new Set(),
-          });
-        }
-
-        // Reload the chat list to update sidebar
-        await state.loadChats();
-      }
-    } catch (error) {
-      console.error("Error deleting chat:", error);
-    }
-  },
-
-  setContextItems: (items: ContextItem[]) => set({ contextItems: items }),
-
-  removeContextItem: (id: string) =>
-    set((state) => ({
-      contextItems: state.contextItems.filter((item) => item.id !== id),
-    })),
-
-  /**
-   * Register for agent streaming updates
-   * This is called when a message is sent and a messageUpdater is created
-   */
-  registerForAgentUpdates: () => {
-    // Don't register if already registered
-    if (get().isRegisteredForAgentUpdates) return;
-
-    const unregister = api.onAgentUpdate((update) => {
-      const { messageUpdater } = get();
-      if (!messageUpdater) return;
-
-      console.info("Received agent update:", update);
-
-      // Process the update based on its type
-      if (update.type === "highLevelUpdate") {
-        // A new high-level step is starting
-        handleHighLevelUpdate(messageUpdater, update);
-      } else if (update.type === "intermediateUpdate") {
-        // An intermediate update for an existing step
-        handleIntermediateUpdate(messageUpdater, update);
-      }
-    });
-
-    // Store the registered state and unregister function
-    set({
-      isRegisteredForAgentUpdates: true,
-      unregisterAgent: unregister,
-    });
-  },
-
-  /**
-   * Unregister from agent updates
-   * This is called when message processing is complete
-   */
-  unregisterFromAgentUpdates: () => {
-    // Call the unregister function if it exists
-    const { unregisterAgent } = get();
-    if (unregisterAgent) {
-      unregisterAgent();
-    }
-
-    // Reset the agent update state
-    set({
-      isRegisteredForAgentUpdates: false,
-      unregisterAgent: null,
-    });
   },
 }));
+export const useChatStore = createSelectors(useChatStoreBase);

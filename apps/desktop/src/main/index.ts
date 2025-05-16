@@ -151,7 +151,7 @@ app.on("window-all-closed", () => {
 });
 
 // Clean up handlers when app quits
-app.on("quit", () => {
+app.on("before-quit", () => {
   logger.info("Application quitting, cleaning up handlers");
   cleanupAgentHandlers();
   cleanupCodebaseHandlers();
@@ -159,6 +159,3 @@ app.on("quit", () => {
   cleanupConfigHandlers();
   cleanupObservabilityHandlers();
 });
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
