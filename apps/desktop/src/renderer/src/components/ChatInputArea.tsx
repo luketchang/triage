@@ -1,5 +1,5 @@
+import { Send, Square } from "lucide-react";
 import React, { useEffect, useRef } from "react";
-import { SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { useChatStore } from "../store/index.js";
 import { Button } from "./ui/Button.jsx";
@@ -62,20 +62,10 @@ function ChatInputArea() {
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-
-    // Handle paste events
-    const handlePaste = () => {
-      setTimeout(resizeTextarea, 0);
-    };
-
-    // Handle input events
-    const handleInput = () => {
-      resizeTextarea();
-    };
-
+    const handlePaste = () => setTimeout(resizeTextarea, 0);
+    const handleInput = () => resizeTextarea();
     textarea.addEventListener("paste", handlePaste);
     textarea.addEventListener("input", handleInput);
-
     return () => {
       textarea.removeEventListener("paste", handlePaste);
       textarea.removeEventListener("input", handleInput);
@@ -133,14 +123,24 @@ function ChatInputArea() {
           rows={1}
           disabled={isThinking}
         />
-        <Button
-          className="absolute right-2 top-2 shadow-sm size-8 p-1"
-          size="sm"
-          onClick={handleSendMessage}
-          disabled={userInput.trim() === "" || isThinking}
-        >
-          <SendIcon className="h-3.5 w-3.5" />
-        </Button>
+        {!isThinking ? (
+          <Button
+            className="absolute right-2 top-2 shadow-sm size-8 p-1"
+            size="sm"
+            onClick={handleSendMessage}
+            disabled={userInput.trim() === ""}
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Button>
+        ) : (
+          <Button
+            className="absolute right-2 top-2 shadow-sm size-8 p-1"
+            size="sm"
+            onClick={handleSendMessage}
+          >
+            <Square className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </div>
       <div className="mt-1.5 text-xs text-gray-500 text-left max-w-[90%] mx-auto">
         Press Enter to send, Shift+Enter for new line

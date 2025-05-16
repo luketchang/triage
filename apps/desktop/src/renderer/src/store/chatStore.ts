@@ -190,7 +190,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
         },
       }));
     });
-    const unregisterUpdater = api.onAgentUpdate((update) => {
+    const unregister = api.onAgentUpdate((update) => {
       console.info("Received agent update:", update);
       if (update.type === "highLevelUpdate") {
         // A new high-level step is starting
@@ -252,7 +252,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       }));
 
       // Unregister from agent updates
-      unregisterUpdater();
+      unregister();
     }
   },
 }));
