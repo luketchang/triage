@@ -1,5 +1,6 @@
 import { logger, timer } from "@triage/common";
 import { generateText, LanguageModelV1 } from "ai";
+import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
 import { CodeSearchStep, LogSearchStep, PipelineStateManager, StepsType } from "../pipeline/state";
@@ -184,10 +185,13 @@ export class CodeSearchAgent {
 
   @timer
   async invoke(params: {
-    codeSearchId: string;
     codeRequest: string;
     maxIters?: number;
   }): Promise<CodeSearchAgentResponse> {
+    logger.info("\n\n" + "=".repeat(25) + " Code Search " + "=".repeat(25));
+    const codeSearchId = uuidv4();
+    this.state.recordHighLevelStep("codeSearch", codeSearchId);
+
     let response: CodeSearchResponse | null = null;
     const maxIters = params.maxIters || MAX_ITERS;
     let currentIter = 0;
@@ -269,7 +273,7 @@ export class CodeSearchAgent {
             throw new Error(`Unknown tool call type: ${toolCall}`);
           }
 
-          this.state.addIntermediateStep(step, params.codeSearchId);
+          this.state.addIntermediateStep(step, codeSearchId);
           newCodeSearchSteps.push(step);
         }
       } else {
