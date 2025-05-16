@@ -26,10 +26,7 @@ export class PostProcessing {
     ]);
 
     logger.info(
-      `Log postprocessing complete with ${logPostprocessingResponse.facts.length} relevant facts`
-    );
-    logger.info(
-      `Code postprocessing complete with ${codePostprocessingResponse.facts.length} relevant facts`
+      `Log postprocessing complete with ${logPostprocessingResponse.facts.length} relevant facts. Code postprocessing complete with ${codePostprocessingResponse.facts.length} relevant facts.`
     );
   }
 }
