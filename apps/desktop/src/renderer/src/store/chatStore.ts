@@ -16,10 +16,8 @@ interface ChatState {
 
   // Current message updater for streaming updates
   messageUpdater: MessageUpdater | null;
-  savedMessageIds: Set<string>;
 
   // Agent update state
-  isRegisteredForAgentUpdates: boolean;
   unregisterAgent: (() => void) | null;
 
   // Agent update functions
@@ -44,8 +42,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isThinking: false,
   unregisterAgent: null,
   messageUpdater: null,
-  savedMessageIds: new Set<string>(),
-  isRegisteredForAgentUpdates: false,
 
   loadChats: async () => {
     try {
@@ -92,7 +88,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         set({
           messages: savedMessages,
-          savedMessageIds: savedIds,
         });
       } else {
         set({ messages: [] });
@@ -113,7 +108,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
           set({
             currentChatId: undefined,
             messages: [],
-            savedMessageIds: new Set(),
           });
         }
 
@@ -223,8 +217,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         if (messageUpdater) {
           messageUpdater.update((cell) => ({
             ...cell,
-            response: "Sorry, I encountered an error processing your request.",
-            error: agentMessage?.error || "Sorry, I encountered an error processing your request.",
+            response: "Sorry, there was an error processing your request.",
+            error: agentMessage?.error || "Sorry, there was an error processing your request.",
           }));
         }
       }
@@ -270,9 +264,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
    * This is called when a message is sent and a messageUpdater is created
    */
   registerForAgentUpdates: () => {
-    // Don't register if already registered
-    if (get().isRegisteredForAgentUpdates) return;
-
     const unregister = api.onAgentUpdate((update) => {
       const { messageUpdater } = get();
       if (!messageUpdater) return;
@@ -291,7 +282,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Store the registered state and unregister function
     set({
-      isRegisteredForAgentUpdates: true,
       unregisterAgent: unregister,
     });
   },
@@ -309,7 +299,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Reset the agent update state
     set({
-      isRegisteredForAgentUpdates: false,
       unregisterAgent: null,
     });
   },
