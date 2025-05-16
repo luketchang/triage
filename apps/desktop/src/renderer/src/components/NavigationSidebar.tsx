@@ -1,3 +1,4 @@
+import { NO_CHAT_SELECTED } from "@renderer/store/chatStore.js";
 import { MoreHorizontalIcon, Trash2Icon } from "lucide-react";
 import { useEffect } from "react";
 import { FaPlus } from "react-icons/fa";
@@ -15,7 +16,6 @@ import { ScrollArea } from "./ui/ScrollArea.jsx";
 function NavigationSidebar() {
   const chats = useChatStore.use.chats();
   const currentChatId = useChatStore.use.currentChatId();
-  const createChat = useChatStore.use.createChat();
   const selectChat = useChatStore.use.selectChat();
   const loadChats = useChatStore.use.loadChats();
   const deleteChat = useChatStore.use.deleteChat();
@@ -27,9 +27,9 @@ function NavigationSidebar() {
     loadChats();
   }, [loadChats]);
 
-  // Handle creating a new chat
-  const handleCreateChat = async () => {
-    await createChat();
+  // Clicking "New Chat" causes unselected chat to be
+  const handleNewChat = async () => {
+    selectChat(NO_CHAT_SELECTED);
     setActiveTab("chat");
   };
 
@@ -43,7 +43,7 @@ function NavigationSidebar() {
     <div className="w-60 h-full bg-background-sidebar border-r border-border flex flex-col">
       <div className="p-4 flex flex-col gap-4">
         <div className="text-primary font-bold text-center text-lg">TRIAGE</div>
-        <Button variant="outline" className="w-full justify-start gap-2" onClick={handleCreateChat}>
+        <Button variant="outline" className="w-full justify-start gap-2" onClick={handleNewChat}>
           <FaPlus size={12} /> New Chat
         </Button>
       </div>

@@ -7,6 +7,7 @@ import { generateId } from "../utils/formatters.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
 import { createSelectors } from "./util.js";
 
+export const NO_CHAT_SELECTED = -1;
 export interface ChatDetails {
   messages?: ChatMessage[];
   userInput?: string;
@@ -33,7 +34,7 @@ interface ChatState {
 const useChatStoreBase = create<ChatState>((set, get) => ({
   // Initial state
   chats: [],
-  currentChatId: -1, // -1 indicates no chat is selected
+  currentChatId: NO_CHAT_SELECTED,
   chatDetailsById: {},
 
   loadChats: async () => {
@@ -94,7 +95,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
         const newChatDetailsById = { ...state.chatDetailsById };
         delete newChatDetailsById[chatId];
         return {
-          currentChatId: state.currentChatId === chatId ? -1 : state.currentChatId,
+          currentChatId: state.currentChatId === chatId ? NO_CHAT_SELECTED : state.currentChatId,
           chats: state.chats.filter((chat) => chat.id !== chatId),
           chatDetailsById: newChatDetailsById,
         };
@@ -125,7 +126,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
 
     let chatId = currentChatId;
     // If no chat is selected, create a new one
-    if (chatId === -1) {
+    if (chatId === NO_CHAT_SELECTED) {
       const chat = await get().createChat();
       if (!chat) return; // Failed to create chat
       chatId = chat.id;
@@ -166,8 +167,8 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       };
       // If no chat was selected when the message was sent, we need to clear the
       // user input on the "new chat" screen.
-      if (currentChatId === -1) {
-        delete newChatDetailsById[-1];
+      if (currentChatId === NO_CHAT_SELECTED) {
+        delete newChatDetailsById[NO_CHAT_SELECTED];
       }
       return { chatDetailsById: newChatDetailsById };
     });

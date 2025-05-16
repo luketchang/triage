@@ -20,6 +20,12 @@ function ChatInputArea() {
   const sendMessage = useChatStore.use.sendMessage();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [currentChatId]);
+
   // Auto-resize textarea function
   const resizeTextarea = () => {
     const textarea = textareaRef.current;
