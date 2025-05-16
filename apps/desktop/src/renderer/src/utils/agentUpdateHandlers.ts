@@ -24,14 +24,14 @@ export function handleHighLevelUpdate(
         newStage = {
           id: update.id,
           type: "logSearch",
-          queries: [],
+          steps: [],
         };
         break;
       case "codeSearch":
         newStage = {
           id: update.id,
           type: "codeSearch",
-          retrievedCode: [],
+          steps: [],
         };
         break;
       case "reasoning":
@@ -96,26 +96,23 @@ export function handleIntermediateUpdate(
         assertStageType(stage, "logSearch");
         updatedStage = {
           ...stage,
-          queries: [...stage.queries, update.step],
+          steps: [...stage.steps, update.step],
         };
         break;
       }
-      case "cat":
+      case "codeSearch": {
         assertStageType(stage, "codeSearch");
         updatedStage = {
           ...stage,
-          retrievedCode: [
-            ...stage.retrievedCode,
-            { filepath: update.step.path, code: update.step.source },
-          ],
+          steps: [...stage.steps, update.step],
         };
         break;
-      // TODO: grep
+      }
       case "reasoning": {
         assertStageType(stage, "reasoning");
         updatedStage = {
           ...stage,
-          content: stage.content + update.step.contentChunk,
+          content: stage.content + update.step.chunk,
         };
         break;
       }
@@ -123,7 +120,7 @@ export function handleIntermediateUpdate(
         assertStageType(stage, "logPostprocessing");
         updatedStage = {
           ...stage,
-          facts: update.step.facts,
+          facts: update.step.data,
         };
         break;
       }
@@ -131,7 +128,7 @@ export function handleIntermediateUpdate(
         assertStageType(stage, "codePostprocessing");
         updatedStage = {
           ...stage,
-          facts: update.step.facts,
+          facts: update.step.data,
         };
         break;
       }

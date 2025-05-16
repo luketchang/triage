@@ -296,23 +296,10 @@ The primary issue appears to be in the authentication middleware where token val
       },
     ];
 
-    // Create step objects with the correct type structure
-    const logPostprocessingStep = {
-      type: "logPostprocessing" as const,
-      timestamp: new Date(),
-      facts: logFacts,
-    };
-
-    const codePostprocessingStep = {
-      type: "codePostprocessing" as const,
-      timestamp: new Date(),
-      facts: codeFacts,
-    };
-
     return {
       role: "assistant",
       response: responseContent,
-      steps: [logPostprocessingStep, codePostprocessingStep],
+      steps: [],
       error: null,
     };
   },

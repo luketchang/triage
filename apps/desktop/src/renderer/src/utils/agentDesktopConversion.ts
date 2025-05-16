@@ -33,23 +33,23 @@ export function convertAgentStagesToSteps(stages?: AgentStage[] | null): AgentSt
     switch (stage.type) {
       case "logSearch":
         // For logSearch, each query in the stage becomes a separate logSearch step
-        stage.queries.forEach((query) => {
+        stage.steps.forEach((step) => {
           steps.push({
             type: "logSearch",
             timestamp: new Date(),
-            input: query.input,
-            results: query.results,
+            reasoning: step.reasoning,
+            data: step.data,
           });
         });
         break;
       case "codeSearch":
         // For codeSearch, each retrieved code in the stage becomes a separate codeSearch step
-        stage.retrievedCode.forEach((code) => {
+        stage.steps.forEach((step) => {
           steps.push({
-            type: "cat",
+            type: "codeSearch",
             timestamp: new Date(),
-            path: code.filepath,
-            source: code.code,
+            reasoning: step.reasoning,
+            data: step.data,
           });
         });
         break;
@@ -58,7 +58,7 @@ export function convertAgentStagesToSteps(stages?: AgentStage[] | null): AgentSt
         steps.push({
           type: "reasoning",
           timestamp: new Date(),
-          content: stage.content,
+          data: stage.content,
         });
         break;
       case "logPostprocessing":
@@ -66,7 +66,7 @@ export function convertAgentStagesToSteps(stages?: AgentStage[] | null): AgentSt
         steps.push({
           type: "logPostprocessing",
           timestamp: new Date(),
-          facts: stage.facts,
+          data: stage.facts,
         });
         break;
       case "codePostprocessing":
@@ -74,7 +74,7 @@ export function convertAgentStagesToSteps(stages?: AgentStage[] | null): AgentSt
         steps.push({
           type: "codePostprocessing",
           timestamp: new Date(),
-          facts: stage.facts,
+          data: stage.facts,
         });
         break;
       // Handle any other stage types in the future

@@ -257,6 +257,15 @@ export class CodeSearchAgent {
             throw new Error(`Unknown tool call type: ${toolCall}`);
           }
         }
+
+        const codeSearchStep: CodeSearchStep = {
+          type: "codeSearch",
+          timestamp: new Date(),
+          reasoning: response.reasoning,
+          data: toolCalls,
+        };
+        newCodeSearchSteps.push(codeSearchStep);
+        this.state.addIntermediateStep(codeSearchStep, codeSearchId);
       } else {
         logger.info("Code search complete");
       }

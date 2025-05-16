@@ -86,16 +86,17 @@ const LogSearchStep: React.FC<{ stage: LogSearchStage; isActive: boolean }> = ({
   isActive,
 }) => (
   <CollapsibleStep title="Log Search" isActive={isActive}>
-    {stage.queries.length === 0 ? (
+    {stage.steps.length === 0 ? (
       <em>Searching logs...</em>
     ) : (
-      stage.queries.map((query, index) => (
+      stage.steps.map((step, index) => (
         <div
           key={`${stage.id}-search-${index}`}
           className="log-search-item mb-2 p-3 bg-background-lighter rounded-lg"
         >
           <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
-            {query.input.query}
+            {/* TODO: properly display */}
+            {step.data.map((toolCall) => toolCall.input.query).join("\n")}
           </div>
         </div>
       ))
@@ -108,16 +109,21 @@ const CodeSearchStep: React.FC<{ stage: CodeSearchStage; isActive: boolean }> = 
   isActive,
 }) => (
   <CollapsibleStep title="Code Search" isActive={isActive}>
-    {stage.retrievedCode.length === 0 ? (
+    {stage.steps.length === 0 ? (
       <em>Searching code...</em>
     ) : (
-      stage.retrievedCode.map((code, index) => (
+      stage.steps.map((step, index) => (
         <div
           key={`${stage.id}-search-${index}`}
           className="code-search-item mb-2 p-3 bg-background-lighter rounded-lg"
         >
           <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
-            {code.filepath}
+            {/* TODO: properly display */}
+            {step.data
+              .map((toolCall) =>
+                toolCall.input.type === "catRequest" ? toolCall.input.path : toolCall.input.pattern
+              )
+              .join("\n")}
           </div>
         </div>
       ))

@@ -241,6 +241,7 @@ export class LogSearchAgent {
           `Searching logs with query: ${response.actions[0]!.query} from ${response.actions[0]!.start} to ${response.actions[0]!.end}`
         );
 
+        // TODO: convert this into loop when we have multiple tool calls output
         logger.info("Fetching logs from observability platform...");
         const logContext = await handleLogSearchRequest(
           response.actions[0]!,
@@ -254,8 +255,14 @@ export class LogSearchAgent {
           output: logContext,
         });
 
-        const lastLogSearchResultsFormatted = formatLogSearchToolCalls(toolCalls);
-        logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
+        const logSearchStep: LogSearchStep = {
+          type: "logSearch",
+          timestamp: new Date(),
+          reasoning: response.reasoning,
+          data: toolCalls,
+        };
+        newLogSearchSteps.push(logSearchStep);
+        this.state.addIntermediateStep(logSearchStep, logSearchId);
       } else {
         logger.info("Log search complete");
       }

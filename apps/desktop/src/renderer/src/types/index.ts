@@ -9,6 +9,7 @@ import {
   UserMessage as AgentUserMessage,
   CodePostprocessingFact,
   CodePostprocessingStep,
+  CodeSearchStep,
   LogPostprocessingFact,
   LogPostprocessingStep,
   LogSearchInput,
@@ -39,6 +40,7 @@ export type {
   CodebaseOverviewProgressUpdate,
   CodePostprocessingFact,
   CodePostprocessingStep,
+  CodeSearchStep,
   Log,
   LogPostprocessingFact,
   LogPostprocessingStep,
@@ -162,13 +164,13 @@ export type AgentStage =
 export interface LogSearchStage {
   type: "logSearch";
   id: string;
-  queries: LogSearchPair[];
+  steps: LogSearchStep[];
 }
 
 export interface CodeSearchStage {
   type: "codeSearch";
   id: string;
-  retrievedCode: CodeSearchPair[];
+  steps: CodeSearchStep[];
 }
 
 export interface ReasoningStage {
