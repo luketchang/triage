@@ -63,15 +63,6 @@ export interface Chat {
   createdAt: Date;
 }
 
-// Define code map type alias
-export type CodeMap = Map<string, string>;
-
-// Enhanced CodeMap with repository and file path information
-export interface EnhancedCodeMap extends CodeMap {
-  repoPath?: string;
-  filePath?: string;
-}
-
 // Define UI-enhanced versions of observability types with visual properties
 // These will supplement the data-only types from the observability package
 export interface UIServiceLatency extends ServiceLatency {
@@ -142,34 +133,6 @@ export interface TraceSearchPair {
   results: TracesWithPagination | string;
 }
 
-// Define specific artifact types with discriminated union
-export interface LogArtifact {
-  id: string;
-  type: "log";
-  title: string;
-  description: string;
-  data: LogSearchPair;
-}
-
-export interface CodeArtifact {
-  id: string;
-  type: "code";
-  title: string;
-  description: string;
-  data: EnhancedCodeMap;
-}
-
-export interface TraceArtifact {
-  id: string;
-  type: "trace";
-  title: string;
-  description: string;
-  data: TraceSearchPair;
-}
-
-// Artifact type as a discriminated union
-export type Artifact = LogArtifact | CodeArtifact | TraceArtifact;
-
 // Define specific context item types with discriminated union
 export interface LogSearchContextItem {
   id: string;
@@ -177,7 +140,6 @@ export interface LogSearchContextItem {
   title: string;
   description: string;
   data: LogSearchPair;
-  sourceTab: TabType;
 }
 
 // Context item type for single trace
@@ -187,7 +149,6 @@ export interface SingleTraceContextItem {
   title: string;
   description: string;
   data: TraceForAgent; // Use the new TraceForAgent type
-  sourceTab: TabType;
 }
 
 // Context item type as a discriminated union
@@ -250,9 +211,6 @@ export interface AssistantMessage {
   error?: string;
 }
 
-// Interface for main content tabs
-export type TabType = "chat" | "settings";
-
 export interface TimeRange {
   start: string;
   end: string;
@@ -261,11 +219,4 @@ export interface TimeRange {
 export interface TimeRangePreset {
   label: string;
   value: number | string;
-}
-
-// Define PostprocessedLogSearchInput locally since it's not exported by @triage/agent
-export interface PostprocessedLogSearchInput extends LogSearchInputCore {
-  title?: string;
-  reasoning?: string;
-  summary?: string;
 }

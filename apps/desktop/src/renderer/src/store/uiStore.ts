@@ -1,5 +1,7 @@
 import { create } from "zustand";
-import { TabType } from "../types/index.js";
+
+// Interface for main content tabs
+export type TabType = "chat" | "settings";
 
 interface UIState {
   // Navigation and tabs

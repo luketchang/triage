@@ -12,19 +12,6 @@ import {
   TracesWithPagination,
 } from "./types/index.js";
 
-// Define a local version of PostprocessedLogSearchInput to avoid import issues
-export interface PostprocessedLogSearchInput {
-  query: string;
-  start: string;
-  end: string;
-  limit: number;
-  pageCursor: string | null;
-  type?: string;
-  title?: string;
-  reasoning?: string;
-  summary?: string;
-}
-
 /**
  * Mock implementation of the Electron API for local development and testing
  * This can be easily imported in your App.tsx to override the window.electronAPI

@@ -6,12 +6,11 @@ import { handleHighLevelUpdate, handleIntermediateUpdate } from "../utils/agentU
 import { generateId } from "../utils/formatters.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
 
-// Define the Chat store state
 interface ChatState {
   // Chat data
-  messages: ChatMessage[];
-  currentChatId: number | undefined;
   chats: Chat[];
+  currentChatId: number | undefined;
+  messages: ChatMessage[];
   newMessage: string;
   isThinking: boolean;
 
@@ -31,13 +30,12 @@ interface ChatState {
   unregisterFromAgentUpdates: () => void;
 
   // Actions
-  setNewMessage: (message: string) => void;
-  setMessages: (messages: ChatMessage[]) => void;
-  selectChat: (chatId: number | undefined) => void;
-  createChat: () => Promise<number | undefined>;
   loadChats: () => Promise<void>;
-  sendMessage: () => Promise<void>;
+  createChat: () => Promise<number | undefined>;
+  selectChat: (chatId: number | undefined) => void;
   deleteChat: (chatId: number) => Promise<void>;
+  setNewMessage: (message: string) => void;
+  sendMessage: () => Promise<void>;
   setContextItems: (items: ContextItem[]) => void;
   removeContextItem: (id: string) => void;
 }
@@ -55,10 +53,32 @@ export const useChatStore = create<ChatState>((set, get) => ({
   savedMessageIds: new Set<string>(),
   isRegisteredForAgentUpdates: false,
 
-  // Setters
-  setNewMessage: (message: string) => set({ newMessage: message }),
+  loadChats: async () => {
+    try {
+      const chats = await api.getAllChats();
+      set({ chats });
+    } catch (error) {
+      console.error("Error loading chats:", error);
+    }
+  },
 
-  setMessages: (messages: ChatMessage[]) => set({ messages }),
+  createChat: async (): Promise<number | undefined> => {
+    try {
+      console.info("Creating new chat via API");
+      const newChatId = await api.createChat();
+
+      console.info("Created new chat with ID:", newChatId);
+      set({ currentChatId: newChatId });
+
+      // Refresh the chat list
+      await get().loadChats();
+
+      return newChatId;
+    } catch (error) {
+      console.error("Error creating new chat:", error);
+      return undefined;
+    }
+  },
 
   selectChat: async (chatId: number | undefined) => {
     set({ currentChatId: chatId });
@@ -89,32 +109,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  createChat: async (): Promise<number | undefined> => {
+  deleteChat: async (chatId: number) => {
     try {
-      console.info("Creating new chat via API");
-      const newChatId = await api.createChat();
+      const success = await api.deleteChat(chatId);
+      if (success) {
+        const state = get();
+        // If we're deleting the currently selected chat, reset UI
+        if (state.currentChatId === chatId) {
+          set({
+            currentChatId: undefined,
+            messages: [],
+            savedMessageIds: new Set(),
+          });
+        }
 
-      console.info("Created new chat with ID:", newChatId);
-      set({ currentChatId: newChatId });
-
-      // Refresh the chat list
-      await get().loadChats();
-
-      return newChatId;
+        // Reload the chat list to update sidebar
+        await state.loadChats();
+      }
     } catch (error) {
-      console.error("Error creating new chat:", error);
-      return undefined;
+      console.error("Error deleting chat:", error);
     }
   },
 
-  loadChats: async () => {
-    try {
-      const chats = await api.getAllChats();
-      set({ chats });
-    } catch (error) {
-      console.error("Error loading chats:", error);
-    }
-  },
+  setNewMessage: (message: string) => set({ newMessage: message }),
 
   sendMessage: async () => {
     const { newMessage, messages, currentChatId, contextItems, isThinking } = get();
@@ -253,28 +270,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       // Unregister from agent updates
       state.unregisterFromAgentUpdates();
-    }
-  },
-
-  deleteChat: async (chatId: number) => {
-    try {
-      const success = await api.deleteChat(chatId);
-      if (success) {
-        const state = get();
-        // If we're deleting the currently selected chat, reset UI
-        if (state.currentChatId === chatId) {
-          set({
-            currentChatId: undefined,
-            messages: [],
-            savedMessageIds: new Set(),
-          });
-        }
-
-        // Reload the chat list to update sidebar
-        await state.loadChats();
-      }
-    } catch (error) {
-      console.error("Error deleting chat:", error);
     }
   },
 
