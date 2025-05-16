@@ -30,13 +30,13 @@ export class PreProcessing {
   }
 
   async run(): Promise<void> {
-    // TODO: add code search and lazy return joined promise
-    await this.logSearch.invoke({
-      logRequest: INITIAL_LOG_REQUEST,
-    });
-
-    await this.codeSearch.invoke({
-      codeRequest: INITIAL_CODE_REQUEST,
-    });
+    await Promise.all([
+      this.logSearch.invoke({
+        logRequest: INITIAL_LOG_REQUEST,
+      }),
+      this.codeSearch.invoke({
+        codeRequest: INITIAL_CODE_REQUEST,
+      }),
+    ]);
   }
 }
