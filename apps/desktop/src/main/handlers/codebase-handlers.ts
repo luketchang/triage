@@ -62,6 +62,10 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
     }
   );
 
+  window.on("close", () => {
+    ipcMain.removeAllListeners("codebase:generate-overview");
+  });
+
   logger.info("All codebase handlers registered.");
 }
 
