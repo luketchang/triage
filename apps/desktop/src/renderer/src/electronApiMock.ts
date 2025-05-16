@@ -12,19 +12,6 @@ import {
   TracesWithPagination,
 } from "./types/index.js";
 
-// Define a local version of PostprocessedLogSearchInput to avoid import issues
-export interface PostprocessedLogSearchInput {
-  query: string;
-  start: string;
-  end: string;
-  limit: number;
-  pageCursor: string | null;
-  type?: string;
-  title?: string;
-  reasoning?: string;
-  summary?: string;
-}
-
 /**
  * Mock implementation of the Electron API for local development and testing
  * This can be easily imported in your App.tsx to override the window.electronAPI
@@ -563,22 +550,22 @@ The primary issue appears to be in the authentication middleware where token val
   /**
    * Create a new chat
    */
-  createChat: async (): Promise<number> => {
+  createChat: async (): Promise<Chat> => {
     console.info("Mock createChat called");
 
     // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // Return a mock chat ID
-    const newChatId = Math.floor(Math.random() * 1000) + 1;
+    // Return a mock chat
+    const newChat = {
+      id: Math.floor(Math.random() * 1000) + 1,
+      createdAt: new Date(),
+    };
 
     // Add to mock chats
-    mockChats.push({
-      id: newChatId,
-      createdAt: new Date(),
-    });
+    mockChats.push(newChat);
 
-    return newChatId;
+    return newChat;
   },
 
   /**

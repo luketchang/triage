@@ -1,6 +1,11 @@
 import { logger } from "@triage/common";
 import { ipcMain } from "electron";
-import { AssistantMessage, ChatMessage, UserMessage } from "../../renderer/src/types/index.js";
+import {
+  AssistantMessage,
+  Chat,
+  ChatMessage,
+  UserMessage,
+} from "../../renderer/src/types/index.js";
 import { DatabaseService } from "../db/service.js";
 import { registerHandler } from "./register-util.js";
 // Single instance of database service
@@ -16,16 +21,21 @@ export function setupDbHandlers(): void {
   dbService = new DatabaseService();
 
   // Create a new chat
-  registerHandler("db:create-chat", async (): Promise<number | null> => {
+  registerHandler("db:create-chat", async (): Promise<Chat | null> => {
     if (!dbService) {
       logger.warn("db:create-chat - DB service not available");
       return null;
     }
 
     logger.info("Creating a new chat");
-    const chatId = await dbService.createChat();
-    logger.info("Created new chat with ID:", chatId);
-    return chatId;
+    const chat = await dbService.createChat();
+    logger.info("Created new chat with ID:", chat.id);
+
+    // HACK: convert createdAt to date
+    return {
+      ...chat,
+      createdAt: new Date(chat.createdAt),
+    };
   });
 
   // Get all chats

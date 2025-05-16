@@ -192,8 +192,7 @@ function CellView({
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Filter stages to only show the ones that should be visible in the UI
-  const stages = useMemo(() => message.stages || [], [message.stages]);
+  const stages = message.stages;
 
   // Determine which stage is currently active when thinking
   const activeStageIndex = useMemo(() => {

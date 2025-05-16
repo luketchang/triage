@@ -37,9 +37,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       callback(update);
     ipcRenderer.on("agent:agent-update", listener);
     // Return a function to remove the listener when no longer needed
-    return () => {
-      ipcRenderer.removeListener("agent:agent-update", listener);
-    };
+    return () => ipcRenderer.removeListener("agent:agent-update", listener);
   },
 
   /**
@@ -134,9 +132,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     const listener = (_event: Electron.IpcRendererEvent, update: any) => callback(update);
     ipcRenderer.on("codebase:overview-progress", listener);
     // Return a function to remove the listener when no longer needed
-    return () => {
-      ipcRenderer.removeListener("codebase:overview-progress", listener);
-    };
+    return () => ipcRenderer.removeListener("codebase:overview-progress", listener);
   },
 });
 
