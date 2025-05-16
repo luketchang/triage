@@ -16,7 +16,7 @@ import { useChatStore, useUIStore } from "../store/index.js";
 
 function NavigationSidebar() {
   // Get state from stores
-  const { chats, contextItems, currentChatId, selectChat, loadChats, deleteChat } = useChatStore();
+  const { chats, currentChatId, selectChat, loadChats, deleteChat } = useChatStore();
   const { activeTab, setActiveTab } = useUIStore();
 
   // Ensure chats are loaded when component mounts
@@ -93,12 +93,6 @@ function NavigationSidebar() {
           )}
         </div>
       </ScrollArea>
-
-      {contextItems.length > 0 && (
-        <div className="text-xs text-primary p-2 text-center">
-          {contextItems.length} context item{contextItems.length !== 1 ? "s" : ""} active
-        </div>
-      )}
 
       <div className="p-3 border-t border-border">
         <Button

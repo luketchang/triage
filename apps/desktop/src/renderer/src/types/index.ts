@@ -199,7 +199,6 @@ export interface UserMessage {
   role: "user";
   timestamp: Date;
   content: string;
-  contextItems?: ContextItem[];
 }
 
 export interface AssistantMessage {

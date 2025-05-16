@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import api from "../services/api.js";
-import { AssistantMessage, Chat, ChatMessage, ContextItem, UserMessage } from "../types/index.js";
+import { AssistantMessage, Chat, ChatMessage, UserMessage } from "../types/index.js";
 import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { handleHighLevelUpdate, handleIntermediateUpdate } from "../utils/agentUpdateHandlers.js";
 import { generateId } from "../utils/formatters.js";
@@ -13,9 +13,6 @@ interface ChatState {
   messages: ChatMessage[];
   newMessage: string;
   isThinking: boolean;
-
-  // Context items for current chat
-  contextItems: ContextItem[];
 
   // Current message updater for streaming updates
   messageUpdater: MessageUpdater | null;
@@ -36,8 +33,6 @@ interface ChatState {
   deleteChat: (chatId: number) => Promise<void>;
   setNewMessage: (message: string) => void;
   sendMessage: () => Promise<void>;
-  setContextItems: (items: ContextItem[]) => void;
-  removeContextItem: (id: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -47,7 +42,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   chats: [],
   newMessage: "",
   isThinking: false,
-  contextItems: [],
   unregisterAgent: null,
   messageUpdater: null,
   savedMessageIds: new Set<string>(),
@@ -134,7 +128,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setNewMessage: (message: string) => set({ newMessage: message }),
 
   sendMessage: async () => {
-    const { newMessage, messages, currentChatId, contextItems, isThinking } = get();
+    const { newMessage, messages, currentChatId, isThinking } = get();
 
     // Don't send if there's no message or if we're already thinking
     if (!newMessage.trim() || isThinking) return;
@@ -154,7 +148,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       role: "user",
       timestamp: new Date(),
       content: newMessage,
-      contextItems: contextItems.length > 0 ? [...contextItems] : undefined,
     };
 
     updatedMessages = [...updatedMessages, userMessage];
@@ -163,7 +156,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({
       messages: updatedMessages,
       newMessage: "",
-      contextItems: [],
       isThinking: true,
     });
 
@@ -272,13 +264,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       state.unregisterFromAgentUpdates();
     }
   },
-
-  setContextItems: (items: ContextItem[]) => set({ contextItems: items }),
-
-  removeContextItem: (id: string) =>
-    set((state) => ({
-      contextItems: state.contextItems.filter((item) => item.id !== id),
-    })),
 
   /**
    * Register for agent streaming updates

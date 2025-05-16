@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import CellView from "../components/CellView.js";
 import ChatInputArea from "../components/ChatInputArea.js";
 import FactsSidebar from "../components/FactsSidebar.js";
-import { Button } from "../components/ui/Button.jsx";
 import { Markdown } from "../components/ui/Markdown.js";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
 import { cn } from "../lib/utils.js";
@@ -14,8 +13,7 @@ import { useChatStore, useUIStore } from "../store/index.js";
 
 function ChatView() {
   // Get chat state from store
-  const { messages, isThinking, contextItems, removeContextItem, unregisterFromAgentUpdates } =
-    useChatStore();
+  const { messages, isThinking, unregisterFromAgentUpdates } = useChatStore();
 
   // Get UI state from store
   const { showFactsSidebar, activeSidebarMessageId, showFactsForMessage } = useUIStore();
@@ -130,31 +128,6 @@ function ChatView() {
           <FactsSidebar logFacts={logFacts} codeFacts={codeFacts} onClose={closeFactsSidebar} />
         </div>
       </div>
-
-      {/* Context items display */}
-      {contextItems && contextItems.length > 0 && (
-        <div className="px-4 py-2 border-t border-border bg-background-lighter">
-          <div className="flex flex-wrap gap-2 max-w-[75%] mx-auto">
-            {contextItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center bg-background-alt rounded-lg px-2 py-1 text-xs gap-2 shadow-sm"
-              >
-                <span className="text-xs font-medium text-primary-dark">{item.type}</span>
-                <span className="text-gray-300 truncate max-w-[160px]">{item.title}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-4 w-4 p-0 ml-1 hover:bg-background-lighter text-gray-400 hover:text-white"
-                  onClick={() => removeContextItem(item.id)}
-                >
-                  ×
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Input area */}
       <ChatInputArea isThinking={isThinking} />
