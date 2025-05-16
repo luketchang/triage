@@ -9,7 +9,7 @@ interface ChatInputAreaProps {
 }
 
 function ChatInputArea({ isThinking }: ChatInputAreaProps) {
-  const { newMessage, setNewMessage, sendMessage } = useChatStore();
+  const { userInput, setUserInput, sendMessage } = useChatStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea function
@@ -31,7 +31,7 @@ function ChatInputArea({ isThinking }: ChatInputAreaProps) {
   // Auto-resize textarea when message changes
   useEffect(() => {
     resizeTextarea();
-  }, [newMessage]);
+  }, [userInput]);
 
   // Focus input on mount and when thinking state changes
   useEffect(() => {
@@ -70,15 +70,15 @@ function ChatInputArea({ isThinking }: ChatInputAreaProps) {
 
   // Reset textarea height when empty
   useEffect(() => {
-    if (newMessage === "" && textareaRef.current) {
+    if (userInput === "" && textareaRef.current) {
       textareaRef.current.style.height = "50px";
     }
-  }, [newMessage]);
+  }, [userInput]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (newMessage.trim()) {
+      if (userInput.trim()) {
         handleSendMessage();
       }
     }
@@ -86,7 +86,7 @@ function ChatInputArea({ isThinking }: ChatInputAreaProps) {
 
   // Send message function
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || isThinking) return;
+    if (!userInput.trim() || isThinking) return;
 
     // Call the send function from the store
     await sendMessage();
@@ -113,8 +113,8 @@ function ChatInputArea({ isThinking }: ChatInputAreaProps) {
             "align-middle leading-normal pt-[13px] overflow-y-hidden"
           )}
           placeholder="Type your message here..."
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={1}
           disabled={isThinking}
@@ -123,7 +123,7 @@ function ChatInputArea({ isThinking }: ChatInputAreaProps) {
           className="absolute right-2 top-2 shadow-sm size-8 p-1"
           size="sm"
           onClick={handleSendMessage}
-          disabled={newMessage.trim() === "" || isThinking}
+          disabled={userInput.trim() === "" || isThinking}
         >
           <SendIcon className="h-3.5 w-3.5" />
         </Button>

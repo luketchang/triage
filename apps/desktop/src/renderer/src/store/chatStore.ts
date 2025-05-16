@@ -13,7 +13,7 @@ interface ChatState {
 
   // Chat-specific state
   messages: ChatMessage[];
-  newMessage: string;
+  userInput: string;
   isThinking: boolean;
   unregisterAgent: (() => void) | null;
 
@@ -25,16 +25,16 @@ interface ChatState {
   createChat: () => Promise<number | undefined>;
   selectChat: (chatId: number | undefined) => void;
   deleteChat: (chatId: number) => Promise<void>;
-  setNewMessage: (message: string) => void;
+  setUserInput: (message: string) => void;
   sendMessage: () => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   // Initial state
-  messages: [],
-  currentChatId: undefined,
   chats: [],
-  newMessage: "",
+  currentChatId: undefined,
+  messages: [],
+  userInput: "",
   isThinking: false,
   unregisterAgent: null,
 
@@ -114,13 +114,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  setNewMessage: (message: string) => set({ newMessage: message }),
+  setUserInput: (message: string) => set({ userInput: message }),
 
   sendMessage: async () => {
-    const { newMessage, messages, currentChatId, isThinking } = get();
+    const { userInput, messages, currentChatId, isThinking } = get();
 
     // Don't send if there's no message or if we're already thinking
-    if (!newMessage.trim() || isThinking) return;
+    if (!userInput.trim() || isThinking) return;
 
     let chatId = currentChatId;
     let updatedMessages = [...messages];
@@ -136,7 +136,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       id: generateId(),
       role: "user",
       timestamp: new Date(),
-      content: newMessage,
+      content: userInput,
     };
 
     updatedMessages = [...updatedMessages, userMessage];
@@ -144,7 +144,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Update state with new message and clear input/context
     set({
       messages: updatedMessages,
-      newMessage: "",
+      userInput: "",
       isThinking: true,
     });
 
@@ -200,7 +200,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       // Call the agent API with message
       const agentChatMessages = convertToAgentChatMessages(updatedMessages);
-      const agentMessage = await api.invokeAgent(newMessage, agentChatMessages);
+      const agentMessage = await api.invokeAgent(userInput, agentChatMessages);
 
       if (agentMessage && !agentMessage.error) {
         // Update the assistant message with the response
