@@ -215,7 +215,7 @@ export class LogSearchAgent {
     let newLogSearchSteps: LogSearchStep[] = [];
 
     let toolCalls: LogSearchToolCall[] = [];
-    while ((!response || !Array.isArray(response.actions)) && currentIter < maxIters) {
+    while ((!response || Array.isArray(response.actions)) && currentIter < maxIters) {
       const previousLogSearchToolCalls = this.state.getLogSearchToolCalls(StepsType.BOTH);
       let lastLogSearchToolCall: LogSearchToolCall | undefined = undefined;
       if (previousLogSearchToolCalls.length > 0) {
@@ -268,7 +268,7 @@ export class LogSearchAgent {
       }
     }
 
-    if (currentIter >= maxIters && (!response || !Array.isArray(response.actions))) {
+    if (currentIter >= maxIters && (!response || Array.isArray(response.actions))) {
       logger.info(
         `Log search reached maximum iterations (${maxIters}). Completing search forcibly.`
       );

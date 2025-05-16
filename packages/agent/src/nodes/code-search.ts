@@ -206,10 +206,7 @@ export class CodeSearchAgent {
     let currentIter = 0;
     let newCodeSearchSteps: CodeSearchStep[] = [];
 
-    while (
-      (!response || (Array.isArray(response.actions) && response.actions.length === 0)) &&
-      currentIter < maxIters
-    ) {
+    while ((!response || Array.isArray(response.actions)) && currentIter < maxIters) {
       // Get the latest code search steps from state
       const cats = this.state.getCatToolCalls(StepsType.BOTH);
       const greps = this.state.getGrepToolCalls(StepsType.BOTH);
@@ -271,7 +268,7 @@ export class CodeSearchAgent {
       }
     }
 
-    if (currentIter >= maxIters && (!response || !Array.isArray(response.actions))) {
+    if (currentIter >= maxIters && (!response || Array.isArray(response.actions))) {
       logger.info(
         `Code search reached maximum iterations (${maxIters}). Completing search forcibly.`
       );
