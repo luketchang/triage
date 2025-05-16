@@ -16,10 +16,6 @@ interface ChatState {
   messages: ChatMessage[];
   userInput: string;
   isThinking: boolean;
-  unregisterAgent: (() => void) | null;
-
-  // Agent update functions
-  unregisterFromAgentUpdates: () => void;
 
   // Actions
   loadChats: () => Promise<void>;
@@ -37,7 +33,6 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
   messages: [],
   userInput: "",
   isThinking: false,
-  unregisterAgent: null,
 
   loadChats: async () => {
     try {
@@ -184,7 +179,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
         }),
       }));
     });
-    const unregister = api.onAgentUpdate((update) => {
+    const unregisterUpdater = api.onAgentUpdate((update) => {
       console.info("Received agent update:", update);
       if (update.type === "highLevelUpdate") {
         // A new high-level step is starting
@@ -193,9 +188,6 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
         // An intermediate update for an existing step
         handleIntermediateUpdate(updater, update);
       }
-    });
-    set({
-      unregisterAgent: unregister,
     });
 
     try {
@@ -244,25 +236,8 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       });
 
       // Unregister from agent updates
-      state.unregisterFromAgentUpdates();
+      unregisterUpdater();
     }
-  },
-
-  /**
-   * Unregister from agent updates
-   * This is called when message processing is complete
-   */
-  unregisterFromAgentUpdates: () => {
-    // Call the unregister function if it exists
-    const { unregisterAgent } = get();
-    if (unregisterAgent) {
-      unregisterAgent();
-    }
-
-    // Reset the agent update state
-    set({
-      unregisterAgent: null,
-    });
   },
 }));
 export const useChatStore = createSelectors(useChatStoreBase);

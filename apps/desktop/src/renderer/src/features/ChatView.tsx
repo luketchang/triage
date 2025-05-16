@@ -1,3 +1,4 @@
+import { User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import CellView from "../components/CellView.js";
 import ChatInputArea from "../components/ChatInputArea.js";
@@ -5,16 +6,12 @@ import FactsSidebar from "../components/FactsSidebar.js";
 import { Markdown } from "../components/ui/Markdown.js";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
 import { cn } from "../lib/utils.js";
-import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
-
-// Import stores and hooks
-import { User } from "lucide-react";
 import { useChatStore, useUIStore } from "../store/index.js";
+import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
 function ChatView() {
   const messages = useChatStore.use.messages();
   const isThinking = useChatStore.use.isThinking();
-  const unregisterFromAgentUpdates = useChatStore.use.unregisterFromAgentUpdates();
   const showFactsSidebar = useUIStore.use.showFactsSidebar();
   const activeSidebarMessageId = useUIStore.use.activeSidebarMessageId();
   const showFactsForMessage = useUIStore.use.showFactsForMessage();
@@ -32,9 +29,6 @@ function ChatView() {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
-
-  // Cleanup agent update listeners when component unmounts
-  useEffect(() => unregisterFromAgentUpdates, [unregisterFromAgentUpdates]);
 
   // Function to open facts sidebar for a specific message
   const openFactsSidebar = (
