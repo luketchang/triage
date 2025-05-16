@@ -15,6 +15,7 @@ import { ScrollArea } from "./ui/ScrollArea.jsx";
 function NavigationSidebar() {
   const chats = useChatStore.use.chats();
   const currentChatId = useChatStore.use.currentChatId();
+  const createChat = useChatStore.use.createChat();
   const selectChat = useChatStore.use.selectChat();
   const loadChats = useChatStore.use.loadChats();
   const deleteChat = useChatStore.use.deleteChat();
@@ -28,8 +29,7 @@ function NavigationSidebar() {
 
   // Handle creating a new chat
   const handleCreateChat = async () => {
-    // Set chat ID to 0 to indicate a new chat should be created when a message is sent
-    selectChat(undefined);
+    await createChat();
     setActiveTab("chat");
   };
 
@@ -49,19 +49,17 @@ function NavigationSidebar() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-2">
+        <div className="p-2 space-y-1">
           {chats.length > 0 ? (
             chats.map((chat) => (
               <div
                 key={chat.id}
-                className={`flex items-center justify-between p-2 rounded-md hover:bg-background-lighter mb-1 text-gray-200 group ${
-                  currentChatId === chat.id ? "bg-background-lighter" : ""
+                className={`flex items-center justify-between p-2 rounded-md text-gray-200 group cursor-pointer min-h-[40px] ${
+                  currentChatId === chat.id ? "bg-background-alt" : "hover:bg-background-lighter"
                 }`}
+                onClick={() => handleSelectChat(chat.id)}
               >
-                <div
-                  className="flex items-center flex-grow cursor-pointer"
-                  onClick={() => handleSelectChat(chat.id)}
-                >
+                <div className="flex items-center flex-grow min-h-full">
                   <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white" />
                   <div className="text-sm truncate">Chat {chat.id}</div>
                 </div>
@@ -71,6 +69,7 @@ function NavigationSidebar() {
                       variant="ghost"
                       size="sm"
                       className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 hover:bg-background-alt"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <MoreHorizontalIcon className="h-3.5 w-3.5" />
                     </Button>

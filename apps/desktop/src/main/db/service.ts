@@ -53,7 +53,7 @@ export class DatabaseService {
     }
   }
 
-  async createChat(): Promise<number> {
+  async createChat(): Promise<Chat> {
     console.info("DatabaseService: Creating new chat");
     try {
       const result = await this.db.insert(schema.chats).values({}).returning();
@@ -63,7 +63,7 @@ export class DatabaseService {
       }
 
       console.info("DatabaseService: Created chat with ID:", result[0]!.id);
-      return result[0]!.id;
+      return result[0];
     } catch (error) {
       console.error("Error creating chat:", error);
       throw error;

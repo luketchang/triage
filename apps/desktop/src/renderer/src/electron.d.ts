@@ -95,9 +95,9 @@ declare global {
 
       /**
        * Create a new chat
-       * @returns Promise with the created chat ID or null if failed
+       * @returns Promise with the created chat or null if failed
        */
-      createChat: () => Promise<number>;
+      createChat: () => Promise<Chat>;
 
       /**
        * Get all chats

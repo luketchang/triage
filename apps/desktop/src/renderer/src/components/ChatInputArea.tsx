@@ -4,12 +4,18 @@ import { cn } from "../lib/utils.js";
 import { useChatStore } from "../store/index.js";
 import { Button } from "./ui/Button.jsx";
 
-interface ChatInputAreaProps {
-  isThinking: boolean;
-}
-
-function ChatInputArea({ isThinking }: ChatInputAreaProps) {
-  const userInput = useChatStore.use.userInput();
+function ChatInputArea() {
+  const currentChatId = useChatStore((state) => state.currentChatId);
+  const userInput = useChatStore((state) =>
+    state.currentChatId !== undefined
+      ? state.chatDetailsById[state.currentChatId]?.userInput || ""
+      : ""
+  );
+  const isThinking = useChatStore((state) =>
+    state.currentChatId !== undefined
+      ? state.chatDetailsById[state.currentChatId]?.isThinking || false
+      : false
+  );
   const setUserInput = useChatStore.use.setUserInput();
   const sendMessage = useChatStore.use.sendMessage();
   const textareaRef = useRef<HTMLTextAreaElement>(null);

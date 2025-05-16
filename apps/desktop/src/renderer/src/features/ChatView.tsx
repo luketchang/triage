@@ -10,8 +10,17 @@ import { useChatStore, useUIStore } from "../store/index.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
 function ChatView() {
-  const messages = useChatStore.use.messages();
-  const isThinking = useChatStore.use.isThinking();
+  const currentChatId = useChatStore((state) => state.currentChatId);
+  const messages = useChatStore((state) =>
+    state.currentChatId !== undefined
+      ? state.chatDetailsById[state.currentChatId]?.messages
+      : undefined
+  );
+  const isThinking = useChatStore((state) =>
+    state.currentChatId !== undefined
+      ? state.chatDetailsById[state.currentChatId]?.isThinking
+      : false
+  );
   const showFactsSidebar = useUIStore.use.showFactsSidebar();
   const activeSidebarMessageId = useUIStore.use.activeSidebarMessageId();
   const showFactsForMessage = useUIStore.use.showFactsForMessage();
@@ -24,6 +33,7 @@ function ChatView() {
 
   // Auto-scroll only when the last message is from the user
   useEffect(() => {
+    if (!messages) return;
     const last = messages[messages.length - 1];
     if (last?.role === "user") {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,7 +79,7 @@ function ChatView() {
             scrollHideDelay={0}
           >
             <div className="flex flex-col justify-start h-auto w-full">
-              {messages.map((message) =>
+              {messages?.map((message) =>
                 message.role === "user" ? (
                   <div key={`user-${message.id}`} className="py-4 px-4 bg-background-assistant">
                     <div className="flex items-start max-w-[90%] mx-auto w-full">
@@ -118,8 +128,7 @@ function ChatView() {
         </div>
       </div>
 
-      {/* Input area */}
-      <ChatInputArea isThinking={isThinking} />
+      <ChatInputArea />
     </div>
   );
 }

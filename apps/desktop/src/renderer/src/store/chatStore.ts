@@ -7,21 +7,25 @@ import { generateId } from "../utils/formatters.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
 import { createSelectors } from "./util.js";
 
-interface ChatState {
-  // Chat data
-  chats: Chat[];
-  currentChatId: number | undefined;
+export interface ChatDetails {
+  messages?: ChatMessage[];
+  userInput?: string;
+  isThinking?: boolean;
+}
 
-  // Chat-specific state
-  messages: ChatMessage[];
-  userInput: string;
-  isThinking: boolean;
+interface ChatState {
+  // List of all chats
+  chats: Chat[];
+  // The currently selected chat
+  currentChatId: number;
+  // Chat details by chatId, only loaded when selected
+  chatDetailsById: Record<number, ChatDetails>;
 
   // Actions
   loadChats: () => Promise<void>;
-  createChat: () => Promise<number | undefined>;
+  createChat: () => Promise<Chat | undefined>;
   selectChat: (chatId: number | undefined) => void;
-  deleteChat: (chatId: number) => Promise<void>;
+  deleteChat: (chatId: number) => Promise<boolean>;
   setUserInput: (message: string) => void;
   sendMessage: () => Promise<void>;
 }
@@ -29,10 +33,8 @@ interface ChatState {
 const useChatStoreBase = create<ChatState>((set, get) => ({
   // Initial state
   chats: [],
-  currentChatId: undefined,
-  messages: [],
-  userInput: "",
-  isThinking: false,
+  currentChatId: -1, // -1 indicates no chat is selected
+  chatDetailsById: {},
 
   loadChats: async () => {
     try {
@@ -43,18 +45,15 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     }
   },
 
-  createChat: async (): Promise<number | undefined> => {
+  createChat: async (): Promise<Chat | undefined> => {
     try {
-      console.info("Creating new chat via API");
-      const newChatId = await api.createChat();
-
-      console.info("Created new chat with ID:", newChatId);
-      set({ currentChatId: newChatId });
-
-      // Refresh the chat list
-      await get().loadChats();
-
-      return newChatId;
+      const newChat = await api.createChat();
+      console.info("Created new chat with ID:", newChat.id);
+      set((state) => ({
+        chats: [newChat, ...state.chats],
+        currentChatId: newChat.id,
+      }));
+      return newChat;
     } catch (error) {
       console.error("Error creating new chat:", error);
       return undefined;
@@ -63,95 +62,87 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
 
   selectChat: async (chatId: number | undefined) => {
     set({ currentChatId: chatId });
-
-    // If selecting empty chat (0) or undefined, clear messages
-    if (!chatId || chatId === 0) {
-      set({ messages: [] });
-      return;
-    }
-
-    // Otherwise, load messages for the selected chat
-    try {
-      const savedMessages = await api.loadChatMessages(chatId);
-      if (savedMessages && savedMessages.length > 0) {
-        const savedIds = new Set<string>();
-        savedMessages.forEach((msg) => savedIds.add(msg.id));
-
-        set({
-          messages: savedMessages,
-        });
-      } else {
-        set({ messages: [] });
+    // Load messages for selected chat if not already loaded
+    if (chatId && get().chatDetailsById[chatId] === undefined) {
+      try {
+        const messages = await api.loadChatMessages(chatId);
+        set((state) => ({
+          chatDetailsById: {
+            ...state.chatDetailsById,
+            [chatId]: {
+              messages,
+              userInput: "",
+              isThinking: false,
+            },
+          },
+        }));
+      } catch (error) {
+        console.error("Error loading saved messages:", error);
       }
-    } catch (error) {
-      console.error("Error loading saved messages:", error);
-      set({ messages: [] });
     }
   },
 
   deleteChat: async (chatId: number) => {
+    let success = false;
     try {
-      const success = await api.deleteChat(chatId);
-      if (success) {
-        const state = get();
-        // If we're deleting the currently selected chat, reset UI
-        if (state.currentChatId === chatId) {
-          set({
-            currentChatId: undefined,
-            messages: [],
-          });
-        }
-
-        // Reload the chat list to update sidebar
-        await state.loadChats();
-      }
+      success = await api.deleteChat(chatId);
     } catch (error) {
       console.error("Error deleting chat:", error);
     }
+    if (success) {
+      set((state) => {
+        const newChatDetailsById = { ...state.chatDetailsById };
+        delete newChatDetailsById[chatId];
+        return {
+          currentChatId: state.currentChatId === chatId ? -1 : state.currentChatId,
+          chats: state.chats.filter((chat) => chat.id !== chatId),
+          chatDetailsById: newChatDetailsById,
+        };
+      });
+    }
+    return success;
   },
 
-  setUserInput: (message: string) => set({ userInput: message }),
+  setUserInput: (message: string) => {
+    set((state) => ({
+      chatDetailsById: {
+        ...state.chatDetailsById,
+        [state.currentChatId]: {
+          ...state.chatDetailsById[state.currentChatId],
+          userInput: message,
+        },
+      },
+    }));
+  },
 
   sendMessage: async () => {
-    const { userInput, messages, currentChatId, isThinking } = get();
+    const { currentChatId, chatDetailsById } = get();
+    const chatDetails = chatDetailsById[currentChatId];
+    const { userInput, messages, isThinking } = chatDetails;
 
     // Don't send if there's no message or if we're already thinking
-    if (!userInput.trim() || isThinking) return;
+    if (!userInput?.trim() || isThinking) return;
 
     let chatId = currentChatId;
-    let updatedMessages = [...messages];
-
-    // If no chat is selected or it's the "empty" chat (0), create a new one
-    if (!chatId || chatId === 0) {
-      chatId = await get().createChat();
-      if (chatId === undefined) return; // Failed to create chat
+    // If no chat is selected, create a new one
+    if (chatId === -1) {
+      const chat = await get().createChat();
+      if (!chat) return; // Failed to create chat
+      chatId = chat.id;
     }
 
-    // Create a new user message with context items
+    // Create a new user and assistant message
     const userMessage: UserMessage = {
       id: generateId(),
       role: "user",
       timestamp: new Date(),
       content: userInput,
     };
-
-    updatedMessages = [...updatedMessages, userMessage];
-
-    // Update state with new message and clear input/context
-    set({
-      messages: updatedMessages,
-      userInput: "",
-      isThinking: true,
-    });
-
-    // Save the user message
     try {
       await api.saveUserMessage(userMessage, chatId);
     } catch (error) {
       console.error("Error saving user message:", error);
     }
-
-    // Create assistant message
     const assistantMessage: AssistantMessage = {
       id: generateId(),
       role: "assistant",
@@ -159,24 +150,43 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       response: "Thinking...",
       stages: [],
     };
-
-    // Add assistant message to chat
+    const updatedMessages = [...(messages || []), userMessage];
     const updatedMessagesWithAssistant = [...updatedMessages, assistantMessage];
-    set({ messages: updatedMessagesWithAssistant });
+
+    // Update state with new user/assistant message and clear input
+    set((state) => {
+      const newChatDetailsById = {
+        ...state.chatDetailsById,
+        [chatId]: {
+          ...state.chatDetailsById[chatId],
+          messages: updatedMessagesWithAssistant,
+          userInput: "",
+          isThinking: true,
+        },
+      };
+      // If no chat was selected when the message was sent, we need to clear the
+      // user input on the "new chat" screen.
+      if (currentChatId === -1) {
+        delete newChatDetailsById[-1];
+      }
+      return { chatDetailsById: newChatDetailsById };
+    });
 
     // Handle streamed updates from the agent
     const updater = new MessageUpdater(assistantMessage, (updatedAssistantMessage) => {
-      // Update the latest assistant message with the updated data
       set((state) => ({
-        messages: state.messages.map((message) => {
-          if (message.role === "assistant" && message.id === assistantMessage.id) {
-            return {
-              ...message,
-              ...updatedAssistantMessage,
-            };
-          }
-          return message;
-        }),
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [chatId]: {
+            ...state.chatDetailsById[chatId],
+            // Update the last assistant message in this chat with updatedAssistantMessage
+            messages: state.chatDetailsById[chatId].messages!.map((message) =>
+              message.role === "assistant" && message.id === assistantMessage.id
+                ? { ...message, ...updatedAssistantMessage }
+                : message
+            ),
+          },
+        },
       }));
     });
     const unregisterUpdater = api.onAgentUpdate((update) => {
@@ -226,14 +236,19 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       }));
     } finally {
       // Save assistant message
-      const state = get();
       console.log("Saving assistant message", JSON.stringify(updater.getMessage()));
-      api.saveAssistantMessage(updater.getMessage(), state.currentChatId!);
+      api.saveAssistantMessage(updater.getMessage(), chatId);
 
-      // Clear thinking state and message updater
-      set({
-        isThinking: false,
-      });
+      // Clear thinking state for chat
+      set((state) => ({
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [chatId]: {
+            ...state.chatDetailsById[chatId],
+            isThinking: false,
+          },
+        },
+      }));
 
       // Unregister from agent updates
       unregisterUpdater();
