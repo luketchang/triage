@@ -58,11 +58,12 @@ Given a user query about the issue/event and gathered context from the logs, you
 - Your goal is recall over precision so prioritize breadth of search and visiting any even slightly relevant/tangential files to the issue/event. You would rather over-explore and return many files that aren't directly relevant over under-exploring and missing key files.
 - Especially in microservices, the root cause may not be in the service that is failing, but in another service that is interacting with it. Explore code in other services other than the one displaying the symptom and explore very widely.
 - Look at the previous code context to see what code you have already fetched and what queries you've tried. Use this knowledge to reason about other potential sources of the issue/event and to inform your next queries as you to keep finding information until the issue/event is resolved.
-- Output your reasoning for each tool call outside the tool calls and explain where you are explorign and where you will likely explore next.
 
 ## Rules:
 - All file paths passed to \`catRequest\` must be absolute. Refer directly to paths in the provided file tree or git-grep output and prepend with ${params.repoPath}.
 - DO NOT read the same files more than once. Look at your previous code context to double check which files you have already read so you do not reread them.
+- Output your reasoning for each tool call outside the tool calls and explain where you are exploring and where you will likely explore next. Use 3-5 sentences max.
+
 
 <remaining_queries>
 ${params.remainingQueries}
@@ -127,7 +128,7 @@ class CodeSearch {
         toolChoice: "auto",
       });
 
-      logger.info(`Code search output:\n${text}`);
+      logger.info(`Code search reasoning:\n${text}`);
 
       // End loop if no tool calls returned, similar to Reasoner
       if (!toolCalls || toolCalls.length === 0) {

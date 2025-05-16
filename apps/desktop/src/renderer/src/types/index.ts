@@ -12,7 +12,6 @@ import {
   LogPostprocessingFact,
   LogPostprocessingStep,
   LogSearchInput,
-  LogSearchInputCore,
   LogSearchStep,
   ReasoningStep,
   TraceSearchInput,
@@ -44,7 +43,6 @@ export type {
   LogPostprocessingFact,
   LogPostprocessingStep,
   LogSearchInput,
-  LogSearchInputCore,
   LogSearchStep,
   LogsWithPagination,
   ReasoningStep,
@@ -118,7 +116,7 @@ export interface TraceQueryParams {
 
 // Define LogSearchPair type for storing pairs of search inputs and results
 export interface LogSearchPair {
-  input: LogSearchInputCore;
+  input: LogSearchInput;
   results: LogsWithPagination | string;
 }
 

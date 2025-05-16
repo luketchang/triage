@@ -109,12 +109,6 @@ export const rootCauseAnalysisToolSchema = {
 };
 
 export const logSearchInputSchema = z.object({
-  // NOTE: this is reasoning for the previous log search results
-  reasoning: z
-    .string()
-    .describe(
-      "Objectively outline what you observe in the most recent set of fetched logs as a sequential list of events (if there exist any log search results). If you notice anything unusual and want to investigate further, explain what you will investigate. If you did not find anything useful, describe how you will change your query for next time."
-    ),
   start: z
     .string()
     .describe(
@@ -142,9 +136,6 @@ export type LogSearchResult = LogsWithPagination & {
 
 // Full LogSearchInput type with reasoning - used when interfacing with LLMs
 export type LogSearchInput = zInfer<typeof logSearchInputSchema> & { type: "logSearchInput" };
-
-// LogSearchInputCore type without reasoning - used for storage in context maps
-export type LogSearchInputCore = Omit<LogSearchInput, "reasoning">;
 
 export const logSearchInputToolSchema = {
   description: "Input parameters for searching logs.",
@@ -269,7 +260,6 @@ export type GrepRequestResult = {
 // The intermediate type the LLM outputs, later used to augment original query
 export const logPostprocessingFactOutputSchema = logSearchInputSchema
   .omit({
-    reasoning: true,
     start: true,
     end: true,
     query: true,
@@ -294,18 +284,14 @@ export const logPostprocessingFactOutputSchema = logSearchInputSchema
 export type LogPostprocessingFactOutput = zInfer<typeof logPostprocessingFactOutputSchema>;
 
 // The final type we actually return to UI
-export const logPostprocessingFactSchema = logSearchInputSchema
-  .omit({
-    reasoning: true,
-  })
-  .extend({
-    title: z.string().describe("A concise title summarizing the fact"),
-    fact: z
-      .string()
-      .describe(
-        "A fact derived from the log search result that supports the answer and some context on why it is relevant."
-      ),
-  });
+export const logPostprocessingFactSchema = logSearchInputSchema.extend({
+  title: z.string().describe("A concise title summarizing the fact"),
+  fact: z
+    .string()
+    .describe(
+      "A fact derived from the log search result that supports the answer and some context on why it is relevant."
+    ),
+});
 
 export type LogPostprocessingFact = zInfer<typeof logPostprocessingFactSchema>;
 

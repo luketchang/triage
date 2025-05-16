@@ -68,6 +68,8 @@ Given all available log labels, a user query about the issue/event, and previous
 - Look at the context previously gathered to see what logs you have already fetched and what queries you've tried, DO NOT repeat past queries.
 - DO NOT query the same services multiple times with slightly different configurations - this wastes iterations and provides redundant information.
 - If you're not finding any logs with specific error keywords, switch to service-only queries to get a system overview first.
+- Output your reasoning for each tool call outside the tool calls and explain where you are exploring and where you will likely explore next. Use 3-5 sentences max.
+
 
 <remaining_queries>
 ${params.remainingQueries}
@@ -138,6 +140,8 @@ class LogSearch {
         toolChoice: "auto",
       });
 
+      logger.info(`Log search reasoning:\n${text}`);
+
       // End loop if no tool calls returned, similar to Reasoner
       if (!toolCalls || toolCalls.length === 0) {
         return {
@@ -167,8 +171,6 @@ class LogSearch {
         query: "service:orders OR service:payments OR service:tickets OR service:expiration",
         limit: 500,
         pageCursor: null,
-        reasoning:
-          "Failed to generate query with LLM. Using fallback query to get a broad view of microservices.",
       };
     }
   }

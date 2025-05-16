@@ -10,7 +10,7 @@ import {
   CodePostprocessingFact,
   GrepRequest,
   LogPostprocessingFact,
-  LogSearchInputCore,
+  LogSearchInput,
 } from "../types/tools";
 
 export interface BaseAgentStep {
@@ -18,7 +18,7 @@ export interface BaseAgentStep {
 }
 
 export interface LogSearchPair {
-  input: LogSearchInputCore;
+  input: LogSearchInput;
   results: LogsWithPagination | string;
 }
 
