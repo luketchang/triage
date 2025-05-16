@@ -3,17 +3,16 @@ import { generateText, LanguageModelV1 } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { CodeSearchStep, LogSearchStep, PipelineStateManager, StepsType } from "../pipeline/state";
-import { handleCatRequest, handleGrepRequest, LLMToolCall, LLMToolCallError } from "../tools";
 import {
-  CatRequestResult,
-  catRequestToolSchema,
-  GrepRequestResult,
-  grepRequestToolSchema,
-  TaskComplete,
-} from "../types";
-
-import { formatCodeSearchSteps, formatLogSearchSteps } from "./utils";
+  CodeSearchStep,
+  CodeSearchToolCall,
+  LogSearchToolCall,
+  StepsType,
+} from "../pipeline/state";
+import { PipelineStateManager } from "../pipeline/state-manager";
+import { handleCatRequest, handleGrepRequest, LLMToolCall } from "../tools";
+import { catRequestToolSchema, grepRequestToolSchema, TaskComplete } from "../types";
+import { formatCodeSearchToolCalls, formatLogSearchToolCalls } from "../utils";
 
 export interface CodeSearchAgentResponse {
   newCodeSearchSteps: CodeSearchStep[];
@@ -36,16 +35,16 @@ function createCodeSearchPrompt(params: {
   query: string;
   codeRequest: string;
   fileTree: string;
-  logSearchSteps: LogSearchStep[];
-  previousCodeSearchSteps: CodeSearchStep[];
+  logSearches: LogSearchToolCall[];
+  previousCodeSearches: CodeSearchToolCall[];
   remainingQueries: number;
   codebaseOverview: string;
   repoPath: string;
 }): string {
   const currentTime = new Date().toISOString();
 
-  const formattedPreviousCodeSearchSteps = formatCodeSearchSteps(params.previousCodeSearchSteps);
-  const formattedPreviousLogSearchSteps = formatLogSearchSteps(params.logSearchSteps);
+  const formattedPreviousCodeSearchSteps = formatCodeSearchToolCalls(params.previousCodeSearches);
+  const formattedPreviousLogSearchSteps = formatLogSearchToolCalls(params.logSearches);
 
   // TODO: split out last code search steps into its own section
   return `
@@ -106,8 +105,8 @@ class CodeSearch {
     query: string;
     codeRequest: string;
     fileTree: string;
-    logSearchSteps: LogSearchStep[];
-    previousCodeSearchSteps: CodeSearchStep[];
+    logSearches: LogSearchToolCall[];
+    previousCodeSearches: CodeSearchToolCall[];
     remainingQueries: number;
     codebaseOverview: string;
     repoPath: string;
@@ -200,9 +199,9 @@ export class CodeSearchAgent {
 
     while ((!response || response.type === "codeSearchToolCalls") && currentIter < maxIters) {
       // Get the latest code search steps from state
-      const catSteps = this.state.getCatSteps(StepsType.BOTH);
-      const grepSteps = this.state.getGrepSteps(StepsType.BOTH);
-      const previousCodeSearchSteps: CodeSearchStep[] = [...catSteps, ...grepSteps].sort(
+      const cats = this.state.getCatToolCalls(StepsType.BOTH);
+      const greps = this.state.getGrepToolCalls(StepsType.BOTH);
+      const previousCodeSearches: CodeSearchToolCall[] = [...cats, ...greps].sort(
         (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
       );
 
@@ -210,8 +209,8 @@ export class CodeSearchAgent {
         query: this.config.query,
         codeRequest: params.codeRequest,
         fileTree: this.config.fileTree,
-        logSearchSteps: this.state.getLogSearchSteps(StepsType.BOTH),
-        previousCodeSearchSteps,
+        logSearches: this.state.getLogSearchToolCalls(StepsType.BOTH),
+        previousCodeSearches,
         remainingQueries: maxIters - currentIter,
         codebaseOverview: this.config.codebaseOverview,
         repoPath: this.config.repoPath,
@@ -224,58 +223,27 @@ export class CodeSearchAgent {
           `Searching filepaths:\n${response.toolCalls.map((toolCall) => JSON.stringify(toolCall)).join("\n")}`
         );
 
+        let toolCalls: CodeSearchToolCall[] = [];
         for (const toolCall of response.toolCalls) {
-          let result: CatRequestResult | GrepRequestResult | LLMToolCallError;
           if (toolCall.type === "catRequest") {
-            result = await handleCatRequest(toolCall);
+            const result = await handleCatRequest(toolCall);
+            toolCalls.push({
+              type: "cat",
+              timestamp: new Date(),
+              input: toolCall,
+              output: result,
+            });
           } else if (toolCall.type === "grepRequest") {
-            result = await handleGrepRequest(toolCall, this.config.repoPath);
+            const result = await handleGrepRequest(toolCall, this.config.repoPath);
+            toolCalls.push({
+              type: "grep",
+              timestamp: new Date(),
+              input: toolCall,
+              output: result,
+            });
           } else {
             throw new Error(`Unknown tool call type: ${toolCall.type}`);
           }
-
-          // TODO: shorten and centralize conversion from tool result + toolcall to step
-          let step: CodeSearchStep;
-          if (toolCall.type === "catRequest") {
-            if (result.type === "error") {
-              step = {
-                type: "cat",
-                timestamp: new Date(),
-                path: toolCall.path,
-                source: result.error,
-              };
-            } else {
-              step = {
-                type: "cat",
-                timestamp: new Date(),
-                path: toolCall.path,
-                source: result.content,
-              };
-            }
-          } else if (toolCall.type === "grepRequest") {
-            if (result.type === "error") {
-              step = {
-                type: "grep",
-                timestamp: new Date(),
-                pattern: toolCall.pattern,
-                flags: toolCall.flags,
-                output: result.error,
-              };
-            } else {
-              step = {
-                type: "grep",
-                timestamp: new Date(),
-                pattern: toolCall.pattern,
-                flags: toolCall.flags,
-                output: result.content,
-              };
-            }
-          } else {
-            throw new Error(`Unknown tool call type: ${toolCall}`);
-          }
-
-          this.state.addIntermediateStep(step, codeSearchId);
-          newCodeSearchSteps.push(step);
         }
       } else {
         logger.info("Code search complete");

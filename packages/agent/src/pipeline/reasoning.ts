@@ -6,7 +6,7 @@ import { LogSearchAgent } from "../nodes/log-search";
 import { Reasoner } from "../nodes/reasoner";
 import { ReasoningStep } from "../pipeline/state";
 
-import { PipelineStateManager } from "./state";
+import { PipelineStateManager } from "./state-manager";
 
 import { TriagePipelineConfig } from ".";
 
@@ -35,7 +35,7 @@ export class Reasoning {
 
     let lastReasoningResponse: ReasoningStep = {
       type: "reasoning",
-      content: "Error in reasoning",
+      data: "Error in reasoning",
       timestamp: new Date(),
     };
 
@@ -73,6 +73,6 @@ export class Reasoning {
       }
     }
 
-    this.state.setAnswer(lastReasoningResponse.content);
+    this.state.setAnswer(lastReasoningResponse.data);
   }
 }

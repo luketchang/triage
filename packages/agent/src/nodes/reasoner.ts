@@ -2,10 +2,10 @@ import { logger, timer } from "@triage/common";
 import { streamText } from "ai";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { PipelineStateManager, ReasoningStep } from "../pipeline/state";
+import { ReasoningStep } from "../pipeline/state";
+import { PipelineStateManager } from "../pipeline/state-manager";
 import { codeRequestToolSchema, logRequestToolSchema, RequestSubAgentCalls } from "../types";
-
-import { formatFacetValues } from "./utils";
+import { formatFacetValues } from "../utils";
 type ReasoningResponse = ReasoningStep | RequestSubAgentCalls;
 
 export const createPrompt = ({
@@ -134,7 +134,7 @@ export class Reasoner {
       output = {
         type: "reasoning",
         timestamp: new Date(),
-        content: text,
+        data: text,
       };
       this.state.addIntermediateStep(output, params.parentId);
     } else {

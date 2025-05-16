@@ -5,11 +5,11 @@ import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { LogSearchStep, PipelineStateManager, StepsType } from "../pipeline/state";
+import { LogSearchStep, LogSearchToolCall, StepsType } from "../pipeline/state";
+import { PipelineStateManager } from "../pipeline/state-manager";
 import { handleLogSearchRequest } from "../tools";
 import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types";
-
-import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "./utils";
+import { ensureSingleToolCall, formatFacetValues, formatLogSearchToolCalls } from "../utils";
 
 export interface LogSearchAgentResponse {
   type: "logSearchAgentResponse";
@@ -28,9 +28,9 @@ function createLogSearchPrompt(params: {
   query: string;
   timezone: string;
   logRequest: string;
-  previousLogSearchSteps: LogSearchStep[];
   platformSpecificInstructions: string;
-  lastLogSearchStep?: LogSearchStep;
+  previousLogSearchToolCalls: LogSearchToolCall[];
+  lastLogSearchToolCall?: LogSearchToolCall;
   logLabelsMap: Map<string, string[]>;
   remainingQueries: number;
   codebaseOverview: string;
@@ -38,8 +38,8 @@ function createLogSearchPrompt(params: {
   const currentTime = DateTime.now().setZone(params.timezone).toISO();
 
   // Format the previous log query result for display
-  const formattedLastLogSearchStep = params.lastLogSearchStep
-    ? formatLogSearchSteps([params.lastLogSearchStep])
+  const formattedLastLogSearchStep = params.lastLogSearchToolCall
+    ? formatLogSearchToolCalls([params.lastLogSearchToolCall])
     : "";
 
   // TODO: consider removing the line about removing all filters
@@ -96,7 +96,7 @@ ${formattedLastLogSearchStep}
 </previous_log_query_result>
 
 <log_results_history>
-${formatLogSearchSteps(params.previousLogSearchSteps)}
+${formatLogSearchToolCalls(params.previousLogSearchToolCalls)}
 </log_results_history>
 
 <system_overview>
@@ -118,8 +118,8 @@ class LogSearch {
     query: string;
     timezone: string;
     logRequest: string;
-    previousLogSearchSteps: LogSearchStep[];
-    lastLogSearchStep?: LogSearchStep;
+    previousLogSearchToolCalls: LogSearchToolCall[];
+    lastLogSearchToolCall?: LogSearchToolCall;
     logLabelsMap: Map<string, string[]>;
     remainingQueries: number;
     codebaseOverview: string;
@@ -198,20 +198,22 @@ export class LogSearchAgent {
     let currentIter = 0;
     let newLogSearchSteps: LogSearchStep[] = [];
 
+    let toolCalls: LogSearchToolCall[] = [];
     while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
-      const previousLogSearchSteps = this.state.getLogSearchSteps(StepsType.BOTH);
-      let lastLogSearchStep: LogSearchStep | undefined = undefined;
-      if (previousLogSearchSteps.length > 0) {
-        lastLogSearchStep = previousLogSearchSteps[previousLogSearchSteps.length - 1];
+      const previousLogSearchToolCalls = this.state.getLogSearchToolCalls(StepsType.BOTH);
+      let lastLogSearchToolCall: LogSearchToolCall | undefined = undefined;
+      if (previousLogSearchToolCalls.length > 0) {
+        lastLogSearchToolCall = previousLogSearchToolCalls[previousLogSearchToolCalls.length - 1];
       }
 
+      // TODO: should enable multiple log searches at once
       response = await this.logSearch.invoke({
         query: this.config.query,
         timezone: this.config.timezone,
         logRequest: params.logRequest,
         logLabelsMap: this.config.logLabelsMap,
-        previousLogSearchSteps,
-        lastLogSearchStep,
+        previousLogSearchToolCalls,
+        lastLogSearchToolCall,
         remainingQueries: maxIters - currentIter,
         codebaseOverview: this.config.codebaseOverview,
       });
@@ -229,29 +231,14 @@ export class LogSearchAgent {
           this.config.observabilityPlatform
         );
 
-        // TODO: centralize the conversion from tool result + toolcall to step
-        let step: LogSearchStep;
-        if (logContext.type === "error") {
-          step = {
-            type: "logSearch",
-            timestamp: new Date(),
-            input: response,
-            results: logContext.error,
-          };
-        } else {
-          step = {
-            type: "logSearch",
-            timestamp: new Date(),
-            input: response,
-            results: logContext,
-          };
-        }
+        toolCalls.push({
+          type: "logSearch",
+          timestamp: new Date(),
+          input: response,
+          output: logContext,
+        });
 
-        newLogSearchSteps.push(step);
-        lastLogSearchStep = step;
-        this.state.addIntermediateStep(step, logSearchId);
-
-        const lastLogSearchResultsFormatted = formatLogSearchSteps([step]);
+        const lastLogSearchResultsFormatted = formatLogSearchToolCalls(toolCalls);
         logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
       } else {
         logger.info("Log search complete");

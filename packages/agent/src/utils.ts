@@ -1,15 +1,16 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
 
+import { CodeSearchToolCall } from "./pipeline/state";
+import { LogSearchInput, SpanSearchInput } from "./types/tools";
+
 import {
   AgentStep,
-  CatStep,
+  CatToolCall,
   ChatMessage,
-  CodeSearchStep,
-  GrepStep,
-  LogSearchStep,
+  GrepToolCall,
+  LogSearchToolCall,
   ReasoningStep,
-} from "..";
-import { LogSearchInput, SpanSearchInput } from "../types/tools";
+} from ".";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {
@@ -124,14 +125,14 @@ export const formatFacetValues = (facetValues: Map<string, Array<string>>): stri
     .join("\n");
 };
 
-export function formatSingleLogSearchStep(step: LogSearchStep): string {
+export function formatSingleLogSearchToolCall(step: LogSearchToolCall): string {
   const input = step.input;
-  const logsOrError = step.results;
+  const logsOrError = step.output;
 
   let formattedContent: string;
   let pageCursor: string | undefined;
 
-  if (typeof logsOrError === "string") {
+  if (logsOrError.type === "error") {
     // It's an error message
     formattedContent = `Error: ${logsOrError}`;
     pageCursor = undefined;
@@ -147,15 +148,41 @@ export function formatSingleLogSearchStep(step: LogSearchStep): string {
   return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
 }
 
-export function formatSingleCatStep(
-  step: CatStep,
+export function formatSingleCatToolCall(
+  step: CatToolCall,
   options: { lineNumbers?: boolean } = {}
 ): string {
-  const header = `File: ${step.path}`;
+  const header = `File: ${step.input.path}`;
   const separator = "-".repeat(header.length);
 
-  let source = step.source;
-  if (options.lineNumbers) {
+  if (step.output.type === "error") {
+    return `${separator}\n${header}\n${separator}\n${step.output.error}\n`;
+  } else {
+    let source = step.output.content;
+    if (options.lineNumbers) {
+      const lines = source.split("\n");
+      const maxLineNumberWidth = String(lines.length).length;
+      source = lines
+        .map((line, index) => {
+          const lineNumber = String(index + 1).padStart(maxLineNumberWidth, " ");
+          return `${lineNumber} | ${line}`;
+        })
+        .join("\n");
+    }
+
+    return `${separator}\n${header}\n${separator}\n${source}\n`;
+  }
+}
+
+export function formatSingleGrepToolCall(step: GrepToolCall): string {
+  // Format input arguments on one line
+  const inputArgs = `git grep ${step.input.pattern} ${step.input.flags ? ` -${step.input.flags}` : ""}`;
+  const separator = "-".repeat(inputArgs.length);
+
+  if (step.output.type === "error") {
+    return `${separator}\n${inputArgs}\n${separator}\n${step.output.error}\n`;
+  } else {
+    let source = step.output.content;
     const lines = source.split("\n");
     const maxLineNumberWidth = String(lines.length).length;
     source = lines
@@ -164,52 +191,52 @@ export function formatSingleCatStep(
         return `${lineNumber} | ${line}`;
       })
       .join("\n");
+
+    return `${separator}\n${inputArgs}\n${separator}\n${source}\n`;
   }
-
-  return `${separator}\n${header}\n${separator}\n${source}\n`;
 }
 
-export function formatSingleGrepStep(step: GrepStep): string {
-  // Format input arguments on one line
-  const inputArgs = `git grep ${step.pattern} ${step.flags ? ` -${step.flags}` : ""}`;
-  const separator = "-".repeat(inputArgs.length);
-
-  let source = step.output;
-  const lines = source.split("\n");
-  const maxLineNumberWidth = String(lines.length).length;
-  source = lines
-    .map((line, index) => {
-      const lineNumber = String(index + 1).padStart(maxLineNumberWidth, " ");
-      return `${lineNumber} | ${line}`;
-    })
-    .join("\n");
-
-  return `${separator}\n${inputArgs}\n${separator}\n${source}\n`;
-}
-
-export function formatLogSearchSteps(steps: LogSearchStep[]): string {
+export function formatLogSearchToolCalls(steps: LogSearchToolCall[]): string {
   return steps
-    .map((step) => formatSingleLogSearchStep(step))
+    .map((step) => formatSingleLogSearchToolCall(step))
     .filter(Boolean)
     .join("\n\n");
 }
 
-export function formatCatSteps(steps: CatStep[], options?: { lineNumbers?: boolean }): string {
-  return steps.map((step) => formatSingleCatStep(step, options)).join("\n\n");
+export function formatCatToolCalls(
+  steps: CatToolCall[],
+  options?: { lineNumbers?: boolean }
+): string {
+  return steps.map((step) => formatSingleCatToolCall(step, options)).join("\n\n");
 }
 
-export function formatGrepSteps(steps: GrepStep[]): string {
-  return steps.map((step) => formatSingleGrepStep(step)).join("\n\n");
+export function formatGrepToolCalls(steps: GrepToolCall[]): string {
+  return steps.map((step) => formatSingleGrepToolCall(step)).join("\n\n");
 }
 
-export function formatCodeSearchSteps(steps: CodeSearchStep[]): string {
-  return steps
-    .map((step) => (step.type == "cat" ? formatSingleCatStep(step) : formatSingleGrepStep(step)))
+export function formatCodeSearchToolCalls(steps: CodeSearchToolCall[]): string {
+  const grepToolCalls = steps.filter((step): step is GrepToolCall => step.type === "grep");
+  const catToolCalls = steps.filter((step): step is CatToolCall => step.type === "cat");
+
+  const allToolCalls = [...grepToolCalls, ...catToolCalls].sort(
+    (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+  );
+
+  return allToolCalls
+    .map((step) => {
+      if (step.type === "grep") {
+        return formatSingleGrepToolCall(step);
+      } else if (step.type === "cat") {
+        return formatSingleCatToolCall(step);
+      }
+      return "";
+    })
+    .filter(Boolean)
     .join("\n\n");
 }
 
 export function formatReasoningStep(step: ReasoningStep): string {
-  return `Reasoning: ${step.content}`;
+  return `Reasoning: ${step.data}`;
 }
 
 export function formatAgentSteps(steps: AgentStep[]): string {
@@ -217,11 +244,9 @@ export function formatAgentSteps(steps: AgentStep[]): string {
   return steps
     .map((step) => {
       if (step.type === "logSearch") {
-        return formatSingleLogSearchStep(step);
-      } else if (step.type === "cat") {
-        return formatSingleCatStep(step);
-      } else if (step.type === "grep") {
-        return formatSingleGrepStep(step);
+        return formatLogSearchToolCalls(step.data);
+      } else if (step.type === "codeSearch") {
+        return formatCodeSearchToolCalls(step.data);
       } else if (step.type === "reasoning") {
         return formatReasoningStep(step);
       }

@@ -3,20 +3,15 @@ import { generateText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import {
-  LogPostprocessingStep,
-  LogSearchStep,
-  PipelineStateManager,
-  StepsType,
-} from "../pipeline/state";
+import { LogPostprocessingStep, LogSearchToolCall, StepsType } from "../pipeline/state";
+import { PipelineStateManager } from "../pipeline/state-manager";
 import { LogPostprocessingFact, logPostprocessingToolSchema } from "../types";
-
 import {
   ensureSingleToolCall,
   formatFacetValues,
-  formatLogSearchSteps,
+  formatLogSearchToolCalls,
   normalizeDatadogQueryString,
-} from "./utils";
+} from "../utils";
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from logs.
@@ -25,7 +20,7 @@ You are an expert AI assistant that assists engineers debugging production issue
 function createPrompt(params: {
   query: string;
   logLabelsMap: Map<string, string[]>;
-  logSearchSteps: LogSearchStep[];
+  logSearchToolCalls: LogSearchToolCall[];
   platformSpecificInstructions: string;
   answer: string;
 }): string {
@@ -63,7 +58,7 @@ function createPrompt(params: {
   </platform_specific_instructions>
     
   <previous_log_context>
-  ${formatLogSearchSteps(params.logSearchSteps)}
+  ${formatLogSearchToolCalls(params.logSearchToolCalls)}
   </previous_log_context>
   `;
 }
@@ -86,7 +81,7 @@ export class LogPostprocessor {
     const prompt = createPrompt({
       query: this.config.query,
       logLabelsMap: this.config.logLabelsMap,
-      logSearchSteps: this.state.getLogSearchSteps(StepsType.CURRENT),
+      logSearchToolCalls: this.state.getLogSearchToolCalls(StepsType.CURRENT),
       answer: this.state.getAnswer()!,
       platformSpecificInstructions:
         this.config.observabilityPlatform.getLogSearchQueryInstructions(),
@@ -141,7 +136,7 @@ export class LogPostprocessor {
     this.state.addIntermediateStep(
       {
         type: "logPostprocessing",
-        facts: augmentedFacts,
+        data: augmentedFacts,
         timestamp: new Date(),
       },
       logPostprocessingId
@@ -150,7 +145,7 @@ export class LogPostprocessor {
     return {
       type: "logPostprocessing",
       timestamp: new Date(),
-      facts: augmentedFacts,
+      data: augmentedFacts,
     };
   }
 }

@@ -19,7 +19,8 @@ import { z } from "zod";
 
 import { AgentConfig } from "./config";
 import { TriagePipeline, TriagePipelineConfig } from "./pipeline";
-import { PipelineStateManager, StepsType, StreamUpdateFn } from "./pipeline/state";
+import { StepsType, StreamUpdateFn } from "./pipeline/state";
+import { PipelineStateManager } from "./pipeline/state-manager";
 import type { ChatMessage } from "./types";
 import { AssistantMessage } from "./types";
 
@@ -186,7 +187,7 @@ async function main(): Promise<void> {
       } else if (update.type === "intermediateUpdate") {
         switch (update.step.type) {
           case "reasoning":
-            process.stdout.write(`${update.step.contentChunk}\n`);
+            process.stdout.write(`${update.step.chunk}\n`);
             break;
           default:
             break;
@@ -228,6 +229,6 @@ if (typeof require !== "undefined" && typeof module !== "undefined" && require.m
 export * from "./config";
 export * from "./nodes/log-search";
 export * from "./nodes/reasoner";
-export * from "./nodes/utils";
 export * from "./pipeline/state";
 export * from "./types";
+export * from "./utils";
