@@ -16,7 +16,10 @@ export interface LogSearchAgentResponse {
   newLogSearchSteps: LogSearchStep[];
 }
 
-export type LogSearchResponse = LogSearchInput | TaskComplete;
+export interface LogSearchResponse {
+  reasoning: string;
+  actions: LogSearchInput[] | TaskComplete;
+}
 
 const MAX_ITERS = 12;
 
@@ -145,9 +148,12 @@ class LogSearch {
       // End loop if no tool calls returned, similar to Reasoner
       if (!toolCalls || toolCalls.length === 0) {
         return {
-          type: "taskComplete",
           reasoning: text,
-          summary: "Log search task complete",
+          actions: {
+            type: "taskComplete",
+            reasoning: text,
+            summary: "Log search task complete",
+          },
         };
       }
 
@@ -155,8 +161,13 @@ class LogSearch {
 
       if (toolCall.toolName === "logSearchInput") {
         return {
-          type: "logSearchInput",
-          ...toolCall.args,
+          reasoning: text,
+          actions: [
+            {
+              type: "logSearchInput",
+              ...toolCall.args,
+            },
+          ],
         };
       } else {
         throw new Error(`Unexpected tool name: ${toolCall.toolName}`);
@@ -165,12 +176,17 @@ class LogSearch {
       logger.error("Error generating log search query:", error);
       // TODO: revisit fallback
       return {
-        type: "logSearchInput",
-        start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        end: new Date().toISOString(),
-        query: "service:orders OR service:payments OR service:tickets OR service:expiration",
-        limit: 500,
-        pageCursor: null,
+        reasoning: "Error generating log search query",
+        actions: [
+          {
+            type: "logSearchInput",
+            start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            end: new Date().toISOString(),
+            query: "service:orders OR service:payments OR service:tickets OR service:expiration",
+            limit: 500,
+            pageCursor: null,
+          },
+        ],
       };
     }
   }
@@ -199,7 +215,7 @@ export class LogSearchAgent {
     let newLogSearchSteps: LogSearchStep[] = [];
 
     let toolCalls: LogSearchToolCall[] = [];
-    while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
+    while ((!response || !Array.isArray(response.actions)) && currentIter < maxIters) {
       const previousLogSearchToolCalls = this.state.getLogSearchToolCalls(StepsType.BOTH);
       let lastLogSearchToolCall: LogSearchToolCall | undefined = undefined;
       if (previousLogSearchToolCalls.length > 0) {
@@ -220,21 +236,21 @@ export class LogSearchAgent {
 
       currentIter++;
 
-      if (response.type === "logSearchInput") {
+      if (Array.isArray(response.actions)) {
         logger.info(
-          `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`
+          `Searching logs with query: ${response.actions[0]!.query} from ${response.actions[0]!.start} to ${response.actions[0]!.end}`
         );
 
         logger.info("Fetching logs from observability platform...");
         const logContext = await handleLogSearchRequest(
-          response,
+          response.actions[0]!,
           this.config.observabilityPlatform
         );
 
         toolCalls.push({
           type: "logSearch",
           timestamp: new Date(),
-          input: response,
+          input: response.actions[0]!,
           output: logContext,
         });
 
@@ -245,7 +261,7 @@ export class LogSearchAgent {
       }
     }
 
-    if (currentIter >= maxIters && (!response || response.type !== "taskComplete")) {
+    if (currentIter >= maxIters && (!response || !Array.isArray(response.actions))) {
       logger.info(
         `Log search reached maximum iterations (${maxIters}). Completing search forcibly.`
       );

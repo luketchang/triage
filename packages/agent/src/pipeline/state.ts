@@ -31,6 +31,7 @@ export interface LogSearchStep extends BaseAgentStep {
   data: LogSearchToolCall[];
 }
 
+// TODO: RENAME TO TOOLCALLWITHRESULT
 export interface CatToolCall extends BaseToolCall {
   type: "cat";
   input: CatRequest;

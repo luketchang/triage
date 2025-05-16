@@ -233,6 +233,9 @@ export type CatRequestResult = {
   content: string;
 };
 
+
+export type CodeSearchInput = CatRequest | GrepRequest;
+
 const grepRequestSchema = z.object({
   pattern: z.string().describe("Regular expression pattern to search for"),
   flags: z
