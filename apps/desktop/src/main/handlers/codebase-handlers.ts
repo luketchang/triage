@@ -2,6 +2,7 @@ import { CodebaseOverview, CodebaseProcessor } from "@triage/codebase-overviews"
 import { getModelWrapper, logger } from "@triage/common";
 import { BrowserWindow, ipcMain } from "electron";
 import { AppConfigStore } from "../../common/AppConfig.js";
+import { registerHandler } from "./register-util.js";
 
 /**
  * Set up all IPC handlers related to codebase processing
@@ -10,7 +11,7 @@ export function setupCodebaseHandlers(window: BrowserWindow, appCfgStore: AppCon
   logger.info("Setting up codebase handlers...");
 
   // Handle codebase overview generation
-  ipcMain.handle(
+  registerHandler(
     "codebase:generate-overview",
     async (_event: any, repoPath: string): Promise<CodebaseOverview> => {
       try {

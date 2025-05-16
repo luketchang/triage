@@ -5,7 +5,6 @@ import { resolve } from "path";
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
     build: {
       minify: true,
       sourcemap: true,
@@ -33,6 +32,7 @@ export default defineConfig({
         },
       },
     },
+    plugins: [externalizeDepsPlugin()],
     resolve: {
       alias: {
         "@renderer": resolve(__dirname, "src/renderer/src"),
@@ -40,7 +40,6 @@ export default defineConfig({
     },
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
     // preload script must output cjs, so we need this override since output format is esm by default
     build: {
       minify: true,
@@ -53,7 +52,9 @@ export default defineConfig({
           entryFileNames: "[name].cjs",
         },
       },
+      sourcemap: true,
     },
+    plugins: [externalizeDepsPlugin()],
     resolve: {
       alias: {
         "@renderer": resolve(__dirname, "src/renderer/src"),

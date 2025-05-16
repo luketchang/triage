@@ -7,7 +7,7 @@ import {
   UserMessage,
 } from "../../renderer/src/types/index.js";
 import { DatabaseService } from "../db/service.js";
-
+import { registerHandler } from "./register-util.js";
 // Single instance of database service
 let dbService: DatabaseService | null = null;
 
@@ -21,7 +21,7 @@ export function setupDbHandlers(): void {
   dbService = new DatabaseService();
 
   // Create a new chat
-  ipcMain.handle("db:create-chat", async (): Promise<Chat | null> => {
+  registerHandler("db:create-chat", async (): Promise<Chat | null> => {
     if (!dbService) {
       logger.warn("db:create-chat - DB service not available");
       return null;
@@ -39,7 +39,8 @@ export function setupDbHandlers(): void {
   });
 
   // Get all chats
-  ipcMain.handle("db:get-all-chats", async (): Promise<{ id: number; createdAt: string }[]> => {
+
+  registerHandler("db:get-all-chats", async (): Promise<{ id: number; createdAt: string }[]> => {
     if (!dbService) {
       logger.warn("db:get-all-chats - DB service not available");
       return [];
@@ -52,7 +53,7 @@ export function setupDbHandlers(): void {
   });
 
   // Save user message
-  ipcMain.handle(
+  registerHandler(
     "db:save-user-message",
     async (_, message: UserMessage, chatId: number): Promise<number | null> => {
       if (!dbService) return null;
@@ -64,7 +65,7 @@ export function setupDbHandlers(): void {
   );
 
   // Save assistant message
-  ipcMain.handle(
+  registerHandler(
     "db:save-assistant-message",
     async (_, message: AssistantMessage, chatId: number): Promise<number | null> => {
       if (!dbService) return null;
@@ -76,7 +77,7 @@ export function setupDbHandlers(): void {
   );
 
   // Get chat messages
-  ipcMain.handle("db:get-messages", async (_, chatId: number): Promise<ChatMessage[]> => {
+  registerHandler("db:get-messages", async (_, chatId: number): Promise<ChatMessage[]> => {
     if (!dbService) return [];
 
     logger.info("Getting messages for chat ID:", chatId);
@@ -85,7 +86,7 @@ export function setupDbHandlers(): void {
   });
 
   // Delete chat and all its messages
-  ipcMain.handle("db:delete-chat", async (_, chatId: number): Promise<boolean> => {
+  registerHandler("db:delete-chat", async (_, chatId: number): Promise<boolean> => {
     if (!dbService) return false;
 
     logger.info("Deleting chat with ID:", chatId);
