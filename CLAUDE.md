@@ -12,7 +12,7 @@
 - Imports: Group and sort imports (external libs before internal, alphabetical within each group); use NodeNext import statements (while all files are TS, import their transpiled version via .js); avoid dynamic imports
 - Naming: camelCase for variables/functions, PascalCase for classes/components/types, and PascalCase or camelCase for filenames
 - Error Handling: Use try/catch and typed Error objects
-- Global variables: Prefer using variables from closures over defining new singletons
+- Closures: Use variables scoped to the closure when appropriate rather than defining module-level singletons
 - Logging: When printing to test code, use console.info (do not use console.log). For actual logging, use logger.info, logger.warn, logger.error (`import { logger } from '@triage/common'`)
 - Architecture: Follow modular design in monorepo structure
 - Making Code Changes: Avoid "drive-by" changes of anything unrelated to what the user asked you to do.

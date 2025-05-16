@@ -1,4 +1,3 @@
-import { AgentStreamUpdate, ChatMessage } from "@triage/agent";
 import { contextBridge, ipcRenderer } from "electron";
 import { AssistantMessage, UserMessage } from "../renderer/src/types/index.js";
 
@@ -20,24 +19,38 @@ contextBridge.exposeInMainWorld("env", {
  */
 contextBridge.exposeInMainWorld("electronAPI", {
   /**
-   * Invoke the agent with a query and return the result
-   * @param query The query to send to the agent
-   * @param chatHistory The chat history to send to the agent
+   * Agent-related IPC functions
    */
-  invokeAgent: (query: string, chatHistory: ChatMessage[]) => {
-    return ipcRenderer.invoke("agent:invoke-agent", query, chatHistory);
-  },
+  agent: {
+    /**
+     * Send a message to the agent via IPC and get a stream ID
+     * @param prompt The prompt to send
+     * @param history Chat history as plain objects
+     * @returns Promise that resolves to a stream ID (string)
+     */
+    invoke: (prompt: string, history: { role: string; content: string }[]) => {
+      const clean = history.map(({ role, content }) => ({ role, content }));
+      return ipcRenderer.invoke("agent:invoke", prompt, clean);
+    },
 
-  /**
-   * Register a callback for agent update events
-   * @param callback Function to call when an agent update is received
-   */
-  onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, update: AgentStreamUpdate) =>
-      callback(update);
-    ipcRenderer.on("agent:agent-update", listener);
-    // Return a function to remove the listener when no longer needed
-    return () => ipcRenderer.removeListener("agent:agent-update", listener);
+    /**
+     * Subscribe to agent chunks for a stream
+     * @param callback Function to call when chunk events are received
+     * @returns Function to remove the listener
+     */
+    onChunk: (callback: (packet: any) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, packet: any) => callback(packet);
+      ipcRenderer.on("agent:chunk", listener);
+      return () => ipcRenderer.removeListener("agent:chunk", listener);
+    },
+
+    /**
+     * Cancel an agent stream
+     * @param streamId ID of the stream to cancel
+     */
+    cancel: (streamId: string) => {
+      ipcRenderer.send("agent:cancel", streamId);
+    },
   },
 
   /**

@@ -16,6 +16,11 @@ function ChatInputArea() {
       ? state.chatDetailsById[state.currentChatId]?.isThinking || false
       : false
   );
+  const cancelStream = useChatStore((state) =>
+    state.currentChatId !== undefined
+      ? state.chatDetailsById[state.currentChatId]?.cancelStream
+      : undefined
+  );
   const setUserInput = useChatStore.use.setUserInput();
   const sendMessage = useChatStore.use.sendMessage();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -58,7 +63,7 @@ function ChatInputArea() {
     return () => clearTimeout(focusTimeout);
   }, [isThinking]);
 
-  // Add event listeners for textarea
+  // Resize textarea when pasting or typing
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -71,7 +76,6 @@ function ChatInputArea() {
       textarea.removeEventListener("input", handleInput);
     };
   }, []);
-
   // Reset textarea height when empty
   useEffect(() => {
     if (userInput === "" && textareaRef.current) {
@@ -79,6 +83,7 @@ function ChatInputArea() {
     }
   }, [userInput]);
 
+  // Submit message when Enter is pressed
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -88,22 +93,12 @@ function ChatInputArea() {
     }
   };
 
-  // Send message function
   const handleSendMessage = async () => {
     if (!userInput.trim() || isThinking) return;
-
-    // Call the send function from the store
     await sendMessage();
-
-    // Reset textarea height after sending
-    if (textareaRef.current) {
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.style.height = "50px";
-        }
-      }, 50);
-    }
   };
+
+  const handleCancelMessage = () => cancelStream?.();
 
   return (
     <div className="p-4 border-t border-border bg-background-lighter">
@@ -136,7 +131,7 @@ function ChatInputArea() {
           <Button
             className="absolute right-2 top-2 shadow-sm size-8 p-1"
             size="sm"
-            onClick={handleSendMessage}
+            onClick={handleCancelMessage}
           >
             <Square className="h-3.5 w-3.5" />
           </Button>

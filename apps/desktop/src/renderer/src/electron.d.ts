@@ -6,8 +6,6 @@
 // Import types from types.ts - this is the single source of truth for types
 import { AppConfig } from "../../common/AppConfig.js";
 import {
-  AgentAssistantMessage,
-  AgentChatMessage,
   AssistantMessage,
   Chat,
   ChatMessage,
@@ -16,11 +14,20 @@ import {
   FacetData,
   LogQueryParams,
   LogsWithPagination,
-  StreamUpdate,
   TraceQueryParams,
   TracesWithPagination,
   UserMessage,
 } from "./types";
+
+/**
+ * Interface for consuming streaming responses.
+ */
+export interface ResponseStream extends AsyncIterable<any> {
+  /**
+   * Cancels the current stream
+   */
+  cancel(): void;
+}
 
 // Augment `window` to include everyting exposed in `preload/index.ts`
 declare global {
@@ -32,23 +39,30 @@ declare global {
 
     electronAPI: {
       /**
-       * Invoke the agent with a query and return the result
-       * @param query The query to send to the agent
-       * @param chatHistory The chat history to send to the agent
-       * @param options Optional configuration options for the agent
-       * @returns Promise with the agent response
+       * Agent-related IPC functions
        */
-      invokeAgent: (
-        query: string,
-        chatHistory: AgentChatMessage[]
-      ) => Promise<AgentAssistantMessage>;
+      agent: {
+        /**
+         * Send a message to the agent via IPC and get a stream ID
+         * @param prompt The prompt to send
+         * @param history Chat history as plain objects
+         * @returns Promise that resolves to a stream ID (string)
+         */
+        invoke(prompt: string, history: { role: string; content: string }[]): Promise<string>;
 
-      /**
-       * Register a callback for agent update events
-       * @param callback Function to call when an agent update is received
-       * @returns Function to remove the event listener
-       */
-      onAgentUpdate: (callback: (update: StreamUpdate) => void) => () => void;
+        /**
+         * Subscribe to agent chunks for a stream
+         * @param callback Function to call when chunk events are received
+         * @returns Function to remove the listener
+         */
+        onChunk(callback: (packet: any) => void): () => void;
+
+        /**
+         * Cancel an agent stream
+         * @param streamId ID of the stream to cancel
+         */
+        cancel(streamId: string): void;
+      };
 
       /**
        * Get the current agent configuration

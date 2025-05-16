@@ -1,9 +1,7 @@
 import { AppConfig } from "src/common/AppConfig.js";
 import mockElectronAPI from "../electronApiMock.js";
 import {
-  AgentAssistantMessage,
   AgentChatMessage,
-  AgentStreamUpdate,
   AssistantMessage,
   Chat,
   ChatMessage,
@@ -14,6 +12,7 @@ import {
   TraceQueryParams,
   UserMessage,
 } from "../types/index.js";
+import { ipcHandlersToStream } from "../utils/ipcHandlersToStream.js";
 
 // Get mock API setting from environment
 const USE_MOCK_API = window.env.USE_MOCK_API;
@@ -36,7 +35,7 @@ const isMethodAvailable = (methodName: string) => {
   if (electronAvailable) {
     methodAvailable =
       typeof window.electronAPI[methodName as keyof typeof window.electronAPI] === "function";
-    console.info(`[API DEBUG] Is method '${methodName}' available:`, methodAvailable);
+    console.info(`[API DEBUG] Is electronAPI.${methodName} available:`, methodAvailable);
   }
 
   return electronAvailable && methodAvailable;
@@ -44,25 +43,54 @@ const isMethodAvailable = (methodName: string) => {
 
 // Create a wrapper API that will use either the real or mock API
 const api = {
-  // Register for agent updates
-  onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => {
-    if (USE_MOCK_API || !isMethodAvailable("onAgentUpdate")) {
-      console.info("Mock onAgentUpdate - no streaming available in mock mode");
-      return () => {}; // Return no-op cleanup function
-    } else {
-      console.info("Using real electronAPI.onAgentUpdate");
-      return window.electronAPI.onAgentUpdate(callback);
-    }
-  },
+  // Use the new ipcHandlersToStream implementation
+  sendAgentMessage: async (query: string, chatHistory: AgentChatMessage[] = []) => {
+    console.info("[API DEBUG] getAgentStream called with query:", query);
 
-  invokeAgent: async (
-    query: string,
-    chatHistory: AgentChatMessage[]
-  ): Promise<AgentAssistantMessage> => {
-    if (USE_MOCK_API || !isMethodAvailable("invokeAgent")) {
-      return mockElectronAPI.invokeAgent(query, chatHistory);
+    if (USE_MOCK_API) {
+      console.info("Using mock getAgentStream");
+      // Create a fake stream with a single value for backward compatibility
+      const response = await mockElectronAPI.invokeAgent(query, chatHistory);
+
+      return {
+        async *[Symbol.asyncIterator]() {
+          // Yield all updates from the mock
+          if (response) {
+            yield response;
+          }
+        },
+        cancel: () => {
+          // No-op for mock
+        },
+      };
     } else {
-      return window.electronAPI.invokeAgent(query, chatHistory);
+      console.info("Using electronAPI.agent for streaming");
+      // Convert AgentChatMessages to plain objects with just role and content
+      const plainChatHistory = chatHistory.map((msg) => {
+        if (msg.role === "assistant") {
+          // For assistant messages, use the 'response' field as content
+          return {
+            role: msg.role,
+            content: msg.response || "",
+          };
+        } else {
+          // For user messages, use the 'content' field
+          return {
+            role: msg.role,
+            content: msg.content,
+          };
+        }
+      });
+
+      return ipcHandlersToStream(
+        {
+          invoke: window.electronAPI.agent.invoke,
+          onChunk: window.electronAPI.agent.onChunk,
+          cancel: window.electronAPI.agent.cancel,
+        },
+        query,
+        plainChatHistory
+      );
     }
   },
 

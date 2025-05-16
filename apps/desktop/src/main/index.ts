@@ -151,6 +151,7 @@ app.on("window-all-closed", () => {
 });
 
 // Clean up handlers when app quits
+// TODO: could move into individual handler files
 app.on("before-quit", () => {
   logger.info("Application quitting, cleaning up handlers");
   cleanupAgentHandlers();

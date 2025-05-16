@@ -12,6 +12,7 @@ export interface ChatDetails {
   messages?: ChatMessage[];
   userInput?: string;
   isThinking?: boolean;
+  cancelStream?: () => void;
 }
 
 interface ChatState {
@@ -173,7 +174,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       return { chatDetailsById: newChatDetailsById };
     });
 
-    // Handle streamed updates from the agent
+    // Create a message updater to handle streaming updates
     const updater = new MessageUpdater(assistantMessage, (updatedAssistantMessage) => {
       set((state) => ({
         chatDetailsById: {
@@ -190,38 +191,43 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
         },
       }));
     });
-    const unregister = api.onAgentUpdate((update) => {
-      console.info("Received agent update:", update);
-      if (update.type === "highLevelUpdate") {
-        // A new high-level step is starting
-        handleHighLevelUpdate(updater, update);
-      } else if (update.type === "intermediateUpdate") {
-        // An intermediate update for an existing step
-        handleIntermediateUpdate(updater, update);
-      }
-    });
 
     try {
-      // Call the agent API with message
+      // Get agent chat messages in the required format
       const agentChatMessages = convertToAgentChatMessages(updatedMessages);
-      const agentMessage = await api.invokeAgent(userInput, agentChatMessages);
 
-      if (agentMessage && !agentMessage.error) {
-        // Update the assistant message with the response
-        updater.update((cell) => ({
-          ...cell,
-          response: agentMessage.response || "I processed your request but got no response.",
-          // preserve existing stages from streaming; do not override here
-          // TODO: once we add back agent steps we should save
-        }));
-      } else {
-        // Handle error response
-        updater.update((cell) => ({
-          ...cell,
-          response: "Sorry, there was an error processing your request.",
-          error: agentMessage?.error || "Sorry, there was an error processing your request.",
-        }));
+      // Get a stream from the agent API
+      const stream = await api.sendAgentMessage(userInput, agentChatMessages);
+
+      // Store the stream's cancel function
+      set((state) => ({
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [chatId]: {
+            ...state.chatDetailsById[chatId],
+            cancelStream: stream.cancel,
+          },
+        },
+      }));
+
+      // Process the stream
+      for await (const update of stream) {
+        console.info("Received agent update:", update);
+
+        if (update.type === "highLevelUpdate") {
+          // A new high-level step is starting
+          handleHighLevelUpdate(updater, update);
+        } else if (update.type === "intermediateUpdate") {
+          // An intermediate update for an existing step
+          handleIntermediateUpdate(updater, update);
+        }
       }
+
+      // Final update based on the last response
+      updater.update((cell) => ({
+        ...cell,
+        response: cell.response !== "Thinking..." ? cell.response : "I processed your request.",
+      }));
     } catch (error) {
       console.error("Error in chat API call:", error);
       // Handle error response
@@ -240,19 +246,17 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       console.log("Saving assistant message", JSON.stringify(updater.getMessage()));
       api.saveAssistantMessage(updater.getMessage(), chatId);
 
-      // Clear thinking state for chat
+      // Clear thinking state and cancel function for chat
       set((state) => ({
         chatDetailsById: {
           ...state.chatDetailsById,
           [chatId]: {
             ...state.chatDetailsById[chatId],
             isThinking: false,
+            cancelStream: undefined,
           },
         },
       }));
-
-      // Unregister from agent updates
-      unregister();
     }
   },
 }));
