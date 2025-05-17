@@ -1,7 +1,9 @@
 import {
   AgentStep,
   AgentStreamUpdate,
+  CodePostprocessingStep,
   CodeSearchStep,
+  LogPostprocessingStep,
   LogSearchStep,
   ReasoningStep,
 } from "@triage/agent";
@@ -17,6 +19,7 @@ export function handleIntermediateUpdate(
   update: AgentStreamUpdate
 ): void {
   messageUpdater.update((assistantMessage: AssistantMessage) => {
+    // TODO: DRY UP!
     // Find the step to update
     if (update.step.type === "reasoning-chunk") {
       const stepIndex = assistantMessage.steps.findIndex(
@@ -119,28 +122,116 @@ export function handleIntermediateUpdate(
         ...assistantMessage,
         steps: updatedSteps,
       };
-    } else {
+    } else if (update.step.type === "logSearch-tools") {
+      const stepIndex = assistantMessage.steps.findIndex((step) => step.id === update.step.id);
+      if (stepIndex === -1) {
+        // Ignore tool calls for unknown steps
+        return {
+          ...assistantMessage,
+          steps: [
+            ...assistantMessage.steps,
+            {
+              type: "logSearch",
+              id: update.step.id,
+              timestamp: new Date(),
+              reasoning: "",
+              data: update.step.toolCalls,
+            },
+          ],
+        };
+      }
+
+      const existingStep = assistantMessage.steps[stepIndex] as LogSearchStep;
+      const updatedStep = {
+        ...existingStep,
+        data: existingStep.data.concat(update.step.toolCalls),
+      };
+
+      const updatedSteps = [...assistantMessage.steps];
+      updatedSteps[stepIndex] = updatedStep;
+
+      return {
+        ...assistantMessage,
+        steps: updatedSteps,
+      };
+    } else if (update.step.type === "codeSearch-tools") {
+      const stepIndex = assistantMessage.steps.findIndex((step) => step.id === update.step.id);
+      if (stepIndex === -1) {
+        // Ignore tool calls for unknown steps
+        return {
+          ...assistantMessage,
+          steps: [
+            ...assistantMessage.steps,
+            {
+              type: "codeSearch",
+              id: update.step.id,
+              timestamp: new Date(),
+              reasoning: "",
+              data: update.step.toolCalls,
+            },
+          ],
+        };
+      }
+
+      const existingStep = assistantMessage.steps[stepIndex] as CodeSearchStep;
+      const updatedStep = {
+        ...existingStep,
+        data: existingStep.data.concat(update.step.toolCalls),
+      };
+
+      const updatedSteps = [...assistantMessage.steps];
+      updatedSteps[stepIndex] = updatedStep;
+
+      return {
+        ...assistantMessage,
+        steps: updatedSteps,
+      };
+    } else if (update.step.type === "logPostprocessing") {
       const stepIndex = assistantMessage.steps.findIndex((step) => step.id === update.step.id);
       if (stepIndex === -1) {
         return {
           ...assistantMessage,
           steps: [...assistantMessage.steps, update.step],
         };
-      } else {
-        const existingStep = assistantMessage.steps[stepIndex];
-        const updatedStep = {
-          ...existingStep,
-          data: update.step.data,
-        };
+      }
 
-        const updatedSteps = [...assistantMessage.steps];
-        updatedSteps[stepIndex] = updatedStep as AgentStep;
+      const existingStep = assistantMessage.steps[stepIndex] as LogPostprocessingStep;
+      const updatedStep = {
+        ...existingStep,
+        data: existingStep.data.concat(update.step.data),
+      };
 
+      const updatedSteps = [...assistantMessage.steps];
+      updatedSteps[stepIndex] = updatedStep;
+
+      return {
+        ...assistantMessage,
+        steps: updatedSteps,
+      };
+    } else if (update.step.type === "codePostprocessing") {
+      const stepIndex = assistantMessage.steps.findIndex((step) => step.id === update.step.id);
+      if (stepIndex === -1) {
         return {
           ...assistantMessage,
-          steps: updatedSteps,
+          steps: [...assistantMessage.steps, update.step],
         };
       }
+
+      const existingStep = assistantMessage.steps[stepIndex] as CodePostprocessingStep;
+      const updatedStep = {
+        ...existingStep,
+        data: existingStep.data.concat(update.step.data),
+      };
+
+      const updatedSteps = [...assistantMessage.steps];
+      updatedSteps[stepIndex] = updatedStep;
+
+      return {
+        ...assistantMessage,
+        steps: updatedSteps,
+      };
+    } else {
+      throw new Error(`Unknown step type: ${update.step}`);
     }
   });
 }

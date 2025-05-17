@@ -42,8 +42,31 @@ export class PipelineStateManager {
   addIntermediateStep(step: AgentStep): void {
     this.currSteps.push(step);
 
+    // NOTE: reasoner does not output end tool calls, just subagent calls
+    if (step.type === "reasoning") {
+      return;
+    }
+
     // NOTE: for reasoning steps, we don't want to send them to the stream since they are accumulated in chunks already. We just add them to agent local steps.
-    if (step.type !== "reasoning") {
+    if (step.type === "logSearch") {
+      this.onUpdate({
+        type: "intermediateUpdate",
+        step: {
+          ...step,
+          type: `${step.type}-tools`,
+          toolCalls: step.data,
+        },
+      });
+    } else if (step.type === "codeSearch") {
+      this.onUpdate({
+        type: "intermediateUpdate",
+        step: {
+          ...step,
+          type: `${step.type}-tools`,
+          toolCalls: step.data,
+        },
+      });
+    } else {
       this.onUpdate({
         type: "intermediateUpdate",
         step,
