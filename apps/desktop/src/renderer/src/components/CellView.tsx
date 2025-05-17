@@ -92,52 +92,56 @@ const GenericStep: React.FC<{ step: AgentStep }> = ({ step }) => {
 };
 
 const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => (
-  <CollapsibleStep title="Log Search">
-    {/* Show reasoning */}
+  <div className="mb-6">
+    {/* Reasoning */}
     {step.reasoning && (
-      <div className="mb-4 p-3 bg-background-lighter rounded-lg">
-        <div className="font-medium text-sm mb-1">Reasoning:</div>
-        <div className="text-sm leading-relaxed break-words">
-          <Markdown>{step.reasoning}</Markdown>
-        </div>
+      <div className="mb-4 text-sm leading-relaxed">
+        <Markdown>{step.reasoning}</Markdown>
       </div>
     )}
 
+    {/* Tool calls */}
     {step.data.length === 0 ? (
-      <em>Searching logs...</em>
+      <em className="text-gray-400 text-sm">Searching logs...</em>
     ) : (
-      step.data.map((toolCall: LogSearchToolCall, index) => (
-        <div
-          key={`${step.id}-search-${index}`}
-          className="log-search-item mb-2 p-3 bg-background-lighter rounded-lg"
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div className="font-medium text-sm">Log Search Query</div>
-            <div className="text-xs px-2 py-1 bg-blue-900/30 text-blue-300 rounded-full">
-              {toolCall.output && "error" in toolCall.output
-                ? "Error"
-                : toolCall.output && "logs" in toolCall.output
-                  ? `${toolCall.output.logs.length} results`
-                  : "Processing..."}
+      <div className="space-y-2">
+        {step.data.map((toolCall: LogSearchToolCall, index) => (
+          <div
+            key={`${step.id}-search-${index}`}
+            className="border border-border/60 rounded-md overflow-hidden bg-background-lighter/30"
+          >
+            <div className="flex justify-between items-center px-3 py-2 border-b border-border/40 bg-background-lighter/70">
+              <div className="text-xs font-medium">Log Search Query</div>
+              <div className="text-xs px-2 py-0.5 bg-blue-900/30 text-blue-300 rounded-full">
+                {toolCall.output && "error" in toolCall.output
+                  ? "Error"
+                  : toolCall.output && "logs" in toolCall.output
+                    ? `${toolCall.output.logs.length} results`
+                    : "Processing..."}
+              </div>
+            </div>
+            <div className="p-3">
+              <div className="font-mono text-xs overflow-x-auto whitespace-pre-wrap break-words">
+                {toolCall.input.query}
+              </div>
+              {toolCall.output && !("error" in toolCall.output) && (
+                <div className="mt-2 border-t border-border/30 pt-2">
+                  <a
+                    href={logSearchInputToDatadogLogsViewUrl(toolCall.input)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs flex items-center text-blue-300 hover:text-blue-100 transition-colors"
+                  >
+                    View in Datadog <ExternalLink className="ml-1" size={12} />
+                  </a>
+                </div>
+              )}
             </div>
           </div>
-          <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words mb-2">
-            {toolCall.input.query}
-          </div>
-          {toolCall.output && !("error" in toolCall.output) && (
-            <a
-              href={logSearchInputToDatadogLogsViewUrl(toolCall.input)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs flex items-center text-blue-300 hover:text-blue-100 transition-colors"
-            >
-              View in Datadog <ExternalLink className="ml-1" size={12} />
-            </a>
-          )}
-        </div>
-      ))
+        ))}
+      </div>
     )}
-  </CollapsibleStep>
+  </div>
 );
 
 const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
@@ -145,129 +149,149 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
   if (!appConfig) return null;
 
   return (
-    <CollapsibleStep title="Code Search">
-      {/* Show reasoning */}
+    <div className="mb-6">
+      {/* Reasoning */}
       {step.reasoning && (
-        <div className="mb-4 p-3 bg-background-lighter rounded-lg">
-          <div className="font-medium text-sm mb-1">Reasoning:</div>
-          <div className="text-sm leading-relaxed break-words">
-            <Markdown>{step.reasoning}</Markdown>
-          </div>
+        <div className="mb-4 text-sm leading-relaxed">
+          <Markdown>{step.reasoning}</Markdown>
         </div>
       )}
 
+      {/* Tool calls */}
       {step.data.length === 0 ? (
-        <em>Searching code...</em>
+        <em className="text-gray-400 text-sm">Searching code...</em>
       ) : (
-        step.data.map((toolCall: CodeSearchToolCall, index) => {
-          // Handle different types of code search tool calls
-          if (toolCall.type === "cat") {
-            const catToolCall = toolCall as CatToolCall;
-            const filepath = catToolCall.input.path;
-            const output =
-              catToolCall.output && !("error" in catToolCall.output) ? catToolCall.output : null;
-            const numLines = output ? output.content.split("\n").length : 0;
-            return (
-              <div
-                key={`${step.id}-search-${index}`}
-                className="code-search-item mb-2 p-3 bg-background-lighter rounded-lg"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="font-medium text-sm">Cat Request</div>
-                  {output && (
-                    <div className="text-xs px-2 py-1 bg-purple-900/30 text-purple-300 rounded-full">
-                      {numLines} line{numLines !== 1 ? "s" : ""}
+        <div className="space-y-2">
+          {step.data.map((toolCall: CodeSearchToolCall, index) => {
+            // Handle different types of code search tool calls
+            if (toolCall.type === "cat") {
+              const catToolCall = toolCall as CatToolCall;
+              const filepath = catToolCall.input.path;
+              const output =
+                catToolCall.output && !("error" in catToolCall.output) ? catToolCall.output : null;
+              const numLines = output ? output.content.split("\n").length : 0;
+              return (
+                <div
+                  key={`${step.id}-search-${index}`}
+                  className="border border-border/60 rounded-md overflow-hidden bg-background-lighter/30"
+                >
+                  <div className="flex justify-between items-center px-3 py-2 border-b border-border/40 bg-background-lighter/70">
+                    <div className="text-xs font-medium">Cat Request</div>
+                    {output && (
+                      <div className="text-xs px-2 py-0.5 bg-purple-900/30 text-purple-300 rounded-full">
+                        {numLines} line{numLines !== 1 ? "s" : ""}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <div className="font-mono text-xs overflow-x-auto whitespace-pre-wrap break-words">
+                      {filepath}
                     </div>
-                  )}
+                    {output && (
+                      <div className="mt-2 border-t border-border/30 pt-2">
+                        <a
+                          href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, filepath)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs flex items-center text-purple-300 hover:text-purple-100 transition-colors"
+                        >
+                          View on GitHub <ExternalLink className="ml-1" size={12} />
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words mb-2">
-                  {filepath}
+              );
+            } else if (toolCall.type === "grep") {
+              const grepToolCall = toolCall as GrepToolCall;
+              return (
+                <div
+                  key={`${step.id}-search-${index}`}
+                  className="border border-border/60 rounded-md overflow-hidden bg-background-lighter/30"
+                >
+                  <div className="px-3 py-2 border-b border-border/40 bg-background-lighter/70">
+                    <div className="text-xs font-medium">Grep Search</div>
+                  </div>
+                  <div className="p-3">
+                    <div className="font-mono text-xs overflow-x-auto whitespace-pre-wrap break-words">
+                      {grepToolCall.input.pattern}
+                    </div>
+                  </div>
                 </div>
-                {output && (
-                  <a
-                    href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, filepath)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs flex items-center text-purple-300 hover:text-purple-100 transition-colors"
-                  >
-                    View in GitHub <ExternalLink className="ml-1" size={12} />
-                  </a>
-                )}
-              </div>
-            );
-          } else if (toolCall.type === "grep") {
-            const grepToolCall = toolCall as GrepToolCall;
-            return (
-              <div
-                key={`${step.id}-search-${index}`}
-                className="code-search-item mb-2 p-3 bg-background-lighter rounded-lg"
-              >
-                <div className="font-medium text-sm mb-2">Grep Search</div>
-                <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
-                  {grepToolCall.input.pattern}
-                </div>
-              </div>
-            );
-          }
+              );
+            }
 
-          return null;
-        })
+            return null;
+          })}
+        </div>
       )}
-    </CollapsibleStep>
+    </div>
   );
 };
 
 const ReasoningStepView: React.FC<{ step: ReasoningStep }> = ({ step }) => (
-  <CollapsibleStep title="Reasoning">
-    <div className="text-sm leading-relaxed break-words">
+  <div className="mb-6">
+    <div className="text-sm leading-relaxed">
       <Markdown>{step.data}</Markdown>
     </div>
-  </CollapsibleStep>
+  </div>
 );
 
 const LogPostprocessingStepView: React.FC<{ step: LogPostprocessingStep }> = ({ step }) => (
-  <CollapsibleStep title="Log Analysis" isActive={true}>
-    <div className="text-sm mb-3 flex items-center">
-      <span className="text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
-        Analyzing logs
-      </span>
-      <AnimatedEllipsis />
+  <div className="mb-6">
+    {/* Title */}
+    <div className="mb-3 flex items-center">
+      <div className="text-sm font-medium text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
+        Log Analysis
+      </div>
     </div>
-    <div className="space-y-3">
+
+    {/* Facts */}
+    <div className="space-y-2">
       {step.data.map((fact, index) => (
         <div
           key={`fact-${index}`}
-          className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
+          className="border border-border/60 rounded-md overflow-hidden bg-background-lighter/30"
         >
-          <div className="font-medium text-sm">{fact.title || "Log Fact"}</div>
-          <div className="mt-2 text-sm text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
+          <div className="px-3 py-2 border-b border-border/40 bg-background-lighter/70">
+            <div className="text-xs font-medium">{fact.title || "Log Fact"}</div>
+          </div>
+          <div className="p-3">
+            <div className="text-xs text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
+          </div>
         </div>
       ))}
     </div>
-  </CollapsibleStep>
+  </div>
 );
 
 const CodePostprocessingStepView: React.FC<{ step: CodePostprocessingStep }> = ({ step }) => (
-  <CollapsibleStep title="Code Analysis" isActive={true}>
-    <div className="text-sm mb-3 flex items-center">
-      <span className="text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
-        Analyzing code
-      </span>
-      <AnimatedEllipsis />
+  <div className="mb-6">
+    {/* Title */}
+    <div className="mb-3 flex items-center">
+      <div className="text-sm font-medium text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
+        Code Analysis
+      </div>
     </div>
-    <div className="space-y-3">
+
+    {/* Facts */}
+    <div className="space-y-2">
       {step.data.map((fact, index) => (
         <div
           key={`fact-${index}`}
-          className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
+          className="border border-border/60 rounded-md overflow-hidden bg-background-lighter/30"
         >
-          <div className="font-medium text-sm">{fact.title || "Code Fact"}</div>
-          <div className="mt-2 text-sm text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
-          {fact.filepath && <div className="mt-1 text-xs text-gray-500">{fact.filepath}</div>}
+          <div className="px-3 py-2 border-b border-border/40 bg-background-lighter/70">
+            <div className="text-xs font-medium">{fact.title || "Code Fact"}</div>
+          </div>
+          <div className="p-3">
+            <div className="text-xs text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
+            {fact.filepath && <div className="mt-1 text-xs text-gray-500">{fact.filepath}</div>}
+          </div>
         </div>
       ))}
     </div>
-  </CollapsibleStep>
+  </div>
 );
 
 interface CellViewProps {
