@@ -12,6 +12,11 @@ import {
 import { AssistantMessage } from "../types/index.js";
 import { MessageUpdater } from "./MessageUpdater.js";
 
+type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyof T, Keys>> &
+  {
+    [K in Keys]-?: Required<Pick<T, K>> & Partial<Omit<T, K>>;
+  }[Keys];
+
 /**
  * Handle an intermediate update from the agent
  * Updates the content of an existing step
@@ -61,9 +66,13 @@ export function handeUpdate(messageUpdater: MessageUpdater, update: AgentStreamU
 function findAndUpdateStep<T extends AgentStep>(
   assistantMessage: AssistantMessage,
   stepId: string,
-  updateLogic:
-    | { createNewStepFn: () => T; updateExistingStepFn?: (step: T) => T }
-    | { createNewStepFn?: () => T; updateExistingStepFn: (step: T) => T }
+  updateLogic: RequireAtLeastOne<
+    {
+      createNewStepFn?: () => T;
+      updateExistingStepFn?: (step: T) => T;
+    },
+    "createNewStepFn" | "updateExistingStepFn"
+  >
 ): AssistantMessage {
   const stepIndex = assistantMessage.steps.findIndex((step) => step.id === stepId);
 
@@ -195,15 +204,11 @@ function handlePostprocessingUpdate(
   assistantMessage: AssistantMessage,
   step: LogPostprocessingStep | CodePostprocessingStep
 ): AssistantMessage {
-  // Use findAndUpdateStep to handle both creation and update cases
-  if (step.type === "logPostprocessing") {
-    return findAndUpdateStep<LogPostprocessingStep>(assistantMessage, step.id, {
+  return findAndUpdateStep<LogPostprocessingStep | CodePostprocessingStep>(
+    assistantMessage,
+    step.id,
+    {
       createNewStepFn: () => step,
-    });
-  } else {
-    // codePostprocessing
-    return findAndUpdateStep<CodePostprocessingStep>(assistantMessage, step.id, {
-      createNewStepFn: () => step,
-    });
-  }
+    }
+  );
 }
