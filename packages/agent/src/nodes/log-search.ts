@@ -246,6 +246,9 @@ export class LogSearchAgent {
           this.config.observabilityPlatform
         );
 
+        const lastLogSearchResultsFormatted = formatLogSearchToolCalls(toolCalls);
+        logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
+
         toolCalls.push({
           type: "logSearch",
           timestamp: new Date(),

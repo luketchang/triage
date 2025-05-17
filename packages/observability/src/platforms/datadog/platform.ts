@@ -61,6 +61,7 @@ Use Datadog Log Search Syntax to search for logs.
 - BAD (wrong tag for log severity, should be "status" not "level"): service:orders AND level:error
 - BAD (missing quotes around keyword terms): service:orders *:No matching document *:duplicate key
 - BAD (uses specific attribute tag instead of using *): service:orders item:"<keyword>"
+- BAD (missing colon for attribute filter): service:orders *"<keyword>"
 
 ## Pagination
 - Page cursors are a feature in Datadog log and span search that allows you to paginate through results.
