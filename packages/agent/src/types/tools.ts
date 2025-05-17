@@ -1,11 +1,12 @@
 import { LogsWithPagination } from "@triage/observability";
 import { z, infer as zInfer } from "zod";
 
-import { LLMToolCall, SubAgentCall } from "../tools";
+import { SubAgentCall } from "../tools";
 
 const BASIC_REASONING_DESCRIPTION =
   "Intermediate reasoning where you can explain what you see from the given information and what information you need next (if any).";
 
+// Task complete types
 const taskCompleteSchema = z.object({
   reasoning: z.string().describe("Reasoning process behind your findings for the task."),
   summary: z.string().describe("Summary of your findings for the task. Be precise and sequential."),
@@ -18,6 +19,7 @@ export const taskCompleteToolSchema = {
   parameters: taskCompleteSchema,
 };
 
+// Code request types
 export const codeRequestSchema = z.object({
   request: z
     .string()
@@ -35,23 +37,7 @@ export const codeRequestToolSchema = {
   parameters: codeRequestSchema,
 };
 
-export const spanRequestSchema = z.object({
-  request: z
-    .string()
-    .describe(
-      "A directive to search for/explore a type of set of spans. This should be a specific request for spans related to specific events, services, etc."
-    ),
-  reasoning: z.string().describe(BASIC_REASONING_DESCRIPTION),
-});
-
-export type SpanRequest = zInfer<typeof spanRequestSchema> & { type: "spanRequest" };
-
-export const spanRequestToolSchema = {
-  description:
-    "A directive to search for/explore a type of set of spans. This should be a specific request for spans related to specific events, services, etc.",
-  parameters: spanRequestSchema,
-};
-
+// Log request types
 export const logRequestSchema = z.object({
   request: z
     .string()
@@ -69,45 +55,13 @@ export const logRequestToolSchema = {
   parameters: logRequestSchema,
 };
 
-export interface ReasoningRequest {
-  type: "reasoningRequest";
-}
-
-export interface LogPostprocessingRequest {
-  type: "logPostprocessing";
-}
-
-export interface CodePostprocessingRequest {
-  type: "codePostprocessing";
-}
-
-export type RequestToolCalls = {
-  type: "toolCalls";
-  toolCalls: Array<LLMToolCall>;
-};
-
+// Subagent call types
 export type RequestSubAgentCalls = {
   type: "subAgentCalls";
   subAgentCalls: Array<SubAgentCall>;
 };
 
-export const rootCauseAnalysisSchema = z.object({
-  rootCause: z
-    .string()
-    .describe(
-      "A clear and concise root cause analysis. Be specific and actionable. Do not cite vague terms like 'synchronization issues' or 'performance issues'. This can be a long input."
-    ),
-});
-
-export type RootCauseAnalysis = zInfer<typeof rootCauseAnalysisSchema> & {
-  type: "rootCauseAnalysis";
-};
-
-export const rootCauseAnalysisToolSchema = {
-  description: "Output a root cause analysis",
-  parameters: rootCauseAnalysisSchema,
-};
-
+// Log search types
 export const logSearchInputSchema = z.object({
   start: z
     .string()
@@ -134,7 +88,6 @@ export type LogSearchResult = LogsWithPagination & {
   toolCallType: "logSearchInput";
 };
 
-// Full LogSearchInput type with reasoning - used when interfacing with LLMs
 export type LogSearchInput = zInfer<typeof logSearchInputSchema> & { type: "logSearchInput" };
 
 export const logSearchInputToolSchema = {
@@ -142,43 +95,7 @@ export const logSearchInputToolSchema = {
   parameters: logSearchInputSchema,
 };
 
-export const spanSearchInputSchema = z.object({
-  // NOTE: this is reasoning for the previous span search results
-  reasoning: z
-    .string()
-    .describe(
-      "Objectively outline what you observe in the most recent set of fetched spans as a sequential list of events. If you notice anything unusual and want to investigate further, explain what you will investigate. If you did not find anything useful, describe how you will change your query for next time. If you have enough context, explain why you are done with the current search."
-    ),
-  start: z
-    .string()
-    .describe(
-      "Start time in ISO 8601 format with timezone (e.g., '2025-03-19T04:10:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
-    ),
-  end: z
-    .string()
-    .describe(
-      "End time in ISO 8601 format with timezone (e.g., '2025-03-19T04:40:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
-    ),
-  query: z.string().describe("Span search query in the observability platform query language"),
-  pageLimit: z.number().describe("Maximum number of spans to return, default to 500"),
-  pageCursor: z
-    .string()
-    .nullable()
-    .describe(
-      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
-    ),
-});
-
-export type SpanSearchInput = zInfer<typeof spanSearchInputSchema> & { type: "spanSearchInput" };
-
-// SpanSearchInputCore type without reasoning - used for storage in context maps
-export type SpanSearchInputCore = Omit<SpanSearchInput, "reasoning">;
-
-export const spanSearchInputToolSchema = {
-  description: "Input parameters for searching spans.",
-  parameters: spanSearchInputSchema,
-};
-
+// Trace search types
 export const traceSearchInputSchema = z.object({
   start: z
     .string()
@@ -207,14 +124,12 @@ export const traceSearchInputSchema = z.object({
 
 export type TraceSearchInput = zInfer<typeof traceSearchInputSchema> & { type: "traceSearchInput" };
 
-// TraceSearchInputCore type without reasoning - used for storage in context maps
-export type TraceSearchInputCore = Omit<TraceSearchInput, "reasoning">;
-
 export const traceSearchInputToolSchema = {
   description: "Input parameters for searching traces.",
   parameters: traceSearchInputSchema,
 };
 
+// Cat types
 const catRequestSchema = z.object({
   path: z.string().describe("Absolute file path to read"),
 });
@@ -232,8 +147,7 @@ export type CatRequestResult = {
   content: string;
 };
 
-export type CodeSearchInput = CatRequest | GrepRequest;
-
+// Grep types
 const grepRequestSchema = z.object({
   pattern: z.string().describe("Regular expression pattern to search for"),
   flags: z
@@ -257,7 +171,10 @@ export type GrepRequestResult = {
   content: string;
 };
 
-// The intermediate type the LLM outputs, later used to augment original query
+// Combined code search input
+export type CodeSearchInput = CatRequest | GrepRequest;
+
+// Log postprocessing types
 export const logPostprocessingFactOutputSchema = logSearchInputSchema
   .omit({
     start: true,
@@ -280,8 +197,6 @@ export const logPostprocessingFactOutputSchema = logSearchInputSchema
         "Keywords to highlight logs that support the fact. The should match the content of the log lines that support the fact even if the keywords themselves are generic.  They are matchers on the right logs and should not be attributes filters."
       ),
   });
-
-export type LogPostprocessingFactOutput = zInfer<typeof logPostprocessingFactOutputSchema>;
 
 // The final type we actually return to UI
 export const logPostprocessingFactSchema = logSearchInputSchema.extend({
@@ -310,6 +225,7 @@ export const logPostprocessingToolSchema = {
   parameters: logPostprocessingSchema,
 };
 
+// Code postprocessing types
 export const codePostprocessingFactSchema = z.object({
   title: z.string().describe("A concise title summarizing the fact"),
   fact: z
@@ -323,6 +239,7 @@ export const codePostprocessingFactSchema = z.object({
 });
 
 export type CodePostprocessingFact = zInfer<typeof codePostprocessingFactSchema>;
+
 export const codePostprocessingSchema = z.object({
   facts: z
     .array(codePostprocessingFactSchema)
@@ -337,16 +254,3 @@ export const codePostprocessingToolSchema = {
   description: "Postprocess code results.",
   parameters: codePostprocessingSchema,
 };
-
-// Generic function to strip reasoning from input objects for storage
-export function stripReasoning<T extends { reasoning: string; type?: string }>(
-  input: T
-): Omit<T, "reasoning"> {
-  const { reasoning, ...core } = input;
-  return core;
-}
-
-export function normalizeForKey<T extends { type: string }>(input: T): Omit<T, "type"> {
-  const { type, ...core } = input;
-  return core;
-}

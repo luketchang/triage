@@ -1,4 +1,4 @@
-import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
+import { Log, LogsWithPagination } from "@triage/observability";
 
 import {
   CatToolCallWithResult,
@@ -6,7 +6,7 @@ import {
   GrepToolCallWithResult,
   LogSearchToolCallWithResult,
 } from "./pipeline/state";
-import { LogSearchInput, SpanSearchInput } from "./types/tools";
+import { LogSearchInput } from "./types/tools";
 
 import { AgentStep, ChatMessage, ReasoningStep } from ".";
 
@@ -33,12 +33,6 @@ export function formatLogQuery(logQuery: Partial<LogSearchInput>): string {
   }`;
 }
 
-export function formatSpanQuery(spanQuery: Partial<SpanSearchInput>): string {
-  return `Query: ${spanQuery.query}\nStart: ${spanQuery.start}\nEnd: ${spanQuery.end}\nPage Limit: ${spanQuery.pageLimit}${
-    spanQuery.pageCursor ? `\nPage Cursor: ${spanQuery.pageCursor}` : ""
-  }`;
-}
-
 export function formatSingleLog(log: Log): string {
   const attributesString = log.attributes
     ? Object.entries(log.attributes)
@@ -49,20 +43,6 @@ export function formatSingleLog(log: Log): string {
   return `[${log.timestamp}] ${log.level.toUpperCase()} [${log.service}] ${log.message}${
     attributesString ? ` [attributes: ${attributesString}]` : ""
   }`;
-}
-
-export function formatSingleSpan(span: Span, index?: number): string {
-  const indexPrefix = index !== undefined ? `[${index + 1}] ` : "";
-
-  return `${indexPrefix}Span ID: ${span.spanId}
-    Service: ${span.service}
-    Operation: ${span.operation}
-    Trace ID: ${span.traceId}
-    Start: ${span.startTime}
-    End: ${span.endTime}
-    Duration: ${span.duration} ms
-    Status: ${span.status || "N/A"}
-    Environment: ${span.environment || "N/A"}`;
 }
 
 export function formatLogResults(
@@ -87,32 +67,6 @@ export function formatLogResults(
       }
 
       return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
-    })
-    .join("\n\n");
-}
-
-export function formatSpanResults(
-  spanResults: Map<Partial<SpanSearchInput>, SpansWithPagination | string>
-): string {
-  return Array.from(spanResults.entries())
-    .map(([input, spansOrError]) => {
-      let formattedContent: string;
-      let pageCursor: string | undefined;
-
-      if (typeof spansOrError === "string") {
-        // It's an error message
-        formattedContent = `Error: ${spansOrError}`;
-        pageCursor = undefined;
-      } else {
-        // It's a spans object
-        formattedContent =
-          spansOrError.spans.length > 0
-            ? spansOrError.spans.map((span, index) => formatSingleSpan(span, index)).join("\n\n")
-            : "No spans found";
-        pageCursor = spansOrError.pageCursorOrIndicator;
-      }
-
-      return `${formatSpanQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
     })
     .join("\n\n");
 }
