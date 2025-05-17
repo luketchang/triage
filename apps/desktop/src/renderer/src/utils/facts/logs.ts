@@ -12,7 +12,7 @@ export function logSearchInputToDatadogLogsViewUrl(
     start: input.start,
     end: input.end,
     limit: input.limit,
-    pageCursor: null,
+    pageCursor: undefined,
   };
 
   const fromTs = new Date(core.start).getTime();

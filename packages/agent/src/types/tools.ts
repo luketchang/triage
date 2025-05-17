@@ -123,7 +123,7 @@ export const logSearchInputSchema = z.object({
   limit: z.number().describe("Maximum number of logs to return, default to 500"),
   pageCursor: z
     .string()
-    .nullable()
+    .optional()
     .describe(
       "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
     ),
@@ -194,7 +194,7 @@ export const traceSearchInputSchema = z.object({
   limit: z.number().describe("Maximum number of traces to return, default to 20"),
   pageCursor: z
     .string()
-    .nullable()
+    .optional()
     .describe(
       "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
     ),
@@ -232,7 +232,6 @@ export type CatRequestResult = {
   toolCallType: "catRequest";
   content: string;
 };
-
 
 export type CodeSearchInput = CatRequest | GrepRequest;
 

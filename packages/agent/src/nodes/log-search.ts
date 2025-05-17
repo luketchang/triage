@@ -198,7 +198,7 @@ class LogSearch {
             end: new Date().toISOString(),
             query: "service:orders OR service:payments OR service:tickets OR service:expiration",
             limit: 500,
-            pageCursor: null,
+            pageCursor: undefined,
           },
         ],
       };
