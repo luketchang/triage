@@ -18,8 +18,18 @@ export function handleIntermediateUpdate(
       );
 
       if (stepIndex === -1) {
-        console.warn(`Step with ID ${update.step.id} not found`);
-        return assistantMessage; // Return unchanged message if step not found
+        return {
+          ...assistantMessage,
+          steps: [
+            ...assistantMessage.steps,
+            {
+              type: "reasoning",
+              id: update.step.id,
+              data: update.step.chunk,
+              timestamp: new Date(),
+            },
+          ],
+        };
       }
 
       const updatedStep = {

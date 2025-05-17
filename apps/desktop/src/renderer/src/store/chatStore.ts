@@ -205,7 +205,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
         updater.update((cell) => ({
           ...cell,
           response: agentMessage.response || "I processed your request but got no response.",
-          // preserve existing stages from streaming; do not override here
+          // preserve existing steps from streaming; do not override here
           // TODO: once we add back agent steps we should save
         }));
       } else {

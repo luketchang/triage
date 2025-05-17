@@ -1,11 +1,6 @@
 import { useAppConfig } from "@renderer/context/useAppConfig.js";
-import type {
-  CatToolCall,
-  CodeSearchToolCall,
-  GrepToolCall,
-  LogSearchToolCall,
-} from "@triage/agent/src/pipeline/state.js";
-import { ExternalLink } from "lucide-react";
+import type { LogSearchToolCall } from "@triage/agent/src/pipeline/state.js";
+import { BarChart, ExternalLink, FileCode, Search } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "../components/ui/Markdown.js";
 import { cn } from "../lib/utils.js";
@@ -20,7 +15,7 @@ import {
   LogSearchStep,
   ReasoningStep,
 } from "../types/index.js";
-import { filepathToGitHubUrl } from "../utils/facts/code.js";
+import { absoluteToRepoRelativePath, filepathToGitHubUrl } from "../utils/facts/code.js";
 import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs.js";
 import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/Accordion.js";
@@ -104,37 +99,33 @@ const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => (
     {step.data.length === 0 ? (
       <em className="text-gray-400 text-sm">Searching logs...</em>
     ) : (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {step.data.map((toolCall: LogSearchToolCall, index) => (
           <div
             key={`${step.id}-search-${index}`}
-            className="border border-border/60 rounded-md overflow-hidden bg-background-lighter/30"
+            className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex items-center justify-between"
           >
-            <div className="flex justify-between items-center px-3 py-2 border-b border-border/40 bg-background-lighter/70">
-              <div className="text-xs font-medium">Log Search Query</div>
-              <div className="text-xs px-2 py-0.5 bg-blue-900/30 text-blue-300 rounded-full">
+            <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
+              <BarChart size={16} className="text-purple-300 flex-shrink-0" />
+              <div className="font-mono text-xs truncate">{toolCall.input.query}</div>
+            </div>
+            <div className="flex items-center">
+              <div className="px-2 py-1 text-xs text-purple-300">
                 {toolCall.output && "error" in toolCall.output
                   ? "Error"
                   : toolCall.output && "logs" in toolCall.output
                     ? `${toolCall.output.logs.length} results`
                     : "Processing..."}
               </div>
-            </div>
-            <div className="p-3">
-              <div className="font-mono text-xs overflow-x-auto whitespace-pre-wrap break-words">
-                {toolCall.input.query}
-              </div>
               {toolCall.output && !("error" in toolCall.output) && (
-                <div className="mt-2 border-t border-border/30 pt-2">
-                  <a
-                    href={logSearchInputToDatadogLogsViewUrl(toolCall.input)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs flex items-center text-blue-300 hover:text-blue-100 transition-colors"
-                  >
-                    View in Datadog <ExternalLink className="ml-1" size={12} />
-                  </a>
-                </div>
+                <a
+                  href={logSearchInputToDatadogLogsViewUrl(toolCall.input)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
+                >
+                  Open in Datadog <ExternalLink className="ml-1" size={12} />
+                </a>
               )}
             </div>
           </div>
@@ -161,66 +152,61 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
       {step.data.length === 0 ? (
         <em className="text-gray-400 text-sm">Searching code...</em>
       ) : (
-        <div className="space-y-2">
-          {step.data.map((toolCall: CodeSearchToolCall, index) => {
+        <div className="space-y-3">
+          {step.data.map((toolCall, index) => {
             // Handle different types of code search tool calls
             if (toolCall.type === "cat") {
-              const catToolCall = toolCall as CatToolCall;
-              const filepath = catToolCall.input.path;
+              const catToolCall = toolCall;
+              const filepath = absoluteToRepoRelativePath(
+                appConfig.repoPath!,
+                catToolCall.input.path
+              );
+              console.log("filepath", filepath);
               const output =
                 catToolCall.output && !("error" in catToolCall.output) ? catToolCall.output : null;
               const numLines = output ? output.content.split("\n").length : 0;
               return (
                 <div
                   key={`${step.id}-search-${index}`}
-                  className="border border-border/60 rounded-md overflow-hidden bg-background-lighter/30"
+                  className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex items-center justify-between"
                 >
-                  <div className="flex justify-between items-center px-3 py-2 border-b border-border/40 bg-background-lighter/70">
-                    <div className="text-xs font-medium">Cat Request</div>
+                  <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
+                    <FileCode size={16} className="text-blue-300 flex-shrink-0" />
+                    <div className="font-mono text-xs truncate">{filepath}</div>
+                  </div>
+                  <div className="flex items-center">
                     {output && (
-                      <div className="text-xs px-2 py-0.5 bg-purple-900/30 text-purple-300 rounded-full">
+                      <div className="px-2 py-1 text-xs text-blue-300">
                         {numLines} line{numLines !== 1 ? "s" : ""}
                       </div>
                     )}
-                  </div>
-                  <div className="p-3">
-                    <div className="font-mono text-xs overflow-x-auto whitespace-pre-wrap break-words">
-                      {filepath}
-                    </div>
                     {output && (
-                      <div className="mt-2 border-t border-border/30 pt-2">
-                        <a
-                          href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, filepath)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs flex items-center text-purple-300 hover:text-purple-100 transition-colors"
-                        >
-                          View on GitHub <ExternalLink className="ml-1" size={12} />
-                        </a>
-                      </div>
+                      <a
+                        href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, filepath)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
+                      >
+                        Open in GitHub <ExternalLink className="ml-1" size={12} />
+                      </a>
                     )}
                   </div>
                 </div>
               );
             } else if (toolCall.type === "grep") {
-              const grepToolCall = toolCall as GrepToolCall;
+              const grepToolCall = toolCall;
               return (
                 <div
                   key={`${step.id}-search-${index}`}
-                  className="border border-border/60 rounded-md overflow-hidden bg-background-lighter/30"
+                  className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex items-center justify-between"
                 >
-                  <div className="px-3 py-2 border-b border-border/40 bg-background-lighter/70">
-                    <div className="text-xs font-medium">Grep Search</div>
-                  </div>
-                  <div className="p-3">
-                    <div className="font-mono text-xs overflow-x-auto whitespace-pre-wrap break-words">
-                      {grepToolCall.input.pattern}
-                    </div>
+                  <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
+                    <Search size={16} className="text-blue-300 flex-shrink-0" />
+                    <div className="font-mono text-xs truncate">{grepToolCall.input.pattern}</div>
                   </div>
                 </div>
               );
             }
-
             return null;
           })}
         </div>
@@ -231,9 +217,12 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
 
 const ReasoningStepView: React.FC<{ step: ReasoningStep }> = ({ step }) => (
   <div className="mb-6">
-    <div className="text-sm leading-relaxed">
-      <Markdown>{step.data}</Markdown>
-    </div>
+    {/* Reasoning */}
+    {step.data && (
+      <div className="mb-4 text-sm leading-relaxed">
+        <Markdown>{step.data}</Markdown>
+      </div>
+    )}
   </div>
 );
 
@@ -247,13 +236,13 @@ const LogPostprocessingStepView: React.FC<{ step: LogPostprocessingStep }> = ({ 
     </div>
 
     {/* Facts */}
-    <div className="space-y-2">
+    <div className="space-y-3">
       {step.data.map((fact, index) => (
         <div
           key={`fact-${index}`}
-          className="border border-border/60 rounded-md overflow-hidden bg-background-lighter/30"
+          className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex flex-col"
         >
-          <div className="px-3 py-2 border-b border-border/40 bg-background-lighter/70">
+          <div className="flex items-center justify-between p-2.5 border-b border-white/10">
             <div className="text-xs font-medium">{fact.title || "Log Fact"}</div>
           </div>
           <div className="p-3">
@@ -275,13 +264,13 @@ const CodePostprocessingStepView: React.FC<{ step: CodePostprocessingStep }> = (
     </div>
 
     {/* Facts */}
-    <div className="space-y-2">
+    <div className="space-y-3">
       {step.data.map((fact, index) => (
         <div
           key={`fact-${index}`}
-          className="border border-border/60 rounded-md overflow-hidden bg-background-lighter/30"
+          className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex flex-col"
         >
-          <div className="px-3 py-2 border-b border-border/40 bg-background-lighter/70">
+          <div className="flex items-center justify-between p-2.5 border-b border-white/10">
             <div className="text-xs font-medium">{fact.title || "Code Fact"}</div>
           </div>
           <div className="p-3">
