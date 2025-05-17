@@ -157,7 +157,6 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
                 appConfig.repoPath!,
                 catToolCall.input.path
               );
-              console.log("filepath", filepath);
               const output =
                 catToolCall.output && !("error" in catToolCall.output) ? catToolCall.output : null;
               const numLines = output ? output.content.split("\n").length : 0;
