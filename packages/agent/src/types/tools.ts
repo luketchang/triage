@@ -226,7 +226,6 @@ export const catRequestToolSchema = {
 
 export type CatRequest = z.infer<typeof catRequestSchema> & { type: "catRequest" };
 
-// TODO: remove in place of CatStep
 export type CatRequestResult = {
   type: "result";
   toolCallType: "catRequest";
@@ -252,7 +251,6 @@ export const grepRequestToolSchema = {
 
 export type GrepRequest = z.infer<typeof grepRequestSchema> & { type: "grepRequest" };
 
-// TODO: remove in place of GrepStep
 export type GrepRequestResult = {
   type: "result";
   toolCallType: "grepRequest";

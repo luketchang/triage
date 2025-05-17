@@ -1,13 +1,17 @@
 import { CoreMessage } from "ai";
 
 import { ChatMessage } from "../types/message";
-import { formatAgentSteps, formatCatToolCalls, formatLogSearchToolCalls } from "../utils";
+import {
+  formatAgentSteps,
+  formatCatToolCallsWithResults,
+  formatLogSearchToolCallsWithResults,
+} from "../utils";
 
 import {
   AgentStep,
-  CatToolCall,
-  GrepToolCall,
-  LogSearchToolCall,
+  CatToolCallWithResult,
+  GrepToolCallWithResult,
+  LogSearchToolCallWithResult,
   StepsType,
   StreamUpdateFn,
 } from "./state";
@@ -125,8 +129,8 @@ export class PipelineStateManager {
     const chatHistory = this.chatHistoryAsCoreMessages();
     console.info("Chat history reasoner: ", JSON.stringify(chatHistory));
 
-    const logContextToolCalls = this.getLogSearchToolCalls(StepsType.CURRENT);
-    const codeContextToolCalls = this.getCatToolCalls(StepsType.CURRENT);
+    const logContextToolCalls = this.getLogSearchToolCallsWithResults(StepsType.CURRENT);
+    const codeContextToolCalls = this.getCatToolCallsWithResults(StepsType.CURRENT);
     return [
       {
         role: "system",
@@ -135,7 +139,7 @@ export class PipelineStateManager {
       ...chatHistory,
       {
         role: "assistant",
-        content: `<log_context>\n${formatLogSearchToolCalls(logContextToolCalls)}\n</log_context>\n\n<code_context>\n${formatCatToolCalls(codeContextToolCalls)}\n</code_context>`,
+        content: `<log_context>\n${formatLogSearchToolCallsWithResults(logContextToolCalls)}\n</log_context>\n\n<code_context>\n${formatCatToolCallsWithResults(codeContextToolCalls)}\n</code_context>`,
       },
     ];
   }
@@ -160,20 +164,20 @@ export class PipelineStateManager {
     }
   }
 
-  getLogSearchToolCalls(type: StepsType): LogSearchToolCall[] {
+  getLogSearchToolCallsWithResults(type: StepsType): LogSearchToolCallWithResult[] {
     return this.getSteps(type)
       .filter((step) => step.type === "logSearch")
       .flatMap((step) => step.data);
   }
 
-  getCatToolCalls(type: StepsType): CatToolCall[] {
+  getCatToolCallsWithResults(type: StepsType): CatToolCallWithResult[] {
     return this.getSteps(type)
       .filter((step) => step.type === "codeSearch")
       .flatMap((step) => step.data)
       .filter((data) => data.type === "cat");
   }
 
-  getGrepToolCalls(type: StepsType): GrepToolCall[] {
+  getGrepToolCallsWithResults(type: StepsType): GrepToolCallWithResult[] {
     return this.getSteps(type)
       .filter((step) => step.type === "codeSearch")
       .flatMap((step) => step.data)

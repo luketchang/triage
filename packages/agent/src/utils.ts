@@ -1,16 +1,14 @@
 import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
 
-import { CodeSearchToolCall } from "./pipeline/state";
+import {
+  CatToolCallWithResult,
+  CodeSearchToolCallWithResult,
+  GrepToolCallWithResult,
+  LogSearchToolCallWithResult,
+} from "./pipeline/state";
 import { LogSearchInput, SpanSearchInput } from "./types/tools";
 
-import {
-  AgentStep,
-  CatToolCall,
-  ChatMessage,
-  GrepToolCall,
-  LogSearchToolCall,
-  ReasoningStep,
-} from ".";
+import { AgentStep, ChatMessage, ReasoningStep } from ".";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {
@@ -125,7 +123,7 @@ export const formatFacetValues = (facetValues: Map<string, Array<string>>): stri
     .join("\n");
 };
 
-export function formatSingleLogSearchToolCall(step: LogSearchToolCall): string {
+export function formatSingleLogSearchToolCallWithResult(step: LogSearchToolCallWithResult): string {
   const input = step.input;
   const logsOrError = step.output;
 
@@ -148,8 +146,8 @@ export function formatSingleLogSearchToolCall(step: LogSearchToolCall): string {
   return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
 }
 
-export function formatSingleCatToolCall(
-  step: CatToolCall,
+export function formatSingleCatToolCallWithResult(
+  step: CatToolCallWithResult,
   options: { lineNumbers?: boolean } = {}
 ): string {
   const header = `File: ${step.input.path}`;
@@ -174,7 +172,7 @@ export function formatSingleCatToolCall(
   }
 }
 
-export function formatSingleGrepToolCall(step: GrepToolCall): string {
+export function formatSingleGrepToolCallWithResult(step: GrepToolCallWithResult): string {
   // Format input arguments on one line
   const inputArgs = `git grep ${step.input.pattern} ${step.input.flags ? ` -${step.input.flags}` : ""}`;
   const separator = "-".repeat(inputArgs.length);
@@ -196,27 +194,31 @@ export function formatSingleGrepToolCall(step: GrepToolCall): string {
   }
 }
 
-export function formatLogSearchToolCalls(steps: LogSearchToolCall[]): string {
+export function formatLogSearchToolCallsWithResults(steps: LogSearchToolCallWithResult[]): string {
   return steps
-    .map((step) => formatSingleLogSearchToolCall(step))
+    .map((step) => formatSingleLogSearchToolCallWithResult(step))
     .filter(Boolean)
     .join("\n\n");
 }
 
-export function formatCatToolCalls(
-  steps: CatToolCall[],
+export function formatCatToolCallsWithResults(
+  steps: CatToolCallWithResult[],
   options?: { lineNumbers?: boolean }
 ): string {
-  return steps.map((step) => formatSingleCatToolCall(step, options)).join("\n\n");
+  return steps.map((step) => formatSingleCatToolCallWithResult(step, options)).join("\n\n");
 }
 
-export function formatGrepToolCalls(steps: GrepToolCall[]): string {
-  return steps.map((step) => formatSingleGrepToolCall(step)).join("\n\n");
+export function formatGrepToolCalls(steps: GrepToolCallWithResult[]): string {
+  return steps.map((step) => formatSingleGrepToolCallWithResult(step)).join("\n\n");
 }
 
-export function formatCodeSearchToolCalls(steps: CodeSearchToolCall[]): string {
-  const grepToolCalls = steps.filter((step): step is GrepToolCall => step.type === "grep");
-  const catToolCalls = steps.filter((step): step is CatToolCall => step.type === "cat");
+export function formatCodeSearchToolCallsWithResults(
+  steps: CodeSearchToolCallWithResult[]
+): string {
+  const grepToolCalls = steps.filter(
+    (step): step is GrepToolCallWithResult => step.type === "grep"
+  );
+  const catToolCalls = steps.filter((step): step is CatToolCallWithResult => step.type === "cat");
 
   const allToolCalls = [...grepToolCalls, ...catToolCalls].sort(
     (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
@@ -225,9 +227,9 @@ export function formatCodeSearchToolCalls(steps: CodeSearchToolCall[]): string {
   return allToolCalls
     .map((step) => {
       if (step.type === "grep") {
-        return formatSingleGrepToolCall(step);
+        return formatSingleGrepToolCallWithResult(step);
       } else if (step.type === "cat") {
-        return formatSingleCatToolCall(step);
+        return formatSingleCatToolCallWithResult(step);
       }
       return "";
     })
@@ -244,9 +246,9 @@ export function formatAgentSteps(steps: AgentStep[]): string {
   return steps
     .map((step) => {
       if (step.type === "logSearch") {
-        return formatLogSearchToolCalls(step.data);
+        return formatLogSearchToolCallsWithResults(step.data);
       } else if (step.type === "codeSearch") {
-        return formatCodeSearchToolCalls(step.data);
+        return formatCodeSearchToolCallsWithResults(step.data);
       } else if (step.type === "reasoning") {
         return formatReasoningStep(step);
       }

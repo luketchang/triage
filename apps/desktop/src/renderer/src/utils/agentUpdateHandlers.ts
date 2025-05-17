@@ -3,10 +3,10 @@ import {
   AgentStreamUpdate,
   CodePostprocessingStep,
   CodeSearchStep,
-  CodeSearchToolCall,
+  CodeSearchToolCallWithResult,
   LogPostprocessingStep,
   LogSearchStep,
-  LogSearchToolCall,
+  LogSearchToolCallWithResult,
   ReasoningStep,
 } from "@triage/agent";
 import { AssistantMessage } from "../types/index.js";
@@ -165,7 +165,7 @@ function handleCodeSearchChunk(
 function handleLogSearchTools(
   assistantMessage: AssistantMessage,
   stepId: string,
-  toolCalls: LogSearchToolCall[]
+  toolCalls: LogSearchToolCallWithResult[]
 ): AssistantMessage {
   return findAndUpdateStep<LogSearchStep>(assistantMessage, stepId, {
     updateExistingStepFn: (step) => ({
@@ -181,7 +181,7 @@ function handleLogSearchTools(
 function handleCodeSearchTools(
   assistantMessage: AssistantMessage,
   stepId: string,
-  toolCalls: CodeSearchToolCall[]
+  toolCalls: CodeSearchToolCallWithResult[]
 ): AssistantMessage {
   return findAndUpdateStep<CodeSearchStep>(assistantMessage, stepId, {
     updateExistingStepFn: (step) => ({

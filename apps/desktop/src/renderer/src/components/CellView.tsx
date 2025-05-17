@@ -1,5 +1,4 @@
 import { useAppConfig } from "@renderer/context/useAppConfig.js";
-import type { LogSearchToolCall } from "@triage/agent/src/pipeline/state.js";
 import { BarChart, ExternalLink, FileCode, Search } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "../components/ui/Markdown.js";
@@ -13,6 +12,7 @@ import {
   LogPostprocessingFact,
   LogPostprocessingStep,
   LogSearchStep,
+  LogSearchToolCallWithResult,
   ReasoningStep,
 } from "../types/index.js";
 import { absoluteToRepoRelativePath, filepathToGitHubUrl } from "../utils/facts/code.js";
@@ -98,7 +98,7 @@ const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => (
     {/* Tool calls */}
     {
       <div className="space-y-3">
-        {step.data.map((toolCall: LogSearchToolCall, index) => (
+        {step.data.map((toolCall: LogSearchToolCallWithResult, index) => (
           <div
             key={`${step.id}-search-${index}`}
             className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex items-center justify-between"

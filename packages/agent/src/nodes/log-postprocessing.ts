@@ -3,13 +3,13 @@ import { generateText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { LogPostprocessingStep, LogSearchToolCall, StepsType } from "../pipeline/state";
+import { LogPostprocessingStep, LogSearchToolCallWithResult, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
 import { LogPostprocessingFact, logPostprocessingToolSchema } from "../types";
 import {
   ensureSingleToolCall,
   formatFacetValues,
-  formatLogSearchToolCalls,
+  formatLogSearchToolCallsWithResults,
   normalizeDatadogQueryString,
 } from "../utils";
 
@@ -20,7 +20,7 @@ You are an expert AI assistant that assists engineers debugging production issue
 function createPrompt(params: {
   query: string;
   logLabelsMap: Map<string, string[]>;
-  logSearchToolCalls: LogSearchToolCall[];
+  logSearchToolCallsWithResults: LogSearchToolCallWithResult[];
   platformSpecificInstructions: string;
   answer: string;
 }): string {
@@ -58,7 +58,7 @@ function createPrompt(params: {
   </platform_specific_instructions>
     
   <previous_log_context>
-  ${formatLogSearchToolCalls(params.logSearchToolCalls)}
+  ${formatLogSearchToolCallsWithResults(params.logSearchToolCallsWithResults)}
   </previous_log_context>
   `;
 }
@@ -79,7 +79,7 @@ export class LogPostprocessor {
     const prompt = createPrompt({
       query: this.config.query,
       logLabelsMap: this.config.logLabelsMap,
-      logSearchToolCalls: this.state.getLogSearchToolCalls(StepsType.CURRENT),
+      logSearchToolCallsWithResults: this.state.getLogSearchToolCallsWithResults(StepsType.CURRENT),
       answer: this.state.getAnswer()!,
       platformSpecificInstructions:
         this.config.observabilityPlatform.getLogSearchQueryInstructions(),

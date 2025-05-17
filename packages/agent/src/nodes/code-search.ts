@@ -5,8 +5,8 @@ import { v4 as uuidv4 } from "uuid";
 import { TriagePipelineConfig } from "../pipeline";
 import {
   CodeSearchStep,
-  CodeSearchToolCall,
-  LogSearchToolCall,
+  CodeSearchToolCallWithResult,
+  LogSearchToolCallWithResult,
   StepsType,
 } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
@@ -17,7 +17,10 @@ import {
   grepRequestToolSchema,
   TaskComplete,
 } from "../types";
-import { formatCodeSearchToolCalls, formatLogSearchToolCalls } from "../utils";
+import {
+  formatCodeSearchToolCallsWithResults,
+  formatLogSearchToolCallsWithResults,
+} from "../utils";
 
 export interface CodeSearchAgentResponse {
   newCodeSearchSteps: CodeSearchStep[];
@@ -43,16 +46,20 @@ function createCodeSearchPrompt(params: {
   query: string;
   codeRequest: string;
   fileTree: string;
-  logSearches: LogSearchToolCall[];
-  previousCodeSearches: CodeSearchToolCall[];
+  logSearchToolCallsWithResults: LogSearchToolCallWithResult[];
+  previousCodeSearchToolCallsWithResults: CodeSearchToolCallWithResult[];
   remainingQueries: number;
   codebaseOverview: string;
   repoPath: string;
 }): string {
   const currentTime = new Date().toISOString();
 
-  const formattedPreviousCodeSearchSteps = formatCodeSearchToolCalls(params.previousCodeSearches);
-  const formattedPreviousLogSearchSteps = formatLogSearchToolCalls(params.logSearches);
+  const formattedPreviousCodeSearchSteps = formatCodeSearchToolCallsWithResults(
+    params.previousCodeSearchToolCallsWithResults
+  );
+  const formattedPreviousLogSearchSteps = formatLogSearchToolCallsWithResults(
+    params.logSearchToolCallsWithResults
+  );
 
   // TODO: split out last code search steps into its own section
   return `
@@ -116,8 +123,8 @@ class CodeSearch {
     query: string;
     codeRequest: string;
     fileTree: string;
-    logSearches: LogSearchToolCall[];
-    previousCodeSearches: CodeSearchToolCall[];
+    logSearchToolCallsWithResults: LogSearchToolCallWithResult[];
+    previousCodeSearchToolCallsWithResults: CodeSearchToolCallWithResult[];
     remainingQueries: number;
     codebaseOverview: string;
     repoPath: string;
@@ -216,11 +223,12 @@ export class CodeSearchAgent {
 
     while ((!response || Array.isArray(response.actions)) && currentIter < maxIters) {
       // Get the latest code search steps from state
-      const cats = this.state.getCatToolCalls(StepsType.BOTH);
-      const greps = this.state.getGrepToolCalls(StepsType.BOTH);
-      const previousCodeSearches: CodeSearchToolCall[] = [...cats, ...greps].sort(
-        (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-      );
+      const cats = this.state.getCatToolCallsWithResults(StepsType.BOTH);
+      const greps = this.state.getGrepToolCallsWithResults(StepsType.BOTH);
+      const previousCodeSearchToolCallsWithResults: CodeSearchToolCallWithResult[] = [
+        ...cats,
+        ...greps,
+      ].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
       const codeSearchId = uuidv4();
       response = await this.codeSearch.invoke({
@@ -228,8 +236,8 @@ export class CodeSearchAgent {
         query: this.config.query,
         codeRequest: params.codeRequest,
         fileTree: this.config.fileTree,
-        logSearches: this.state.getLogSearchToolCalls(StepsType.BOTH),
-        previousCodeSearches,
+        logSearchToolCallsWithResults: this.state.getLogSearchToolCallsWithResults(StepsType.BOTH),
+        previousCodeSearchToolCallsWithResults,
         remainingQueries: maxIters - currentIter,
         codebaseOverview: this.config.codebaseOverview,
         repoPath: this.config.repoPath,
@@ -242,7 +250,7 @@ export class CodeSearchAgent {
           `Searching filepaths:\n${response.actions.map((toolCall) => JSON.stringify(toolCall)).join("\n")}`
         );
 
-        let toolCalls: CodeSearchToolCall[] = [];
+        let toolCalls: CodeSearchToolCallWithResult[] = [];
         for (const toolCall of response.actions) {
           if (toolCall.type === "catRequest") {
             const result = await handleCatRequest(toolCall);

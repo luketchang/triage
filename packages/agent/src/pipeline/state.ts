@@ -20,37 +20,37 @@ export interface BaseAgentStep {
   timestamp: Date;
 }
 
-export interface LogSearchToolCall extends BaseToolCall {
+export interface WithResult<T> {
+  output: T | LLMToolCallError;
+}
+
+export interface LogSearchToolCallWithResult extends BaseToolCall, WithResult<LogSearchResult> {
   type: "logSearch";
   input: LogSearchInput;
-  output: LogSearchResult | LLMToolCallError;
 }
 
 export interface LogSearchStep extends BaseAgentStep {
   type: "logSearch";
   reasoning: string;
-  data: LogSearchToolCall[];
+  data: LogSearchToolCallWithResult[];
 }
 
-// TODO: RENAME TO TOOLCALLWITHRESULT
-export interface CatToolCall extends BaseToolCall {
+export interface CatToolCallWithResult extends BaseToolCall, WithResult<CatRequestResult> {
   type: "cat";
   input: CatRequest;
-  output: CatRequestResult | LLMToolCallError;
 }
 
-export interface GrepToolCall extends BaseToolCall {
+export interface GrepToolCallWithResult extends BaseToolCall, WithResult<GrepRequestResult> {
   type: "grep";
   input: GrepRequest;
-  output: GrepRequestResult | LLMToolCallError;
 }
 
-export type CodeSearchToolCall = CatToolCall | GrepToolCall;
+export type CodeSearchToolCallWithResult = CatToolCallWithResult | GrepToolCallWithResult;
 
 export interface CodeSearchStep extends BaseAgentStep {
   type: "codeSearch";
   reasoning: string;
-  data: CodeSearchToolCall[];
+  data: CodeSearchToolCallWithResult[];
 }
 
 export interface ReasoningStep extends BaseAgentStep {

@@ -5,11 +5,15 @@ import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { LogSearchStep, LogSearchToolCall, StepsType } from "../pipeline/state";
+import { LogSearchStep, LogSearchToolCallWithResult, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
 import { handleLogSearchRequest } from "../tools";
 import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types";
-import { ensureSingleToolCall, formatFacetValues, formatLogSearchToolCalls } from "../utils";
+import {
+  ensureSingleToolCall,
+  formatFacetValues,
+  formatLogSearchToolCallsWithResults,
+} from "../utils";
 
 export interface LogSearchAgentResponse {
   newLogSearchSteps: LogSearchStep[];
@@ -31,8 +35,8 @@ function createLogSearchPrompt(params: {
   timezone: string;
   logRequest: string;
   platformSpecificInstructions: string;
-  previousLogSearchToolCalls: LogSearchToolCall[];
-  lastLogSearchToolCall?: LogSearchToolCall;
+  previousLogSearchToolCallsWithResults: LogSearchToolCallWithResult[];
+  lastLogSearchToolCallWithResult?: LogSearchToolCallWithResult;
   logLabelsMap: Map<string, string[]>;
   remainingQueries: number;
   codebaseOverview: string;
@@ -40,8 +44,8 @@ function createLogSearchPrompt(params: {
   const currentTime = DateTime.now().setZone(params.timezone).toISO();
 
   // Format the previous log query result for display
-  const formattedLastLogSearchStep = params.lastLogSearchToolCall
-    ? formatLogSearchToolCalls([params.lastLogSearchToolCall])
+  const formattedLastLogSearchStep = params.lastLogSearchToolCallWithResult
+    ? formatLogSearchToolCallsWithResults([params.lastLogSearchToolCallWithResult])
     : "";
 
   // TODO: consider removing the line about removing all filters
@@ -98,7 +102,7 @@ ${formattedLastLogSearchStep}
 </previous_log_query_result>
 
 <log_results_history>
-${formatLogSearchToolCalls(params.previousLogSearchToolCalls)}
+${formatLogSearchToolCallsWithResults(params.previousLogSearchToolCallsWithResults)}
 </log_results_history>
 
 <system_overview>
@@ -127,8 +131,8 @@ class LogSearch {
     query: string;
     timezone: string;
     logRequest: string;
-    previousLogSearchToolCalls: LogSearchToolCall[];
-    lastLogSearchToolCall?: LogSearchToolCall;
+    previousLogSearchToolCallsWithResults: LogSearchToolCallWithResult[];
+    lastLogSearchToolCallWithResult?: LogSearchToolCallWithResult;
     logLabelsMap: Map<string, string[]>;
     remainingQueries: number;
     codebaseOverview: string;
@@ -231,10 +235,13 @@ export class LogSearchAgent {
     let newLogSearchSteps: LogSearchStep[] = [];
 
     while ((!response || Array.isArray(response.actions)) && currentIter < maxIters) {
-      const previousLogSearchToolCalls = this.state.getLogSearchToolCalls(StepsType.BOTH);
-      let lastLogSearchToolCall: LogSearchToolCall | undefined = undefined;
-      if (previousLogSearchToolCalls.length > 0) {
-        lastLogSearchToolCall = previousLogSearchToolCalls[previousLogSearchToolCalls.length - 1];
+      const previousLogSearchToolCallsWithResults = this.state.getLogSearchToolCallsWithResults(
+        StepsType.BOTH
+      );
+      let lastLogSearchToolCallWithResult: LogSearchToolCallWithResult | undefined = undefined;
+      if (previousLogSearchToolCallsWithResults.length > 0) {
+        lastLogSearchToolCallWithResult =
+          previousLogSearchToolCallsWithResults[previousLogSearchToolCallsWithResults.length - 1];
       }
 
       // TODO: should enable multiple log searches at once
@@ -245,8 +252,8 @@ export class LogSearchAgent {
         timezone: this.config.timezone,
         logRequest: params.logRequest,
         logLabelsMap: this.config.logLabelsMap,
-        previousLogSearchToolCalls,
-        lastLogSearchToolCall,
+        previousLogSearchToolCallsWithResults,
+        lastLogSearchToolCallWithResult,
         remainingQueries: maxIters - currentIter,
         codebaseOverview: this.config.codebaseOverview,
       });
@@ -259,7 +266,7 @@ export class LogSearchAgent {
         );
 
         // TODO: convert this into loop when we have multiple tool calls output
-        let toolCalls: LogSearchToolCall[] = [];
+        let toolCalls: LogSearchToolCallWithResult[] = [];
 
         logger.info("Fetching logs from observability platform...");
         const logContext = await handleLogSearchRequest(
@@ -267,7 +274,7 @@ export class LogSearchAgent {
           this.config.observabilityPlatform
         );
 
-        const lastLogSearchResultsFormatted = formatLogSearchToolCalls(toolCalls);
+        const lastLogSearchResultsFormatted = formatLogSearchToolCallsWithResults(toolCalls);
         logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
 
         toolCalls.push({

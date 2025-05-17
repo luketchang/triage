@@ -3,10 +3,10 @@ import { generateText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { CatToolCall, CodePostprocessingStep, StepsType } from "../pipeline/state";
+import { CatToolCallWithResult, CodePostprocessingStep, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
 import { codePostprocessingToolSchema } from "../types";
-import { ensureSingleToolCall, formatCatToolCalls, normalizeFilePath } from "../utils";
+import { ensureSingleToolCall, formatCatToolCallsWithResults, normalizeFilePath } from "../utils";
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from code.
@@ -16,7 +16,7 @@ function createPrompt(params: {
   query: string;
   repoPath: string;
   codebaseOverview: string;
-  catSteps: CatToolCall[];
+  catToolCallsWithResults: CatToolCallWithResult[];
   answer: string;
 }): string {
   return `
@@ -46,7 +46,7 @@ function createPrompt(params: {
   </repo_path>
   
   <previous_code_context>
-  ${formatCatToolCalls(params.catSteps, { lineNumbers: true })}
+  ${formatCatToolCallsWithResults(params.catToolCallsWithResults, { lineNumbers: true })}
   </previous_code_context>
   `;
 }
@@ -68,7 +68,7 @@ export class CodePostprocessor {
       query: this.config.query,
       repoPath: this.config.repoPath,
       codebaseOverview: this.config.codebaseOverview,
-      catSteps: this.state.getCatToolCalls(StepsType.CURRENT),
+      catToolCallsWithResults: this.state.getCatToolCallsWithResults(StepsType.CURRENT),
       answer: this.state.getAnswer()!,
     });
 
