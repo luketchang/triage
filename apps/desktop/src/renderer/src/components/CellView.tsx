@@ -1,19 +1,27 @@
+import { useAppConfig } from "@renderer/context/useAppConfig.js";
+import type {
+  CatToolCall,
+  CodeSearchToolCall,
+  GrepToolCall,
+  LogSearchToolCall,
+} from "@triage/agent/src/pipeline/state.js";
+import { ExternalLink } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "../components/ui/Markdown.js";
 import { cn } from "../lib/utils.js";
 import {
-  AgentStage,
+  AgentStep,
   AssistantMessage,
   CodePostprocessingFact,
-  CodePostprocessingStage,
   CodePostprocessingStep,
-  CodeSearchStage,
+  CodeSearchStep,
   LogPostprocessingFact,
-  LogPostprocessingStage,
   LogPostprocessingStep,
-  LogSearchStage,
-  ReasoningStage,
+  LogSearchStep,
+  ReasoningStep,
 } from "../types/index.js";
+import { filepathToGitHubUrl } from "../utils/facts/code.js";
+import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs.js";
 import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/Accordion.js";
 
@@ -68,89 +76,165 @@ const CollapsibleStep: React.FC<{
   );
 };
 
-const GenericStep: React.FC<{ stage: AgentStage; isActive: boolean }> = ({ stage, isActive }) => {
-  switch (stage.type) {
+const GenericStep: React.FC<{ step: AgentStep }> = ({ step }) => {
+  switch (step.type) {
     case "logSearch":
-      return <LogSearchStep stage={stage} isActive={isActive} />;
+      return <LogSearchStepView step={step} />;
     case "codeSearch":
-      return <CodeSearchStep stage={stage} isActive={isActive} />;
+      return <CodeSearchStepView step={step} />;
     case "reasoning":
-      return <ReasoningStep stage={stage} isActive={isActive} />;
+      return <ReasoningStepView step={step} />;
     case "logPostprocessing":
-      return <LogPostprocessingStep stage={stage} isActive={isActive} />;
+      return <LogPostprocessingStepView step={step} />;
     case "codePostprocessing":
-      return <CodePostprocessingStep stage={stage} isActive={isActive} />;
+      return <CodePostprocessingStepView step={step} />;
   }
 };
 
-const LogSearchStep: React.FC<{ stage: LogSearchStage; isActive: boolean }> = ({
-  stage,
-  isActive,
-}) => (
-  <CollapsibleStep title="Log Search" isActive={isActive}>
-    {stage.steps.length === 0 ? (
+const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => (
+  <CollapsibleStep title="Log Search">
+    {/* Show reasoning */}
+    {step.reasoning && (
+      <div className="mb-4 p-3 bg-background-lighter rounded-lg">
+        <div className="font-medium text-sm mb-1">Reasoning:</div>
+        <div className="text-sm leading-relaxed break-words">
+          <Markdown>{step.reasoning}</Markdown>
+        </div>
+      </div>
+    )}
+
+    {step.data.length === 0 ? (
       <em>Searching logs...</em>
     ) : (
-      stage.steps.map((step, index) => (
+      step.data.map((toolCall: LogSearchToolCall, index) => (
         <div
-          key={`${stage.id}-search-${index}`}
+          key={`${step.id}-search-${index}`}
           className="log-search-item mb-2 p-3 bg-background-lighter rounded-lg"
         >
-          <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
-            {/* TODO: properly display */}
-            {step.data.map((toolCall) => toolCall.input.query).join("\n")}
+          <div className="flex justify-between items-start mb-2">
+            <div className="font-medium text-sm">Log Search Query</div>
+            <div className="text-xs px-2 py-1 bg-blue-900/30 text-blue-300 rounded-full">
+              {toolCall.output && "error" in toolCall.output
+                ? "Error"
+                : toolCall.output && "logs" in toolCall.output
+                  ? `${toolCall.output.logs.length} results`
+                  : "Processing..."}
+            </div>
           </div>
+          <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words mb-2">
+            {toolCall.input.query}
+          </div>
+          {toolCall.output && !("error" in toolCall.output) && (
+            <a
+              href={logSearchInputToDatadogLogsViewUrl(toolCall.input)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs flex items-center text-blue-300 hover:text-blue-100 transition-colors"
+            >
+              View in Datadog <ExternalLink className="ml-1" size={12} />
+            </a>
+          )}
         </div>
       ))
     )}
   </CollapsibleStep>
 );
 
-const CodeSearchStep: React.FC<{ stage: CodeSearchStage; isActive: boolean }> = ({
-  stage,
-  isActive,
-}) => (
-  <CollapsibleStep title="Code Search" isActive={isActive}>
-    {stage.steps.length === 0 ? (
-      <em>Searching code...</em>
-    ) : (
-      stage.steps.map((step, index) => (
-        <div
-          key={`${stage.id}-search-${index}`}
-          className="code-search-item mb-2 p-3 bg-background-lighter rounded-lg"
-        >
-          <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
-            {/* TODO: properly display */}
-            {step.data
-              .map((toolCall) =>
-                toolCall.input.type === "catRequest" ? toolCall.input.path : toolCall.input.pattern
-              )
-              .join("\n")}
+const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
+  const { appConfig } = useAppConfig();
+  if (!appConfig) return null;
+
+  return (
+    <CollapsibleStep title="Code Search">
+      {/* Show reasoning */}
+      {step.reasoning && (
+        <div className="mb-4 p-3 bg-background-lighter rounded-lg">
+          <div className="font-medium text-sm mb-1">Reasoning:</div>
+          <div className="text-sm leading-relaxed break-words">
+            <Markdown>{step.reasoning}</Markdown>
           </div>
         </div>
-      ))
-    )}
-  </CollapsibleStep>
-);
+      )}
 
-const ReasoningStep: React.FC<{ stage: ReasoningStage; isActive: boolean }> = ({
-  stage,
-  isActive,
-}) => (
-  <CollapsibleStep title="Reasoning" isActive={isActive}>
+      {step.data.length === 0 ? (
+        <em>Searching code...</em>
+      ) : (
+        step.data.map((toolCall: CodeSearchToolCall, index) => {
+          // Handle different types of code search tool calls
+          if (toolCall.type === "cat") {
+            const catToolCall = toolCall as CatToolCall;
+            const filepath = catToolCall.input.path;
+            const output =
+              catToolCall.output && !("error" in catToolCall.output) ? catToolCall.output : null;
+            const numLines = output ? output.content.split("\n").length : 0;
+            return (
+              <div
+                key={`${step.id}-search-${index}`}
+                className="code-search-item mb-2 p-3 bg-background-lighter rounded-lg"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="font-medium text-sm">Cat Request</div>
+                  {output && (
+                    <div className="text-xs px-2 py-1 bg-purple-900/30 text-purple-300 rounded-full">
+                      {numLines} line{numLines !== 1 ? "s" : ""}
+                    </div>
+                  )}
+                </div>
+                <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words mb-2">
+                  {filepath}
+                </div>
+                {output && (
+                  <a
+                    href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, filepath)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs flex items-center text-purple-300 hover:text-purple-100 transition-colors"
+                  >
+                    View in GitHub <ExternalLink className="ml-1" size={12} />
+                  </a>
+                )}
+              </div>
+            );
+          } else if (toolCall.type === "grep") {
+            const grepToolCall = toolCall as GrepToolCall;
+            return (
+              <div
+                key={`${step.id}-search-${index}`}
+                className="code-search-item mb-2 p-3 bg-background-lighter rounded-lg"
+              >
+                <div className="font-medium text-sm mb-2">Grep Search</div>
+                <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
+                  {grepToolCall.input.pattern}
+                </div>
+              </div>
+            );
+          }
+
+          return null;
+        })
+      )}
+    </CollapsibleStep>
+  );
+};
+
+const ReasoningStepView: React.FC<{ step: ReasoningStep }> = ({ step }) => (
+  <CollapsibleStep title="Reasoning">
     <div className="text-sm leading-relaxed break-words">
-      <Markdown>{stage.content}</Markdown>
+      <Markdown>{step.data}</Markdown>
     </div>
   </CollapsibleStep>
 );
 
-const LogPostprocessingStep: React.FC<{ stage: LogPostprocessingStage; isActive: boolean }> = ({
-  stage,
-  isActive,
-}) => (
-  <CollapsibleStep title="Log Postprocessing" isActive={isActive}>
+const LogPostprocessingStepView: React.FC<{ step: LogPostprocessingStep }> = ({ step }) => (
+  <CollapsibleStep title="Log Analysis" isActive={true}>
+    <div className="text-sm mb-3 flex items-center">
+      <span className="text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
+        Analyzing logs
+      </span>
+      <AnimatedEllipsis />
+    </div>
     <div className="space-y-3">
-      {stage.facts.map((fact, index) => (
+      {step.data.map((fact, index) => (
         <div
           key={`fact-${index}`}
           className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
@@ -163,13 +247,16 @@ const LogPostprocessingStep: React.FC<{ stage: LogPostprocessingStage; isActive:
   </CollapsibleStep>
 );
 
-const CodePostprocessingStep: React.FC<{ stage: CodePostprocessingStage; isActive: boolean }> = ({
-  stage,
-  isActive,
-}) => (
-  <CollapsibleStep title="Code Postprocessing" isActive={isActive}>
+const CodePostprocessingStepView: React.FC<{ step: CodePostprocessingStep }> = ({ step }) => (
+  <CollapsibleStep title="Code Analysis" isActive={true}>
+    <div className="text-sm mb-3 flex items-center">
+      <span className="text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
+        Analyzing code
+      </span>
+      <AnimatedEllipsis />
+    </div>
     <div className="space-y-3">
-      {stage.facts.map((fact, index) => (
+      {step.data.map((fact, index) => (
         <div
           key={`fact-${index}`}
           className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
@@ -272,8 +359,8 @@ function CellView({
       <div className="cellview-main-content flex-1 w-full min-w-0 overflow-hidden">
         {/* Render each visible step */}
         {steps.map((step, index) => (
-          <React.Fragment key={step}>
-            <GenericStep stage={step} isActive={isThinking && index === activeStageIndex} />
+          <React.Fragment key={step.id}>
+            <GenericStep step={step} />
           </React.Fragment>
         ))}
 

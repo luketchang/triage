@@ -2,7 +2,7 @@ import { create } from "zustand";
 import api from "../services/api.js";
 import { AssistantMessage, Chat, ChatMessage, UserMessage } from "../types/index.js";
 import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
-import { handleHighLevelUpdate, handleIntermediateUpdate } from "../utils/agentUpdateHandlers.js";
+import { handleIntermediateUpdate } from "../utils/agentUpdateHandlers.js";
 import { generateId } from "../utils/formatters.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
 import { createSelectors } from "./util.js";
@@ -192,13 +192,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     });
     const unregisterUpdater = api.onAgentUpdate((update) => {
       console.info("Received agent update:", update);
-      if (update.type === "highLevelUpdate") {
-        // A new high-level step is starting
-        handleHighLevelUpdate(updater, update);
-      } else if (update.type === "intermediateUpdate") {
-        // An intermediate update for an existing step
-        handleIntermediateUpdate(updater, update);
-      }
+      handleIntermediateUpdate(updater, update);
     });
 
     try {

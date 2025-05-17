@@ -3,7 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
 import fs from "fs";
 import path from "path";
-import { AgentStage, ChatMessage } from "../../renderer/src/types/index.js";
+import { AgentStep, ChatMessage } from "../../renderer/src/types/index.js";
 import { DB_DIR, DB_NAME } from "../constants.js";
 import * as schema from "./schema.js";
 import { AssistantMessage, Chat, UserMessage } from "./schema.js";
@@ -139,7 +139,7 @@ export class DatabaseService {
           chatId,
           timestamp: message.timestamp.toISOString(),
           response: message.response,
-          stages: JSON.stringify(message.stages),
+          steps: JSON.stringify(message.steps),
           error: message.error || null,
         })
         .returning();
@@ -183,7 +183,7 @@ export class DatabaseService {
           role: "assistant" as const,
           timestamp: new Date(row.timestamp),
           response: row.response,
-          stages: JSON.parse(row.stages) as AgentStage[], // TODO: unsafe
+          steps: JSON.parse(row.steps) as AgentStep[], // TODO: unsafe
           error: row.error || undefined,
         })),
       ];
