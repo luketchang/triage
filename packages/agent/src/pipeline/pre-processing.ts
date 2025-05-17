@@ -30,13 +30,11 @@ export class PreProcessing {
   }
 
   async run(): Promise<void> {
-    await Promise.all([
-      this.logSearch.invoke({
-        logRequest: INITIAL_LOG_REQUEST,
-      }),
-      this.codeSearch.invoke({
-        codeRequest: INITIAL_CODE_REQUEST,
-      }),
-    ]);
+    await this.logSearch.invoke({
+      logRequest: INITIAL_LOG_REQUEST,
+    });
+    await this.codeSearch.invoke({
+      codeRequest: INITIAL_CODE_REQUEST,
+    });
   }
 }
