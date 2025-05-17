@@ -6,6 +6,7 @@ import {
   getDirectoryTree,
   getGitCommitHash,
   getPathToSourceCodeMap,
+  isAbortError,
   logger,
 } from "@triage/common";
 import { LanguageModelV1 } from "ai";
@@ -207,6 +208,12 @@ export class CodebaseProcessor {
         message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
         progress: 0,
       });
+
+      if (isAbortError(error)) {
+        logger.info("Codebase overview generation was aborted");
+        throw new Error("Codebase overview generation was aborted", { cause: error });
+      }
+
       throw new Error(`Error processing codebase`, { cause: error });
     }
   }

@@ -1,4 +1,4 @@
-import { logger, timer } from "@triage/common";
+import { isAbortError, logger, timer } from "@triage/common";
 import { generateText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
@@ -94,64 +94,80 @@ export class LogPostprocessor {
 
     logger.info(`Log postprocessing prompt:\n${prompt}`);
 
-    const { toolCalls } = await generateText({
-      model: this.config.fastClient,
-      system: SYSTEM_PROMPT,
-      prompt: prompt,
-      tools: {
-        logPostprocessing: logPostprocessingToolSchema,
-      },
-      toolChoice: "required",
-      abortSignal: this.config.abortSignal,
-    });
-
-    // If multiple tool calls are returned (on accident), we will just merge them
-    let toolCall;
-    if (toolCalls.length > 1) {
-      logger.warn("Multiple tool calls detected, merging results");
-      toolCall = {
-        args: {
-          facts: toolCalls.flatMap((call) => call.args.facts || []),
+    try {
+      const { toolCalls } = await generateText({
+        model: this.config.fastClient,
+        system: SYSTEM_PROMPT,
+        prompt: prompt,
+        tools: {
+          logPostprocessing: logPostprocessingToolSchema,
         },
-      };
-    } else {
-      toolCall = ensureSingleToolCall(toolCalls);
-    }
+        toolChoice: "required",
+        abortSignal: this.config.abortSignal,
+      });
 
-    // Normalize Datadog query strings in each fact
-    const normalizedFacts =
-      toolCall.args.facts?.map((fact) => ({
-        ...fact,
-        query: normalizeDatadogQueryString(fact.query),
-      })) || [];
+      // If multiple tool calls are returned (on accident), we will just merge them
+      let toolCall;
+      if (toolCalls.length > 1) {
+        logger.warn("Multiple tool calls detected, merging results");
+        toolCall = {
+          args: {
+            facts: toolCalls.flatMap((call) => call.args.facts || []),
+          },
+        };
+      } else {
+        toolCall = ensureSingleToolCall(toolCalls);
+      }
 
-    // Augment original query with highlight keywords
-    const augmentedFacts: LogPostprocessingFact[] = normalizedFacts.map((fact) => ({
-      title: fact.title,
-      fact: fact.fact,
-      query: this.config.observabilityPlatform.addKeywordsToQuery(
-        fact.query,
-        fact.highlightKeywords
-      ),
-      start: fact.start,
-      end: fact.end,
-      limit: fact.limit,
-      pageCursor: fact.pageCursor,
-    }));
+      // Normalize Datadog query strings in each fact
+      const normalizedFacts =
+        toolCall.args.facts?.map((fact) => ({
+          ...fact,
+          query: normalizeDatadogQueryString(fact.query),
+        })) || [];
 
-    this.state.addIntermediateStep(
-      {
+      // Augment original query with highlight keywords
+      const augmentedFacts: LogPostprocessingFact[] = normalizedFacts.map((fact) => ({
+        title: fact.title,
+        fact: fact.fact,
+        query: this.config.observabilityPlatform.addKeywordsToQuery(
+          fact.query,
+          fact.highlightKeywords
+        ),
+        start: fact.start,
+        end: fact.end,
+        limit: fact.limit,
+        pageCursor: fact.pageCursor,
+      }));
+
+      this.state.addIntermediateStep(
+        {
+          type: "logPostprocessing",
+          facts: augmentedFacts,
+          timestamp: new Date(),
+        },
+        logPostprocessingId
+      );
+
+      return {
         type: "logPostprocessing",
-        facts: augmentedFacts,
         timestamp: new Date(),
-      },
-      logPostprocessingId
-    );
+        facts: augmentedFacts,
+      };
+    } catch (error) {
+      // If the operation was aborted, propagate the error
+      if (isAbortError(error)) {
+        logger.info(`Log postprocessing aborted: ${error}`);
+        throw error; // Don't retry on abort
+      }
 
-    return {
-      type: "logPostprocessing",
-      timestamp: new Date(),
-      facts: augmentedFacts,
-    };
+      logger.error(`Error in log postprocessing: ${error}`);
+      // Return empty facts on error
+      return {
+        type: "logPostprocessing",
+        timestamp: new Date(),
+        facts: [],
+      };
+    }
   }
 }

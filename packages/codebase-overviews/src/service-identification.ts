@@ -1,7 +1,7 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 
-import { logger } from "@triage/common";
+import { isAbortError, logger } from "@triage/common";
 import { generateText, LanguageModelV1 } from "ai";
 
 import { SelectedModules, selectedModulesSchema } from "./types";
@@ -119,6 +119,12 @@ export async function identifyTopLevelServices(
     }
     return absServiceDirs;
   } catch (error) {
+    // If the operation was aborted, propagate the error
+    if (isAbortError(error)) {
+      logger.info(`Service identification aborted: ${error}`);
+      throw error; // Don't retry on abort
+    }
+
     logger.error(`Error processing service identification: ${error}`);
     return [];
   }

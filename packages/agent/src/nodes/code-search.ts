@@ -1,4 +1,4 @@
-import { logger, timer } from "@triage/common";
+import { isAbortError, logger, timer } from "@triage/common";
 import { generateText, LanguageModelV1 } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
@@ -165,6 +165,12 @@ class CodeSearch {
         toolCalls: outputToolCalls,
       };
     } catch (error) {
+      // If the operation was aborted, propagate the error
+      if (isAbortError(error)) {
+        logger.info(`Code search aborted: ${error}`);
+        throw error; // Don't retry on abort
+      }
+
       // TODO: revisit this
       logger.error("Error generating code search output:", error);
       return {

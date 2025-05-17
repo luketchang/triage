@@ -1,4 +1,4 @@
-import { logger, timer } from "@triage/common";
+import { isAbortError, logger, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
 import { generateText, LanguageModelV1 } from "ai";
 import { v4 as uuidv4 } from "uuid";
@@ -162,6 +162,12 @@ class LogSearch {
         throw new Error(`Unexpected tool name: ${toolCall.toolName}`);
       }
     } catch (error) {
+      // If the operation was aborted, propagate the error
+      if (isAbortError(error)) {
+        logger.info(`Log search aborted: ${error}`);
+        throw error; // Don't retry on abort
+      }
+
       logger.error("Error generating log search query:", error);
       // TODO: revisit fallback
       return {

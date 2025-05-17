@@ -1,4 +1,4 @@
-import { logger } from "@triage/common";
+import { isAbortError, logger } from "@triage/common";
 import { generateText, LanguageModelV1 } from "ai";
 
 import { MERGE_SUMMARIES_EXAMPLE } from "./examples/merge-summaries-example";
@@ -116,6 +116,12 @@ export async function generateDirectorySummary(
 
     return text;
   } catch (error) {
+    // If the operation was aborted, propagate the error
+    if (isAbortError(error)) {
+      logger.info(`Directory summary generation aborted: ${error}`);
+      throw error; // Don't retry on abort
+    }
+
     logger.error(`Error generating directory summary: ${error}`);
     return `Error generating summary for ${directory}: ${error}`;
   }
@@ -149,6 +155,12 @@ export async function mergeAllSummaries(
 
     return text;
   } catch (error) {
+    // If the operation was aborted, propagate the error
+    if (isAbortError(error)) {
+      logger.info(`Summary merging aborted: ${error}`);
+      throw error; // Don't retry on abort
+    }
+
     logger.error(`Error merging summaries: ${error}`);
     return `Error generating final document: ${error}`;
   }
