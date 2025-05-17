@@ -59,12 +59,14 @@ export function handleIntermediateUpdate(
 
 /**
  * Common logic for finding a step and returning updated assistant message
+ * If updateExistingStepFn is not provided, only new step creation will occur
  */
 function findAndUpdateStep<T extends AgentStep>(
   assistantMessage: AssistantMessage,
   stepId: string,
-  createNewStepFn: () => T,
-  updateExistingStepFn: (step: T) => T
+  updateLogic:
+    | { createNewStepFn: () => T; updateExistingStepFn?: (step: T) => T }
+    | { createNewStepFn?: () => T; updateExistingStepFn: (step: T) => T }
 ): AssistantMessage {
   const stepIndex = assistantMessage.steps.findIndex((step) => step.id === stepId);
 
@@ -72,13 +74,13 @@ function findAndUpdateStep<T extends AgentStep>(
   if (stepIndex === -1) {
     return {
       ...assistantMessage,
-      steps: [...assistantMessage.steps, createNewStepFn()],
+      steps: [...assistantMessage.steps, updateLogic.createNewStepFn!()],
     };
   }
 
   // Otherwise update the existing step
   const existingStep = assistantMessage.steps[stepIndex] as T;
-  const updatedStep = updateExistingStepFn(existingStep);
+  const updatedStep = updateLogic.updateExistingStepFn!(existingStep);
 
   const updatedSteps = [...assistantMessage.steps];
   updatedSteps[stepIndex] = updatedStep;
@@ -97,20 +99,18 @@ function handleReasoningChunk(
   stepId: string,
   chunk: string
 ): AssistantMessage {
-  return findAndUpdateStep<ReasoningStep>(
-    assistantMessage,
-    stepId,
-    () => ({
+  return findAndUpdateStep<ReasoningStep>(assistantMessage, stepId, {
+    createNewStepFn: () => ({
       type: "reasoning",
       timestamp: new Date(),
       id: stepId,
       data: chunk,
     }),
-    (step) => ({
+    updateExistingStepFn: (step) => ({
       ...step,
       data: step.data + chunk,
-    })
-  );
+    }),
+  });
 }
 
 /**
@@ -121,21 +121,19 @@ function handleLogSearchChunk(
   stepId: string,
   chunk: string
 ): AssistantMessage {
-  return findAndUpdateStep<LogSearchStep>(
-    assistantMessage,
-    stepId,
-    () => ({
+  return findAndUpdateStep<LogSearchStep>(assistantMessage, stepId, {
+    createNewStepFn: () => ({
       type: "logSearch",
       timestamp: new Date(),
       id: stepId,
       reasoning: chunk,
       data: [],
     }),
-    (step) => ({
+    updateExistingStepFn: (step) => ({
       ...step,
       reasoning: step.reasoning + chunk,
-    })
-  );
+    }),
+  });
 }
 
 /**
@@ -146,21 +144,19 @@ function handleCodeSearchChunk(
   stepId: string,
   chunk: string
 ): AssistantMessage {
-  return findAndUpdateStep<CodeSearchStep>(
-    assistantMessage,
-    stepId,
-    () => ({
+  return findAndUpdateStep<CodeSearchStep>(assistantMessage, stepId, {
+    createNewStepFn: () => ({
       type: "codeSearch",
       timestamp: new Date(),
       id: stepId,
       reasoning: chunk,
       data: [],
     }),
-    (step) => ({
+    updateExistingStepFn: (step) => ({
       ...step,
       reasoning: step.reasoning + chunk,
-    })
-  );
+    }),
+  });
 }
 
 /**
@@ -171,21 +167,12 @@ function handleLogSearchTools(
   stepId: string,
   toolCalls: LogSearchToolCall[]
 ): AssistantMessage {
-  return findAndUpdateStep<LogSearchStep>(
-    assistantMessage,
-    stepId,
-    () => ({
-      type: "logSearch",
-      timestamp: new Date(),
-      id: stepId,
-      reasoning: "",
-      data: toolCalls,
-    }),
-    (step) => ({
+  return findAndUpdateStep<LogSearchStep>(assistantMessage, stepId, {
+    updateExistingStepFn: (step) => ({
       ...step,
       data: toolCalls,
-    })
-  );
+    }),
+  });
 }
 
 /**
@@ -196,21 +183,12 @@ function handleCodeSearchTools(
   stepId: string,
   toolCalls: CodeSearchToolCall[]
 ): AssistantMessage {
-  return findAndUpdateStep<CodeSearchStep>(
-    assistantMessage,
-    stepId,
-    () => ({
-      type: "codeSearch",
-      timestamp: new Date(),
-      id: stepId,
-      reasoning: "",
-      data: toolCalls,
-    }),
-    (step) => ({
+  return findAndUpdateStep<CodeSearchStep>(assistantMessage, stepId, {
+    updateExistingStepFn: (step) => ({
       ...step,
       data: toolCalls,
-    })
-  );
+    }),
+  });
 }
 
 /**
@@ -220,38 +198,15 @@ function handlePostprocessingUpdate(
   assistantMessage: AssistantMessage,
   step: LogPostprocessingStep | CodePostprocessingStep
 ): AssistantMessage {
-  const stepIndex = assistantMessage.steps.findIndex((s) => s.id === step.id);
-
-  // If step doesn't exist, add it as is
-  if (stepIndex === -1) {
-    return {
-      ...assistantMessage,
-      steps: [...assistantMessage.steps, step],
-    };
-  }
-
-  // Otherwise update the existing step's data array
-  let updatedStep: LogPostprocessingStep | CodePostprocessingStep;
+  // Use findAndUpdateStep to handle both creation and update cases
   if (step.type === "logPostprocessing") {
-    const existingStep = assistantMessage.steps[stepIndex] as LogPostprocessingStep;
-    updatedStep = {
-      ...existingStep,
-      data: step.data,
-    };
+    return findAndUpdateStep<LogPostprocessingStep>(assistantMessage, step.id, {
+      createNewStepFn: () => step,
+    });
   } else {
     // codePostprocessing
-    const existingStep = assistantMessage.steps[stepIndex] as CodePostprocessingStep;
-    updatedStep = {
-      ...existingStep,
-      data: step.data,
-    };
+    return findAndUpdateStep<CodePostprocessingStep>(assistantMessage, step.id, {
+      createNewStepFn: () => step,
+    });
   }
-
-  const updatedSteps = [...assistantMessage.steps];
-  updatedSteps[stepIndex] = updatedStep;
-
-  return {
-    ...assistantMessage,
-    steps: updatedSteps,
-  };
 }
