@@ -96,9 +96,7 @@ const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => (
     )}
 
     {/* Tool calls */}
-    {step.data.length === 0 ? (
-      <em className="text-gray-400 text-sm">Searching logs...</em>
-    ) : (
+    {
       <div className="space-y-3">
         {step.data.map((toolCall: LogSearchToolCall, index) => (
           <div
@@ -131,7 +129,7 @@ const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => (
           </div>
         ))}
       </div>
-    )}
+    }
   </div>
 );
 
@@ -149,9 +147,7 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
       )}
 
       {/* Tool calls */}
-      {step.data.length === 0 ? (
-        <em className="text-gray-400 text-sm">Searching code...</em>
-      ) : (
+      {
         <div className="space-y-3">
           {step.data.map((toolCall, index) => {
             // Handle different types of code search tool calls
@@ -210,7 +206,7 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
             return null;
           })}
         </div>
-      )}
+      }
     </div>
   );
 };

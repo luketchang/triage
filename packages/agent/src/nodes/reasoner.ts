@@ -138,7 +138,6 @@ export class Reasoner {
         timestamp: new Date(),
         data: text,
       };
-      this.state.addIntermediateStep(output);
     } else {
       output = {
         type: "subAgentCalls",

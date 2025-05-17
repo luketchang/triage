@@ -1,6 +1,6 @@
 import { logger, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
-import { generateText, LanguageModelV1 } from "ai";
+import { LanguageModelV1, streamText } from "ai";
 import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 
@@ -110,13 +110,20 @@ ${params.codebaseOverview}
 class LogSearch {
   private llmClient: LanguageModelV1;
   private observabilityPlatform: ObservabilityPlatform;
+  private state: PipelineStateManager;
 
-  constructor(llmClient: LanguageModelV1, observabilityPlatform: ObservabilityPlatform) {
+  constructor(
+    llmClient: LanguageModelV1,
+    observabilityPlatform: ObservabilityPlatform,
+    state: PipelineStateManager
+  ) {
     this.llmClient = llmClient;
     this.observabilityPlatform = observabilityPlatform;
+    this.state = state;
   }
 
   async invoke(params: {
+    logSearchId: string;
     query: string;
     timezone: string;
     logRequest: string;
@@ -132,7 +139,7 @@ class LogSearch {
     });
 
     try {
-      const { toolCalls, text } = await generateText({
+      const { toolCalls, textStream } = streamText({
         model: this.llmClient,
         system: SYSTEM_PROMPT,
         prompt: prompt,
@@ -142,10 +149,18 @@ class LogSearch {
         toolChoice: "auto",
       });
 
+      let text = "";
+      for await (const chunk of textStream) {
+        this.state.addStreamingStep("logSearch", params.logSearchId, chunk);
+        text += chunk;
+      }
+
       logger.info(`Log search reasoning:\n${text}`);
 
+      const finalizedToolCalls = await toolCalls;
+
       // End loop if no tool calls returned, similar to Reasoner
-      if (!toolCalls || toolCalls.length === 0) {
+      if (!finalizedToolCalls || finalizedToolCalls.length === 0) {
         return {
           reasoning: text,
           actions: {
@@ -156,7 +171,7 @@ class LogSearch {
         };
       }
 
-      const toolCall = ensureSingleToolCall(toolCalls);
+      const toolCall = ensureSingleToolCall(finalizedToolCalls);
 
       if (toolCall.toolName === "logSearchInput") {
         return {
@@ -199,7 +214,11 @@ export class LogSearchAgent {
   constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
-    this.logSearch = new LogSearch(this.config.fastClient, this.config.observabilityPlatform);
+    this.logSearch = new LogSearch(
+      this.config.fastClient,
+      this.config.observabilityPlatform,
+      state
+    );
   }
 
   @timer
@@ -219,7 +238,9 @@ export class LogSearchAgent {
       }
 
       // TODO: should enable multiple log searches at once
+      const logSearchId = uuidv4();
       response = await this.logSearch.invoke({
+        logSearchId,
         query: this.config.query,
         timezone: this.config.timezone,
         logRequest: params.logRequest,
@@ -257,7 +278,7 @@ export class LogSearchAgent {
         });
 
         const logSearchStep: LogSearchStep = {
-          id: uuidv4(),
+          id: logSearchId,
           type: "logSearch",
           timestamp: new Date(),
           reasoning: response.reasoning,

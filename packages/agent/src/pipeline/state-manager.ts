@@ -23,12 +23,16 @@ export class PipelineStateManager {
     this.chatHistory = chatHistory;
   }
 
-  addStreamingStep(type: "reasoning", id: string, chunk: string): void {
+  addStreamingStep(
+    type: "reasoning" | "logSearch" | "codeSearch",
+    id: string,
+    chunk: string
+  ): void {
     this.onUpdate({
       type: "intermediateUpdate",
       step: {
         id,
-        type,
+        type: `${type}-chunk`,
         chunk,
         timestamp: new Date(),
       },

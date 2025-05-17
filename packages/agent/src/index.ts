@@ -184,7 +184,10 @@ async function main(): Promise<void> {
     onUpdate: (update) => {
       if (update.type === "intermediateUpdate") {
         switch (update.step.type) {
-          case "reasoning":
+          case "reasoning-chunk":
+            process.stdout.write(`${update.step.chunk}\n`);
+            break;
+          case "logSearch-chunk":
             process.stdout.write(`${update.step.chunk}\n`);
             break;
           default:

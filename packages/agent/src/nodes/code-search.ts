@@ -1,5 +1,5 @@
 import { logger, timer } from "@triage/common";
-import { generateText, LanguageModelV1 } from "ai";
+import { LanguageModelV1, streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
@@ -104,12 +104,15 @@ ${params.codebaseOverview}
 
 class CodeSearch {
   private llmClient: LanguageModelV1;
+  private state: PipelineStateManager;
 
-  constructor(llmClient: LanguageModelV1) {
+  constructor(llmClient: LanguageModelV1, state: PipelineStateManager) {
     this.llmClient = llmClient;
+    this.state = state;
   }
 
   async invoke(params: {
+    codeSearchId: string;
     query: string;
     codeRequest: string;
     fileTree: string;
@@ -124,7 +127,7 @@ class CodeSearch {
     });
 
     try {
-      const { toolCalls, text } = await generateText({
+      const { toolCalls, textStream } = streamText({
         model: this.llmClient,
         system: SYSTEM_PROMPT,
         prompt: prompt,
@@ -135,10 +138,17 @@ class CodeSearch {
         toolChoice: "auto",
       });
 
+      let text = "";
+      for await (const chunk of textStream) {
+        this.state.addStreamingStep("codeSearch", params.codeSearchId, chunk);
+        text += chunk;
+      }
+
       logger.info(`Code search reasoning:\n${text}`);
 
       // End loop if no tool calls returned, similar to Reasoner
-      if (!toolCalls || toolCalls.length === 0) {
+      const finalizedToolCalls = await toolCalls;
+      if (!finalizedToolCalls || finalizedToolCalls.length === 0) {
         logger.info("No more tool calls returned");
         return {
           reasoning: text,
@@ -151,7 +161,7 @@ class CodeSearch {
       }
 
       let outputToolCalls: CodeSearchInput[] = [];
-      for (const toolCall of toolCalls) {
+      for (const toolCall of finalizedToolCalls) {
         if (toolCall.toolName === "catRequest") {
           outputToolCalls.push({
             type: "catRequest",
@@ -189,7 +199,7 @@ export class CodeSearchAgent {
   constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
-    this.codeSearch = new CodeSearch(this.config.fastClient);
+    this.codeSearch = new CodeSearch(this.config.fastClient, this.state);
   }
 
   @timer
@@ -212,7 +222,9 @@ export class CodeSearchAgent {
         (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
       );
 
+      const codeSearchId = uuidv4();
       response = await this.codeSearch.invoke({
+        codeSearchId,
         query: this.config.query,
         codeRequest: params.codeRequest,
         fileTree: this.config.fileTree,
@@ -255,7 +267,7 @@ export class CodeSearchAgent {
 
         const codeSearchStep: CodeSearchStep = {
           type: "codeSearch",
-          id: uuidv4(),
+          id: codeSearchId,
           timestamp: new Date(),
           reasoning: response.reasoning,
           data: toolCalls,
