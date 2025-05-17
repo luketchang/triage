@@ -3,6 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
 import fs from "fs";
 import path from "path";
+import superjson from "superjson";
 import { AgentStep, ChatMessage } from "../../renderer/src/types/index.js";
 import { DB_DIR, DB_NAME } from "../constants.js";
 import * as schema from "./schema.js";
@@ -114,7 +115,7 @@ export class DatabaseService {
           chatId,
           timestamp: message.timestamp.toISOString(),
           content: message.content,
-          contextItems: message.contextItems ? JSON.stringify(message.contextItems) : null,
+          contextItems: message.contextItems ? superjson.stringify(message.contextItems) : null,
         })
         .returning();
 
@@ -139,7 +140,7 @@ export class DatabaseService {
           chatId,
           timestamp: message.timestamp.toISOString(),
           response: message.response,
-          steps: JSON.stringify(message.steps),
+          steps: superjson.stringify(message.steps),
           error: message.error || null,
         })
         .returning();
@@ -175,7 +176,7 @@ export class DatabaseService {
           role: "user" as const,
           timestamp: new Date(row.timestamp),
           content: row.content,
-          contextItems: row.contextItems ? JSON.parse(row.contextItems) : undefined,
+          contextItems: row.contextItems ? superjson.parse(row.contextItems) : undefined,
         })),
         ...assistantMessages.map((row: AssistantMessage) => ({
           id: row.id.toString(),
@@ -183,7 +184,7 @@ export class DatabaseService {
           role: "assistant" as const,
           timestamp: new Date(row.timestamp),
           response: row.response,
-          steps: JSON.parse(row.steps) as AgentStep[], // TODO: unsafe
+          steps: superjson.parse(row.steps) as AgentStep[],
           error: row.error || undefined,
         })),
       ];
