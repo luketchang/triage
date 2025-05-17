@@ -49,6 +49,7 @@ export class CodebaseProcessor {
       outputDir?: string;
       maxConcurrentDirs?: number;
       onProgress?: (update: CodebaseOverviewProgressUpdate) => void;
+      abortSignal?: AbortSignal;
     } = {}
   ) {
     this.maxConcurrentDirs = options.maxConcurrentDirs || 8;
@@ -99,7 +100,8 @@ export class CodebaseProcessor {
       const serviceDirs = await identifyTopLevelServices(
         this.llmClient,
         this.repoPath,
-        repoFileTree
+        repoFileTree,
+        this.options.abortSignal
       );
       let directoriesToProcess: string[];
 
@@ -145,7 +147,8 @@ export class CodebaseProcessor {
             directory,
             directoryTree,
             pathToSourceCode,
-            repoFileTree
+            repoFileTree,
+            this.options.abortSignal
           );
 
           completedDirs++;
@@ -180,7 +183,8 @@ export class CodebaseProcessor {
         this.llmClient,
         this.options.systemDescription || "",
         summaries,
-        repoFileTree
+        repoFileTree,
+        this.options.abortSignal
       );
 
       this.updateProgress({

@@ -89,6 +89,7 @@ export class CodePostprocessor {
         codePostprocessing: codePostprocessingToolSchema,
       },
       toolChoice: "required",
+      abortSignal: this.config.abortSignal,
     });
 
     let toolCall;

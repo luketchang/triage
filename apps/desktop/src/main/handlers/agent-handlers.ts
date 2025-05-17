@@ -30,7 +30,6 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
       logger.info(`Creating agent stream ${streamId} for query:`, query);
 
       const controller = new AbortController();
-      const signal = controller.signal;
       streams.set(streamId, { controller, win: window });
 
       // Start agent processing asynchronously to return stream ID immediately
@@ -40,7 +39,7 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
 
           // Send updates to renderer via window
           const onUpdate = (update: any) => {
-            if (signal.aborted) return;
+            if (controller.signal.aborted) return;
             window.webContents.send("agent:chunk", { id: streamId, chunk: update });
           };
 
@@ -55,7 +54,7 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
             startDate,
             endDate,
             onUpdate,
-            // We'll handle the signal separately in the onUpdate callback
+            abortSignal: controller.signal,
           });
 
           // Send completion signal
@@ -64,7 +63,7 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
           logger.error(`Error in agent stream ${streamId}:`, error);
 
           // If aborted, send cancelled message, otherwise send error
-          if (signal.aborted) {
+          if (controller.signal.aborted) {
             window.webContents.send("agent:chunk", {
               id: streamId,
               error: "cancelled",

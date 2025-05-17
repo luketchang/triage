@@ -33,6 +33,7 @@ export interface AgentArgs {
   startDate?: Date;
   endDate?: Date;
   onUpdate: StreamUpdateFn;
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -45,6 +46,7 @@ export async function invokeAgent({
   startDate = new Date("2025-04-01T21:00:00Z"),
   endDate = new Date("2025-04-01T22:00:00Z"),
   onUpdate,
+  abortSignal,
 }: AgentArgs): Promise<AssistantMessage> {
   if (!agentCfg.codebaseOverview) {
     throw new Error("Codebase overview is required");
@@ -70,6 +72,7 @@ export async function invokeAgent({
     reasoningClient: getModelWrapper(agentCfg.reasoningModel, agentCfg),
     fastClient: getModelWrapper(agentCfg.fastModel, agentCfg),
     observabilityPlatform,
+    abortSignal,
   };
 
   const state = new PipelineStateManager(onUpdate, chatHistory);

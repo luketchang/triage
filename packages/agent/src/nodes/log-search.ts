@@ -104,10 +104,16 @@ ${params.codebaseOverview}
 class LogSearch {
   private llmClient: LanguageModelV1;
   private observabilityPlatform: ObservabilityPlatform;
+  private config: Readonly<TriagePipelineConfig>;
 
-  constructor(llmClient: LanguageModelV1, observabilityPlatform: ObservabilityPlatform) {
+  constructor(
+    llmClient: LanguageModelV1,
+    observabilityPlatform: ObservabilityPlatform,
+    config: TriagePipelineConfig
+  ) {
     this.llmClient = llmClient;
     this.observabilityPlatform = observabilityPlatform;
+    this.config = config;
   }
 
   async invoke(params: {
@@ -133,6 +139,7 @@ class LogSearch {
           logSearchInput: logSearchInputToolSchema,
         },
         toolChoice: "auto",
+        abortSignal: this.config.abortSignal,
       });
 
       // End loop if no tool calls returned, similar to Reasoner
@@ -179,7 +186,11 @@ export class LogSearchAgent {
   constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
-    this.logSearch = new LogSearch(this.config.fastClient, this.config.observabilityPlatform);
+    this.logSearch = new LogSearch(
+      this.config.fastClient,
+      this.config.observabilityPlatform,
+      this.config
+    );
   }
 
   @timer

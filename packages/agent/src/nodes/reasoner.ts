@@ -105,6 +105,7 @@ export class Reasoner {
         codeRequest: codeRequestToolSchema,
       },
       toolChoice: "auto",
+      abortSignal: this.config.abortSignal,
     });
 
     let text = "";

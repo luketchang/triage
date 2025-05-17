@@ -96,9 +96,11 @@ ${params.codebaseOverview}
 
 class CodeSearch {
   private llmClient: LanguageModelV1;
+  private config: Readonly<TriagePipelineConfig>;
 
-  constructor(llmClient: LanguageModelV1) {
+  constructor(llmClient: LanguageModelV1, config: TriagePipelineConfig) {
     this.llmClient = llmClient;
+    this.config = config;
   }
 
   async invoke(params: {
@@ -125,6 +127,7 @@ class CodeSearch {
           grepRequest: grepRequestToolSchema,
         },
         toolChoice: "auto",
+        abortSignal: this.config.abortSignal,
       });
 
       logger.info(`Code search output:\n${text}`);
@@ -180,7 +183,7 @@ export class CodeSearchAgent {
   constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
-    this.codeSearch = new CodeSearch(this.config.fastClient);
+    this.codeSearch = new CodeSearch(this.config.fastClient, this.config);
   }
 
   @timer

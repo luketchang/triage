@@ -1,7 +1,9 @@
-import { logger } from "@triage/common";
-import { generateText, LanguageModelV1 } from "ai";
 import * as fs from "fs/promises";
 import * as path from "path";
+
+import { logger } from "@triage/common";
+import { generateText, LanguageModelV1 } from "ai";
+
 import { SelectedModules, selectedModulesSchema } from "./types";
 
 /**
@@ -53,7 +55,8 @@ ${params.repoFileTree}
 export async function identifyTopLevelServices(
   llmClient: LanguageModelV1,
   repoPath: string,
-  repoFileTree: string
+  repoFileTree: string,
+  abortSignal?: AbortSignal
 ): Promise<string[]> {
   logger.info(`File tree: ${repoFileTree}`);
 
@@ -72,6 +75,7 @@ export async function identifyTopLevelServices(
         selectedModules: selectedModulesTool,
       },
       toolChoice: "required",
+      abortSignal,
     });
 
     if (!toolCalls || toolCalls.length === 0) {
@@ -109,7 +113,7 @@ export async function identifyTopLevelServices(
         } else {
           logger.warn(`Identified service path '${relPath}' is not a directory.`);
         }
-      } catch (error) {
+      } catch {
         logger.warn(`Identified service directory '${relPath}' does not exist in the repository.`);
       }
     }

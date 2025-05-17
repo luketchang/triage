@@ -95,7 +95,8 @@ export async function generateDirectorySummary(
   directory: string,
   dirFileTree: string,
   fileContents: Record<string, string>,
-  repoFileTree: string
+  repoFileTree: string,
+  abortSignal?: AbortSignal
 ): Promise<string> {
   const prompt = createDirectorySummaryPrompt({
     systemDescription,
@@ -110,6 +111,7 @@ export async function generateDirectorySummary(
       model: llmClient,
       system: SUMMARIZATION_SYSTEM_PROMPT,
       prompt,
+      abortSignal,
     });
 
     return text;
@@ -126,7 +128,8 @@ export async function mergeAllSummaries(
   llmClient: LanguageModelV1,
   systemDescription: string,
   summaries: Record<string, string>,
-  repoFileTree: string
+  repoFileTree: string,
+  abortSignal?: AbortSignal
 ): Promise<string> {
   const example = MERGE_SUMMARIES_EXAMPLE;
   const prompt = createMergeSummariesPrompt({
@@ -141,6 +144,7 @@ export async function mergeAllSummaries(
       model: llmClient,
       system: SUMMARIZATION_SYSTEM_PROMPT,
       prompt,
+      abortSignal,
     });
 
     return text;
