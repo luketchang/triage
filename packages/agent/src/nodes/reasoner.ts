@@ -114,7 +114,7 @@ export class Reasoner {
         if (part.type === "text-delta") {
           text += part.textDelta;
           // If this is root cause analysis (no tool calls), stream text as it's generated
-          this.state.addStreamingStep("reasoning", part.textDelta, params.parentId);
+          this.state.addStreamingStep("reasoning", params.parentId, part.textDelta);
         } else if (part.type === "reasoning") {
           process.stdout.write(`${part.textDelta}\n`);
         }

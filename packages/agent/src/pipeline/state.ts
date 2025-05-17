@@ -75,13 +75,6 @@ export type AgentStep =
   | LogPostprocessingStep
   | CodePostprocessingStep;
 
-export type AgentStage =
-  | "logSearch"
-  | "codeSearch"
-  | "reasoning"
-  | "logPostprocessing"
-  | "codePostprocessing";
-
 type StreamingPartial<T> = Omit<T, "data"> & { chunk: string };
 
 export type AgentStreamingStep =
