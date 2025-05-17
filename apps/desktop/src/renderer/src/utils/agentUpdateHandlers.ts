@@ -21,36 +21,36 @@ export function handleIntermediateUpdate(
   update: AgentStreamUpdate
 ): void {
   messageUpdater.update((assistantMessage: AssistantMessage) => {
-    const { type, id } = update.step;
+    const { type, id } = update;
 
     // Handle reasoning chunks
     if (type === "reasoning-chunk") {
-      return handleReasoningChunk(assistantMessage, id, update.step.chunk);
+      return handleReasoningChunk(assistantMessage, id, update.chunk);
     }
 
     // Handle log search chunks
     if (type === "logSearch-chunk") {
-      return handleLogSearchChunk(assistantMessage, id, update.step.chunk);
+      return handleLogSearchChunk(assistantMessage, id, update.chunk);
     }
 
     // Handle code search chunks
     if (type === "codeSearch-chunk") {
-      return handleCodeSearchChunk(assistantMessage, id, update.step.chunk);
+      return handleCodeSearchChunk(assistantMessage, id, update.chunk);
     }
 
     // Handle log search tools
     if (type === "logSearch-tools") {
-      return handleLogSearchTools(assistantMessage, id, update.step.toolCalls);
+      return handleLogSearchTools(assistantMessage, id, update.toolCalls);
     }
 
     // Handle code search tools
     if (type === "codeSearch-tools") {
-      return handleCodeSearchTools(assistantMessage, id, update.step.toolCalls);
+      return handleCodeSearchTools(assistantMessage, id, update.toolCalls);
     }
 
     // Handle postprocessing updates
     if (type === "logPostprocessing" || type === "codePostprocessing") {
-      return handlePostprocessingUpdate(assistantMessage, update.step);
+      return handlePostprocessingUpdate(assistantMessage, update);
     }
 
     throw new Error(`Unknown step type: ${type}`);

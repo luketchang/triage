@@ -33,13 +33,10 @@ export class PipelineStateManager {
     chunk: string
   ): void {
     this.onUpdate({
-      type: "intermediateUpdate",
-      step: {
-        id,
-        type: `${type}-chunk`,
-        chunk,
-        timestamp: new Date(),
-      },
+      id,
+      type: `${type}-chunk`,
+      chunk,
+      timestamp: new Date(),
     });
   }
 
@@ -53,27 +50,18 @@ export class PipelineStateManager {
 
     if (step.type === "logSearch") {
       this.onUpdate({
-        type: "intermediateUpdate",
-        step: {
-          ...step,
-          type: `${step.type}-tools`,
-          toolCalls: step.data,
-        },
+        ...step,
+        type: `${step.type}-tools`,
+        toolCalls: step.data,
       });
     } else if (step.type === "codeSearch") {
       this.onUpdate({
-        type: "intermediateUpdate",
-        step: {
-          ...step,
-          type: `${step.type}-tools`,
-          toolCalls: step.data,
-        },
+        ...step,
+        type: `${step.type}-tools`,
+        toolCalls: step.data,
       });
     } else {
-      this.onUpdate({
-        type: "intermediateUpdate",
-        step,
-      });
+      this.onUpdate(step);
     }
   }
 

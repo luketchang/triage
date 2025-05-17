@@ -74,7 +74,7 @@ export type AgentStep =
   | LogPostprocessingStep
   | CodePostprocessingStep;
 
-type StreamingPartial<T extends AgentStep> = Omit<T, "data" | "type" | "reasoning"> & {
+type StreamingChunk<T extends AgentStep> = Omit<T, "data" | "type" | "reasoning"> & {
   type: `${T["type"]}-chunk`;
   chunk: string;
 };
@@ -84,19 +84,14 @@ type StreamingTools<T extends AgentStep> = Omit<T, "type" | "reasoning"> & {
   toolCalls: T["data"];
 };
 
-export type AgentStreamingStep =
-  | StreamingPartial<ReasoningStep>
-  | StreamingPartial<LogSearchStep>
-  | StreamingPartial<CodeSearchStep>
+export type AgentStreamUpdate =
+  | StreamingChunk<ReasoningStep>
+  | StreamingChunk<LogSearchStep>
+  | StreamingChunk<CodeSearchStep>
   | StreamingTools<LogSearchStep>
   | StreamingTools<CodeSearchStep>
   | LogPostprocessingStep
   | CodePostprocessingStep;
-
-export type AgentStreamUpdate = {
-  type: "intermediateUpdate";
-  step: AgentStreamingStep;
-};
 
 export type StreamUpdateFn = (update: AgentStreamUpdate) => void;
 
