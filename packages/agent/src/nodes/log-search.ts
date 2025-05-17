@@ -214,7 +214,6 @@ export class LogSearchAgent {
     let currentIter = 0;
     let newLogSearchSteps: LogSearchStep[] = [];
 
-    let toolCalls: LogSearchToolCall[] = [];
     while ((!response || Array.isArray(response.actions)) && currentIter < maxIters) {
       const previousLogSearchToolCalls = this.state.getLogSearchToolCalls(StepsType.BOTH);
       let lastLogSearchToolCall: LogSearchToolCall | undefined = undefined;
@@ -242,6 +241,8 @@ export class LogSearchAgent {
         );
 
         // TODO: convert this into loop when we have multiple tool calls output
+        let toolCalls: LogSearchToolCall[] = [];
+
         logger.info("Fetching logs from observability platform...");
         const logContext = await handleLogSearchRequest(
           response.actions[0]!,
