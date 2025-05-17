@@ -31,6 +31,10 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
 
         const agentCfg = await agentCfgStore.getValues();
 
+        // NOTE: we set timezone every agent call to handle edge cases where timezone changes while app still open
+        agentCfg.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        console.info("Setting timezone to:", agentCfg.timezone);
+
         // Send updates to renderer via window
         const onUpdate = (update: any) => {
           window.webContents.send("agent:agent-update", update);
@@ -39,6 +43,7 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
         // Calculate date range for last two weeks
         const endDate = new Date();
         const startDate = new Date(endDate.getTime() - TWO_WEEKS_MS);
+
         const result = await invokeAgent({
           query,
           chatHistory,

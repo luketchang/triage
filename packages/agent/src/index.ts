@@ -63,6 +63,7 @@ export async function invokeAgent({
 
   const pipelineConfig: TriagePipelineConfig = {
     query,
+    timezone: agentCfg.timezone,
     repoPath: agentCfg.repoPath,
     codebaseOverview: agentCfg.codebaseOverview.content,
     fileTree,
@@ -134,6 +135,7 @@ async function main(): Promise<void> {
   const codebaseOverview = await fs.readFile(overviewPath, "utf-8");
   const bugPath =
     "/Users/luketchang/code/triage/repos/ticketing/bugs/order-cancelled-publish-bug.txt";
+  const timezone = "America/Los_Angeles";
 
   const bug = await fs.readFile(bugPath, "utf-8");
 
@@ -150,6 +152,7 @@ async function main(): Promise<void> {
     chatHistory,
     agentCfg: {
       repoPath,
+      timezone,
       codebaseOverview: {
         content: codebaseOverview,
         repoPath,
