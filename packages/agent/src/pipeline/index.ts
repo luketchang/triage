@@ -11,6 +11,7 @@ export type TriagePipelineConfig = {
   fastClient: LanguageModelV1;
   observabilityPlatform: ObservabilityPlatform;
   query: string;
+  timezone: string;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
