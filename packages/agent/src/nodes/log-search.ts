@@ -12,7 +12,6 @@ import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types
 import { ensureSingleToolCall, formatFacetValues, formatLogSearchToolCalls } from "../utils";
 
 export interface LogSearchAgentResponse {
-  type: "logSearchAgentResponse";
   newLogSearchSteps: LogSearchStep[];
 }
 
@@ -206,8 +205,6 @@ export class LogSearchAgent {
   @timer
   async invoke(params: { logRequest: string; maxIters?: number }): Promise<LogSearchAgentResponse> {
     logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
-    const logSearchId = uuidv4();
-    this.state.recordHighLevelStep("logSearch", logSearchId);
 
     let response: LogSearchResponse | null = null;
     const maxIters = params.maxIters || MAX_ITERS;
@@ -257,13 +254,14 @@ export class LogSearchAgent {
         });
 
         const logSearchStep: LogSearchStep = {
+          id: uuidv4(),
           type: "logSearch",
           timestamp: new Date(),
           reasoning: response.reasoning,
           data: toolCalls,
         };
         newLogSearchSteps.push(logSearchStep);
-        this.state.addIntermediateStep(logSearchStep, logSearchId);
+        this.state.addIntermediateStep(logSearchStep);
       } else {
         logger.info("Log search complete");
       }
@@ -276,7 +274,6 @@ export class LogSearchAgent {
     }
 
     return {
-      type: "logSearchAgentResponse",
       newLogSearchSteps,
     };
   }

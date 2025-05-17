@@ -6,9 +6,11 @@ import {
   AssistantMessage,
   CodePostprocessingFact,
   CodePostprocessingStage,
+  CodePostprocessingStep,
   CodeSearchStage,
   LogPostprocessingFact,
   LogPostprocessingStage,
+  LogPostprocessingStep,
   LogSearchStage,
   ReasoningStage,
 } from "../types/index.js";
@@ -198,28 +200,16 @@ function CellView({
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const stages = message.stages;
+  const steps = message.steps;
 
-  // Determine which stage is currently active when thinking
-  const activeStageIndex = useMemo(() => {
-    if (!isThinking || stages.length === 0) return -1;
-    return stages.length - 1;
-  }, [isThinking, stages]);
-
-  const logPostprocessingStage = useMemo(
-    () =>
-      stages.find(
-        (stage): stage is LogPostprocessingStage => stage.type === "logPostprocessing"
-      ) as LogPostprocessingStage | undefined,
-    [stages]
+  const logPostprocessingStep = useMemo(
+    () => steps.find((step): step is LogPostprocessingStep => step.type === "logPostprocessing"),
+    [steps]
   );
 
-  const codePostprocessingStage = useMemo(
-    () =>
-      stages.find(
-        (stage): stage is CodePostprocessingStage => stage.type === "codePostprocessing"
-      ) as CodePostprocessingStage | undefined,
-    [stages]
+  const codePostprocessingStep = useMemo(
+    () => steps.find((step): step is CodePostprocessingStep => step.type === "codePostprocessing"),
+    [steps]
   );
 
   // Determine if we have facts to show - only when there are actually facts
@@ -227,9 +217,9 @@ function CellView({
     () =>
       !isThinking &&
       message.response &&
-      ((logPostprocessingStage?.facts?.length || 0) > 0 ||
-        (codePostprocessingStage?.facts?.length || 0) > 0),
-    [isThinking, message.response, logPostprocessingStage, codePostprocessingStage]
+      ((logPostprocessingStep?.data?.length || 0) > 0 ||
+        (codePostprocessingStep?.data?.length || 0) > 0),
+    [isThinking, message.response, logPostprocessingStep, codePostprocessingStep]
   );
 
   // Set up a time-based check for showing the waiting indicator
@@ -262,12 +252,12 @@ function CellView({
   useEffect(() => {
     lastUpdateTimeRef.current = Date.now();
     setShowWaitingIndicator(false);
-  }, [stages]);
+  }, [steps]);
 
   // Handle opening the facts sidebar
   const handleShowFacts = () => {
     if (onShowFacts && hasFacts) {
-      onShowFacts(logPostprocessingStage?.facts || [], codePostprocessingStage?.facts || []);
+      onShowFacts(logPostprocessingStep?.data || [], codePostprocessingStep?.data || []);
     }
   };
 
@@ -281,9 +271,9 @@ function CellView({
       {/* Main content area */}
       <div className="cellview-main-content flex-1 w-full min-w-0 overflow-hidden">
         {/* Render each visible step */}
-        {stages.map((stage, index) => (
-          <React.Fragment key={stage.id}>
-            <GenericStep stage={stage} isActive={isThinking && index === activeStageIndex} />
+        {steps.map((step, index) => (
+          <React.Fragment key={step}>
+            <GenericStep stage={step} isActive={isThinking && index === activeStageIndex} />
           </React.Fragment>
         ))}
 

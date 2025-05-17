@@ -28,12 +28,12 @@ export class Reasoning {
   async run(): Promise<void> {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
     const reasoningId = uuidv4();
-    this.state.recordHighLevelStep("reasoning", reasoningId);
 
     let iterationCount = 0;
     const maxIterations = 50;
 
     let lastReasoningResponse: ReasoningStep = {
+      id: uuidv4(),
       type: "reasoning",
       data: "Error in reasoning",
       timestamp: new Date(),

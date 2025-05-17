@@ -198,8 +198,6 @@ export class CodeSearchAgent {
     maxIters?: number;
   }): Promise<CodeSearchAgentResponse> {
     logger.info("\n\n" + "=".repeat(25) + " Code Search " + "=".repeat(25));
-    const codeSearchId = uuidv4();
-    this.state.recordHighLevelStep("codeSearch", codeSearchId);
 
     let response: CodeSearchResponse | null = null;
     const maxIters = params.maxIters || MAX_ITERS;
@@ -257,12 +255,13 @@ export class CodeSearchAgent {
 
         const codeSearchStep: CodeSearchStep = {
           type: "codeSearch",
+          id: uuidv4(),
           timestamp: new Date(),
           reasoning: response.reasoning,
           data: toolCalls,
         };
         newCodeSearchSteps.push(codeSearchStep);
-        this.state.addIntermediateStep(codeSearchStep, codeSearchId);
+        this.state.addIntermediateStep(codeSearchStep);
       } else {
         logger.info("Code search complete");
       }

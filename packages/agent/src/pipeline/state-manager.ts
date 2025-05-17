@@ -1,11 +1,9 @@
 import { CoreMessage } from "ai";
-import { v4 as uuidv4 } from "uuid";
 
 import { ChatMessage } from "../types/message";
 import { formatAgentSteps, formatCatToolCalls, formatLogSearchToolCalls } from "../utils";
 
 import {
-  AgentStage,
   AgentStep,
   CatToolCall,
   GrepToolCall,
@@ -25,20 +23,11 @@ export class PipelineStateManager {
     this.chatHistory = chatHistory;
   }
 
-  recordHighLevelStep(stage: AgentStage, id?: string): void {
-    this.onUpdate({
-      type: "highLevelUpdate",
-      stage,
-      id: id || uuidv4(),
-    });
-  }
-
-  addStreamingStep(type: "reasoning", chunk: string, parentId: string): void {
+  addStreamingStep(type: "reasoning", id: string, chunk: string): void {
     this.onUpdate({
       type: "intermediateUpdate",
-      id: uuidv4(),
-      parentId,
       step: {
+        id,
         type,
         chunk,
         timestamp: new Date(),
@@ -46,15 +35,13 @@ export class PipelineStateManager {
     });
   }
 
-  addIntermediateStep(step: AgentStep, parentId: string): void {
+  addIntermediateStep(step: AgentStep): void {
     this.currSteps.push(step);
 
     // NOTE: for reasoning steps, we don't want to send them to the stream since they are accumulated in chunks already. We just add them to agent local steps.
     if (step.type !== "reasoning") {
       this.onUpdate({
         type: "intermediateUpdate",
-        id: uuidv4(),
-        parentId,
         step,
       });
     }

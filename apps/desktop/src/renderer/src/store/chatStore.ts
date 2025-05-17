@@ -149,7 +149,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       role: "assistant",
       timestamp: new Date(),
       response: "Thinking...",
-      stages: [],
+      steps: [],
     };
     const updatedMessages = [...(messages || []), userMessage];
     const updatedMessagesWithAssistant = [...updatedMessages, assistantMessage];

@@ -16,6 +16,7 @@ export interface BaseToolCall {
 }
 
 export interface BaseAgentStep {
+  id: string;
   timestamp: Date;
 }
 
@@ -90,18 +91,8 @@ export type AgentStreamingStep =
   | LogPostprocessingStep
   | CodePostprocessingStep;
 
-export type AgentStreamUpdate = HighLevelUpdate | IntermediateUpdate;
-
-export type HighLevelUpdate = {
-  type: "highLevelUpdate";
-  stage: AgentStage;
-  id: string;
-};
-
-export type IntermediateUpdate = {
+export type AgentStreamUpdate = {
   type: "intermediateUpdate";
-  id: string;
-  parentId: string;
   step: AgentStreamingStep;
 };
 

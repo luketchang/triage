@@ -1,5 +1,6 @@
 import { logger, timer } from "@triage/common";
 import { streamText } from "ai";
+import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
 import { ReasoningStep } from "../pipeline/state";
@@ -132,11 +133,12 @@ export class Reasoner {
     let output: ReasoningResponse;
     if (finalizedToolCalls.length === 0) {
       output = {
+        id: uuidv4(),
         type: "reasoning",
         timestamp: new Date(),
         data: text,
       };
-      this.state.addIntermediateStep(output, params.parentId);
+      this.state.addIntermediateStep(output);
     } else {
       output = {
         type: "subAgentCalls",

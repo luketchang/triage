@@ -63,8 +63,6 @@ export class CodePostprocessor {
   @timer
   async invoke(): Promise<CodePostprocessingStep> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
-    const codePostprocessingId = uuidv4();
-    this.state.recordHighLevelStep("codePostprocessing", codePostprocessingId);
 
     const prompt = createPrompt({
       query: this.config.query,
@@ -105,19 +103,15 @@ export class CodePostprocessor {
         filepath: normalizeFilePath(fact.filepath, this.config.repoPath),
       })) || [];
 
-    this.state.addIntermediateStep(
-      {
-        type: "codePostprocessing",
-        data: normalizedFacts,
-        timestamp: new Date(),
-      },
-      codePostprocessingId
-    );
-
-    return {
+    const step: CodePostprocessingStep = {
+      id: uuidv4(),
       type: "codePostprocessing",
       timestamp: new Date(),
       data: normalizedFacts,
     };
+
+    this.state.addIntermediateStep(step);
+
+    return step;
   }
 }

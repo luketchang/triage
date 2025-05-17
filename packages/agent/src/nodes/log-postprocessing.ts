@@ -75,8 +75,6 @@ export class LogPostprocessor {
   @timer
   async invoke(): Promise<LogPostprocessingStep> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
-    const logPostprocessingId = uuidv4();
-    this.state.recordHighLevelStep("logPostprocessing", logPostprocessingId);
 
     const prompt = createPrompt({
       query: this.config.query,
@@ -133,19 +131,15 @@ export class LogPostprocessor {
       pageCursor: fact.pageCursor,
     }));
 
-    this.state.addIntermediateStep(
-      {
-        type: "logPostprocessing",
-        data: augmentedFacts,
-        timestamp: new Date(),
-      },
-      logPostprocessingId
-    );
-
-    return {
+    const step: LogPostprocessingStep = {
+      id: uuidv4(),
       type: "logPostprocessing",
-      timestamp: new Date(),
       data: augmentedFacts,
+      timestamp: new Date(),
     };
+
+    this.state.addIntermediateStep(step);
+
+    return step;
   }
 }
