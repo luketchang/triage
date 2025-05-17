@@ -10,7 +10,6 @@ import {
   LogSearchResult,
 } from "../types/tools";
 
-// TODO: MOVE EVERYTHING TO TYPES
 export interface BaseToolCall {
   timestamp: Date;
 }

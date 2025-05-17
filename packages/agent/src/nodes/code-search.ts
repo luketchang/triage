@@ -223,11 +223,11 @@ export class CodeSearchAgent {
 
     while ((!response || Array.isArray(response.actions)) && currentIter < maxIters) {
       // Get the latest code search steps from state
-      const cats = this.state.getCatToolCallsWithResults(StepsType.BOTH);
-      const greps = this.state.getGrepToolCallsWithResults(StepsType.BOTH);
+      const catToolCallsWithResults = this.state.getCatToolCallsWithResults(StepsType.BOTH);
+      const grepToolCallsWithResults = this.state.getGrepToolCallsWithResults(StepsType.BOTH);
       const previousCodeSearchToolCallsWithResults: CodeSearchToolCallWithResult[] = [
-        ...cats,
-        ...greps,
+        ...catToolCallsWithResults,
+        ...grepToolCallsWithResults,
       ].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
       const codeSearchId = uuidv4();
@@ -250,11 +250,11 @@ export class CodeSearchAgent {
           `Searching filepaths:\n${response.actions.map((toolCall) => JSON.stringify(toolCall)).join("\n")}`
         );
 
-        let toolCalls: CodeSearchToolCallWithResult[] = [];
+        let toolCallsWithResults: CodeSearchToolCallWithResult[] = [];
         for (const toolCall of response.actions) {
           if (toolCall.type === "catRequest") {
             const result = await handleCatRequest(toolCall);
-            toolCalls.push({
+            toolCallsWithResults.push({
               type: "cat",
               timestamp: new Date(),
               input: toolCall,
@@ -262,7 +262,7 @@ export class CodeSearchAgent {
             });
           } else if (toolCall.type === "grepRequest") {
             const result = await handleGrepRequest(toolCall, this.config.repoPath);
-            toolCalls.push({
+            toolCallsWithResults.push({
               type: "grep",
               timestamp: new Date(),
               input: toolCall,
@@ -278,7 +278,7 @@ export class CodeSearchAgent {
           id: codeSearchId,
           timestamp: new Date(),
           reasoning: response.reasoning,
-          data: toolCalls,
+          data: toolCallsWithResults,
         };
         newCodeSearchSteps.push(codeSearchStep);
         this.state.addIntermediateStep(codeSearchStep);

@@ -266,7 +266,7 @@ export class LogSearchAgent {
         );
 
         // TODO: convert this into loop when we have multiple tool calls output
-        let toolCalls: LogSearchToolCallWithResult[] = [];
+        let toolCallsWithResults: LogSearchToolCallWithResult[] = [];
 
         logger.info("Fetching logs from observability platform...");
         const logContext = await handleLogSearchRequest(
@@ -274,10 +274,11 @@ export class LogSearchAgent {
           this.config.observabilityPlatform
         );
 
-        const lastLogSearchResultsFormatted = formatLogSearchToolCallsWithResults(toolCalls);
+        const lastLogSearchResultsFormatted =
+          formatLogSearchToolCallsWithResults(toolCallsWithResults);
         logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
 
-        toolCalls.push({
+        toolCallsWithResults.push({
           type: "logSearch",
           timestamp: new Date(),
           input: response.actions[0]!,
@@ -289,7 +290,7 @@ export class LogSearchAgent {
           type: "logSearch",
           timestamp: new Date(),
           reasoning: response.reasoning,
-          data: toolCalls,
+          data: toolCallsWithResults,
         };
         newLogSearchSteps.push(logSearchStep);
         this.state.addIntermediateStep(logSearchStep);
