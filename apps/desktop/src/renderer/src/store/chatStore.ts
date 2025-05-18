@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import api from "../services/api.js";
-import { AssistantMessage, Chat, ChatMessage, UserMessage } from "../types/index.js";
+import { AssistantMessage, Chat, ChatMessage, ContextItem, UserMessage } from "../types/index.js";
 import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { handleUpdate } from "../utils/agentUpdateHandlers.js";
 import { generateId } from "../utils/formatters.js";
@@ -12,6 +12,7 @@ export interface ChatDetails {
   messages?: ChatMessage[];
   userInput?: string;
   isThinking?: boolean;
+  contextItems?: ContextItem[];
 }
 
 interface ChatState {
@@ -28,6 +29,9 @@ interface ChatState {
   selectChat: (chatId: number | undefined) => void;
   deleteChat: (chatId: number) => Promise<boolean>;
   setUserInput: (message: string) => void;
+  setContextItems: (
+    items: ContextItem[] | ((currentItems: ContextItem[]) => ContextItem[])
+  ) => void;
   sendMessage: () => Promise<void>;
 }
 
@@ -74,6 +78,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
               messages,
               userInput: "",
               isThinking: false,
+              contextItems: [],
             },
           },
         }));
@@ -116,13 +121,34 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     }));
   },
 
+  setContextItems: (items: ContextItem[] | ((currentItems: ContextItem[]) => ContextItem[])) => {
+    set((state) => {
+      const currentChatId = state.currentChatId;
+      const currentChat = state.chatDetailsById[currentChatId];
+      const currentItems = currentChat?.contextItems || [];
+
+      // If items is a function, call it with current items to get new items
+      const newItems = typeof items === "function" ? items(currentItems) : items;
+
+      return {
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [currentChatId]: {
+            ...state.chatDetailsById[currentChatId],
+            contextItems: newItems,
+          },
+        },
+      };
+    });
+  },
+
   sendMessage: async () => {
     const { currentChatId, chatDetailsById } = get();
     const chatDetails = chatDetailsById[currentChatId];
-    const { userInput, messages, isThinking } = chatDetails;
+    const { userInput, messages, isThinking, contextItems } = chatDetails;
 
     // Don't send if there's no message or if we're already thinking
-    if (!userInput?.trim() || isThinking) return;
+    if ((!userInput?.trim() && (!contextItems || contextItems.length === 0)) || isThinking) return;
 
     let chatId = currentChatId;
     // If no chat is selected, create a new one
@@ -137,13 +163,16 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       id: generateId(),
       role: "user",
       timestamp: new Date(),
-      content: userInput,
+      content: userInput || "",
+      contextItems: contextItems || undefined,
     };
+
     try {
       await api.saveUserMessage(userMessage, chatId);
     } catch (error) {
       console.error("Error saving user message:", error);
     }
+
     const assistantMessage: AssistantMessage = {
       id: generateId(),
       role: "assistant",
@@ -154,7 +183,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     const updatedMessages = [...(messages || []), userMessage];
     const updatedMessagesWithAssistant = [...updatedMessages, assistantMessage];
 
-    // Update state with new user/assistant message and clear input
+    // Update state with new user/assistant message and clear input and context items
     set((state) => {
       const newChatDetailsById = {
         ...state.chatDetailsById,
@@ -162,6 +191,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
           ...state.chatDetailsById[chatId],
           messages: updatedMessagesWithAssistant,
           userInput: "",
+          contextItems: [],
           isThinking: true,
         },
       };
@@ -198,7 +228,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     try {
       // Call the agent API with message
       const agentChatMessages = convertToAgentChatMessages(updatedMessages);
-      const agentMessage = await api.invokeAgent(userInput, agentChatMessages);
+      const agentMessage = await api.invokeAgent(userInput || "", agentChatMessages);
 
       if (agentMessage && !agentMessage.error) {
         // Update the assistant message with the response
