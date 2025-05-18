@@ -113,13 +113,14 @@ function ChatInputArea() {
 
     // Handle paste events
     const handlePaste = (e: ClipboardEvent) => {
-      setTimeout(resizeTextarea, 0);
-
-      // Check if pasted content might be a Datadog URL
+      // Allow default paste to insert content, then react
       const pastedText = e.clipboardData?.getData("text") || "";
-      if (pastedText) {
-        tryExtractDatadogLogsViewUrl(pastedText);
+      if (pastedText && tryExtractDatadogLogsViewUrl(pastedText)) {
+        // Prevent URL text from being inserted
+        e.preventDefault();
+        return;
       }
+      setTimeout(resizeTextarea, 0);
     };
 
     // Handle input events
@@ -236,7 +237,7 @@ function ChatInputArea() {
           disabled={isThinking}
         />
         <Button
-          className="absolute right-2 top-2 shadow-sm size-8 p-1"
+          className="absolute right-2 bottom-2 shadow-sm size-8 p-1"
           size="sm"
           onClick={handleSendMessage}
           disabled={(userInput.trim() === "" && effectiveContextItems.length === 0) || isThinking}
