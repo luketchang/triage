@@ -7,6 +7,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App.js";
 
 if (process.env.NODE_ENV === "production") {
+  console.info("Initializing Sentry");
   Sentry.init({
     // Adds request headers and IP for users, for more info visit:
     // https://docs.sentry.io/platforms/javascript/guides/electron/configuration/options/#sendDefaultPii
@@ -15,8 +16,8 @@ if (process.env.NODE_ENV === "production") {
     integrations: [
       Sentry.captureConsoleIntegration({ levels: ["error"] }),
       Sentry.replayIntegration({
-        maskAllText: true,
-        blockAllMedia: true,
+        maskAllText: false,
+        blockAllMedia: false,
       }),
     ],
     replaysSessionSampleRate: 1.0,
