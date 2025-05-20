@@ -85,6 +85,9 @@ export class Reasoner {
   async invoke(params: { parentId: string; maxSteps?: number }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${this.config.query}`);
 
+    // HACK: stream single reasoning update just to start the step in the UI
+    this.state.addStreamingUpdate("reasoning", params.parentId, "");
+
     // Inject system prompt into history
     const prompt = createPrompt({
       ...params,

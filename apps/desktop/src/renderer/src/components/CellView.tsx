@@ -375,7 +375,15 @@ function CellView({
         {/* Show waiting indicator with less restrictive conditions */}
         {isThinking && showWaitingIndicator && (
           <div className="waiting-indicator p-2 text-left text-gray-400">
-            <AnimatedEllipsis />
+            {/* Show "Reasoning..." if the last step is a reasoning step */}
+            {steps.length > 0 && steps[steps.length - 1].type === "reasoning" ? (
+              <div className="flex items-center">
+                <span className="mr-1">Reasoning</span>
+                <AnimatedEllipsis />
+              </div>
+            ) : (
+              <AnimatedEllipsis />
+            )}
           </div>
         )}
 
@@ -426,8 +434,6 @@ function CellView({
           </div>
         )}
       </div>
-
-      {/* Facts sidebar is now rendered in ChatView component */}
     </div>
   );
 }
