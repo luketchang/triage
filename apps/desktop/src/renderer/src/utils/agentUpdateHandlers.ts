@@ -1,153 +1,214 @@
-import { HighLevelUpdate, IntermediateUpdate } from "@triage/agent";
-import { AgentStage, AssistantMessage } from "../types/index.js";
-import { assertStageType } from "./agentDesktopConversion.js";
+import {
+  AgentStep,
+  AgentStreamUpdate,
+  CodePostprocessingStep,
+  CodeSearchStep,
+  CodeSearchToolCallWithResult,
+  LogPostprocessingStep,
+  LogSearchStep,
+  LogSearchToolCallWithResult,
+  ReasoningStep,
+} from "@triage/agent";
+import { AssistantMessage } from "../types/index.js";
 import { MessageUpdater } from "./MessageUpdater.js";
 
-/**
- * Handle a high-level update from the agent
- * Creates a new step in the message
- */
-export function handleHighLevelUpdate(
-  messageUpdater: MessageUpdater,
-  update: HighLevelUpdate
-): void {
-  messageUpdater.update((assistantMessage) => {
-    const existingStageIndex = assistantMessage.stages.findIndex((stage) => stage.id === update.id);
-    if (existingStageIndex !== -1) {
-      console.warn(`Stage with ID ${update.id} already exists, skipping duplicate`);
-      return assistantMessage;
-    }
-
-    let newStage: AgentStage;
-    switch (update.stage) {
-      case "logSearch":
-        newStage = {
-          id: update.id,
-          type: "logSearch",
-          queries: [],
-        };
-        break;
-      case "codeSearch":
-        newStage = {
-          id: update.id,
-          type: "codeSearch",
-          retrievedCode: [],
-        };
-        break;
-      case "reasoning":
-        newStage = {
-          id: update.id,
-          type: "reasoning",
-          content: "",
-        };
-        break;
-      case "logPostprocessing":
-        newStage = {
-          id: update.id,
-          type: "logPostprocessing",
-          facts: [],
-        };
-        break;
-      case "codePostprocessing":
-        newStage = {
-          id: update.id,
-          type: "codePostprocessing",
-          facts: [],
-        };
-        break;
-      default:
-        console.warn(`Unknown step type: ${update.stage}`);
-        return assistantMessage;
-    }
-
-    // Add the new step to the message
-    return {
-      ...assistantMessage,
-      stages: [...assistantMessage.stages, newStage],
-    };
-  });
-}
+type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyof T, Keys>> &
+  {
+    [K in Keys]-?: Required<Pick<T, K>> & Partial<Omit<T, K>>;
+  }[Keys];
 
 /**
  * Handle an intermediate update from the agent
  * Updates the content of an existing step
  */
-export function handleIntermediateUpdate(
-  messageUpdater: MessageUpdater,
-  update: IntermediateUpdate
-): void {
+export function handleUpdate(messageUpdater: MessageUpdater, update: AgentStreamUpdate): void {
   messageUpdater.update((assistantMessage: AssistantMessage) => {
-    // Find the step to update
-    const stepIndex = assistantMessage.stages.findIndex(
-      (stage: AgentStage) => stage.id === update.parentId
-    );
+    const { type, id } = update;
 
-    if (stepIndex === -1) {
-      console.warn(`Step with ID ${update.parentId} not found`);
-      return assistantMessage; // Return unchanged message if step not found
+    // Handle reasoning chunks
+    if (type === "reasoning-chunk") {
+      return handleReasoningChunk(assistantMessage, id, update.chunk);
     }
 
-    const stage = assistantMessage.stages[stepIndex];
-    let updatedStage: AgentStage;
-
-    // Update the step based on its type
-    switch (update.step.type) {
-      case "logSearch": {
-        assertStageType(stage, "logSearch");
-        updatedStage = {
-          ...stage,
-          queries: [...stage.queries, update.step],
-        };
-        break;
-      }
-      case "cat":
-        assertStageType(stage, "codeSearch");
-        updatedStage = {
-          ...stage,
-          retrievedCode: [
-            ...stage.retrievedCode,
-            { filepath: update.step.path, code: update.step.source },
-          ],
-        };
-        break;
-      // TODO: grep
-      case "reasoning": {
-        assertStageType(stage, "reasoning");
-        updatedStage = {
-          ...stage,
-          content: stage.content + update.step.contentChunk,
-        };
-        break;
-      }
-      case "logPostprocessing": {
-        assertStageType(stage, "logPostprocessing");
-        updatedStage = {
-          ...stage,
-          facts: update.step.facts,
-        };
-        break;
-      }
-      case "codePostprocessing": {
-        assertStageType(stage, "codePostprocessing");
-        updatedStage = {
-          ...stage,
-          facts: update.step.facts,
-        };
-        break;
-      }
-      default:
-        console.warn(`Unknown stage type: ${(stage as AgentStage).type}`);
-        return assistantMessage; // Return unchanged message if unknown step type
+    // Handle log search chunks
+    if (type === "logSearch-chunk") {
+      return handleLogSearchChunk(assistantMessage, id, update.chunk);
     }
 
-    // Create new stages array with the updated step
-    const updatedStages = [...assistantMessage.stages];
-    updatedStages[stepIndex] = updatedStage;
+    // Handle code search chunks
+    if (type === "codeSearch-chunk") {
+      return handleCodeSearchChunk(assistantMessage, id, update.chunk);
+    }
 
-    // Return updated message
+    // Handle log search tools
+    if (type === "logSearch-tools") {
+      return handleLogSearchTools(assistantMessage, id, update.toolCalls);
+    }
+
+    // Handle code search tools
+    if (type === "codeSearch-tools") {
+      return handleCodeSearchTools(assistantMessage, id, update.toolCalls);
+    }
+
+    // Handle postprocessing updates
+    if (type === "logPostprocessing" || type === "codePostprocessing") {
+      return handlePostprocessingUpdate(assistantMessage, update);
+    }
+
+    throw new Error(`Unknown step type: ${type}`);
+  });
+}
+
+/**
+ * Common logic for finding a step and returning updated assistant message
+ * If updateExistingStepFn is not provided, only new step creation will occur
+ */
+function findAndUpdateStep<T extends AgentStep>(
+  assistantMessage: AssistantMessage,
+  stepId: string,
+  updateLogic: RequireAtLeastOne<
+    {
+      createNewStepFn?: () => T;
+      updateExistingStepFn?: (step: T) => T;
+    },
+    "createNewStepFn" | "updateExistingStepFn"
+  >
+): AssistantMessage {
+  const stepIndex = assistantMessage.steps.findIndex((step) => step.id === stepId);
+
+  // If step doesn't exist yet, create a new one
+  if (stepIndex === -1) {
     return {
       ...assistantMessage,
-      stages: updatedStages,
+      steps: [...assistantMessage.steps, updateLogic.createNewStepFn!()],
     };
+  }
+
+  // Otherwise update the existing step
+  const existingStep = assistantMessage.steps[stepIndex] as T;
+  const updatedStep = updateLogic.updateExistingStepFn!(existingStep);
+
+  const updatedSteps = [...assistantMessage.steps];
+  updatedSteps[stepIndex] = updatedStep;
+
+  return {
+    ...assistantMessage,
+    steps: updatedSteps,
+  };
+}
+
+/**
+ * Handle reasoning chunk updates
+ */
+function handleReasoningChunk(
+  assistantMessage: AssistantMessage,
+  stepId: string,
+  chunk: string
+): AssistantMessage {
+  return findAndUpdateStep<ReasoningStep>(assistantMessage, stepId, {
+    createNewStepFn: () => ({
+      type: "reasoning",
+      timestamp: new Date(),
+      id: stepId,
+      data: chunk,
+    }),
+    updateExistingStepFn: (step) => ({
+      ...step,
+      data: step.data + chunk,
+    }),
   });
+}
+
+/**
+ * Handle log search chunk updates
+ */
+function handleLogSearchChunk(
+  assistantMessage: AssistantMessage,
+  stepId: string,
+  chunk: string
+): AssistantMessage {
+  return findAndUpdateStep<LogSearchStep>(assistantMessage, stepId, {
+    createNewStepFn: () => ({
+      type: "logSearch",
+      timestamp: new Date(),
+      id: stepId,
+      reasoning: chunk,
+      data: [],
+    }),
+    updateExistingStepFn: (step) => ({
+      ...step,
+      reasoning: step.reasoning + chunk,
+    }),
+  });
+}
+
+/**
+ * Handle code search chunk updates
+ */
+function handleCodeSearchChunk(
+  assistantMessage: AssistantMessage,
+  stepId: string,
+  chunk: string
+): AssistantMessage {
+  return findAndUpdateStep<CodeSearchStep>(assistantMessage, stepId, {
+    createNewStepFn: () => ({
+      type: "codeSearch",
+      timestamp: new Date(),
+      id: stepId,
+      reasoning: chunk,
+      data: [],
+    }),
+    updateExistingStepFn: (step) => ({
+      ...step,
+      reasoning: step.reasoning + chunk,
+    }),
+  });
+}
+
+/**
+ * Handle log search tools updates
+ */
+function handleLogSearchTools(
+  assistantMessage: AssistantMessage,
+  stepId: string,
+  toolCalls: LogSearchToolCallWithResult[]
+): AssistantMessage {
+  return findAndUpdateStep<LogSearchStep>(assistantMessage, stepId, {
+    updateExistingStepFn: (step) => ({
+      ...step,
+      data: toolCalls,
+    }),
+  });
+}
+
+/**
+ * Handle code search tools updates
+ */
+function handleCodeSearchTools(
+  assistantMessage: AssistantMessage,
+  stepId: string,
+  toolCalls: CodeSearchToolCallWithResult[]
+): AssistantMessage {
+  return findAndUpdateStep<CodeSearchStep>(assistantMessage, stepId, {
+    updateExistingStepFn: (step) => ({
+      ...step,
+      data: toolCalls,
+    }),
+  });
+}
+
+/**
+ * Handle postprocessing updates
+ */
+function handlePostprocessingUpdate(
+  assistantMessage: AssistantMessage,
+  step: LogPostprocessingStep | CodePostprocessingStep
+): AssistantMessage {
+  return findAndUpdateStep<LogPostprocessingStep | CodePostprocessingStep>(
+    assistantMessage,
+    step.id,
+    {
+      createNewStepFn: () => step,
+    }
+  );
 }

@@ -50,6 +50,7 @@ export function timer(
       const endTime = Date.now();
       const elapsedTime = (endTime - startTime) / 1000; // Convert to seconds
       logger.info(`Time taken by '${propertyKey}' (failed): ${elapsedTime.toFixed(4)} seconds`);
+      logger.error(error);
       throw error;
     }
   };

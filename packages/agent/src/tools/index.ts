@@ -14,7 +14,6 @@ import {
   GrepRequestResult,
   LogRequest,
   LogSearchInput,
-  LogSearchInputCore,
   LogSearchResult,
 } from "../types";
 
@@ -72,7 +71,7 @@ export async function handleGrepRequest(
 }
 
 export async function handleLogSearchRequest(
-  toolCall: LogSearchInputCore,
+  toolCall: LogSearchInput,
   observabilityPlatform: ObservabilityPlatform
 ): Promise<LogSearchResult | LLMToolCallError> {
   try {

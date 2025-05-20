@@ -1,5 +1,4 @@
-import { InferSelectModel, InferInsertModel } from "drizzle-orm";
-import { sql } from "drizzle-orm";
+import { InferInsertModel, InferSelectModel, sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // Define the schema using Drizzle's type-safe builders
@@ -27,7 +26,7 @@ export const assistantMessages = sqliteTable("assistant_messages", {
     .references(() => chats.id, { onDelete: "cascade" }),
   timestamp: text("timestamp").notNull(),
   response: text("response").notNull(),
-  stages: text("stages").notNull(),
+  steps: text("steps").notNull(),
   error: text("error"),
 });
 

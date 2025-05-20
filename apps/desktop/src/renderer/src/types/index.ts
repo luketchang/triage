@@ -7,13 +7,16 @@ import {
   AgentStep,
   AgentStreamUpdate,
   UserMessage as AgentUserMessage,
+  CatToolCallWithResult,
   CodePostprocessingFact,
   CodePostprocessingStep,
+  CodeSearchStep,
+  GrepToolCallWithResult,
   LogPostprocessingFact,
   LogPostprocessingStep,
   LogSearchInput,
-  LogSearchInputCore,
   LogSearchStep,
+  LogSearchToolCallWithResult,
   ReasoningStep,
   TraceSearchInput,
 } from "@triage/agent";
@@ -23,7 +26,6 @@ import {
   LogsWithPagination,
   ServiceLatency,
   Span,
-  SpanError,
   SpansWithPagination,
   Trace,
   TracesWithPagination,
@@ -36,22 +38,26 @@ export type {
   AgentStep,
   AgentStreamUpdate,
   AgentUserMessage,
+  CatToolCallWithResult,
   CodebaseOverview,
   CodebaseOverviewProgressUpdate,
   CodePostprocessingFact,
   CodePostprocessingStep,
+  CodeSearchStep,
+  GrepToolCallWithResult,
   Log,
   LogPostprocessingFact,
   LogPostprocessingStep,
   LogSearchInput,
-  LogSearchInputCore,
   LogSearchStep,
+  LogSearchToolCallWithResult,
   LogsWithPagination,
   ReasoningStep,
   ServiceLatency,
   Span,
   SpansWithPagination,
   Trace,
+  TraceSearchInput,
   TracesWithPagination,
 };
 
@@ -63,132 +69,11 @@ export interface Chat {
   createdAt: Date;
 }
 
-// Define UI-enhanced versions of observability types with visual properties
-// These will supplement the data-only types from the observability package
-export interface UIServiceLatency extends ServiceLatency {
-  color: string; // for visualization
-}
-
-// Define a UI-enhanced version of Trace with visual properties
-export interface UITrace extends Omit<Trace, "serviceBreakdown"> {
-  serviceBreakdown: UIServiceLatency[]; // Override with UI-enhanced service latency
-}
-
-// Define a version of Trace for agent consumption without serviceBreakdown
-export type TraceForAgent = Omit<Trace, "serviceBreakdown">;
-
-// Define UI-enhanced version of Span for the UI components
-export interface UISpan {
-  id: string;
-  service: string;
-  operation: string;
-  resource: string;
-  start: string | Date;
-  end: string | Date;
-  duration: number;
-  children?: UISpan[];
-  error?: SpanError;
-  tags?: Record<string, string>;
-}
-
 // Define facet data type
 export interface FacetData {
   name: string;
   values: string[];
   counts?: number[];
-}
-
-// Define log query params type
-export interface LogQueryParams {
-  query: string;
-  start: string;
-  end: string;
-  limit: number;
-  pageCursor?: string;
-}
-
-// Similar to LogQueryParams, but for traces
-export interface TraceQueryParams {
-  query: string;
-  start: string;
-  end: string;
-  limit: number;
-  pageCursor?: string;
-}
-
-// Define LogSearchPair type for storing pairs of search inputs and results
-export interface LogSearchPair {
-  input: LogSearchInputCore;
-  results: LogsWithPagination | string;
-}
-
-export interface CodeSearchPair {
-  filepath: string;
-  code: string;
-}
-
-// Similar to LogSearchPair, but for traces
-export interface TraceSearchPair {
-  input: TraceSearchInput;
-  results: TracesWithPagination | string;
-}
-
-// Define specific context item types with discriminated union
-export interface LogSearchContextItem {
-  id: string;
-  type: "logSearch";
-  title: string;
-  description: string;
-  data: LogSearchPair;
-}
-
-// Context item type for single trace
-export interface SingleTraceContextItem {
-  id: string;
-  type: "singleTrace";
-  title: string;
-  description: string;
-  data: TraceForAgent; // Use the new TraceForAgent type
-}
-
-// Context item type as a discriminated union
-export type ContextItem = LogSearchContextItem | SingleTraceContextItem;
-
-export type AgentStage =
-  | LogSearchStage
-  | CodeSearchStage
-  | ReasoningStage
-  | LogPostprocessingStage
-  | CodePostprocessingStage;
-
-export interface LogSearchStage {
-  type: "logSearch";
-  id: string;
-  queries: LogSearchPair[];
-}
-
-export interface CodeSearchStage {
-  type: "codeSearch";
-  id: string;
-  retrievedCode: CodeSearchPair[];
-}
-
-export interface ReasoningStage {
-  type: "reasoning";
-  id: string;
-  content: string;
-}
-
-export interface LogPostprocessingStage {
-  type: "logPostprocessing";
-  id: string;
-  facts: LogPostprocessingFact[];
-}
-
-export interface CodePostprocessingStage {
-  type: "codePostprocessing";
-  id: string;
-  facts: CodePostprocessingFact[];
 }
 
 // Interface for chat messages
@@ -205,7 +90,7 @@ export interface AssistantMessage {
   id: string;
   role: "assistant";
   timestamp: Date;
-  stages: AgentStage[];
+  steps: AgentStep[];
   response: string;
   error?: string;
 }

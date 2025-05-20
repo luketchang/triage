@@ -3,7 +3,7 @@ import { logger } from "@triage/common";
 import { CodePostprocessor } from "../nodes/code-postprocessing";
 import { LogPostprocessor } from "../nodes/log-postprocessing";
 
-import { PipelineStateManager } from "./state";
+import { PipelineStateManager } from "./state-manager";
 
 import { TriagePipelineConfig } from ".";
 
@@ -26,7 +26,7 @@ export class PostProcessing {
     ]);
 
     logger.info(
-      `Log postprocessing complete with ${logPostprocessingResponse.facts.length} relevant facts. Code postprocessing complete with ${codePostprocessingResponse.facts.length} relevant facts.`
+      `Log postprocessing complete with ${logPostprocessingResponse.data.length} relevant facts. Code postprocessing complete with ${codePostprocessingResponse.data.length} relevant facts.`
     );
   }
 }
