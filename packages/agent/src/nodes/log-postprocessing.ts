@@ -138,7 +138,7 @@ export class LogPostprocessor {
       timestamp: new Date(),
     };
 
-    this.state.addIntermediateStep(step);
+    this.state.addUpdate(step);
 
     return step;
   }

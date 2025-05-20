@@ -21,7 +21,7 @@ type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyo
  * Handle an intermediate update from the agent
  * Updates the content of an existing step
  */
-export function handeUpdate(messageUpdater: MessageUpdater, update: AgentStreamUpdate): void {
+export function handleUpdate(messageUpdater: MessageUpdater, update: AgentStreamUpdate): void {
   messageUpdater.update((assistantMessage: AssistantMessage) => {
     const { type, id } = update;
 

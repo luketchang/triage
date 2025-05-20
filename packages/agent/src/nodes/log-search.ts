@@ -155,7 +155,7 @@ class LogSearch {
 
       let text = "";
       for await (const chunk of textStream) {
-        this.state.addStreamingStep("logSearch", params.logSearchId, chunk);
+        this.state.addStreamingUpdate("logSearch", params.logSearchId, chunk);
         text += chunk;
       }
 
@@ -293,7 +293,7 @@ export class LogSearchAgent {
           data: toolCallsWithResults,
         };
         newLogSearchSteps.push(logSearchStep);
-        this.state.addIntermediateStep(logSearchStep);
+        this.state.addUpdate(logSearchStep);
       } else {
         logger.info("Log search complete");
       }

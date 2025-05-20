@@ -182,10 +182,9 @@ export function formatCodeSearchToolCallsWithResults(
     .map((step) => {
       if (step.type === "grep") {
         return formatSingleGrepToolCallWithResult(step);
-      } else if (step.type === "cat") {
+      } else {
         return formatSingleCatToolCallWithResult(step);
       }
-      return "";
     })
     .filter(Boolean)
     .join("\n\n");

@@ -147,7 +147,7 @@ class CodeSearch {
 
       let text = "";
       for await (const chunk of textStream) {
-        this.state.addStreamingStep("codeSearch", params.codeSearchId, chunk);
+        this.state.addStreamingUpdate("codeSearch", params.codeSearchId, chunk);
         text += chunk;
       }
 
@@ -281,7 +281,7 @@ export class CodeSearchAgent {
           data: toolCallsWithResults,
         };
         newCodeSearchSteps.push(codeSearchStep);
-        this.state.addIntermediateStep(codeSearchStep);
+        this.state.addUpdate(codeSearchStep);
       } else {
         logger.info("Code search complete");
       }

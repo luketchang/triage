@@ -110,7 +110,7 @@ export class CodePostprocessor {
       data: normalizedFacts,
     };
 
-    this.state.addIntermediateStep(step);
+    this.state.addUpdate(step);
 
     return step;
   }
