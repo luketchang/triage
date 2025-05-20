@@ -1,17 +1,22 @@
+import { useAppConfig } from "@renderer/context/useAppConfig.js";
+import { BarChart, ExternalLink, FileCode, Search } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "../components/ui/Markdown.js";
 import { cn } from "../lib/utils.js";
 import {
-  AgentStage,
+  AgentStep,
   AssistantMessage,
   CodePostprocessingFact,
-  CodePostprocessingStage,
-  CodeSearchStage,
+  CodePostprocessingStep,
+  CodeSearchStep,
   LogPostprocessingFact,
-  LogPostprocessingStage,
-  LogSearchStage,
-  ReasoningStage,
+  LogPostprocessingStep,
+  LogSearchStep,
+  LogSearchToolCallWithResult,
+  ReasoningStep,
 } from "../types/index.js";
+import { absoluteToRepoRelativePath, filepathToGitHubUrl } from "../utils/facts/code.js";
+import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs.js";
 import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/Accordion.js";
 
@@ -66,113 +71,211 @@ const CollapsibleStep: React.FC<{
   );
 };
 
-const GenericStep: React.FC<{ stage: AgentStage; isActive: boolean }> = ({ stage, isActive }) => {
-  switch (stage.type) {
+const GenericStep: React.FC<{ step: AgentStep }> = ({ step }) => {
+  switch (step.type) {
     case "logSearch":
-      return <LogSearchStep stage={stage} isActive={isActive} />;
+      return <LogSearchStepView step={step} />;
     case "codeSearch":
-      return <CodeSearchStep stage={stage} isActive={isActive} />;
+      return <CodeSearchStepView step={step} />;
     case "reasoning":
-      return <ReasoningStep stage={stage} isActive={isActive} />;
+      return <ReasoningStepView step={step} />;
     case "logPostprocessing":
-      return <LogPostprocessingStep stage={stage} isActive={isActive} />;
+      return <LogPostprocessingStepView step={step} />;
     case "codePostprocessing":
-      return <CodePostprocessingStep stage={stage} isActive={isActive} />;
+      return <CodePostprocessingStepView step={step} />;
   }
 };
 
-const LogSearchStep: React.FC<{ stage: LogSearchStage; isActive: boolean }> = ({
-  stage,
-  isActive,
-}) => (
-  <CollapsibleStep title="Log Search" isActive={isActive}>
-    {stage.queries.length === 0 ? (
-      <em>Searching logs...</em>
-    ) : (
-      stage.queries.map((query, index) => (
-        <div
-          key={`${stage.id}-search-${index}`}
-          className="log-search-item mb-2 p-3 bg-background-lighter rounded-lg"
-        >
-          <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
-            {query.input.query}
-          </div>
-        </div>
-      ))
+const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => (
+  <div className="mb-6">
+    {/* Reasoning */}
+    {step.reasoning && (
+      <div className="mb-4 text-sm leading-relaxed">
+        <Markdown>{step.reasoning}</Markdown>
+      </div>
     )}
-  </CollapsibleStep>
+
+    {/* Tool calls */}
+    {
+      <div className="space-y-3">
+        {step.data.map((toolCall: LogSearchToolCallWithResult, index) => (
+          <div
+            key={`${step.id}-search-${index}`}
+            className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex items-center justify-between"
+          >
+            <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
+              <BarChart size={16} className="text-purple-300 flex-shrink-0" />
+              <div className="font-mono text-xs truncate">{toolCall.input.query}</div>
+            </div>
+            <div className="flex items-center">
+              <div className="px-2 py-1 text-xs text-purple-300">
+                {toolCall.output && "error" in toolCall.output
+                  ? "Error"
+                  : toolCall.output && "logs" in toolCall.output
+                    ? `${toolCall.output.logs.length} results`
+                    : "Processing..."}
+              </div>
+              {toolCall.output && !("error" in toolCall.output) && (
+                <a
+                  href={logSearchInputToDatadogLogsViewUrl(toolCall.input)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
+                >
+                  Open in Datadog <ExternalLink className="ml-1" size={12} />
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    }
+  </div>
 );
 
-const CodeSearchStep: React.FC<{ stage: CodeSearchStage; isActive: boolean }> = ({
-  stage,
-  isActive,
-}) => (
-  <CollapsibleStep title="Code Search" isActive={isActive}>
-    {stage.retrievedCode.length === 0 ? (
-      <em>Searching code...</em>
-    ) : (
-      stage.retrievedCode.map((code, index) => (
-        <div
-          key={`${stage.id}-search-${index}`}
-          className="code-search-item mb-2 p-3 bg-background-lighter rounded-lg"
-        >
-          <div className="font-mono text-sm overflow-x-auto whitespace-pre-wrap break-words">
-            {code.filepath}
-          </div>
-        </div>
-      ))
-    )}
-  </CollapsibleStep>
-);
+const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
+  const { appConfig } = useAppConfig();
+  if (!appConfig) return null;
 
-const ReasoningStep: React.FC<{ stage: ReasoningStage; isActive: boolean }> = ({
-  stage,
-  isActive,
-}) => (
-  <CollapsibleStep title="Reasoning" isActive={isActive}>
-    <div className="text-sm leading-relaxed break-words">
-      <Markdown>{stage.content}</Markdown>
+  return (
+    <div className="mb-6">
+      {/* Reasoning */}
+      {step.reasoning && (
+        <div className="mb-4 text-sm leading-relaxed">
+          <Markdown>{step.reasoning}</Markdown>
+        </div>
+      )}
+
+      {/* Tool calls */}
+      {
+        <div className="space-y-3">
+          {step.data.map((toolCall, index) => {
+            // Handle different types of code search tool calls
+            if (toolCall.type === "cat") {
+              const catToolCall = toolCall;
+              const filepath = absoluteToRepoRelativePath(
+                appConfig.repoPath!,
+                catToolCall.input.path
+              );
+              const output =
+                catToolCall.output && !("error" in catToolCall.output) ? catToolCall.output : null;
+              const numLines = output ? output.content.split("\n").length : 0;
+              return (
+                <div
+                  key={`${step.id}-search-${index}`}
+                  className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex items-center justify-between"
+                >
+                  <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
+                    <FileCode size={16} className="text-blue-300 flex-shrink-0" />
+                    <div className="font-mono text-xs truncate">{filepath}</div>
+                  </div>
+                  <div className="flex items-center">
+                    {output && (
+                      <div className="px-2 py-1 text-xs text-blue-300">
+                        {numLines} line{numLines !== 1 ? "s" : ""}
+                      </div>
+                    )}
+                    {output && (
+                      <a
+                        href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, filepath)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
+                      >
+                        Open in GitHub <ExternalLink className="ml-1" size={12} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            } else if (toolCall.type === "grep") {
+              const grepToolCall = toolCall;
+              return (
+                <div
+                  key={`${step.id}-search-${index}`}
+                  className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex items-center justify-between"
+                >
+                  <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
+                    <Search size={16} className="text-blue-300 flex-shrink-0" />
+                    <div className="font-mono text-xs truncate">{grepToolCall.input.pattern}</div>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      }
     </div>
-  </CollapsibleStep>
+  );
+};
+
+const ReasoningStepView: React.FC<{ step: ReasoningStep }> = ({ step }) => (
+  <div className="mb-6">
+    {/* Reasoning */}
+    {step.data && (
+      <div className="mb-4 text-sm leading-relaxed">
+        <Markdown>{step.data}</Markdown>
+      </div>
+    )}
+  </div>
 );
 
-const LogPostprocessingStep: React.FC<{ stage: LogPostprocessingStage; isActive: boolean }> = ({
-  stage,
-  isActive,
-}) => (
-  <CollapsibleStep title="Log Postprocessing" isActive={isActive}>
+const LogPostprocessingStepView: React.FC<{ step: LogPostprocessingStep }> = ({ step }) => (
+  <div className="mb-6">
+    {/* Title */}
+    <div className="mb-3 flex items-center">
+      <div className="text-sm font-medium text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
+        Log Analysis
+      </div>
+    </div>
+
+    {/* Facts */}
     <div className="space-y-3">
-      {stage.facts.map((fact, index) => (
+      {step.data.map((fact, index) => (
         <div
           key={`fact-${index}`}
-          className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
+          className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex flex-col"
         >
-          <div className="font-medium text-sm">{fact.title || "Log Fact"}</div>
-          <div className="mt-2 text-sm text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
+          <div className="flex items-center justify-between p-2.5 border-b border-white/10">
+            <div className="text-xs font-medium">{fact.title || "Log Fact"}</div>
+          </div>
+          <div className="p-3">
+            <div className="text-xs text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
+          </div>
         </div>
       ))}
     </div>
-  </CollapsibleStep>
+  </div>
 );
 
-const CodePostprocessingStep: React.FC<{ stage: CodePostprocessingStage; isActive: boolean }> = ({
-  stage,
-  isActive,
-}) => (
-  <CollapsibleStep title="Code Postprocessing" isActive={isActive}>
+const CodePostprocessingStepView: React.FC<{ step: CodePostprocessingStep }> = ({ step }) => (
+  <div className="mb-6">
+    {/* Title */}
+    <div className="mb-3 flex items-center">
+      <div className="text-sm font-medium text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
+        Code Analysis
+      </div>
+    </div>
+
+    {/* Facts */}
     <div className="space-y-3">
-      {stage.facts.map((fact, index) => (
+      {step.data.map((fact, index) => (
         <div
           key={`fact-${index}`}
-          className="p-3 bg-background-lighter rounded-lg border border-border/50 shadow-sm"
+          className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex flex-col"
         >
-          <div className="font-medium text-sm">{fact.title || "Code Fact"}</div>
-          <div className="mt-2 text-sm text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
-          {fact.filepath && <div className="mt-1 text-xs text-gray-500">{fact.filepath}</div>}
+          <div className="flex items-center justify-between p-2.5 border-b border-white/10">
+            <div className="text-xs font-medium">{fact.title || "Code Fact"}</div>
+          </div>
+          <div className="p-3">
+            <div className="text-xs text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
+            {fact.filepath && <div className="mt-1 text-xs text-gray-500">{fact.filepath}</div>}
+          </div>
         </div>
       ))}
     </div>
-  </CollapsibleStep>
+  </div>
 );
 
 interface CellViewProps {
@@ -192,28 +295,16 @@ function CellView({
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const waitingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const stages = message.stages;
+  const steps = message.steps;
 
-  // Determine which stage is currently active when thinking
-  const activeStageIndex = useMemo(() => {
-    if (!isThinking || stages.length === 0) return -1;
-    return stages.length - 1;
-  }, [isThinking, stages]);
-
-  const logPostprocessingStage = useMemo(
-    () =>
-      stages.find(
-        (stage): stage is LogPostprocessingStage => stage.type === "logPostprocessing"
-      ) as LogPostprocessingStage | undefined,
-    [stages]
+  const logPostprocessingStep = useMemo(
+    () => steps.find((step): step is LogPostprocessingStep => step.type === "logPostprocessing"),
+    [steps]
   );
 
-  const codePostprocessingStage = useMemo(
-    () =>
-      stages.find(
-        (stage): stage is CodePostprocessingStage => stage.type === "codePostprocessing"
-      ) as CodePostprocessingStage | undefined,
-    [stages]
+  const codePostprocessingStep = useMemo(
+    () => steps.find((step): step is CodePostprocessingStep => step.type === "codePostprocessing"),
+    [steps]
   );
 
   // Determine if we have facts to show - only when there are actually facts
@@ -221,9 +312,9 @@ function CellView({
     () =>
       !isThinking &&
       message.response &&
-      ((logPostprocessingStage?.facts?.length || 0) > 0 ||
-        (codePostprocessingStage?.facts?.length || 0) > 0),
-    [isThinking, message.response, logPostprocessingStage, codePostprocessingStage]
+      ((logPostprocessingStep?.data?.length || 0) > 0 ||
+        (codePostprocessingStep?.data?.length || 0) > 0),
+    [isThinking, message.response, logPostprocessingStep, codePostprocessingStep]
   );
 
   // Set up a time-based check for showing the waiting indicator
@@ -256,12 +347,12 @@ function CellView({
   useEffect(() => {
     lastUpdateTimeRef.current = Date.now();
     setShowWaitingIndicator(false);
-  }, [stages]);
+  }, [steps]);
 
   // Handle opening the facts sidebar
   const handleShowFacts = () => {
     if (onShowFacts && hasFacts) {
-      onShowFacts(logPostprocessingStage?.facts || [], codePostprocessingStage?.facts || []);
+      onShowFacts(logPostprocessingStep?.data || [], codePostprocessingStep?.data || []);
     }
   };
 
@@ -275,16 +366,24 @@ function CellView({
       {/* Main content area */}
       <div className="cellview-main-content flex-1 w-full min-w-0 overflow-hidden">
         {/* Render each visible step */}
-        {stages.map((stage, index) => (
-          <React.Fragment key={stage.id}>
-            <GenericStep stage={stage} isActive={isThinking && index === activeStageIndex} />
+        {steps.map((step, index) => (
+          <React.Fragment key={step.id}>
+            <GenericStep step={step} />
           </React.Fragment>
         ))}
 
         {/* Show waiting indicator with less restrictive conditions */}
         {isThinking && showWaitingIndicator && (
           <div className="waiting-indicator p-2 text-left text-gray-400">
-            <AnimatedEllipsis />
+            {/* Show "Reasoning..." if the last step is a reasoning step */}
+            {steps.length > 0 && steps[steps.length - 1].type === "reasoning" ? (
+              <div className="flex items-center">
+                <span className="mr-1">Reasoning</span>
+                <AnimatedEllipsis />
+              </div>
+            ) : (
+              <AnimatedEllipsis />
+            )}
           </div>
         )}
 
@@ -335,8 +434,6 @@ function CellView({
           </div>
         )}
       </div>
-
-      {/* Facts sidebar is now rendered in ChatView component */}
     </div>
   );
 }

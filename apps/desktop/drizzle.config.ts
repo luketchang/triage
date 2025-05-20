@@ -2,7 +2,7 @@ import type { Config } from "drizzle-kit";
 import * as path from "path";
 
 export default {
-  schema: "./electron/db/schema.ts", // Path relative to desktop app
+  schema: "./src/main/db/schema.ts", // Path relative to desktop app
   out: "./drizzle", // Output migrations to apps/desktop/drizzle
   driver: "better-sqlite",
   dbCredentials: {

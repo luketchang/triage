@@ -6,7 +6,7 @@ import { LogSearchAgent } from "../nodes/log-search";
 import { Reasoner } from "../nodes/reasoner";
 import { ReasoningStep } from "../pipeline/state";
 
-import { PipelineStateManager } from "./state";
+import { PipelineStateManager } from "./state-manager";
 
 import { TriagePipelineConfig } from ".";
 
@@ -28,14 +28,14 @@ export class Reasoning {
   async run(): Promise<void> {
     logger.info("\n\n" + "=".repeat(25) + " Reasoning " + "=".repeat(25));
     const reasoningId = uuidv4();
-    this.state.recordHighLevelStep("reasoning", reasoningId);
 
     let iterationCount = 0;
     const maxIterations = 50;
 
     let lastReasoningResponse: ReasoningStep = {
+      id: uuidv4(),
       type: "reasoning",
-      content: "Error in reasoning",
+      data: "Error in reasoning",
       timestamp: new Date(),
     };
 
@@ -48,21 +48,19 @@ export class Reasoning {
         logger.info(`Reasoning response: ${JSON.stringify(reasoningResponse)}`);
 
         if (reasoningResponse.type === "subAgentCalls") {
-          await Promise.all(
-            reasoningResponse.subAgentCalls.map((subAgentCall) => {
-              if (subAgentCall.type === "logRequest") {
-                return this.logSearchAgent.invoke({
-                  logRequest: subAgentCall.request,
-                });
-              } else if (subAgentCall.type === "codeRequest") {
-                return this.codeSearchAgent.invoke({
-                  codeRequest: subAgentCall.request,
-                });
-              } else {
-                throw new Error(`Unknown tool call type`);
-              }
-            })
-          );
+          for (const subAgentCall of reasoningResponse.subAgentCalls) {
+            if (subAgentCall.type === "logRequest") {
+              await this.logSearchAgent.invoke({
+                logRequest: subAgentCall.request,
+              });
+            } else if (subAgentCall.type === "codeRequest") {
+              await this.codeSearchAgent.invoke({
+                codeRequest: subAgentCall.request,
+              });
+            } else {
+              throw new Error(`Unknown tool call type`);
+            }
+          }
         } else {
           lastReasoningResponse = reasoningResponse;
           break;
@@ -73,6 +71,6 @@ export class Reasoning {
       }
     }
 
-    this.state.setAnswer(lastReasoningResponse.content);
+    this.state.setAnswer(lastReasoningResponse.data);
   }
 }
