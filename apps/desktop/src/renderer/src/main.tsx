@@ -20,7 +20,7 @@ if (process.env.NODE_ENV === "production") {
         blockAllMedia: false,
       }),
     ],
-    replaysSessionSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1, // Default 10%
     replaysOnErrorSampleRate: 1.0,
   });
 }
