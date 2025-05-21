@@ -11,6 +11,54 @@ import {
 } from "../utils/parse/logs.js";
 import { Button } from "./ui/Button.jsx";
 
+interface ContextItemProps {
+  item: LogSearchInput | RetrieveSentryEventInput;
+  index: number;
+  onRemove: (index: number) => void;
+}
+
+// Generic component for all context items with different inner content based on type
+function ContextItem({ item, index, onRemove }: ContextItemProps) {
+  // Determine the content to display based on item type
+  let primaryContent: React.ReactNode;
+  let secondaryContent: React.ReactNode;
+
+  if (item.type === "logSearchInput") {
+    primaryContent = (
+      <span className="font-medium text-gray-300 truncate max-w-[200px]">
+        {item.query || "Datadog Log Search"}
+      </span>
+    );
+    secondaryContent = (
+      <span className="text-gray-400">{formatDateRange(item.start, item.end)}</span>
+    );
+  } else if (item.type === "retrieveSentryEventInput") {
+    const sentryItem = item as RetrieveSentryEventInput;
+    primaryContent = (
+      <span className="font-medium text-gray-300 truncate max-w-[200px]">
+        Sentry Issue: {sentryItem.issueId}
+      </span>
+    );
+    secondaryContent = <span className="text-gray-400">{sentryItem.eventSpecifier}</span>;
+  } else {
+    // Fallback for unknown item types
+    primaryContent = (
+      <span className="font-medium text-gray-300 truncate max-w-[200px]">Context Item</span>
+    );
+    secondaryContent = null;
+  }
+
+  return (
+    <div className="bg-background-alt border border-border rounded-md px-2 py-1 text-xs flex items-center gap-1.5">
+      {primaryContent}
+      {secondaryContent}
+      <button className="text-gray-400 hover:text-gray-200" onClick={() => onRemove(index)}>
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
 function ChatInputArea() {
   const currentChatId = useChatStore((state) => state.currentChatId);
   const userInput = useChatStore((state) =>
@@ -111,25 +159,7 @@ function ChatInputArea() {
         {contextItems.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
             {contextItems.map((item, index) => (
-              <div
-                key={index}
-                className="bg-background-alt border border-border rounded-md px-2 py-1 text-xs flex items-center gap-1.5"
-              >
-                <span className="font-medium text-gray-300 truncate max-w-[200px]">
-                  {item.type === "logSearchInput"
-                    ? item.query || "Datadog Log Search"
-                    : "Context Item"}
-                </span>
-                {item.type === "logSearchInput" && (
-                  <span className="text-gray-400">{formatDateRange(item.start, item.end)}</span>
-                )}
-                <button
-                  className="text-gray-400 hover:text-gray-200"
-                  onClick={() => removeContextItem(index)}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
+              <ContextItem key={index} item={item} index={index} onRemove={removeContextItem} />
             ))}
           </div>
         )}
