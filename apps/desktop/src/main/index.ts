@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/electron";
 import { AgentConfigStore } from "@triage/agent";
 import { logger } from "@triage/common";
 import { ObservabilityConfigStore } from "@triage/observability";
-import { app, BrowserWindow, dialog, shell } from "electron";
+import { app, BrowserWindow, dialog, protocol, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
 import { AppCfgSchema, AppConfigStore } from "../common/AppConfig.js";
@@ -24,6 +24,14 @@ import {
 import { setupDesktopLogger } from "./setup/logger-setup.js";
 
 if (process.env.NODE_ENV === "production") {
+  // Register sentry-ipc scheme for Sentry's Electron SDK
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: "sentry-ipc",
+      privileges: { standard: true, secure: true, supportFetchAPI: true },
+    },
+  ]);
+
   Sentry.init({
     dsn: "https://0959c176189c84d818acd95b7add26ac@o4509322414063616.ingest.us.sentry.io/4509322496180224",
     environment: process.env.NODE_ENV,
