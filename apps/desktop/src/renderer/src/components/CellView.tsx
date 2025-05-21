@@ -15,61 +15,9 @@ import {
   LogSearchToolCallWithResult,
   ReasoningStep,
 } from "../types/index.js";
-import { absoluteToRepoRelativePath, filepathToGitHubUrl } from "../utils/facts/code.js";
-import { logSearchInputToDatadogLogsViewUrl } from "../utils/facts/logs.js";
+import { absoluteToRepoRelativePath, filepathToGitHubUrl } from "../utils/code.js";
+import { logSearchInputToDatadogLogsViewUrl } from "../utils/logs.js";
 import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/Accordion.js";
-
-/**
- * Collapsible step container component
- */
-const CollapsibleStep: React.FC<{
-  title: string;
-  children: React.ReactNode;
-  isActive?: boolean;
-}> = ({ title, children, isActive = false }) => {
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to the bottom of content when new content is added
-  useEffect(() => {
-    if (contentRef.current) {
-      contentRef.current.scrollTop = contentRef.current.scrollHeight;
-    }
-  });
-
-  return (
-    <Accordion type="single" collapsible defaultValue="item-1" className="mb-3">
-      <AccordionItem
-        value="item-1"
-        className="border border-border rounded-lg overflow-hidden shadow-sm"
-      >
-        <AccordionTrigger
-          className={cn("p-2.5", isActive ? "bg-background-lighter" : "bg-background-lighter")}
-        >
-          <div
-            className={cn(
-              "font-medium text-sm",
-              isActive
-                ? "text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine"
-                : "text-white"
-            )}
-          >
-            {title}
-          </div>
-        </AccordionTrigger>
-        <AccordionContent className="p-0">
-          <div
-            className="p-3 bg-background prose prose-invert max-w-none overflow-auto"
-            ref={contentRef}
-            style={{ maxHeight: "300px" }}
-          >
-            {children}
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
-  );
-};
 
 const GenericStep: React.FC<{ step: AgentStep }> = ({ step }) => {
   switch (step.type) {
