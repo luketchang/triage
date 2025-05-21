@@ -1,3 +1,4 @@
+import { formatDateRange } from "@renderer/utils/formatters.js";
 import { X } from "lucide-react";
 import React, { useEffect, useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
@@ -18,14 +19,12 @@ function ChatInputArea() {
       ? state.chatDetailsById[state.currentChatId]?.isThinking || false
       : false
   );
-  const contextItems = useChatStore((state) =>
-    state.currentChatId !== undefined
-      ? state.chatDetailsById[state.currentChatId]?.contextItems
-      : undefined
-  );
-
-  // Default context items to empty array locally to avoid new array each render
-  const effectiveContextItems = contextItems ?? [];
+  const contextItems =
+    useChatStore((state) =>
+      state.currentChatId !== undefined
+        ? state.chatDetailsById[state.currentChatId]?.contextItems
+        : [undefined]
+    ) ?? [];
 
   const setUserInput = useChatStore.use.setUserInput();
   const setContextItems = useChatStore.use.setContextItems();
@@ -61,7 +60,7 @@ function ChatInputArea() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (userInput.trim() || effectiveContextItems.length > 0) {
+      if (userInput.trim() || contextItems.length > 0) {
         handleSendMessage();
       }
     }
@@ -72,22 +71,9 @@ function ChatInputArea() {
     setContextItems((prevContextItems) => prevContextItems.filter((_, i) => i !== index));
   };
 
-  // Format date range for display
-  const formatDateRange = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-
-    // Format time as HH:MM
-    const formatTime = (date: Date) => {
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    };
-
-    return `${formatTime(startDate)} - ${formatTime(endDate)}`;
-  };
-
   // Send message function
   const handleSendMessage = async () => {
-    if ((!userInput.trim() && effectiveContextItems.length === 0) || isThinking) return;
+    if ((!userInput.trim() && contextItems.length === 0) || isThinking) return;
 
     // Call the send function from the store
     // The sendMessage function in the store will use the context items
@@ -107,9 +93,9 @@ function ChatInputArea() {
     <div className="p-4 border-t border-border bg-background-lighter">
       <div className="relative max-w-[90%] mx-auto">
         {/* Context Items Cards */}
-        {effectiveContextItems.length > 0 && (
+        {contextItems.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
-            {effectiveContextItems.map((item, index) => (
+            {contextItems.map((item, index) => (
               <div
                 key={index}
                 className="bg-background-alt border border-border rounded-md px-2 py-1 text-xs flex items-center gap-1.5"
@@ -154,7 +140,7 @@ function ChatInputArea() {
           className="absolute right-2 bottom-2 shadow-sm size-8 p-1"
           size="sm"
           onClick={handleSendMessage}
-          disabled={(userInput.trim() === "" && effectiveContextItems.length === 0) || isThinking}
+          disabled={(userInput.trim() === "" && contextItems.length === 0) || isThinking}
         >
           <SendIcon className="h-3.5 w-3.5" />
         </Button>

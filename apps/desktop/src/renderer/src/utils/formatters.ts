@@ -30,3 +30,15 @@ export const formatTimestamp = (timestamp: string): string => {
 export const generateId = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
+
+export const formatDateRange = (start: string, end: string) => {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  // Format time as HH:MM
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
+  return `${formatTime(startDate)} - ${formatTime(endDate)}`;
+};

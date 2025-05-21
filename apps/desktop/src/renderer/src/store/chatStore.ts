@@ -3,11 +3,8 @@ import api from "../services/api.js";
 import { AssistantMessage, Chat, ChatMessage, ContextItem, UserMessage } from "../types/index.js";
 import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { handleUpdate } from "../utils/agentUpdateHandlers.js";
-import {
-  datadogLogsViewUrlToLogSearchInput,
-  isValidDatadogLogsViewUrl,
-} from "../utils/facts/logs.js";
 import { generateId } from "../utils/formatters.js";
+import { datadogLogsViewUrlToLogSearchInput, isValidDatadogLogsViewUrl } from "../utils/logs.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
 import { createSelectors } from "./util.js";
 
