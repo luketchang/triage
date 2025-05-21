@@ -27,7 +27,7 @@ function ChatInputArea() {
     ) ?? [];
 
   const setUserInput = useChatStore.use.setUserInput();
-  const setContextItems = useChatStore.use.setContextItems();
+  const removeContextItem = useChatStore.use.removeContextItem();
   const sendMessage = useChatStore.use.sendMessage();
   const tryAddDatadogContextFromUrl = useChatStore.use.tryAddDatadogContextFromUrl();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -64,11 +64,6 @@ function ChatInputArea() {
         handleSendMessage();
       }
     }
-  };
-
-  // Function to remove a context item
-  const removeContextItem = (index: number) => {
-    setContextItems((prevContextItems) => prevContextItems.filter((_, i) => i !== index));
   };
 
   // Send message function

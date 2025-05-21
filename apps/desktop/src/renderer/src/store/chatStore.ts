@@ -30,9 +30,8 @@ interface ChatState {
   selectChat: (chatId: number | undefined) => void;
   deleteChat: (chatId: number) => Promise<boolean>;
   setUserInput: (message: string) => void;
-  setContextItems: (
-    items: ContextItem[] | ((currentItems: ContextItem[]) => ContextItem[])
-  ) => void;
+  setContextItems: (items: ContextItem[]) => void;
+  removeContextItem: (index: number) => void;
   sendMessage: () => Promise<void>;
   tryAddDatadogContextFromUrl: (url: string) => boolean;
 }
@@ -170,21 +169,34 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     }));
   },
 
-  setContextItems: (items: ContextItem[] | ((currentItems: ContextItem[]) => ContextItem[])) => {
+  setContextItems: (items: ContextItem[]) => {
     set((state) => {
       const currentChatId = state.currentChatId;
-      const currentChat = state.chatDetailsById[currentChatId];
-      const currentItems = currentChat?.contextItems || [];
-
-      // If items is a function, call it with current items to get new items
-      const newItems = typeof items === "function" ? items(currentItems) : items;
 
       return {
         chatDetailsById: {
           ...state.chatDetailsById,
           [currentChatId]: {
             ...state.chatDetailsById[currentChatId],
-            contextItems: newItems,
+            contextItems: items,
+          },
+        },
+      };
+    });
+  },
+
+  removeContextItem: (index: number) => {
+    set((state) => {
+      const currentChatId = state.currentChatId;
+      const currentChat = state.chatDetailsById[currentChatId];
+      const currentItems = currentChat?.contextItems || [];
+
+      return {
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [currentChatId]: {
+            ...state.chatDetailsById[currentChatId],
+            contextItems: currentItems.filter((_, i) => i !== index),
           },
         },
       };
