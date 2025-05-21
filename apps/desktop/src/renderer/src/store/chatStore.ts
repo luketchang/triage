@@ -4,8 +4,11 @@ import { AssistantMessage, Chat, ChatMessage, ContextItem, UserMessage } from ".
 import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { handleUpdate } from "../utils/agentUpdateHandlers.js";
 import { generateId } from "../utils/formatters.js";
-import { datadogLogsViewUrlToLogSearchInput, isValidDatadogLogsViewUrl } from "../utils/logs.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
+import {
+  datadogLogsViewUrlToLogSearchInput,
+  isValidDatadogLogsViewUrl,
+} from "../utils/parse/logs.js";
 import { createSelectors } from "./util.js";
 
 export const NO_CHAT_SELECTED = -1;

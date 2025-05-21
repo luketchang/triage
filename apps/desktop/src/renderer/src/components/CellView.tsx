@@ -15,8 +15,8 @@ import {
   LogSearchToolCallWithResult,
   ReasoningStep,
 } from "../types/index.js";
-import { absoluteToRepoRelativePath, filepathToGitHubUrl } from "../utils/code.js";
-import { logSearchInputToDatadogLogsViewUrl } from "../utils/logs.js";
+import { absoluteToRepoRelativePath, filepathToGitHubUrl } from "../utils/parse/code.js";
+import { logSearchInputToDatadogLogsViewUrl } from "../utils/parse/logs.js";
 import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
 
 const GenericStep: React.FC<{ step: AgentStep }> = ({ step }) => {

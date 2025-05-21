@@ -1,8 +1,8 @@
 // @ts-ignore - Ignoring React module resolution issues
 import React from "react";
 import { useAppConfig } from "../context/useAppConfig.js";
-import { filepathToGitHubUrl } from "../utils/code.js";
-import { logSearchInputToDatadogLogsViewUrl } from "../utils/logs.js";
+import { filepathToGitHubUrl } from "../utils/parse/code.js";
+import { logSearchInputToDatadogLogsViewUrl } from "../utils/parse/logs.js";
 import { ScrollArea } from "./ui/ScrollArea.js";
 
 // Fact types from the codebase

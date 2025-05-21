@@ -1,4 +1,4 @@
-import { LogPostprocessingFact, LogSearchInput } from "../types/index.js";
+import { LogPostprocessingFact, LogSearchInput } from "../../types/index.js";
 
 /**
  * Converts a LogSearchInput or LogPostprocessingFact into a Datadog log viewer URL
