@@ -3,6 +3,10 @@ import api from "../services/api.js";
 import { AssistantMessage, Chat, ChatMessage, ContextItem, UserMessage } from "../types/index.js";
 import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { handleUpdate } from "../utils/agentUpdateHandlers.js";
+import {
+  datadogLogsViewUrlToLogSearchInput,
+  isValidDatadogLogsViewUrl,
+} from "../utils/facts/logs.js";
 import { generateId } from "../utils/formatters.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
 import { createSelectors } from "./util.js";
@@ -33,13 +37,61 @@ interface ChatState {
     items: ContextItem[] | ((currentItems: ContextItem[]) => ContextItem[])
   ) => void;
   sendMessage: () => Promise<void>;
+  tryAddDatadogContextFromUrl: (url: string) => boolean;
 }
 
 const useChatStoreBase = create<ChatState>((set, get) => ({
   // Initial state
   chats: [],
   currentChatId: NO_CHAT_SELECTED,
-  chatDetailsById: {},
+  chatDetailsById: {
+    // Initialize details for when no chat is selected
+    [NO_CHAT_SELECTED]: {
+      userInput: "",
+      contextItems: [],
+    },
+  },
+
+  tryAddDatadogContextFromUrl: (text) => {
+    if (!text || !isValidDatadogLogsViewUrl(text)) return false;
+
+    try {
+      const logSearchInput = datadogLogsViewUrlToLogSearchInput(text);
+      let added = false;
+
+      set((state) => {
+        // Always use the current chat ID (which might be NO_CHAT_SELECTED)
+        const targetId = state.currentChatId;
+
+        const current = state.chatDetailsById[targetId]?.contextItems ?? [];
+        const exists = current.some(
+          (item) =>
+            item.type === "logSearchInput" &&
+            item.query === logSearchInput.query &&
+            item.start === logSearchInput.start &&
+            item.end === logSearchInput.end
+        );
+
+        if (!exists) {
+          added = true;
+          return {
+            chatDetailsById: {
+              ...state.chatDetailsById,
+              [targetId]: {
+                ...state.chatDetailsById[targetId],
+                contextItems: [...current, logSearchInput],
+              },
+            },
+          };
+        }
+        return {};
+      });
+
+      return added;
+    } catch {
+      return false;
+    }
+  },
 
   loadChats: async () => {
     try {
@@ -145,7 +197,18 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
   sendMessage: async () => {
     const { currentChatId, chatDetailsById } = get();
     const chatDetails = chatDetailsById[currentChatId];
-    const { userInput, messages, isThinking, contextItems } = chatDetails;
+
+    // Check if we have pending context items when no chat is selected
+    let pendingContextItems: ContextItem[] = [];
+    if (currentChatId === NO_CHAT_SELECTED) {
+      pendingContextItems = chatDetailsById[NO_CHAT_SELECTED]?.contextItems || [];
+    }
+
+    // Use either the current chat's details or empty values if no chat selected
+    const userInput = chatDetails?.userInput || "";
+    const messages = chatDetails?.messages || [];
+    const isThinking = chatDetails?.isThinking || false;
+    const contextItems = chatDetails?.contextItems || pendingContextItems;
 
     // Don't send if there's no message or if we're already thinking
     if ((!userInput?.trim() && (!contextItems || contextItems.length === 0)) || isThinking) return;
@@ -156,6 +219,24 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       const chat = await get().createChat();
       if (!chat) return; // Failed to create chat
       chatId = chat.id;
+
+      // Transfer any pending context items to the new chat
+      if (pendingContextItems.length > 0) {
+        set((state) => ({
+          chatDetailsById: {
+            ...state.chatDetailsById,
+            [chatId]: {
+              ...state.chatDetailsById[chatId],
+              contextItems: pendingContextItems,
+            },
+            // Clear the pending context items
+            [NO_CHAT_SELECTED]: {
+              ...state.chatDetailsById[NO_CHAT_SELECTED],
+              contextItems: [],
+            },
+          },
+        }));
+      }
     }
 
     // Create a new user and assistant message

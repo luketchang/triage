@@ -1,12 +1,9 @@
 import { X } from "lucide-react";
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
+import TextareaAutosize from "react-textarea-autosize";
 import { SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { useChatStore } from "../store/index.js";
-import {
-  datadogLogsViewUrlToLogSearchInput,
-  isValidDatadogLogsViewUrl,
-} from "../utils/facts/logs.js";
 import { Button } from "./ui/Button.jsx";
 
 function ChatInputArea() {
@@ -33,6 +30,7 @@ function ChatInputArea() {
   const setUserInput = useChatStore.use.setUserInput();
   const setContextItems = useChatStore.use.setContextItems();
   const sendMessage = useChatStore.use.sendMessage();
+  const tryAddDatadogContextFromUrl = useChatStore.use.tryAddDatadogContextFromUrl();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -41,28 +39,6 @@ function ChatInputArea() {
     }
   }, [currentChatId]);
 
-  // Auto-resize textarea function
-  const resizeTextarea = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Reset height to default
-    textarea.style.height = "50px";
-
-    // Adjust height based on content
-    const scrollHeight = textarea.scrollHeight;
-    if (scrollHeight > 50) {
-      const newHeight = Math.min(150, scrollHeight);
-      textarea.style.height = `${newHeight}px`;
-    }
-  };
-
-  // Auto-resize textarea when message changes
-  useEffect(() => {
-    resizeTextarea();
-  }, [userInput]);
-
-  // Focus input on mount and when thinking state changes
   useEffect(() => {
     const focusTimeout = setTimeout(() => {
       if (textareaRef.current && !isThinking) {
@@ -73,76 +49,14 @@ function ChatInputArea() {
     return () => clearTimeout(focusTimeout);
   }, [isThinking]);
 
-  // Function to extract Datadog URL from text - memoized to prevent infinite re-renders
-  const tryExtractDatadogLogsViewUrl = useCallback(
-    (text: string) => {
-      if (!text || !isValidDatadogLogsViewUrl(text)) {
-        return false;
-      }
-
-      try {
-        const logSearchInput = datadogLogsViewUrlToLogSearchInput(text);
-        let added = false;
-        setContextItems((currentItems) => {
-          const exists = currentItems.some(
-            (item) =>
-              item.type === "logSearchInput" &&
-              item.query === logSearchInput.query &&
-              item.start === logSearchInput.start &&
-              item.end === logSearchInput.end
-          );
-          if (!exists) {
-            added = true;
-            return [...currentItems, logSearchInput];
-          }
-          return currentItems;
-        });
-        return added;
-      } catch (error) {
-        console.error("Error converting Datadog URL:", error);
-        return false;
-      }
-    },
-    [setContextItems]
-  );
-
-  // Add event listeners for textarea
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Handle paste events
-    const handlePaste = (e: ClipboardEvent) => {
-      // Allow default paste to insert content, then react
-      const pastedText = e.clipboardData?.getData("text") || "";
-      if (pastedText && tryExtractDatadogLogsViewUrl(pastedText)) {
-        // Prevent URL text from being inserted
-        e.preventDefault();
-        return;
-      }
-      setTimeout(resizeTextarea, 0);
-    };
-
-    // Handle input events
-    const handleInput = () => {
-      resizeTextarea();
-    };
-
-    textarea.addEventListener("paste", handlePaste);
-    textarea.addEventListener("input", handleInput);
-
-    return () => {
-      textarea.removeEventListener("paste", handlePaste);
-      textarea.removeEventListener("input", handleInput);
-    };
-  }, [tryExtractDatadogLogsViewUrl]);
-
-  // Reset textarea height when empty
-  useEffect(() => {
-    if (userInput === "" && textareaRef.current) {
-      textareaRef.current.style.height = "50px";
+  // Handle paste event to detect Datadog URLs
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const text = e.clipboardData.getData("text");
+    if (tryAddDatadogContextFromUrl(text)) {
+      // Intercepted a valid URL - don't insert it
+      e.preventDefault();
     }
-  }, [userInput]);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -202,13 +116,11 @@ function ChatInputArea() {
               >
                 <span className="font-medium text-gray-300 truncate max-w-[200px]">
                   {item.type === "logSearchInput"
-                    ? (item as any).query || "Datadog Search"
+                    ? item.query || "Datadog Log Search"
                     : "Context Item"}
                 </span>
                 {item.type === "logSearchInput" && (
-                  <span className="text-gray-400">
-                    {formatDateRange((item as any).start, (item as any).end)}
-                  </span>
+                  <span className="text-gray-400">{formatDateRange(item.start, item.end)}</span>
                 )}
                 <button
                   className="text-gray-400 hover:text-gray-200"
@@ -221,20 +133,22 @@ function ChatInputArea() {
           </div>
         )}
 
-        <textarea
+        <TextareaAutosize
           ref={textareaRef}
           className={cn(
             "w-full p-3 pr-10 bg-background border border-border rounded-lg",
-            "resize-none min-h-[50px] max-h-[200px] outline-none focus-ring",
+            "resize-none outline-none focus-ring",
             "placeholder:text-gray-500 text-sm shadow-sm",
-            "align-middle leading-normal pt-[13px] overflow-y-hidden"
+            "align-middle leading-normal pt-[13px]"
           )}
           placeholder="Type your message here..."
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          rows={1}
+          onPaste={handlePaste}
           disabled={isThinking}
+          minRows={1}
+          maxRows={6}
         />
         <Button
           className="absolute right-2 bottom-2 shadow-sm size-8 p-1"
