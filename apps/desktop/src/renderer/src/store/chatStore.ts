@@ -5,10 +5,6 @@ import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { handleUpdate } from "../utils/agentUpdateHandlers.js";
 import { generateId } from "../utils/formatters.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
-import {
-  datadogLogsViewUrlToLogSearchInput,
-  isValidDatadogLogsViewUrl,
-} from "../utils/parse/logs.js";
 import { createSelectors } from "./util.js";
 
 export const NO_CHAT_SELECTED = -1;
@@ -48,24 +44,6 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       userInput: "",
       contextItems: [],
     },
-  },
-
-  addContextItem: (item) => {
-    set((state) => {
-      // Always use the current chat ID (which might be NO_CHAT_SELECTED)
-      const targetId = state.currentChatId;
-      const current = state.chatDetailsById[targetId]?.contextItems ?? [];
-
-      return {
-        chatDetailsById: {
-          ...state.chatDetailsById,
-          [targetId]: {
-            ...state.chatDetailsById[targetId],
-            contextItems: [...current, item],
-          },
-        },
-      };
-    });
   },
 
   loadChats: async () => {
@@ -146,6 +124,24 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
         },
       },
     }));
+  },
+
+  addContextItem: (item) => {
+    set((state) => {
+      // Always use the current chat ID (which might be NO_CHAT_SELECTED)
+      const targetId = state.currentChatId;
+      const current = state.chatDetailsById[targetId]?.contextItems ?? [];
+
+      return {
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [targetId]: {
+            ...state.chatDetailsById[targetId],
+            contextItems: [...current, item],
+          },
+        },
+      };
+    });
   },
 
   removeContextItem: (index: number) => {
