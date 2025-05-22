@@ -1,3 +1,5 @@
+import { LogSearchInput } from "@triage/observability";
+
 import { LLMToolCallError } from "../tools";
 import {
   CatRequest,
@@ -6,7 +8,6 @@ import {
   GrepRequest,
   GrepRequestResult,
   LogPostprocessingFact,
-  LogSearchInput,
   LogSearchResult,
 } from "../types/tools";
 

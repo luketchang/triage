@@ -1,4 +1,4 @@
-import { LogsWithPagination } from "@triage/observability";
+import { LogSearchInput, LogsWithPagination, TraceSearchInput } from "@triage/observability";
 import { z, infer as zInfer } from "zod";
 
 import { SubAgentCall } from "../tools";
@@ -83,16 +83,16 @@ export const logSearchInputSchema = z.object({
     ),
 });
 
-export type LogSearchResult = LogsWithPagination & {
-  type: "result";
-  toolCallType: "logSearchInput";
-};
-
-export type LogSearchInput = zInfer<typeof logSearchInputSchema> & { type: "logSearchInput" };
+export type LogSearchRequest = LogSearchInput;
 
 export const logSearchInputToolSchema = {
   description: "Input parameters for searching logs.",
   parameters: logSearchInputSchema,
+};
+
+export type LogSearchResult = LogsWithPagination & {
+  type: "result";
+  toolCallType: "logSearchInput";
 };
 
 // Trace search types
@@ -122,12 +122,12 @@ export const traceSearchInputSchema = z.object({
     ),
 });
 
-export type TraceSearchInput = zInfer<typeof traceSearchInputSchema> & { type: "traceSearchInput" };
-
 export const traceSearchInputToolSchema = {
   description: "Input parameters for searching traces.",
   parameters: traceSearchInputSchema,
 };
+
+export type TraceSearchRequest = TraceSearchInput;
 
 // Cat types
 const catRequestSchema = z.object({

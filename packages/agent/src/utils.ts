@@ -1,4 +1,4 @@
-import { Log, LogsWithPagination } from "@triage/observability";
+import { Log, LogSearchInput, LogsWithPagination } from "@triage/observability";
 
 import {
   CatToolCallWithResult,
@@ -6,7 +6,6 @@ import {
   GrepToolCallWithResult,
   LogSearchToolCallWithResult,
 } from "./pipeline/state";
-import { LogSearchInput } from "./types/tools";
 
 import { AgentStep, ChatMessage, ReasoningStep } from ".";
 

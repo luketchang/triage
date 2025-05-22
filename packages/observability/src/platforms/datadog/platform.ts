@@ -6,10 +6,13 @@ import { ObservabilityPlatform } from "../../observability.interface";
 import {
   IntegrationType,
   Log,
+  LogSearchInput,
   LogsWithPagination,
   Span,
+  SpanSearchInput,
   SpansWithPagination,
   Trace,
+  TraceSearchInput,
   TracesWithPagination,
 } from "../../types";
 
@@ -229,13 +232,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
     return Array.from(uniqueValues);
   }
 
-  async fetchSpans(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<SpansWithPagination> {
+  async fetchSpans(params: SpanSearchInput): Promise<SpansWithPagination> {
     try {
       logger.info(`Executing GET query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);
@@ -322,13 +319,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
   /**
    * Fetch traces based on a span query
    */
-  async fetchTraces(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<TracesWithPagination> {
+  async fetchTraces(params: TraceSearchInput): Promise<TracesWithPagination> {
     try {
       logger.info(`Fetching traces with query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);
@@ -571,13 +562,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
     });
   }
 
-  async fetchLogs(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<LogsWithPagination> {
+  async fetchLogs(params: LogSearchInput): Promise<LogsWithPagination> {
     try {
       logger.info(`Executing GET query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);

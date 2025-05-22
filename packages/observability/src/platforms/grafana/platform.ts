@@ -6,10 +6,13 @@ import { ObservabilityPlatform } from "../../observability.interface";
 import {
   IntegrationType,
   Log,
+  LogSearchInput,
   LogsWithPagination,
   PaginationStatus,
+  SpanSearchInput,
   SpansWithPagination,
   Trace,
+  TraceSearchInput,
   TracesWithPagination,
 } from "../../types";
 
@@ -144,23 +147,11 @@ export class GrafanaPlatform implements ObservabilityPlatform {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  fetchSpans(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursorOrIndicator?: string;
-  }): Promise<SpansWithPagination> {
+  fetchSpans(params: SpanSearchInput): Promise<SpansWithPagination> {
     throw new Error("fetchSpans is not implemented for Grafana platform");
   }
 
-  async fetchLogs(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursorOrIndicator?: string;
-  }): Promise<LogsWithPagination> {
+  async fetchLogs(params: LogSearchInput): Promise<LogsWithPagination> {
     try {
       const url = `${this.baseUrl}/loki/api/v1/query_range`;
 
@@ -221,13 +212,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     }
   }
 
-  fetchTraces(_params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursorOrIndicator?: string;
-  }): Promise<TracesWithPagination> {
+  fetchTraces(_params: TraceSearchInput): Promise<TracesWithPagination> {
     throw new Error("fetchTraces is not implemented for Grafana platform");
   }
 

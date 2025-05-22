@@ -26,6 +26,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
 
         // Call the real platform API
         const result = await platform.fetchLogs({
+          type: "logSearchInput",
           query: params.query || "",
           start: params.start,
           end: params.end,
@@ -79,6 +80,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
         // Call the real platform API (assuming the method exists)
         logger.info("Fetching traces for time range:", { start: params.start, end: params.end });
         const result = await platform.fetchTraces({
+          type: "traceSearchInput",
           query: params.query || "",
           start: params.start,
           end: params.end,

@@ -13,7 +13,7 @@ import {
   GrepRequest,
   GrepRequestResult,
   LogRequest,
-  LogSearchInput,
+  LogSearchRequest,
   LogSearchResult,
 } from "../types";
 
@@ -21,7 +21,7 @@ type ToolCallID = {
   toolCallId: string;
 };
 
-export type LLMToolCall = ToolCallID & (LogSearchInput | CatRequest | GrepRequest);
+export type LLMToolCall = ToolCallID & (LogSearchRequest | CatRequest | GrepRequest);
 
 export type SubAgentCall = ToolCallID & (LogRequest | CodeRequest);
 
@@ -71,16 +71,11 @@ export async function handleGrepRequest(
 }
 
 export async function handleLogSearchRequest(
-  toolCall: LogSearchInput,
+  toolCall: LogSearchRequest,
   observabilityPlatform: ObservabilityPlatform
 ): Promise<LogSearchResult | LLMToolCallError> {
   try {
-    const logContext = await observabilityPlatform.fetchLogs({
-      query: toolCall.query,
-      start: toolCall.start,
-      end: toolCall.end,
-      limit: toolCall.limit,
-    });
+    const logContext = await observabilityPlatform.fetchLogs(toolCall);
     return { type: "result", toolCallType: "logSearchInput", ...logContext };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));

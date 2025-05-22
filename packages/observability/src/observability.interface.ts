@@ -1,8 +1,11 @@
 import {
   IntegrationType,
+  LogSearchInput,
   LogsWithPagination,
+  SpanSearchInput,
   SpansWithPagination,
   Trace,
+  TraceSearchInput,
   TracesWithPagination,
 } from "./types";
 
@@ -65,13 +68,7 @@ export interface ObservabilityPlatform {
    * @param pageCursor - Cursor for pagination
    * @returns SpansWithPagination object containing spans and pagination info
    */
-  fetchSpans(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<SpansWithPagination>;
+  fetchSpans(params: SpanSearchInput): Promise<SpansWithPagination>;
 
   /**
    * Fetch logs from the observability platform
@@ -82,13 +79,7 @@ export interface ObservabilityPlatform {
    * @param pageCursor - Cursor for pagination
    * @returns Array of Log objects
    */
-  fetchLogs(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<LogsWithPagination>;
+  fetchLogs(params: LogSearchInput): Promise<LogsWithPagination>;
 
   /**
    * Fetch traces from the observability platform
@@ -99,13 +90,7 @@ export interface ObservabilityPlatform {
    * @param pageCursor - Cursor for pagination
    * @returns TracesWithPagination object containing traces and pagination info
    */
-  fetchTraces(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<TracesWithPagination>;
+  fetchTraces(params: TraceSearchInput): Promise<TracesWithPagination>;
 
   /**
    * Fetch a single trace by its ID

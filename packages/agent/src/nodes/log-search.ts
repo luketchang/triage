@@ -8,7 +8,7 @@ import { TriagePipelineConfig } from "../pipeline";
 import { LogSearchStep, LogSearchToolCallWithResult, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
 import { handleLogSearchRequest } from "../tools";
-import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types";
+import { logSearchInputToolSchema, LogSearchRequest, TaskComplete } from "../types";
 import {
   ensureSingleToolCall,
   formatFacetValues,
@@ -21,7 +21,7 @@ export interface LogSearchAgentResponse {
 
 export interface LogSearchResponse {
   reasoning: string;
-  actions: LogSearchInput[] | TaskComplete;
+  actions: LogSearchRequest[] | TaskComplete;
 }
 
 const MAX_ITERS = 12;
@@ -270,6 +270,8 @@ export class LogSearchAgent {
 
         logger.info("Fetching logs from observability platform...");
         const logContext = await handleLogSearchRequest(
+          // TODO: remove this once we allow multiple log search tool calls
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           response.actions[0]!,
           this.config.observabilityPlatform
         );

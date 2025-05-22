@@ -100,3 +100,30 @@ export interface TracesWithPagination {
   traces: Trace[];
   pageCursorOrIndicator?: string;
 }
+
+export interface LogSearchInput {
+  type: "logSearchInput";
+  start: string;
+  end: string;
+  query: string;
+  limit: number;
+  pageCursor?: string;
+}
+
+export interface SpanSearchInput {
+  type: "spanSearchInput";
+  query: string;
+  start: string;
+  end: string;
+  limit: number;
+  pageCursor?: string;
+}
+
+export interface TraceSearchInput {
+  type: "traceSearchInput";
+  start: string;
+  end: string;
+  query: string;
+  limit: number;
+  pageCursor?: string;
+}
