@@ -69,6 +69,7 @@ Given all available log labels, a user query about the issue/event, and previous
   - Use attribute filters in place of plain keyword filters
   - Widen time range
   - Add more services to the query
+- Anchor your queries around the timestamps provided in the user query or the attached context, if any.
 
 ## Rules:
 - Output  one  \`LogSearchInput\` at a time. DO NOT output multiple \`LogSearchInput\` tool calls.
