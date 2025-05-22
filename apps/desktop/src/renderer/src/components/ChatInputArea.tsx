@@ -1,3 +1,4 @@
+import { ContextItem } from "@renderer/types/index.js";
 import { formatDateRange } from "@renderer/utils/formatters.js";
 import { X } from "lucide-react";
 import React, { useEffect, useRef } from "react";
@@ -5,11 +6,50 @@ import TextareaAutosize from "react-textarea-autosize";
 import { SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { useChatStore } from "../store/index.js";
-import {
-  datadogLogsViewUrlToLogSearchInput,
-  isValidDatadogLogsViewUrl,
-} from "../utils/parse/logs.js";
+import { datadogLogsViewUrlToLogSearchInput } from "../utils/parse/logs.js";
+import { parseSentryEventUrl } from "../utils/parse/sentry.js";
 import { Button } from "./ui/Button.jsx";
+
+interface ContextItemProps {
+  item: ContextItem;
+  index: number;
+  onRemove: (index: number) => void;
+}
+
+// Generic component for all context items with different inner content based on type
+function ContextItemView({ item, index, onRemove }: ContextItemProps) {
+  // Determine the content to display based on item type
+  let primaryContent: React.ReactNode;
+  let secondaryContent: React.ReactNode;
+
+  if (item.type === "logSearchInput") {
+    primaryContent = (
+      <span className="font-medium text-gray-300 truncate max-w-[200px]">
+        {item.query || "Datadog Log Search"}
+      </span>
+    );
+    secondaryContent = (
+      <span className="text-gray-400">{formatDateRange(item.start, item.end)}</span>
+    );
+  } else {
+    primaryContent = (
+      <span className="font-medium text-gray-300 truncate max-w-[200px]">
+        Sentry Issue: {item.issueId}
+      </span>
+    );
+    secondaryContent = <span className="text-gray-400">{item.eventSpecifier}</span>;
+  }
+
+  return (
+    <div className="bg-background-alt border border-border rounded-md px-2 py-1 text-xs flex items-center gap-1.5">
+      {primaryContent}
+      {secondaryContent}
+      <button className="text-gray-400 hover:text-gray-200" onClick={() => onRemove(index)}>
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
 
 function ChatInputArea() {
   const currentChatId = useChatStore((state) => state.currentChatId);
@@ -52,26 +92,26 @@ function ChatInputArea() {
     return () => clearTimeout(focusTimeout);
   }, [isThinking]);
 
-  const tryAddDatadogContextFromUrl = (text: string): boolean => {
-    const logSearchInput = datadogLogsViewUrlToLogSearchInput(text);
-    if (logSearchInput) {
-      addContextItem(logSearchInput);
+  const tryAddContextFromUrl = <T extends (text: string) => ContextItem | undefined>(
+    fn: T,
+    text: string
+  ): boolean => {
+    const contextItem = fn(text);
+    if (contextItem) {
+      addContextItem(contextItem);
       return true;
     }
     return false;
   };
 
-  // Handle paste event to detect Datadog URLs
+  // Handle paste event to detect Datadog and Sentry URLs
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const text = e.clipboardData.getData("text");
 
-    // Try to parse as Datadog logs URL
-    let added = false;
-    if (text && isValidDatadogLogsViewUrl(text)) {
-      added = tryAddDatadogContextFromUrl(text);
-    }
+    const added =
+      tryAddContextFromUrl(datadogLogsViewUrlToLogSearchInput, text) ||
+      tryAddContextFromUrl(parseSentryEventUrl, text);
 
-    // NOTE: we will have other checks in future, that's why we have this `added` pattern
     if (added) {
       e.preventDefault();
     }
@@ -111,25 +151,7 @@ function ChatInputArea() {
         {contextItems.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
             {contextItems.map((item, index) => (
-              <div
-                key={index}
-                className="bg-background-alt border border-border rounded-md px-2 py-1 text-xs flex items-center gap-1.5"
-              >
-                <span className="font-medium text-gray-300 truncate max-w-[200px]">
-                  {item.type === "logSearchInput"
-                    ? item.query || "Datadog Log Search"
-                    : "Context Item"}
-                </span>
-                {item.type === "logSearchInput" && (
-                  <span className="text-gray-400">{formatDateRange(item.start, item.end)}</span>
-                )}
-                <button
-                  className="text-gray-400 hover:text-gray-200"
-                  onClick={() => removeContextItem(index)}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
+              <ContextItemView key={index} item={item} index={index} onRemove={removeContextItem} />
             ))}
           </div>
         )}

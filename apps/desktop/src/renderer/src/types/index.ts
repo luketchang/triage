@@ -79,7 +79,17 @@ export interface FacetData {
 // Interface for chat messages
 export type ChatMessage = UserMessage | AssistantMessage;
 
-export type ContextItem = LogSearchInput;
+// TODO: this will move to sentry package once we add api wrapper
+export type SentryEventSpecifier = "latest" | "oldest" | "recommended" | string;
+
+export interface RetrieveSentryEventInput {
+  type: "retrieveSentryEventInput";
+  orgSlug: string;
+  issueId: string;
+  eventSpecifier: SentryEventSpecifier;
+}
+
+export type ContextItem = LogSearchInput | RetrieveSentryEventInput;
 
 export interface UserMessage {
   id: string;
