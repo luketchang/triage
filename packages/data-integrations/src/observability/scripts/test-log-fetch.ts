@@ -6,13 +6,12 @@ import {
   DatadogCfgSchema,
   DatadogClient,
   DatadogConfig,
-  formatLogQuery,
-  formatSingleLog,
   GrafanaCfgSchema,
   GrafanaClient,
   GrafanaConfig,
   LogsWithPagination,
 } from "..";
+import { formatLogQuery, formatSingleLog } from "../formatting";
 
 // Setup command line options
 const program = new Command();
@@ -54,7 +53,7 @@ function displayLogs(logsWithPagination: LogsWithPagination, client: string): vo
     // Use the formatSingleLog function from the formatting module
     const formattedLog = formatSingleLog(log);
     logger.info(`[${index + 1}] ${formattedLog}`);
-    
+
     // Only show metadata if it's not empty and not already included in the formatted log
     const metadataEntries = Object.entries(log.metadata || {});
     if (metadataEntries.length > 0) {
@@ -66,14 +65,14 @@ function displayLogs(logsWithPagination: LogsWithPagination, client: string): vo
 async function testDatadogLogFetch(datadogCfg: DatadogConfig): Promise<void> {
   try {
     logger.info("Testing Datadog log fetching...");
-    
+
     const logSearchInput = {
       query: options.query,
       start: options.start,
       end: options.end,
       limit: parseInt(options.limit, 10),
     };
-    
+
     // Use the formatLogQuery function to display the query
     logger.info(formatLogQuery(logSearchInput));
 
@@ -92,7 +91,7 @@ async function testDatadogLogFetch(datadogCfg: DatadogConfig): Promise<void> {
 async function testGrafanaLogFetch(grafanaCfg: GrafanaConfig): Promise<void> {
   try {
     logger.info("Testing Grafana log fetching...");
-    
+
     // For Grafana, we need to ensure the query is in the correct format (LogQL)
     // If user provided simple query, format it as a LogQL query
     let grafanaQuery = options.query;
@@ -110,7 +109,7 @@ async function testGrafanaLogFetch(grafanaCfg: GrafanaConfig): Promise<void> {
       end: options.end,
       limit: parseInt(options.limit, 10),
     };
-    
+
     // Use the formatLogQuery function to display the query
     logger.info(formatLogQuery(logSearchInput));
     logger.info(`Formatted Grafana query: ${grafanaQuery}`);

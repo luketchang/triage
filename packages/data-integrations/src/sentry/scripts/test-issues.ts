@@ -2,7 +2,8 @@
 import { logger } from "@triage/common";
 import { Command } from "commander";
 
-import { SentryClient, formatSentryEvent, formatSentryEventList,} from "../";
+import { SentryClient } from "../";
+import { formatSentryEvent, formatSentryEventList } from "../formatting";
 import { SentryEvent, SentryListEvent } from "../types";
 
 // Setup command line options

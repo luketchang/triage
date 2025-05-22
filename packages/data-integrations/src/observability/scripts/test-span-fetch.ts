@@ -2,7 +2,8 @@
 import { logger } from "@triage/common";
 import { Command } from "commander";
 
-import { DatadogCfgSchema, DatadogClient, DatadogConfig, Span, SpansWithPagination, formatSpans } from "../";
+import { DatadogCfgSchema, DatadogClient, DatadogConfig, SpansWithPagination } from "../";
+import { formatSpans } from "../formatting";
 
 // Setup command line options
 const program = new Command();
