@@ -13,7 +13,7 @@ import {
   ensureSingleToolCall,
   formatFacetValues,
   formatLogSearchToolCallsWithResults,
-  formatUserMessageWithContext,
+  formatUserMessage,
 } from "../utils";
 
 export interface LogSearchAgentResponse {
@@ -87,7 +87,7 @@ ${currentTime}
 </current_time_in_user_local_timezone>
 
 <query>
-${formatUserMessageWithContext(params.userMessage)}
+${formatUserMessage(params.userMessage)}
 </query>
 
 <log_labels>

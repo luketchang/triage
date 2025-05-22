@@ -10,7 +10,7 @@ import {
   ensureSingleToolCall,
   formatFacetValues,
   formatLogSearchToolCallsWithResults,
-  formatUserMessageWithContext,
+  formatUserMessage,
   normalizeDatadogQueryString,
 } from "../utils";
 
@@ -43,7 +43,7 @@ function createPrompt(params: {
   - Strictly follow the platform specific instructions provided below for guidance on the DOs and DONTs of writing log search queries.
   
   <query>
-  ${formatUserMessageWithContext(params.userMessage)}
+  ${formatUserMessage(params.userMessage)}
   </query>
 
   <answer>

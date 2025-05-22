@@ -9,7 +9,7 @@ import {
   ReasoningStep,
 } from "./pipeline/state";
 import { ChatMessage, MaterializedContextItem } from "./types";
-import { UserMessage } from "./types/message";
+import { AssistantMessage, UserMessage } from "./types/message";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {
@@ -55,44 +55,6 @@ export function formatSingleLogSearchToolCallWithResult(step: LogSearchToolCallW
   }
 
   return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
-}
-
-/**
- * Format a UserMessage with its context items
- * @param userMessage The user message to format
- * @returns Formatted string with content and context items
- */
-export function formatUserMessageWithContext(userMessage: UserMessage): string {
-  let formattedMessage = userMessage.content;
-
-  // Add materialized context items if they exist
-  if (userMessage.contextItems && userMessage.contextItems.length > 0) {
-    formattedMessage += "\n\nAttached Context:";
-
-    userMessage.contextItems.forEach((item) => {
-      if (item.type === "log") {
-        formattedMessage += `\n\nLog Query:\n${formatLogQuery(item.input)}`;
-
-        // Check if there are any logs
-        if (item.output.logs.length > 0) {
-          const firstLog = item.output.logs[0];
-          if (firstLog) {
-            formattedMessage += `\n\nLog Results:\n${formatSingleLog(firstLog)}`;
-            // If there are multiple logs, add a summary
-            if (item.output.logs.length > 1) {
-              formattedMessage += `\n...and ${item.output.logs.length - 1} more logs`;
-            }
-          }
-        } else {
-          formattedMessage += "\n\nNo logs found matching this query.";
-        }
-      } else if (item.type === "sentry") {
-        formattedMessage += `\n\nSentry Event:\n${formatSentryEvent(item.output)}`;
-      }
-    });
-  }
-
-  return formattedMessage;
 }
 
 export function formatSingleCatToolCallWithResult(
@@ -225,38 +187,79 @@ export function formatAgentSteps(steps: AgentStep[]): string {
     .join("\n\n");
 }
 
-// TODO: extract assistant message formatting into its own function
+export function formatUserMessage(userMessage: UserMessage): string {
+  let formattedMessage = userMessage.content;
+
+  // Add materialized context items if they exist
+  if (userMessage.contextItems && userMessage.contextItems.length > 0) {
+    formattedMessage += "\n\nAttached Context:";
+
+    userMessage.contextItems.forEach((item) => {
+      if (item.type === "log") {
+        formattedMessage += `\n\nLog Query:\n${formatLogQuery(item.input)}`;
+
+        // Check if there are any logs
+        if (item.output.logs.length > 0) {
+          const firstLog = item.output.logs[0];
+          if (firstLog) {
+            formattedMessage += `\n\nLog Results:\n${formatSingleLog(firstLog)}`;
+            // If there are multiple logs, add a summary
+            if (item.output.logs.length > 1) {
+              formattedMessage += `\n...and ${item.output.logs.length - 1} more logs`;
+            }
+          }
+        } else {
+          formattedMessage += "\n\nNo logs found matching this query.";
+        }
+      } else if (item.type === "sentry") {
+        formattedMessage += `\n\nSentry Event:\n${formatSentryEvent(item.output)}`;
+      }
+    });
+  }
+
+  return formattedMessage;
+}
+
+export function formatAssistantMessage(message: ChatMessage): string {
+  if (message.role !== "assistant") {
+    throw new Error("Expected assistant message");
+  }
+
+  const assistantMessage: AssistantMessage = message;
+  let formattedMessage = "Assistant:";
+
+  // Add gathered context if there are steps
+  if (assistantMessage.steps && assistantMessage.steps.length > 0) {
+    formattedMessage += `\nGathered Context:\n${formatAgentSteps(assistantMessage.steps)}`;
+  }
+
+  // Add response if it exists
+  if (assistantMessage.response) {
+    formattedMessage += `\n\nResponse: ${assistantMessage.response}`;
+  }
+
+  // Add error if it exists
+  if (assistantMessage.error) {
+    formattedMessage += `\n\nError: ${assistantMessage.error}`;
+  }
+
+  return formattedMessage;
+}
+
 export function formatCurrentChatHistory(
   chatHistory: ChatMessage[],
   currSteps: AgentStep[]
 ): string {
   if (!chatHistory || chatHistory.length === 0) {
-    return "No conversation history.";
+    return "";
   }
 
   const chatHistoryString = chatHistory
     .map((message) => {
       if (message.role === "user") {
-        return formatUserMessageWithContext(message);
+        return formatUserMessage(message);
       } else {
-        let formattedMessage = "Assistant:";
-
-        // Add gathered context if there are steps
-        if (message.steps && message.steps.length > 0) {
-          formattedMessage += `\nGathered Context:\n${formatAgentSteps(message.steps)}`;
-        }
-
-        // Add response if it exists
-        if (message.response) {
-          formattedMessage += `\n\nResponse: ${message.response}`;
-        }
-
-        // Add error if it exists
-        if (message.error) {
-          formattedMessage += `\n\nError: ${message.error}`;
-        }
-
-        return formattedMessage;
+        return formatAssistantMessage(message);
       }
     })
     .filter(Boolean)

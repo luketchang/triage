@@ -11,7 +11,7 @@ import {
   RequestSubAgentCalls,
   UserMessage,
 } from "../types";
-import { formatFacetValues, formatUserMessageWithContext } from "../utils";
+import { formatFacetValues, formatUserMessage } from "../utils";
 type ReasoningResponse = ReasoningStep | RequestSubAgentCalls;
 
 export const createPrompt = ({
@@ -54,7 +54,7 @@ Tips:
   - Do not miss the forest for the trees and suggest a narrow bandaid fix. Think about how the system should ideally function if it were fully correct. Then simulate how the system would behave under your proposed fixes to validate that your fix is fully correct and doesn't introduce new issues or fail to solve the original problem. If it does fail, try to reason about what the root cause is and propose a new fix.
 
 <query>
-${formatUserMessageWithContext(userMessage)}
+${formatUserMessage(userMessage)}
 </query>
 
 <repo_path>

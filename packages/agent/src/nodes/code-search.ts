@@ -21,7 +21,7 @@ import {
 import {
   formatCodeSearchToolCallsWithResults,
   formatLogSearchToolCallsWithResults,
-  formatUserMessageWithContext,
+  formatUserMessage,
 } from "../utils";
 
 export interface CodeSearchAgentResponse {
@@ -90,7 +90,7 @@ ${currentTime}
 </current_time>
 
 <query>
-${formatUserMessageWithContext(params.userMessage)}
+${formatUserMessage(params.userMessage)}
 </query>
 
 <file_tree>

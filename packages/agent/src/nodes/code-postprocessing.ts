@@ -6,7 +6,12 @@ import { TriagePipelineConfig } from "../pipeline";
 import { CatToolCallWithResult, CodePostprocessingStep, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
 import { codePostprocessingToolSchema, UserMessage } from "../types";
-import { ensureSingleToolCall, formatCatToolCallsWithResults, formatUserMessageWithContext, normalizeFilePath } from "../utils";
+import {
+  ensureSingleToolCall,
+  formatCatToolCallsWithResults,
+  formatUserMessage,
+  normalizeFilePath,
+} from "../utils";
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from code.
@@ -30,7 +35,7 @@ function createPrompt(params: {
   - Do not give references for code "fixes" only reference existing code that is in the previous code context.
 
   <query>
-  ${formatUserMessageWithContext(params.userMessage)}
+  ${formatUserMessage(params.userMessage)}
   </query>
 
   <answer>
