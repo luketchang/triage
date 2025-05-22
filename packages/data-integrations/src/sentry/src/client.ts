@@ -28,7 +28,7 @@ export class SentryClient {
     issueId: string,
     eventId: string
   ): Promise<SentryEvent> {
-    const url = `/${encodeURIComponent(orgSlug)}/issues/${encodeURIComponent(
+    const url = `/organizations/${encodeURIComponent(orgSlug)}/issues/${encodeURIComponent(
       issueId
     )}/events/${encodeURIComponent(eventId)}/`;
     logger.info(`GET ${url}`);
@@ -40,7 +40,7 @@ export class SentryClient {
    * List *all* events on an issue (newest first).
    */
   async listIssueEvents(orgSlug: string, issueId: string): Promise<SentryListEvent[]> {
-    const url = `/${encodeURIComponent(orgSlug)}/issues/${encodeURIComponent(issueId)}/events/`;
+    const url = `/organizations/${encodeURIComponent(orgSlug)}/issues/${encodeURIComponent(issueId)}/events/`;
     logger.info(`GET ${url}`);
     const resp = await this.axios.get<SentryListEvent[]>(url);
     return resp.data;
