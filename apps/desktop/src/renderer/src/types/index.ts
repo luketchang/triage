@@ -87,12 +87,14 @@ export type ChatMessage = UserMessage | AssistantMessage;
 
 export type ContextItem = LogSearchInput | GetSentryEventInput;
 
+export type MaterializedContextItem = LogsWithPagination | SentryEvent;
+
 export interface UserMessage {
   id: string;
   role: "user";
   timestamp: Date;
   content: string;
-  contextItems?: ContextItem[];
+  contextItems?: Map<ContextItem, MaterializedContextItem>;
 }
 
 export interface AssistantMessage {

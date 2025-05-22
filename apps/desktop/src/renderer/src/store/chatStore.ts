@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import api from "../services/api.js";
-import { AssistantMessage, Chat, ChatMessage, ContextItem, UserMessage } from "../types/index.js";
+import {
+  AssistantMessage,
+  Chat,
+  ChatMessage,
+  ContextItem,
+  LogSearchInput,
+  MaterializedContextItem,
+  RetrieveSentryEventInput,
+  UserMessage,
+} from "../types/index.js";
 import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
 import { handleUpdate } from "../utils/agentUpdateHandlers.js";
 import { generateId } from "../utils/formatters.js";
@@ -190,13 +199,16 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       chatId = chat.id;
     }
 
+    // Materialize context items by fetching logs and issue event details
+    const materializedContextItems = await materializeContextItems(contextItems);
+
     // Create a new user and assistant message
     const userMessage: UserMessage = {
       id: generateId(),
       role: "user",
       timestamp: new Date(),
       content: userInput || "",
-      contextItems: contextItems || undefined,
+      contextItems: materializedContextItems,
     };
 
     try {
@@ -312,4 +324,51 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     }
   },
 }));
+
+/**
+ * Materialize context items by fetching logs and issue event details
+ * @param contextItems Array of context items to materialize
+ * @returns Map of context items to their materialized data
+ */
+async function materializeContextItems(
+  contextItems: ContextItem[]
+): Promise<Map<ContextItem, MaterializedContextItem>> {
+  const materializedItems = new Map<ContextItem, MaterializedContextItem | undefined>();
+
+  if (!contextItems || contextItems.length === 0) {
+    return materializedItems as Map<ContextItem, MaterializedContextItem>;
+  }
+
+  // Process each context item in parallel
+  await Promise.all(
+    contextItems.map(async (item) => {
+      try {
+        if (item.type === "logSearchInput") {
+          // This is a LogSearchInput
+          const logSearchInput = item as LogSearchInput;
+          const logs = await api.fetchLogs(logSearchInput);
+          materializedItems.set(item, logs);
+        } else if (item.type === "retrieveSentryEventInput") {
+          // This is a RetrieveSentryEventInput
+          const sentryEventInput = item as RetrieveSentryEventInput;
+          const sentryEvent = await api.fetchSentryEvent(sentryEventInput);
+          materializedItems.set(item, sentryEvent);
+        } else {
+          console.warn("Unknown context item type", { item });
+        }
+      } catch (error) {
+        console.error("Error materializing context item", { error, item });
+      }
+    })
+  );
+
+  // Filter out undefined values for the return type
+  return new Map(
+    Array.from(materializedItems.entries()).filter(([_, value]) => value !== undefined) as [
+      ContextItem,
+      MaterializedContextItem,
+    ][]
+  );
+}
+
 export const useChatStore = createSelectors(useChatStoreBase);
