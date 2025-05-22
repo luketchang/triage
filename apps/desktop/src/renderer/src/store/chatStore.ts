@@ -33,7 +33,6 @@ interface ChatState {
   selectChat: (chatId: number | undefined) => void;
   deleteChat: (chatId: number) => Promise<boolean>;
   setUserInput: (message: string) => void;
-  setContextItems: (items: ContextItem[]) => void;
   removeContextItem: (index: number) => void;
   sendMessage: () => Promise<void>;
   tryAddDatadogContextFromUrl: (url: string) => boolean;
@@ -56,7 +55,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
 
     try {
       const logSearchInput = datadogLogsViewUrlToLogSearchInput(text);
-      let added = false;
+      if (!logSearchInput) return false;
 
       set((state) => {
         // Always use the current chat ID (which might be NO_CHAT_SELECTED)
@@ -71,22 +70,18 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
             item.end === logSearchInput.end
         );
 
-        if (!exists) {
-          added = true;
-          return {
-            chatDetailsById: {
-              ...state.chatDetailsById,
-              [targetId]: {
-                ...state.chatDetailsById[targetId],
-                contextItems: [...current, logSearchInput],
-              },
+        return {
+          chatDetailsById: {
+            ...state.chatDetailsById,
+            [targetId]: {
+              ...state.chatDetailsById[targetId],
+              contextItems: [...current, logSearchInput],
             },
-          };
-        }
-        return {};
+          },
+        };
       });
 
-      return added;
+      return true;
     } catch {
       return false;
     }
@@ -172,22 +167,6 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     }));
   },
 
-  setContextItems: (items: ContextItem[]) => {
-    set((state) => {
-      const currentChatId = state.currentChatId;
-
-      return {
-        chatDetailsById: {
-          ...state.chatDetailsById,
-          [currentChatId]: {
-            ...state.chatDetailsById[currentChatId],
-            contextItems: items,
-          },
-        },
-      };
-    });
-  },
-
   removeContextItem: (index: number) => {
     set((state) => {
       const currentChatId = state.currentChatId;
@@ -231,24 +210,6 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       const chat = await get().createChat();
       if (!chat) return; // Failed to create chat
       chatId = chat.id;
-
-      // Transfer any pending context items to the new chat
-      if (pendingContextItems.length > 0) {
-        set((state) => ({
-          chatDetailsById: {
-            ...state.chatDetailsById,
-            [chatId]: {
-              ...state.chatDetailsById[chatId],
-              contextItems: pendingContextItems,
-            },
-            // Clear the pending context items
-            [NO_CHAT_SELECTED]: {
-              ...state.chatDetailsById[NO_CHAT_SELECTED],
-              contextItems: [],
-            },
-          },
-        }));
-      }
     }
 
     // Create a new user and assistant message

@@ -90,14 +90,14 @@ export function isValidDatadogLogsViewUrl(url: string): boolean {
  * @param url Datadog logs view URL (e.g., https://app.datadoghq.com/logs?query=service%3Apayments&from_ts=1746738000000&to_ts=1746739800000)
  * @returns LogSearchInput object with parsed parameters
  */
-export function datadogLogsViewUrlToLogSearchInput(url: string): LogSearchInput {
+export function datadogLogsViewUrlToLogSearchInput(url: string): LogSearchInput | undefined {
   try {
     // Parse the URL
     const parsedUrl = new URL(url);
 
     // Check if it's a Datadog logs URL
     if (!isValidDatadogLogsViewUrl(url)) {
-      throw new Error("Not a valid Datadog logs URL");
+      return undefined;
     }
 
     // Extract query parameters
@@ -130,6 +130,6 @@ export function datadogLogsViewUrlToLogSearchInput(url: string): LogSearchInput 
       pageCursor: undefined,
     };
   } catch (error) {
-    throw new Error(`Failed to parse Datadog URL: ${(error as Error).message}`);
+    throw new Error(`Failed to parse Datadog URL`, { cause: error });
   }
 }
