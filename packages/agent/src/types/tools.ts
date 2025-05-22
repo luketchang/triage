@@ -1,4 +1,4 @@
-import { LogsWithPagination } from "@triage/observability";
+import { LogSearchInput, LogsWithPagination, TraceSearchInput } from "@triage/data-integrations";
 import { z, infer as zInfer } from "zod";
 
 import { SubAgentCall } from "../tools";
@@ -73,26 +73,28 @@ export const logSearchInputSchema = z.object({
     .describe(
       "End time in ISO 8601 format with timezone (e.g., '2025-03-19T04:40:00Z'). Be generous and give +15 minutes if user provided exact time."
     ),
-  query: z.string().describe("Log search query in the observability platform query language"),
+  query: z
+    .string()
+    .describe("Log search query in the observability platform specific query language"),
   limit: z.number().describe("Maximum number of logs to return, default to 500"),
   pageCursor: z
     .string()
     .optional()
     .describe(
-      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
+      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other observability platforms. Always set to null when no cursor is needed."
     ),
 });
 
-export type LogSearchResult = LogsWithPagination & {
-  type: "result";
-  toolCallType: "logSearchInput";
-};
-
-export type LogSearchInput = zInfer<typeof logSearchInputSchema> & { type: "logSearchInput" };
+export type LogSearchRequest = LogSearchInput;
 
 export const logSearchInputToolSchema = {
   description: "Input parameters for searching logs.",
   parameters: logSearchInputSchema,
+};
+
+export type LogSearchResult = LogsWithPagination & {
+  type: "result";
+  toolCallType: "logSearchInput";
 };
 
 // Trace search types
@@ -107,13 +109,15 @@ export const traceSearchInputSchema = z.object({
     .describe(
       "End time in ISO 8601 format with timezone (e.g., '2025-03-19T04:40:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
     ),
-  query: z.string().describe("Trace search query in the observability platform query language"),
+  query: z
+    .string()
+    .describe("Trace search query in the observability platform specific query language"),
   limit: z.number().describe("Maximum number of traces to return, default to 20"),
   pageCursor: z
     .string()
     .optional()
     .describe(
-      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
+      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other observability platforms. Always set to null when no cursor is needed."
     ),
   reasoning: z
     .string()
@@ -122,12 +126,12 @@ export const traceSearchInputSchema = z.object({
     ),
 });
 
-export type TraceSearchInput = zInfer<typeof traceSearchInputSchema> & { type: "traceSearchInput" };
-
 export const traceSearchInputToolSchema = {
   description: "Input parameters for searching traces.",
   parameters: traceSearchInputSchema,
 };
+
+export type TraceSearchRequest = TraceSearchInput;
 
 // Cat types
 const catRequestSchema = z.object({

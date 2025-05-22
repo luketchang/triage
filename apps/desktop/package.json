@@ -49,7 +49,7 @@
     "@triage/codebase-overviews": "workspace:*",
     "@triage/common": "workspace:*",
     "@triage/config": "workspace:*",
-    "@triage/observability": "workspace:*",
+    "@triage/data-integrations": "workspace:*",
     "@types/react-syntax-highlighter": "^15.5.13",
     "better-sqlite3": "11.9.1",
     "class-variance-authority": "^0.7.0",

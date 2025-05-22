@@ -10,10 +10,10 @@ import {
 } from "@triage/common";
 import {
   DatadogCfgSchema,
-  getObservabilityPlatform,
+  getObservabilityClient,
   GrafanaCfgSchema,
   IntegrationType,
-} from "@triage/observability";
+} from "@triage/data-integrations";
 import { Command as CommanderCommand } from "commander";
 import { z } from "zod";
 
@@ -55,9 +55,9 @@ export async function invokeAgent({
   }
   const fileTree = await getDirectoryTree(agentCfg.repoPath);
 
-  const observabilityPlatform = getObservabilityPlatform(agentCfg);
+  const observabilityClient = getObservabilityClient(agentCfg);
   // Get formatted labels map for time range
-  const logLabelsMap = await observabilityPlatform.getLogsFacetValues(
+  const logLabelsMap = await observabilityClient.getLogsFacetValues(
     startDate.toISOString(),
     endDate.toISOString()
   );
@@ -71,7 +71,7 @@ export async function invokeAgent({
     logLabelsMap,
     reasoningClient: getModelWrapper(agentCfg.reasoningModel, agentCfg),
     fastClient: getModelWrapper(agentCfg.fastModel, agentCfg),
-    observabilityPlatform,
+    observabilityClient,
   };
 
   const state = new PipelineStateManager(onUpdate, chatHistory);
@@ -161,7 +161,7 @@ async function main(): Promise<void> {
       balancedModel: OpenAIModel.GPT_4_1,
       reasoningModel: GeminiModel.GEMINI_2_5_PRO,
       fastModel: GeminiModel.GEMINI_2_5_FLASH,
-      observabilityPlatform: integration,
+      observabilityClient: integration,
       observabilityFeatures: observabilityFeatures as ("logs" | "spans")[],
       datadog:
         integration === "datadog"

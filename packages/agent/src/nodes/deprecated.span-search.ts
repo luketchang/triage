@@ -1,5 +1,5 @@
 // import { getModelWrapper, logger, Model, timer } from "@triage/common";
-// import { ObservabilityPlatform, SpansWithPagination } from "@triage/observability";
+// import { ObservabilityClient, SpansWithPagination } from "@triage/data-integrations";
 // import { generateText } from "ai";
 
 // import {
@@ -148,11 +148,11 @@
 
 // class SpanSearch {
 //   private llm: Model;
-//   private observabilityPlatform: ObservabilityPlatform;
+//   private observabilityClient: ObservabilityClient;
 
-//   constructor(llm: Model, observabilityPlatform: ObservabilityPlatform) {
+//   constructor(llm: Model, observabilityClient: ObservabilityClient) {
 //     this.llm = llm;
-//     this.observabilityPlatform = observabilityPlatform;
+//     this.observabilityClient = observabilityClient;
 //   }
 
 //   async invoke(params: {
@@ -169,7 +169,7 @@
 //   }): Promise<SpanSearchResponse> {
 //     const prompt = createSpanSearchPrompt({
 //       ...params,
-//       platformSpecificInstructions: this.observabilityPlatform.getSpanSearchQueryInstructions(),
+//       platformSpecificInstructions: this.observabilityClient.getSpanSearchQueryInstructions(),
 //     });
 
 //     try {
@@ -218,18 +218,18 @@
 // export class SpanSearchAgent {
 //   private fastModel: Model;
 //   private reasoningModel: Model;
-//   private observabilityPlatform: ObservabilityPlatform;
+//   private observabilityClient: ObservabilityClient;
 //   private spanSearch: SpanSearch;
 
 //   constructor(
 //     fastModel: Model,
 //     reasoningModel: Model,
-//     observabilityPlatform: ObservabilityPlatform
+//     observabilityClient: ObservabilityClient
 //   ) {
 //     this.fastModel = fastModel;
 //     this.reasoningModel = reasoningModel;
-//     this.observabilityPlatform = observabilityPlatform;
-//     this.spanSearch = new SpanSearch(fastModel, observabilityPlatform);
+//     this.observabilityClient = observabilityClient;
+//     this.spanSearch = new SpanSearch(fastModel, observabilityClient);
 //   }
 
 //   @timer
@@ -283,7 +283,7 @@
 
 //         try {
 //           logger.info("Fetching spans from observability platform...");
-//           const spansWithPagination = await this.observabilityPlatform.fetchSpans({
+//           const spansWithPagination = await this.observabilityClient.fetchSpans({
 //             query: response.query,
 //             start: response.start,
 //             end: response.end,

@@ -1,4 +1,5 @@
 const path = require("path");
+
 const { typescriptCheckedConfig } = require("../eslint-config/src/typescript-checked");
 
 /** @type {import("eslint").Linter.FlatConfig[]} */

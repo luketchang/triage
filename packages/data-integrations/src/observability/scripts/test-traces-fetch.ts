@@ -1,8 +1,9 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
 import { Command } from "commander";
-import { DatadogCfgSchema, DatadogConfig, Trace, TracesWithPagination } from "../src";
-import { DatadogPlatform } from "../src/platforms/datadog";
+
+import { DatadogCfgSchema, DatadogConfig, Trace, TracesWithPagination } from "../";
+import { DatadogClient } from "../clients/datadog";
 
 // Setup command line options
 const program = new Command();
@@ -10,7 +11,7 @@ const program = new Command();
 program
   .name("test-traces-fetch")
   .description("Test trace fetching from Datadog observability platform")
-  .option("-p, --platform <platform>", "Platform to test (datadog)", "datadog")
+  .option("-p, --client <client>", "Client to test (datadog)", "datadog")
   .option("-q, --query <query>", "Span query to find traces", "*") // Query is based on spans
   .option(
     "-s, --start <datetime>",
@@ -23,13 +24,11 @@ program
 
 const options = program.opts();
 
-// Validate platform option
-const validPlatforms = ["datadog"];
-if (!validPlatforms.includes(options.platform)) {
-  logger.error(
-    `Invalid platform: ${options.platform}. Must be one of: ${validPlatforms.join(", ")}`
-  );
-  process.exit(1);
+// Validate client option
+const validClients = ["datadog"];
+if (!validClients.includes(options.client)) {
+  logger.error(`Invalid client: ${options.client}. Must be one of: ${validClients.join(", ")}`);
+  throw new Error(`Invalid client: ${options.client}. Must be one of: ${validClients.join(", ")}`);
 }
 
 // Format duration helper
@@ -44,9 +43,9 @@ const formatDuration = (durationMs: number): string => {
 };
 
 // Display traces results
-function displayTraces(tracesWithPagination: TracesWithPagination, platform: string): void {
+function displayTraces(tracesWithPagination: TracesWithPagination, client: string): void {
   const traces = tracesWithPagination.traces;
-  logger.info(`\n${platform.toUpperCase()} TRACES (${traces.length} traces found):`);
+  logger.info(`\n${client.toUpperCase()} TRACES (${traces.length} traces found):`);
 
   if (traces.length === 0) {
     logger.info("No traces found for the given query.");
@@ -87,8 +86,9 @@ async function testDatadogTraceFetch(datadogCfg: DatadogConfig): Promise<void> {
     logger.info(`Time range: ${options.start} to ${options.end}`);
     logger.info(`Limit: ${options.limit}`);
 
-    const datadogPlatform = new DatadogPlatform(datadogCfg);
-    const tracesResult = await datadogPlatform.fetchTraces({
+    const datadogClient = new DatadogClient(datadogCfg);
+    const tracesResult = await datadogClient.fetchTraces({
+      type: "traceSearchInput",
       query: options.query,
       start: options.start,
       end: options.end,
@@ -105,8 +105,8 @@ async function testDatadogTraceFetch(datadogCfg: DatadogConfig): Promise<void> {
 async function main(): Promise<void> {
   logger.info("Starting trace fetch test...");
 
-  // Check if platform configs are available
-  if (options.platform === "datadog") {
+  // Check if client configs are available
+  if (options.client === "datadog") {
     const datadogCfg = DatadogCfgSchema.parse({
       apiKey: process.env.DATADOG_API_KEY,
       appKey: process.env.DATADOG_APP_KEY,
@@ -119,5 +119,5 @@ async function main(): Promise<void> {
 
 main().catch((error) => {
   logger.error("Fatal error:", error);
-  process.exit(1);
+  throw error;
 });

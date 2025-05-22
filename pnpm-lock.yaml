@@ -110,9 +110,9 @@ importers:
       '@triage/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@triage/observability':
+      '@triage/data-integrations':
         specifier: workspace:*
-        version: link:../../packages/observability
+        version: link:../../packages/data-integrations
       '@types/react-syntax-highlighter':
         specifier: ^15.5.13
         version: 15.5.13
@@ -288,9 +288,9 @@ importers:
       '@triage/config':
         specifier: workspace:*
         version: link:../config
-      '@triage/observability':
+      '@triage/data-integrations':
         specifier: workspace:*
-        version: link:../observability
+        version: link:../data-integrations
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
@@ -343,9 +343,6 @@ importers:
       '@triage/config':
         specifier: workspace:*
         version: link:../config
-      '@triage/observability':
-        specifier: workspace:*
-        version: link:../observability
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
@@ -518,26 +515,7 @@ importers:
         specifier: 5.7.3
         version: 5.7.3
 
-  packages/eslint-config:
-    dependencies:
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.31.1
-        version: 8.32.1(@typescript-eslint/parser@8.32.1(eslint@9.26.0(jiti@1.21.7))(typescript@5.7.3))(eslint@9.26.0(jiti@1.21.7))(typescript@5.7.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.31.1
-        version: 8.32.1(eslint@9.26.0(jiti@1.21.7))(typescript@5.7.3)
-      eslint-plugin-import:
-        specifier: ^2.31.0
-        version: 2.31.0(@typescript-eslint/parser@8.32.1(eslint@9.26.0(jiti@1.21.7))(typescript@5.7.3))(eslint@9.26.0(jiti@1.21.7))
-    devDependencies:
-      eslint:
-        specifier: ^9.20.0
-        version: 9.26.0(jiti@1.21.7)
-      typescript:
-        specifier: 5.7.3
-        version: 5.7.3
-
-  packages/observability:
+  packages/data-integrations:
     dependencies:
       '@datadog/datadog-api-client':
         specifier: ^1.32.0
@@ -579,6 +557,25 @@ importers:
       tsx:
         specifier: ^4.15.0
         version: 4.19.4
+      typescript:
+        specifier: 5.7.3
+        version: 5.7.3
+
+  packages/eslint-config:
+    dependencies:
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^8.31.1
+        version: 8.32.1(@typescript-eslint/parser@8.32.1(eslint@9.26.0(jiti@1.21.7))(typescript@5.7.3))(eslint@9.26.0(jiti@1.21.7))(typescript@5.7.3)
+      '@typescript-eslint/parser':
+        specifier: ^8.31.1
+        version: 8.32.1(eslint@9.26.0(jiti@1.21.7))(typescript@5.7.3)
+      eslint-plugin-import:
+        specifier: ^2.31.0
+        version: 2.31.0(@typescript-eslint/parser@8.32.1(eslint@9.26.0(jiti@1.21.7))(typescript@5.7.3))(eslint@9.26.0(jiti@1.21.7))
+    devDependencies:
+      eslint:
+        specifier: ^9.20.0
+        version: 9.26.0(jiti@1.21.7)
       typescript:
         specifier: 5.7.3
         version: 5.7.3

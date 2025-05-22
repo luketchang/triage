@@ -2,7 +2,7 @@ import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import * as Sentry from "@sentry/electron";
 import { AgentConfigStore } from "@triage/agent";
 import { logger } from "@triage/common";
-import { ObservabilityConfigStore } from "@triage/observability";
+import { ObservabilityConfigStore } from "@triage/data-integrations";
 import { app, BrowserWindow, dialog, protocol, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";

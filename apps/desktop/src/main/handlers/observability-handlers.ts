@@ -1,9 +1,9 @@
 import { logger } from "@triage/common";
-import { ObservabilityConfigStore } from "@triage/observability";
+import { ObservabilityConfigStore } from "@triage/data-integrations";
 import { ipcMain } from "electron";
 import {
   FacetData,
-  getObservabilityPlatform,
+  getObservabilityClient,
   LogSearchInput,
   LogsWithPagination,
   TraceSearchInput,
@@ -22,10 +22,11 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
     async (_event: any, params: LogSearchInput): Promise<LogsWithPagination> => {
       try {
         const observabilityCfg = await observabilityCfgStore.getValues();
-        const platform = getObservabilityPlatform(observabilityCfg);
+        const client = getObservabilityClient(observabilityCfg);
 
-        // Call the real platform API
-        const result = await platform.fetchLogs({
+        // Call the real client API
+        const result = await client.fetchLogs({
+          type: "logSearchInput",
           query: params.query || "",
           start: params.start,
           end: params.end,
@@ -47,11 +48,11 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
         const observabilityCfg = await observabilityCfgStore.getValues();
-        const platform = getObservabilityPlatform(observabilityCfg);
+        const client = getObservabilityClient(observabilityCfg);
 
-        // Call the real platform API
+        // Call the real client API
         logger.info("Getting log facet values for time range:", { start, end });
-        const logFacetsMap = await platform.getLogsFacetValues(start, end);
+        const logFacetsMap = await client.getLogsFacetValues(start, end);
 
         // Convert the Map<string, string[]> to FacetData[] format
         const facetsArray = Array.from(logFacetsMap.entries()).map(([name, values]) => {
@@ -74,11 +75,12 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
     async (_event: any, params: TraceSearchInput): Promise<TracesWithPagination> => {
       try {
         const observabilityCfg = await observabilityCfgStore.getValues();
-        const platform = getObservabilityPlatform(observabilityCfg);
+        const client = getObservabilityClient(observabilityCfg);
 
-        // Call the real platform API (assuming the method exists)
+        // Call the real client API (assuming the method exists)
         logger.info("Fetching traces for time range:", { start: params.start, end: params.end });
-        const result = await platform.fetchTraces({
+        const result = await client.fetchTraces({
+          type: "traceSearchInput",
           query: params.query || "",
           start: params.start,
           end: params.end,
@@ -100,11 +102,11 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
         const observabilityCfg = await observabilityCfgStore.getValues();
-        const platform = getObservabilityPlatform(observabilityCfg);
+        const client = getObservabilityClient(observabilityCfg);
 
-        // Call the real platform API (assuming the method exists)
+        // Call the real client API (assuming the method exists)
         logger.info("Getting span facet values for time range:", { start, end });
-        const spanFacetsMap = await platform.getSpansFacetValues(start, end);
+        const spanFacetsMap = await client.getSpansFacetValues(start, end);
 
         // Convert the Map<string, string[]> to FacetData[] format
         const facetsArray = Array.from(spanFacetsMap.entries()).map(([name, values]) => {

@@ -1,7 +1,7 @@
 import { exec } from "child_process";
 
 import { logger } from "@triage/common";
-import { ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityClient } from "@triage/data-integrations";
 
 import { CodeSearchAgentResponse } from "../nodes/code-search";
 import { LogSearchAgentResponse } from "../nodes/log-search";
@@ -13,7 +13,7 @@ import {
   GrepRequest,
   GrepRequestResult,
   LogRequest,
-  LogSearchInput,
+  LogSearchRequest,
   LogSearchResult,
 } from "../types";
 
@@ -21,7 +21,7 @@ type ToolCallID = {
   toolCallId: string;
 };
 
-export type LLMToolCall = ToolCallID & (LogSearchInput | CatRequest | GrepRequest);
+export type LLMToolCall = ToolCallID & (LogSearchRequest | CatRequest | GrepRequest);
 
 export type SubAgentCall = ToolCallID & (LogRequest | CodeRequest);
 
@@ -71,16 +71,11 @@ export async function handleGrepRequest(
 }
 
 export async function handleLogSearchRequest(
-  toolCall: LogSearchInput,
-  observabilityPlatform: ObservabilityPlatform
+  toolCall: LogSearchRequest,
+  observabilityClient: ObservabilityClient
 ): Promise<LogSearchResult | LLMToolCallError> {
   try {
-    const logContext = await observabilityPlatform.fetchLogs({
-      query: toolCall.query,
-      start: toolCall.start,
-      end: toolCall.end,
-      limit: toolCall.limit,
-    });
+    const logContext = await observabilityClient.fetchLogs(toolCall);
     return { type: "result", toolCallType: "logSearchInput", ...logContext };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
