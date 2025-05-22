@@ -1,6 +1,4 @@
 import { ContextItem } from "@renderer/types/index.js";
-import { formatDateRange } from "@renderer/utils/formatters.js";
-import { X } from "lucide-react";
 import React, { useEffect, useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { SendIcon } from "../icons/index.jsx";
@@ -9,47 +7,7 @@ import { useChatStore } from "../store/index.js";
 import { datadogLogsViewUrlToLogSearchInput } from "../utils/parse/logs.js";
 import { parseSentryEventUrl } from "../utils/parse/sentry.js";
 import { Button } from "./ui/Button.jsx";
-
-interface ContextItemProps {
-  item: ContextItem;
-  index: number;
-  onRemove: (index: number) => void;
-}
-
-// Generic component for all context items with different inner content based on type
-function ContextItemView({ item, index, onRemove }: ContextItemProps) {
-  // Determine the content to display based on item type
-  let primaryContent: React.ReactNode;
-  let secondaryContent: React.ReactNode;
-
-  if (item.type === "logSearchInput") {
-    primaryContent = (
-      <span className="font-medium text-gray-300 truncate max-w-[200px]">
-        {item.query || "Datadog Log Search"}
-      </span>
-    );
-    secondaryContent = (
-      <span className="text-gray-400">{formatDateRange(item.start, item.end)}</span>
-    );
-  } else {
-    primaryContent = (
-      <span className="font-medium text-gray-300 truncate max-w-[200px]">
-        Sentry Issue: {item.issueId}
-      </span>
-    );
-    secondaryContent = <span className="text-gray-400">{item.eventSpecifier}</span>;
-  }
-
-  return (
-    <div className="bg-background-alt border border-border rounded-md px-2 py-1 text-xs flex items-center gap-1.5">
-      {primaryContent}
-      {secondaryContent}
-      <button className="text-gray-400 hover:text-gray-200" onClick={() => onRemove(index)}>
-        <X className="h-3 w-3" />
-      </button>
-    </div>
-  );
-}
+import ContextItemView from "./ContextItemView.js";
 
 function ChatInputArea() {
   const currentChatId = useChatStore((state) => state.currentChatId);

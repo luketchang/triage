@@ -2,6 +2,7 @@ import { User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import CellView from "../components/CellView.js";
 import ChatInputArea from "../components/ChatInputArea.js";
+import ContextItemView from "../components/ContextItemView.js";
 import FactsSidebar from "../components/FactsSidebar.js";
 import { Markdown } from "../components/ui/Markdown.js";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
@@ -86,6 +87,14 @@ function ChatView() {
                         <User className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1 overflow-hidden pt-0.5 min-w-0">
+                        {/* Context Items Cards */}
+                        {message.contextItems && message.contextItems.length > 0 && (
+                          <div className="mb-2 flex flex-wrap gap-2">
+                            {message.contextItems.map((item, index) => (
+                              <ContextItemView key={index} item={item} index={index} />
+                            ))}
+                          </div>
+                        )}
                         <div className="bg-background-alt p-4 rounded-lg shadow-sm">
                           <Markdown>{message.content}</Markdown>
                         </div>
