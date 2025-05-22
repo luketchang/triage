@@ -94,7 +94,8 @@ export interface UserMessage {
   role: "user";
   timestamp: Date;
   content: string;
-  contextItems?: MaterializedContextItem[];
+  contextItems?: ContextItem[];
+  materializedContextItems?: MaterializedContextItem[];
 }
 
 export interface AssistantMessage {

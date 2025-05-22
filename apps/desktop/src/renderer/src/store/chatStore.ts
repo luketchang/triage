@@ -188,17 +188,14 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       chatId = newChat.id;
     }
 
-    // Materialize context items
-    const materialized = await materializeContextItems(contextItems);
-    console.info("Materialized context items:", materialized);
-
     // Build user and assistant messages
     const userMessage: UserMessage = {
       id: generateId(),
       role: "user",
       timestamp: new Date(),
       content: userInput.trim(),
-      contextItems: materialized,
+      contextItems,
+      materializedContextItems: [], // Don't wait to materialize context items for updating UI
     };
     const assistantMessage: AssistantMessage = {
       id: generateId(),
@@ -208,12 +205,9 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       steps: [],
     };
 
-    // Persist user message
-    try {
-      await api.saveUserMessage(userMessage, chatId);
-    } catch (err) {
-      console.error("Error saving user message:", err);
-    }
+    // Materialize context items
+    const materialized = await materializeContextItems(contextItems);
+    console.info("Materialized context items:", materialized);
 
     // Optimistically update UI state to clear current input and add user message + empty assistant message
     set((s) => {
@@ -231,6 +225,13 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
         },
       };
     });
+
+    // Persist user message
+    try {
+      await api.saveUserMessage(userMessage, chatId);
+    } catch (err) {
+      console.error("Error saving user message:", err);
+    }
 
     // Handle streamed assistant updates
     const updater = new MessageUpdater(assistantMessage, (updated) => {

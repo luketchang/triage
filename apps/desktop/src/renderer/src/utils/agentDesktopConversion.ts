@@ -11,7 +11,7 @@ export function convertToAgentChatMessages(
 ): Array<AgentUserMessage | AgentAssistantMessage> {
   return messages.map((message) => {
     if (message.role === "user") {
-      return { ...message } as AgentUserMessage;
+      return { ...message, contextItems: message.materializedContextItems } as AgentUserMessage;
     } else {
       return { ...message } as AgentAssistantMessage;
     }
