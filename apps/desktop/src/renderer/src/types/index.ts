@@ -21,15 +21,15 @@ import {
 import { CodebaseOverview, CodebaseOverviewProgressUpdate } from "@triage/codebase-overviews";
 import {
   Log,
-  LogsWithPagination,
   LogSearchInput,
-  TraceSearchInput,
+  LogsWithPagination,
   ServiceLatency,
   Span,
   SpansWithPagination,
   Trace,
+  TraceSearchInput,
   TracesWithPagination,
-} from "@triage/observability";
+} from "@triage/data-integrations";
 
 // Re-export imported types
 export type {
@@ -61,7 +61,7 @@ export type {
   TracesWithPagination,
 };
 
-export { getObservabilityPlatform, IntegrationType } from "@triage/observability";
+export { getObservabilityPlatform, IntegrationType } from "@triage/data-integrations";
 
 // Define chat type for chat history
 export interface Chat {

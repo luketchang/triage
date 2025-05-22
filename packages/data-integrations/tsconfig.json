@@ -2,9 +2,9 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": "src/observability/src",
     "composite": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/observability/src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

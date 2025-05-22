@@ -1,5 +1,5 @@
 // import { getModelWrapper, logger, Model, timer } from "@triage/common";
-// import { ObservabilityPlatform, SpansWithPagination } from "@triage/observability";
+// import { ObservabilityPlatform, SpansWithPagination } from "@triage/data-integrations";
 // import { generateText } from "ai";
 
 // import {

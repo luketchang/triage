@@ -20,6 +20,6 @@
     { "path": "../../packages/codebase-overviews" },
     { "path": "../../packages/common" },
     { "path": "../../packages/config" },
-    { "path": "../../packages/observability" }
+    { "path": "../../packages/data-integrations" }
   ]
 }

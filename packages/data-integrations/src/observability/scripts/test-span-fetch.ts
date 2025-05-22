@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
 import { Command } from "commander";
-import { DatadogCfgSchema, DatadogConfig, SpansWithPagination } from "../dist";
+import { DatadogCfgSchema, DatadogConfig, SpansWithPagination } from "../../../dist";
 import { DatadogPlatform } from "../src";
 
 // Setup command line options

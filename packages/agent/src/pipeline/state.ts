@@ -1,4 +1,4 @@
-import { LogSearchInput } from "@triage/observability";
+import { LogSearchInput } from "@triage/data-integrations";
 
 import { LLMToolCallError } from "../tools";
 import {

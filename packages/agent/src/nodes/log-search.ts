@@ -1,5 +1,5 @@
 import { logger, timer } from "@triage/common";
-import { ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityPlatform } from "@triage/data-integrations";
 import { LanguageModelV1, streamText } from "ai";
 import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";

@@ -1,4 +1,4 @@
-import { ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityPlatform } from "@triage/data-integrations";
 import { LanguageModelV1 } from "ai";
 
 import { PostProcessing } from "./post-processing";

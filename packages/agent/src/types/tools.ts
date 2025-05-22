@@ -1,4 +1,4 @@
-import { LogSearchInput, LogsWithPagination, TraceSearchInput } from "@triage/observability";
+import { LogSearchInput, LogsWithPagination, TraceSearchInput } from "@triage/data-integrations";
 import { z, infer as zInfer } from "zod";
 
 import { SubAgentCall } from "../tools";

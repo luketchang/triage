@@ -1,5 +1,5 @@
 import { logger } from "@triage/common";
-import { ObservabilityConfigStore } from "@triage/observability";
+import { ObservabilityConfigStore } from "@triage/data-integrations";
 import { ipcMain } from "electron";
 import {
   FacetData,

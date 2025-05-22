@@ -1,4 +1,4 @@
-import { Log, LogSearchInput, LogsWithPagination } from "@triage/observability";
+import { Log, LogSearchInput, LogsWithPagination } from "@triage/data-integrations";
 
 import {
   CatToolCallWithResult,

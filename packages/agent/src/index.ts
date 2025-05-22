@@ -13,7 +13,7 @@ import {
   getObservabilityPlatform,
   GrafanaCfgSchema,
   IntegrationType,
-} from "@triage/observability";
+} from "@triage/data-integrations";
 import { Command as CommanderCommand } from "commander";
 import { z } from "zod";
 

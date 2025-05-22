@@ -1,7 +1,7 @@
 import { exec } from "child_process";
 
 import { logger } from "@triage/common";
-import { ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityPlatform } from "@triage/data-integrations";
 
 import { CodeSearchAgentResponse } from "../nodes/code-search";
 import { LogSearchAgentResponse } from "../nodes/log-search";
