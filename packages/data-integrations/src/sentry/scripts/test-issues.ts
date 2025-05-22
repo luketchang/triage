@@ -126,6 +126,26 @@ function displayEvent(event: SentryEvent, title: string, showAllPackages = false
             logger.info(`        ${header[0]}: ${header[1]}`);
           });
         }
+      } else if (entry.type === "exception" && entry.data?.values) {
+        logger.info("    Exception stack trace:");
+        entry.data.values.forEach((ex: any, exIndex: number) => {
+          if (ex.stacktrace?.frames) {
+            ex.stacktrace.frames.forEach((frame: any, frameIndex: number) => {
+              const fn = frame.function || "<unknown>";
+              const file = frame.filename || frame.absPath || "<unknown>";
+              const line = frame.lineNo != null ? frame.lineNo : "?";
+              logger.info(`      at ${fn} (${file}:${line})`);
+              // — Now print the surrounding source lines
+              if (frame.context && Array.isArray(frame.context)) {
+                frame.context.forEach(([ctxLineNo, ctxLine]: [number, string]) => {
+                  // Trim trailing whitespace so the log stays neat
+                  const trimmed = ctxLine.trimEnd();
+                  logger.info(`         ${ctxLineNo}: ${trimmed}`);
+                });
+              }
+            });
+          }
+        });
       } else {
         // For other types, show generic data
         logger.info(`    Data: ${JSON.stringify(entry.data, null, 2)}`);
