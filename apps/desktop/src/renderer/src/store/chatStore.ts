@@ -271,7 +271,17 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     try {
       // Call the agent API with message
       const agentChatMessages = convertToAgentChatMessages(updatedMessages);
-      const agentMessage = await api.invokeAgent(userInput || "", agentChatMessages);
+
+      // Create a UserMessage object with content and materialized context items
+      const userMessageForAgent: UserMessage = {
+        id: generateId(), // Use the same ID generation function
+        role: "user",
+        timestamp: new Date(),
+        content: userInput || "",
+        contextItems: materializedContextItems,
+      };
+
+      const agentMessage = await api.invokeAgent(userMessageForAgent, agentChatMessages);
 
       if (agentMessage && !agentMessage.error) {
         // Update the assistant message with the response

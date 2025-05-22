@@ -209,14 +209,19 @@ const mockChats: Chat[] = [
  */
 const mockElectronAPI = {
   /**
-   * Invoke the agent with a query and return a mock response
+   * Invoke the agent with a UserMessage and return a mock response
    */
   invokeAgent: async (
-    _query: string,
+    userMessage: { content: string; contextItems?: any[] },
     _chatHistory: AgentChatMessage[]
   ): Promise<AgentAssistantMessage> => {
     // Simulate delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Log the query for debugging
+    console.info("Invoking agent with message:", userMessage.content);
+    console.info("Context items:", userMessage.contextItems || []);
+    console.info("Chat history:", _chatHistory);
 
     // Create a much fuller response content with detailed analysis
     const responseContent = `## Root Cause Analysis

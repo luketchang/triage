@@ -35,12 +35,12 @@ declare global {
     electronAPI: {
       /**
        * Invoke the agent with a query and return the result
-       * @param query The query to send to the agent
+       * @param userMessage The user message to send to the agent
        * @param chatHistory The chat history to send to the agent
        * @returns Promise with the agent response
        */
       invokeAgent: (
-        query: string,
+        userMessage: UserMessage,
         chatHistory: AgentChatMessage[]
       ) => Promise<AgentAssistantMessage>;
 

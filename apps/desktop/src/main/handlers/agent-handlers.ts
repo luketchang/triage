@@ -1,6 +1,7 @@
 import {
   AssistantMessage as AgentAssistantMessage,
   ChatMessage as AgentChatMessage,
+  UserMessage as AgentUserMessage,
   AgentConfigStore,
   invokeAgent,
 } from "@triage/agent";
@@ -22,11 +23,12 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
     "agent:invoke-agent",
     async (
       _event: any,
-      query: string,
+      userMessage: AgentUserMessage,
       chatHistory: AgentChatMessage[]
     ): Promise<AgentAssistantMessage> => {
       try {
-        logger.info("Invoking agent with query:", query);
+        logger.info("Invoking agent with message:", userMessage.content);
+        logger.info("Context items:", userMessage.contextItems || []);
         logger.info("IPC chat history:", chatHistory);
 
         const agentCfg = await agentCfgStore.getValues();
@@ -45,7 +47,7 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
         const startDate = new Date(endDate.getTime() - TWO_WEEKS_MS);
 
         const result = await invokeAgent({
-          query,
+          userMessage,
           chatHistory,
           agentCfg,
           startDate,

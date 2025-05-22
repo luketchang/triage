@@ -58,13 +58,20 @@ const api = {
   },
 
   invokeAgent: async (
-    query: string,
+    userMessage: UserMessage,
     chatHistory: AgentChatMessage[]
   ): Promise<AgentAssistantMessage> => {
     if (USE_MOCK_API || !isMethodAvailable("invokeAgent")) {
-      return mockElectronAPI.invokeAgent(query, chatHistory);
+      // For mock API, create a simplified object that matches the expected type
+      return mockElectronAPI.invokeAgent(
+        {
+          content: userMessage.content,
+          contextItems: userMessage.contextItems,
+        },
+        chatHistory
+      );
     } else {
-      return window.electronAPI.invokeAgent(query, chatHistory);
+      return window.electronAPI.invokeAgent(userMessage, chatHistory);
     }
   },
 
