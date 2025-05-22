@@ -94,12 +94,14 @@ function displayEvent(event: SentryEvent, title: string, showAllPackages = false
   // Entries (including breadcrumbs, requests, etc.)
   if (event.entries && event.entries.length > 0) {
     logger.info("\nEntries:");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     event.entries.forEach((entry: any, index: number) => {
       logger.info(`  [${index + 1}] Type: ${entry.type}`);
 
       // Handle different entry types
       if (entry.type === "breadcrumbs" && entry.data?.values) {
         logger.info("    Breadcrumbs:");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         entry.data.values.forEach((crumb: any, crumbIndex: number) => {
           logger.info(
             `      [${crumbIndex + 1}] ${crumb.timestamp} | ${crumb.level} | ${crumb.category}: ${crumb.message}`
@@ -204,17 +206,19 @@ async function main(): Promise<void> {
       displayEventList(events);
     }
 
-    // If a specific event ID is provided, fetch it directly
-    if (eventId) {
-      logger.info(`Fetching specific event ${eventId}...`);
-      const event = await sentryClient.retrieveIssueEvent(orgSlug, issueId, eventId);
-      displayEvent(event, `EVENT DETAILS FOR ${eventId}`, showPackages);
-    }
-    // Otherwise use the event specifier
-    else if (!listEvents || eventSpecifier !== "latest") {
-      logger.info(`Fetching ${eventSpecifier} event for issue ${issueId}...`);
-      const event = await sentryClient.fetchEventBySpecifier(orgSlug, issueId, eventSpecifier);
-      displayEvent(event, `${eventSpecifier.toUpperCase()} EVENT DETAILS`, showPackages);
+    // Get event details - either by specific ID or using a specifier
+    if (!listEvents || eventId || eventSpecifier !== "latest") {
+      // If we have a specific eventId, use that, otherwise use the specifier
+      const idToUse = eventId || eventSpecifier;
+      logger.info(`Fetching event (${idToUse}) for issue ${issueId}...`);
+
+      const event = await sentryClient.getEventForIssue(orgSlug, issueId, idToUse);
+
+      const title = eventId
+        ? `EVENT DETAILS FOR ${eventId}`
+        : `${eventSpecifier.toUpperCase()} EVENT DETAILS`;
+
+      displayEvent(event, title, showPackages);
     }
 
     logger.info("\nSentry issues test completed!");

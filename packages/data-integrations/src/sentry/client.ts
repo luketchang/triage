@@ -1,9 +1,26 @@
+/*
+ * Sentry URLs and Event Specifiers
+ *
+ * The Sentry UI allows users to select events on an issue page in several ways:
+ *   - By clicking "latest", "oldest", or "recommended" buttons, which update the URL with the corresponding specifier.
+ *   - By selecting a specific event, in which case the event ID appears in the URL.
+ *   - By not selecting anything (default on page load), in which case "recommended" is used internally, but not shown in the URL.
+ *
+ * This API supports both event specifiers ("latest", "oldest", "recommended") and concrete event IDs to match all possible Sentry URL cases.
+ *
+ * Note on "recommended":
+ *   - Sentry's "recommended" event is not always guaranteed to be the same as "latest", but in practice, they almost always match.
+ *   - We unfortunately don't have access to figuring out which event is the "recommended" event, so we treat "recommended" as "latest" for now. NOTE: this is a hack due to API limitations and may not be 100% accurate.
+ *   - If Sentry changes their logic or exposes a true "recommended" API, this should be revisited.
+ */
+
 import { logger } from "@triage/common";
 import axios, { AxiosInstance } from "axios";
-import { SentryEvent, SentryListEvent } from "./types";
+
+import { SentryEvent, SentryEventSpecifier, SentryListEvent } from "./types";
 
 /**
- * A low-level Sentry client.  Constructor only needs an API token.
+ * A low-level Sentry client. Constructor only needs an API token.
  * Methods all require you to pass in the orgSlug and issueId.
  */
 export class SentryClient {
@@ -21,42 +38,17 @@ export class SentryClient {
   }
 
   /**
-   * Retrieve one event by its exact event ID.
-   */
-  async retrieveIssueEvent(
-    orgSlug: string,
-    issueId: string,
-    eventId: string
-  ): Promise<SentryEvent> {
-    const url = `/organizations/${encodeURIComponent(orgSlug)}/issues/${encodeURIComponent(
-      issueId
-    )}/events/${encodeURIComponent(eventId)}/`;
-    logger.info(`GET ${url}`);
-    const resp = await this.axios.get<SentryEvent>(url);
-    return resp.data;
-  }
-
-  /**
-   * List *all* events on an issue (newest first).
-   */
-  async listIssueEvents(orgSlug: string, issueId: string): Promise<SentryListEvent[]> {
-    const url = `/organizations/${encodeURIComponent(orgSlug)}/issues/${encodeURIComponent(issueId)}/events/`;
-    logger.info(`GET ${url}`);
-    const resp = await this.axios.get<SentryListEvent[]>(url);
-    return resp.data;
-  }
-
-  /**
-   * Given an eventSpecifier which is either
-   * - a concrete event ID (32-hex), or
-   * - "latest" | "oldest" | "recommended",
+   * Get an event for a specific issue. If no eventSpecifier is provided, returns the latest event.
    *
-   * returns the full `SentryEvent`.  (Note: "recommended" defaults to newest.)
+   * @param orgSlug Organization slug
+   * @param issueId Issue ID
+   * @param eventSpecifier Optional event ID or specifier ("latest", "oldest", "recommended")
+   * @returns The Sentry event
    */
-  async fetchEventBySpecifier(
+  async getEventForIssue(
     orgSlug: string,
     issueId: string,
-    eventSpecifier: string
+    eventSpecifier: SentryEventSpecifier = "latest"
   ): Promise<SentryEvent> {
     const isKeyword =
       eventSpecifier === "latest" ||
@@ -64,7 +56,7 @@ export class SentryClient {
       eventSpecifier === "recommended";
 
     if (!isKeyword) {
-      return this.retrieveIssueEvent(orgSlug, issueId, eventSpecifier);
+      return this.getEventById(orgSlug, issueId, eventSpecifier);
     }
 
     const all = await this.listIssueEvents(orgSlug, issueId);
@@ -82,6 +74,42 @@ export class SentryClient {
     }
 
     logger.info(`Picked "${eventSpecifier}" → eventID=${chosenId} for ${orgSlug}/${issueId}`);
-    return this.retrieveIssueEvent(orgSlug, issueId, chosenId);
+    return this.getEventById(orgSlug, issueId, chosenId);
+  }
+
+  /**
+   * List *all* events on an issue (newest first).
+   *
+   * @param orgSlug Organization slug
+   * @param issueId Issue ID
+   * @returns List of Sentry events
+   */
+  async listIssueEvents(orgSlug: string, issueId: string): Promise<SentryListEvent[]> {
+    const url = `/organizations/${encodeURIComponent(orgSlug)}/issues/${encodeURIComponent(issueId)}/events/`;
+    logger.info(`GET ${url}`);
+    const resp = await this.axios.get<SentryListEvent[]>(url);
+    return resp.data;
+  }
+
+  /**
+   * Get one event by its exact event ID.
+   * @private Internal method to get an event by ID
+   *
+   * @param orgSlug Organization slug
+   * @param issueId Issue ID
+   * @param eventId Event ID
+   * @returns The Sentry event
+   */
+  private async getEventById(
+    orgSlug: string,
+    issueId: string,
+    eventId: string
+  ): Promise<SentryEvent> {
+    const url = `/organizations/${encodeURIComponent(orgSlug)}/issues/${encodeURIComponent(
+      issueId
+    )}/events/${encodeURIComponent(eventId)}/`;
+    logger.info(`GET ${url}`);
+    const resp = await this.axios.get<SentryEvent>(url);
+    return resp.data;
   }
 }
