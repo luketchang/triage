@@ -156,19 +156,16 @@ export function formatSingleGrepToolCallWithResult(step: GrepToolCallWithResult)
 
 export function formatMaterializedContextItem(item: MaterializedContextItem): string {
   if (item.type === "log") {
-    const input = item.input;
-    const output = item.output;
-
     let formattedContent: string;
     let pageCursor: string | undefined;
 
-    formattedContent = output.logs.map((log) => formatSingleLog(log)).join("\n");
+    formattedContent = item.output.logs.map((log) => formatSingleLog(log)).join("\n");
     if (!formattedContent) {
       formattedContent = "No logs found";
     }
-    pageCursor = output.pageCursorOrIndicator;
+    pageCursor = item.output.pageCursorOrIndicator;
 
-    return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
+    return `${formatLogQuery(item.input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
   } else if (item.type === "sentry") {
     return formatSentryEvent(item.output, item.input);
   }
@@ -176,6 +173,7 @@ export function formatMaterializedContextItem(item: MaterializedContextItem): st
   return "Unknown context item type";
 }
 
+// TODO: potentially cut out some fields to reduce noise
 export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEventInput): string {
   const parts: string[] = [];
 

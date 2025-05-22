@@ -5,9 +5,7 @@ import {
   Chat,
   ChatMessage,
   ContextItem,
-  LogSearchInput,
   MaterializedContextItem,
-  RetrieveSentryEventInput,
   UserMessage,
 } from "../types/index.js";
 import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
@@ -345,20 +343,16 @@ async function materializeContextItems(
     contextItems.map(async (item) => {
       try {
         if (item.type === "logSearchInput") {
-          // This is a LogSearchInput
-          const logSearchInput = item as LogSearchInput;
-          const logs = await api.fetchLogs(logSearchInput);
-          materializedItems.push({ type: "log", input: logSearchInput, output: logs });
+          const logs = await api.fetchLogs(item);
+          materializedItems.push({ type: "log", input: item, output: logs });
         } else if (item.type === "retrieveSentryEventInput") {
-          // This is a RetrieveSentryEventInput
-          const sentryEventInput = item as RetrieveSentryEventInput;
-          const sentryEvent = await api.fetchSentryEvent(sentryEventInput);
-          materializedItems.push({ type: "sentry", input: sentryEventInput, output: sentryEvent });
+          const sentryEvent = await api.fetchSentryEvent(item);
+          materializedItems.push({ type: "sentry", input: item, output: sentryEvent });
         } else {
-          console.warn("Unknown context item type", { item });
+          console.error("Unknown context item type", { item });
         }
       } catch (error) {
-        console.error("Error materializing context item", { error, item });
+        console.error("Error materializing context item. Skipping insertion.", { error, item });
       }
     })
   );
