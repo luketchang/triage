@@ -2,8 +2,8 @@ import {
   Log,
   LogSearchInput,
   LogsWithPagination,
+  RetrieveSentryEventInput,
   SentryEvent,
-  RetrieveSentryEventInput
 } from "@triage/data-integrations";
 
 import {
@@ -12,7 +12,6 @@ import {
   GrepToolCallWithResult,
   LogSearchToolCallWithResult,
 } from "./pipeline/state";
-
 import { MaterializedContextItem } from "./types/message.js";
 
 import { AgentStep, ChatMessage, ReasoningStep } from ".";
@@ -159,32 +158,34 @@ export function formatMaterializedContextItem(item: MaterializedContextItem): st
   if (item.type === "log") {
     const input = item.input;
     const output = item.output;
-    
+
     let formattedContent: string;
     let pageCursor: string | undefined;
-    
+
     formattedContent = output.logs.map((log) => formatSingleLog(log)).join("\n");
     if (!formattedContent) {
       formattedContent = "No logs found";
     }
     pageCursor = output.pageCursorOrIndicator;
-    
+
     return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
   } else if (item.type === "sentry") {
     return formatSentryEvent(item.output, item.input);
   }
-  
+
   return "Unknown context item type";
 }
 
 export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEventInput): string {
   const parts: string[] = [];
-  
+
   // Add query information if input is provided
   if (input) {
-    parts.push(`Query: Issue ID ${input.issueId}${input.eventId ? `, Event ID ${input.eventId}` : ""}`);
+    parts.push(
+      `Query: Issue ID ${input.issueId}${input.eventSpecifier ? `, Event ID ${input.eventSpecifier}` : ""}`
+    );
   }
-  
+
   // Basic information
   parts.push(`Event ID: ${event.eventID}`);
   parts.push(`Group ID: ${event.groupID}`);
@@ -195,7 +196,7 @@ export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEven
   parts.push(`Message: ${event.message || "(no message)"}`);
   parts.push(`Platform: ${event.platform}`);
   parts.push(`Culprit: ${event.culprit || "(not provided)"}`);
-  
+
   // User information
   if (event.user) {
     parts.push("\nUser:");
@@ -203,7 +204,7 @@ export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEven
     parts.push(`  Email: ${event.user.email || "(not provided)"}`);
     parts.push(`  Username: ${event.user.username || "(not provided)"}`);
     parts.push(`  Name: ${event.user.name || "(not provided)"}`);
-    
+
     if (event.user.geo) {
       parts.push("  Geo:");
       Object.entries(event.user.geo).forEach(([key, value]) => {
@@ -211,7 +212,7 @@ export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEven
       });
     }
   }
-  
+
   // Tags
   if (event.tags && event.tags.length > 0) {
     parts.push("\nTags:");
@@ -219,13 +220,13 @@ export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEven
       parts.push(`  ${tag.key}: ${tag.value}${tag.query ? ` (query: ${tag.query})` : ""}`);
     });
   }
-  
+
   // Error information
   if (event.entries && event.entries.length > 0) {
     parts.push("\nEntries:");
     event.entries.forEach((entry: any, index: number) => {
       parts.push(`  [${index + 1}] Type: ${entry.type}`);
-      
+
       // Handle different entry types
       if (entry.type === "exception" && entry.data?.values) {
         parts.push("    Exceptions:");
@@ -236,7 +237,9 @@ export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEven
             // Get the last few frames as they're usually most relevant
             const relevantFrames = exception.stacktrace.frames.slice(-5);
             relevantFrames.forEach((frame: any) => {
-              parts.push(`          at ${frame.function || "<unknown>"} (${frame.filename}:${frame.lineno}:${frame.colno})`);
+              parts.push(
+                `          at ${frame.function || "<unknown>"} (${frame.filename}:${frame.lineno}:${frame.colno})`
+              );
             });
           }
         });
@@ -260,7 +263,7 @@ export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEven
       }
     });
   }
-  
+
   // Context (additional data)
   if (event.context && Object.keys(event.context).length > 0) {
     parts.push("\nContext:");
@@ -268,7 +271,7 @@ export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEven
       parts.push(`  ${key}: ${JSON.stringify(value)}`);
     });
   }
-  
+
   return parts.join("\n");
 }
 

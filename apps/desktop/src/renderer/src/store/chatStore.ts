@@ -201,6 +201,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
 
     // Materialize context items by fetching logs and issue event details
     const materializedContextItems = await materializeContextItems(contextItems);
+    console.info("Materialized context items:", materializedContextItems);
 
     // Create a new user and assistant message
     const userMessage: UserMessage = {
