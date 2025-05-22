@@ -9,7 +9,7 @@
 
 - Formatting: Follow Prettier config with double quotes, semicolons, es5 trailing commas, 100 char line length, 2 space indentation
 - TypeScript: Strict typing required, use explicit return types
-- Imports: Group and sort imports (external libs before internal, alphabetical within each group); use NodeNext import statements (while all files are TS, import their transpiled version via .js); avoid dynamic imports
+- Imports: Group and sort imports (external libs before internal, alphabetical within each group); use NodeNext import statements (while all files are TS, import their transpiled version via .js); avoid dynamic imports; when possible import from top level directories or packages rather than specifying deep subdirectories unnecessarily
 - Naming: camelCase for variables/functions, PascalCase for classes/components/types, and PascalCase or camelCase for filenames
 - Error Handling: Use try/catch and typed Error objects
 - Global variables: Prefer using variables from closures over defining new singletons
