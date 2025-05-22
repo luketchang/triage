@@ -35,7 +35,7 @@ const options = program.opts();
 const validClients = ["datadog", "grafana", "both"];
 if (!validClients.includes(options.client)) {
   logger.error(`Invalid client: ${options.client}. Must be one of: ${validClients.join(", ")}`);
-  process.exit(1);
+  throw new Error(`Invalid client: ${options.client}. Must be one of: ${validClients.join(", ")}`);
 }
 
 // Display formatted logs
@@ -143,5 +143,5 @@ async function main(): Promise<void> {
 
 main().catch((error) => {
   logger.error("Fatal error:", error);
-  process.exit(1);
+  throw error;
 });

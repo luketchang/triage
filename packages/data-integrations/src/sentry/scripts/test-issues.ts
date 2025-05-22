@@ -189,7 +189,7 @@ async function main(): Promise<void> {
   const authToken = process.env.SENTRY_AUTH_TOKEN;
   if (!authToken) {
     logger.error("SENTRY_AUTH_TOKEN environment variable is required");
-    process.exit(1);
+    throw new Error("SENTRY_AUTH_TOKEN environment variable is required");
   }
 
   const { orgSlug, issueId, eventId, eventSpecifier, listEvents, showPackages } = options;
@@ -220,11 +220,11 @@ async function main(): Promise<void> {
     logger.info("\nSentry issues test completed!");
   } catch (error) {
     logger.error("Error testing Sentry client:", error);
-    process.exit(1);
+    throw error;
   }
 }
 
 main().catch((error) => {
   logger.error("Fatal error:", error);
-  process.exit(1);
+  throw error;
 });
