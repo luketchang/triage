@@ -1,3 +1,4 @@
+import { ContextItem } from "@renderer/types/index.js";
 import { formatDateRange } from "@renderer/utils/formatters.js";
 import { X } from "lucide-react";
 import React, { useEffect, useRef } from "react";
@@ -5,20 +6,18 @@ import TextareaAutosize from "react-textarea-autosize";
 import { SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { useChatStore } from "../store/index.js";
-import {
-  datadogLogsViewUrlToLogSearchInput,
-  isValidDatadogLogsViewUrl,
-} from "../utils/parse/logs.js";
+import { datadogLogsViewUrlToLogSearchInput } from "../utils/parse/logs.js";
+import { parseSentryEventUrl } from "../utils/parse/sentry.js";
 import { Button } from "./ui/Button.jsx";
 
 interface ContextItemProps {
-  item: LogSearchInput | RetrieveSentryEventInput;
+  item: ContextItem;
   index: number;
   onRemove: (index: number) => void;
 }
 
 // Generic component for all context items with different inner content based on type
-function ContextItem({ item, index, onRemove }: ContextItemProps) {
+function ContextItemView({ item, index, onRemove }: ContextItemProps) {
   // Determine the content to display based on item type
   let primaryContent: React.ReactNode;
   let secondaryContent: React.ReactNode;
@@ -33,13 +32,12 @@ function ContextItem({ item, index, onRemove }: ContextItemProps) {
       <span className="text-gray-400">{formatDateRange(item.start, item.end)}</span>
     );
   } else if (item.type === "retrieveSentryEventInput") {
-    const sentryItem = item as RetrieveSentryEventInput;
     primaryContent = (
       <span className="font-medium text-gray-300 truncate max-w-[200px]">
-        Sentry Issue: {sentryItem.issueId}
+        Sentry Issue: {item.issueId}
       </span>
     );
-    secondaryContent = <span className="text-gray-400">{sentryItem.eventSpecifier}</span>;
+    secondaryContent = <span className="text-gray-400">{item.eventSpecifier}</span>;
   } else {
     // Fallback for unknown item types
     primaryContent = (
@@ -100,26 +98,26 @@ function ChatInputArea() {
     return () => clearTimeout(focusTimeout);
   }, [isThinking]);
 
-  const tryAddDatadogContextFromUrl = (text: string): boolean => {
-    const logSearchInput = datadogLogsViewUrlToLogSearchInput(text);
-    if (logSearchInput) {
-      addContextItem(logSearchInput);
+  const tryAddContextFromUrl = <T extends (text: string) => ContextItem | undefined>(
+    fn: T,
+    text: string
+  ): boolean => {
+    const contextItem = fn(text);
+    if (contextItem) {
+      addContextItem(contextItem);
       return true;
     }
     return false;
   };
 
-  // Handle paste event to detect Datadog URLs
+  // Handle paste event to detect Datadog and Sentry URLs
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const text = e.clipboardData.getData("text");
 
-    // Try to parse as Datadog logs URL
-    let added = false;
-    if (text && isValidDatadogLogsViewUrl(text)) {
-      added = tryAddDatadogContextFromUrl(text);
-    }
+    const added =
+      tryAddContextFromUrl(datadogLogsViewUrlToLogSearchInput, text) ||
+      tryAddContextFromUrl(parseSentryEventUrl, text);
 
-    // NOTE: we will have other checks in future, that's why we have this `added` pattern
     if (added) {
       e.preventDefault();
     }
@@ -159,7 +157,7 @@ function ChatInputArea() {
         {contextItems.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
             {contextItems.map((item, index) => (
-              <ContextItem key={index} item={item} index={index} onRemove={removeContextItem} />
+              <ContextItemView key={index} item={item} index={index} onRemove={removeContextItem} />
             ))}
           </div>
         )}

@@ -46,6 +46,24 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     },
   },
 
+  addContextItem: (item) => {
+    set((state) => {
+      // Always use the current chat ID (which might be NO_CHAT_SELECTED)
+      const targetId = state.currentChatId;
+      const current = state.chatDetailsById[targetId]?.contextItems ?? [];
+
+      return {
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [targetId]: {
+            ...state.chatDetailsById[targetId],
+            contextItems: [...current, item],
+          },
+        },
+      };
+    });
+  },
+
   loadChats: async () => {
     try {
       const chats = await api.getAllChats();
