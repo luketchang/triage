@@ -328,15 +328,15 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
 /**
  * Materialize context items by fetching logs and issue event details
  * @param contextItems Array of context items to materialize
- * @returns Map of context items to their materialized data
+ * @returns Array of materialized context items
  */
 async function materializeContextItems(
   contextItems: ContextItem[]
-): Promise<Map<ContextItem, MaterializedContextItem>> {
-  const materializedItems = new Map<ContextItem, MaterializedContextItem | undefined>();
+): Promise<MaterializedContextItem[]> {
+  const materializedItems: MaterializedContextItem[] = [];
 
   if (!contextItems || contextItems.length === 0) {
-    return materializedItems as Map<ContextItem, MaterializedContextItem>;
+    return materializedItems;
   }
 
   // Process each context item in parallel
@@ -347,12 +347,12 @@ async function materializeContextItems(
           // This is a LogSearchInput
           const logSearchInput = item as LogSearchInput;
           const logs = await api.fetchLogs(logSearchInput);
-          materializedItems.set(item, logs);
+          materializedItems.push({ type: "log", input: logSearchInput, output: logs });
         } else if (item.type === "retrieveSentryEventInput") {
           // This is a RetrieveSentryEventInput
           const sentryEventInput = item as RetrieveSentryEventInput;
           const sentryEvent = await api.fetchSentryEvent(sentryEventInput);
-          materializedItems.set(item, sentryEvent);
+          materializedItems.push({ type: "sentry", input: sentryEventInput, output: sentryEvent });
         } else {
           console.warn("Unknown context item type", { item });
         }
@@ -363,12 +363,7 @@ async function materializeContextItems(
   );
 
   // Filter out undefined values for the return type
-  return new Map(
-    Array.from(materializedItems.entries()).filter(([_, value]) => value !== undefined) as [
-      ContextItem,
-      MaterializedContextItem,
-    ][]
-  );
+  return materializedItems;
 }
 
 export const useChatStore = createSelectors(useChatStoreBase);

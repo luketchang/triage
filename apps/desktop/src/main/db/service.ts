@@ -4,12 +4,7 @@ import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
 import fs from "fs";
 import path from "path";
 import superjson from "superjson";
-import {
-  AgentStep,
-  ChatMessage,
-  ContextItem,
-  MaterializedContextItem,
-} from "../../renderer/src/types/index.js";
+import { AgentStep, ChatMessage, MaterializedContextItem } from "../../renderer/src/types/index.js";
 import { DB_DIR, DB_NAME } from "../constants.js";
 import * as schema from "./schema.js";
 import { AssistantMessage, Chat, UserMessage } from "./schema.js";
@@ -182,7 +177,7 @@ export class DatabaseService {
           timestamp: new Date(row.timestamp),
           content: row.content,
           contextItems: row.contextItems
-            ? (superjson.parse(row.contextItems) as Map<ContextItem, MaterializedContextItem>)
+            ? (superjson.parse(row.contextItems) as MaterializedContextItem[])
             : undefined,
         })),
         ...assistantMessages.map((row: AssistantMessage) => ({
