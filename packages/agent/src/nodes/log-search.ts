@@ -1,5 +1,5 @@
 import { logger, timer } from "@triage/common";
-import { ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityClient } from "@triage/data-integrations";
 import { LanguageModelV1, streamText } from "ai";
 import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
@@ -8,7 +8,7 @@ import { TriagePipelineConfig } from "../pipeline";
 import { LogSearchStep, LogSearchToolCallWithResult, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
 import { handleLogSearchRequest } from "../tools";
-import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types";
+import { logSearchInputToolSchema, LogSearchRequest, TaskComplete } from "../types";
 import {
   ensureSingleToolCall,
   formatFacetValues,
@@ -21,7 +21,7 @@ export interface LogSearchAgentResponse {
 
 export interface LogSearchResponse {
   reasoning: string;
-  actions: LogSearchInput[] | TaskComplete;
+  actions: LogSearchRequest[] | TaskComplete;
 }
 
 const MAX_ITERS = 12;
@@ -113,16 +113,16 @@ ${params.codebaseOverview}
 
 class LogSearch {
   private llmClient: LanguageModelV1;
-  private observabilityPlatform: ObservabilityPlatform;
+  private observabilityClient: ObservabilityClient;
   private state: PipelineStateManager;
 
   constructor(
     llmClient: LanguageModelV1,
-    observabilityPlatform: ObservabilityPlatform,
+    observabilityClient: ObservabilityClient,
     state: PipelineStateManager
   ) {
     this.llmClient = llmClient;
-    this.observabilityPlatform = observabilityPlatform;
+    this.observabilityClient = observabilityClient;
     this.state = state;
   }
 
@@ -139,7 +139,7 @@ class LogSearch {
   }): Promise<LogSearchResponse> {
     const prompt = createLogSearchPrompt({
       ...params,
-      platformSpecificInstructions: this.observabilityPlatform.getLogSearchQueryInstructions(),
+      platformSpecificInstructions: this.observabilityClient.getLogSearchQueryInstructions(),
     });
 
     try {
@@ -218,11 +218,7 @@ export class LogSearchAgent {
   constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
-    this.logSearch = new LogSearch(
-      this.config.fastClient,
-      this.config.observabilityPlatform,
-      state
-    );
+    this.logSearch = new LogSearch(this.config.fastClient, this.config.observabilityClient, state);
   }
 
   @timer
@@ -268,10 +264,12 @@ export class LogSearchAgent {
         // TODO: convert this into loop when we have multiple tool calls output
         let toolCallsWithResults: LogSearchToolCallWithResult[] = [];
 
-        logger.info("Fetching logs from observability platform...");
+        logger.info("Fetching logs from observability client...");
         const logContext = await handleLogSearchRequest(
+          // TODO: remove once we allow multiple log search tool calls
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           response.actions[0]!,
-          this.config.observabilityPlatform
+          this.config.observabilityClient
         );
 
         const lastLogSearchResultsFormatted =

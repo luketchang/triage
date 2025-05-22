@@ -237,7 +237,6 @@ The primary issue appears to be in the authentication middleware where token val
         end: new Date().toISOString(),
         limit: 100,
         pageCursor: undefined,
-        type: "logSearchInput",
       },
       {
         title: "Database Timeouts",
@@ -247,7 +246,6 @@ The primary issue appears to be in the authentication middleware where token val
         end: new Date().toISOString(),
         limit: 100,
         pageCursor: undefined,
-        type: "logSearchInput",
       },
       {
         title: "High Latency Events",
@@ -257,7 +255,6 @@ The primary issue appears to be in the authentication middleware where token val
         end: new Date().toISOString(),
         limit: 100,
         pageCursor: undefined,
-        type: "logSearchInput",
       },
       {
         title: "User Impact",
@@ -267,7 +264,6 @@ The primary issue appears to be in the authentication middleware where token val
         end: new Date().toISOString(),
         limit: 100,
         pageCursor: undefined,
-        type: "logSearchInput",
       },
     ];
 

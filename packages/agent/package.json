@@ -16,7 +16,7 @@
     "@modelcontextprotocol/sdk": "^1.6.1",
     "@triage/common": "workspace:*",
     "@triage/config": "workspace:*",
-    "@triage/observability": "workspace:*",
+    "@triage/data-integrations": "workspace:*",
     "@types/uuid": "^10.0.0",
     "ai": "^4.2.2",
     "commander": "^13.1.0",

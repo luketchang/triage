@@ -81,8 +81,7 @@ export class LogPostprocessor {
       logLabelsMap: this.config.logLabelsMap,
       logSearchToolCallsWithResults: this.state.getLogSearchToolCallsWithResults(StepsType.CURRENT),
       answer: this.state.getAnswer()!,
-      platformSpecificInstructions:
-        this.config.observabilityPlatform.getLogSearchQueryInstructions(),
+      platformSpecificInstructions: this.config.observabilityClient.getLogSearchQueryInstructions(),
     });
 
     logger.info(`Log postprocessing prompt:\n${prompt}`);
@@ -121,10 +120,7 @@ export class LogPostprocessor {
     const augmentedFacts: LogPostprocessingFact[] = normalizedFacts.map((fact) => ({
       title: fact.title,
       fact: fact.fact,
-      query: this.config.observabilityPlatform.addKeywordsToQuery(
-        fact.query,
-        fact.highlightKeywords
-      ),
+      query: this.config.observabilityClient.addKeywordsToQuery(fact.query, fact.highlightKeywords),
       start: fact.start,
       end: fact.end,
       limit: fact.limit,
