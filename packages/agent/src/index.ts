@@ -87,13 +87,13 @@ export async function invokeAgent({
       role: "assistant",
       steps: state.getSteps(StepsType.CURRENT),
       response: response.answer,
-      error: null,
+      error: undefined,
     };
   } catch (error) {
     return {
       role: "assistant",
       steps: state.getSteps(StepsType.CURRENT),
-      response: null,
+      response: undefined,
       error: `${error}`,
     };
   }

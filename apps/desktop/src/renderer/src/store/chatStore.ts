@@ -170,52 +170,36 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
   },
 
   sendMessage: async () => {
-    const { currentChatId, chatDetailsById } = get();
-    const chatDetails = chatDetailsById[currentChatId];
+    const state = get();
+    const { currentChatId, chatDetailsById } = state;
+    const details = chatDetailsById[currentChatId] || {};
+    const { userInput = "", contextItems = [], isThinking = false, messages = [] } = details;
 
-    // Check if we have pending context items when no chat is selected
-    // This is to enable us to send a message with no user input and only context items
-    let pendingContextItems: ContextItem[] = [];
-    if (currentChatId === NO_CHAT_SELECTED) {
-      pendingContextItems = chatDetailsById[NO_CHAT_SELECTED]?.contextItems || [];
+    // Don't send if already in progress or no content
+    if (isThinking || (!userInput.trim() && contextItems.length === 0)) {
+      return;
     }
 
-    // Use either the current chat's details or empty values if no chat selected
-    const userInput = chatDetails?.userInput || "";
-    const messages = chatDetails?.messages || [];
-    const isThinking = chatDetails?.isThinking || false;
-    const contextItems = chatDetails?.contextItems || pendingContextItems;
-
-    // Don't send if there's no message or if we're already thinking
-    if ((!userInput?.trim() && (!contextItems || contextItems.length === 0)) || isThinking) return;
-
+    // Ensure we have a real materialized chat ID
     let chatId = currentChatId;
-    // If no chat is selected, create a new one
     if (chatId === NO_CHAT_SELECTED) {
-      const chat = await get().createChat();
-      if (!chat) return; // Failed to create chat
-      chatId = chat.id;
+      const newChat = await state.createChat();
+      if (!newChat) return;
+      chatId = newChat.id;
     }
 
-    // Materialize context items by fetching logs and issue event details
-    const materializedContextItems = await materializeContextItems(contextItems);
-    console.info("Materialized context items:", materializedContextItems);
+    // Materialize context items
+    const materialized = await materializeContextItems(contextItems);
+    console.info("Materialized context items:", materialized);
 
-    // Create a new user and assistant message
+    // Build user and assistant messages
     const userMessage: UserMessage = {
       id: generateId(),
       role: "user",
       timestamp: new Date(),
-      content: userInput || "",
-      contextItems: materializedContextItems,
+      content: userInput.trim(),
+      contextItems: materialized,
     };
-
-    try {
-      await api.saveUserMessage(userMessage, chatId);
-    } catch (error) {
-      console.error("Error saving user message:", error);
-    }
-
     const assistantMessage: AssistantMessage = {
       id: generateId(),
       role: "assistant",
@@ -223,113 +207,90 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       response: "Thinking...",
       steps: [],
     };
-    const updatedMessages = [...(messages || []), userMessage];
-    const updatedMessagesWithAssistant = [...updatedMessages, assistantMessage];
 
-    // Update state with new user/assistant message and clear input and context items
-    set((state) => {
-      const newChatDetailsById = {
-        ...state.chatDetailsById,
-        [chatId]: {
-          ...state.chatDetailsById[chatId],
-          messages: updatedMessagesWithAssistant,
-          userInput: "",
-          contextItems: [],
-          isThinking: true,
-        },
-      };
-      // If no chat was selected when the message was sent, we need to clear the
-      // user input on the "new chat" screen.
-      if (currentChatId === NO_CHAT_SELECTED) {
-        delete newChatDetailsById[NO_CHAT_SELECTED];
-      }
-      return { chatDetailsById: newChatDetailsById };
-    });
+    // Persist user message
+    try {
+      await api.saveUserMessage(userMessage, chatId);
+    } catch (err) {
+      console.error("Error saving user message:", err);
+    }
 
-    // Handle streamed updates from the agent
-    const updater = new MessageUpdater(assistantMessage, (updatedAssistantMessage) => {
-      set((state) => ({
+    // Optimistically update UI state to clear current input and add user message + empty assistant message
+    set((s) => {
+      const existing = s.chatDetailsById[chatId] || { messages: [] };
+      return {
         chatDetailsById: {
-          ...state.chatDetailsById,
+          ...s.chatDetailsById,
           [chatId]: {
-            ...state.chatDetailsById[chatId],
-            // Update the last assistant message in this chat with updatedAssistantMessage
-            messages: state.chatDetailsById[chatId].messages!.map((message) =>
-              message.role === "assistant" && message.id === assistantMessage.id
-                ? { ...message, ...updatedAssistantMessage }
-                : message
-            ),
+            ...existing,
+            messages: [...(existing.messages || []), userMessage, assistantMessage],
+            userInput: "",
+            contextItems: [],
+            isThinking: true,
           },
         },
-      }));
+      };
     });
-    const unregisterUpdater = api.onAgentUpdate((update) => {
-      console.info("Received agent update:", update);
+
+    // Handle streamed assistant updates
+    const updater = new MessageUpdater(assistantMessage, (updated) => {
+      set((s) => {
+        const chat = s.chatDetailsById[chatId];
+        return {
+          chatDetailsById: {
+            ...s.chatDetailsById,
+            [chatId]: {
+              ...chat,
+              messages: chat.messages!.map((m) =>
+                m.id === assistantMessage.id ? { ...m, ...updated } : m
+              ),
+            },
+          },
+        };
+      });
+    });
+    const unregister = api.onAgentUpdate((update) => {
       handleUpdate(updater, update);
     });
 
     try {
-      // Call the agent API with message
-      const agentChatMessages = convertToAgentChatMessages(updatedMessages);
+      // Invoke agent with full conversation
+      const agentMessages = convertToAgentChatMessages([...(messages || []), userMessage]);
+      const agentResponse = await api.invokeAgent(userMessage, agentMessages);
 
-      // Create a UserMessage object with content and materialized context items
-      const userMessageForAgent: UserMessage = {
-        id: generateId(), // Use the same ID generation function
-        role: "user",
-        timestamp: new Date(),
-        content: userInput || "",
-        contextItems: materializedContextItems,
-      };
-
-      const agentMessage = await api.invokeAgent(userMessageForAgent, agentChatMessages);
-
-      if (agentMessage && !agentMessage.error) {
-        // Update the assistant message with the response
-        updater.update((cell) => ({
-          ...cell,
-          response: agentMessage.response || "I processed your request but got no response.",
-          // preserve existing steps from streaming; do not override here
-          // TODO: once we add back agent steps we should save
-        }));
-      } else {
-        // Handle error response
+      if (agentResponse?.error) {
         updater.update((cell) => ({
           ...cell,
           response: "Sorry, there was an error processing your request.",
-          error: agentMessage?.error || "Sorry, there was an error processing your request.",
+          error: agentResponse.error,
+        }));
+      } else {
+        updater.update((cell) => ({
+          ...cell,
+          response: agentResponse.response || "No response from agent.",
         }));
       }
-    } catch (error) {
-      console.error("Error in chat API call:", error);
-      // Handle error response
+    } catch (err) {
+      console.error("Agent call error:", err);
       updater.update((cell) => ({
         ...cell,
         response: "Sorry, there was an error processing your request.",
-        error:
-          error instanceof Error
-            ? error.message
-            : typeof error === "object" && error !== null
-              ? JSON.stringify(error)
-              : String(error),
+        error: err instanceof Error ? err.message : String(err),
       }));
     } finally {
-      // Save assistant message
-      console.log("Saving assistant message", JSON.stringify(updater.getMessage()));
-      api.saveAssistantMessage(updater.getMessage(), chatId);
-
-      // Clear thinking state for chat
-      set((state) => ({
+      // Persist assistant message and clear thinking state
+      const finalMessage = updater.getMessage();
+      api.saveAssistantMessage(finalMessage, chatId);
+      set((s) => ({
         chatDetailsById: {
-          ...state.chatDetailsById,
+          ...s.chatDetailsById,
           [chatId]: {
-            ...state.chatDetailsById[chatId],
+            ...s.chatDetailsById[chatId],
             isThinking: false,
           },
         },
       }));
-
-      // Unregister from agent updates
-      unregisterUpdater();
+      unregister();
     }
   },
 }));

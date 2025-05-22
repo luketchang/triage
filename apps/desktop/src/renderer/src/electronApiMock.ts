@@ -303,7 +303,7 @@ The primary issue appears to be in the authentication middleware where token val
       role: "assistant",
       response: responseContent,
       steps: [],
-      error: null,
+      error: undefined,
     };
   },
 
