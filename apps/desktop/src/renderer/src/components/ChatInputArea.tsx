@@ -1,7 +1,14 @@
+import { formatDateRange } from "@renderer/utils/formatters.js";
+import { X } from "lucide-react";
 import React, { useEffect, useRef } from "react";
+import TextareaAutosize from "react-textarea-autosize";
 import { SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { useChatStore } from "../store/index.js";
+import {
+  datadogLogsViewUrlToLogSearchInput,
+  isValidDatadogLogsViewUrl,
+} from "../utils/parse/logs.js";
 import { Button } from "./ui/Button.jsx";
 
 function ChatInputArea() {
@@ -16,8 +23,17 @@ function ChatInputArea() {
       ? state.chatDetailsById[state.currentChatId]?.isThinking || false
       : false
   );
+  const contextItems =
+    useChatStore((state) =>
+      state.currentChatId !== undefined
+        ? state.chatDetailsById[state.currentChatId]?.contextItems
+        : [undefined]
+    ) ?? [];
+
   const setUserInput = useChatStore.use.setUserInput();
+  const removeContextItem = useChatStore.use.removeContextItem();
   const sendMessage = useChatStore.use.sendMessage();
+  const addContextItem = useChatStore.use.addContextItem();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -26,28 +42,6 @@ function ChatInputArea() {
     }
   }, [currentChatId]);
 
-  // Auto-resize textarea function
-  const resizeTextarea = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Reset height to default
-    textarea.style.height = "50px";
-
-    // Adjust height based on content
-    const scrollHeight = textarea.scrollHeight;
-    if (scrollHeight > 50) {
-      const newHeight = Math.min(150, scrollHeight);
-      textarea.style.height = `${newHeight}px`;
-    }
-  };
-
-  // Auto-resize textarea when message changes
-  useEffect(() => {
-    resizeTextarea();
-  }, [userInput]);
-
-  // Focus input on mount and when thinking state changes
   useEffect(() => {
     const focusTimeout = setTimeout(() => {
       if (textareaRef.current && !isThinking) {
@@ -58,41 +52,35 @@ function ChatInputArea() {
     return () => clearTimeout(focusTimeout);
   }, [isThinking]);
 
-  // Add event listeners for textarea
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Handle paste events
-    const handlePaste = () => {
-      setTimeout(resizeTextarea, 0);
-    };
-
-    // Handle input events
-    const handleInput = () => {
-      resizeTextarea();
-    };
-
-    textarea.addEventListener("paste", handlePaste);
-    textarea.addEventListener("input", handleInput);
-
-    return () => {
-      textarea.removeEventListener("paste", handlePaste);
-      textarea.removeEventListener("input", handleInput);
-    };
-  }, []);
-
-  // Reset textarea height when empty
-  useEffect(() => {
-    if (userInput === "" && textareaRef.current) {
-      textareaRef.current.style.height = "50px";
+  const tryAddDatadogContextFromUrl = (text: string): boolean => {
+    const logSearchInput = datadogLogsViewUrlToLogSearchInput(text);
+    if (logSearchInput) {
+      addContextItem(logSearchInput);
+      return true;
     }
-  }, [userInput]);
+    return false;
+  };
+
+  // Handle paste event to detect Datadog URLs
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const text = e.clipboardData.getData("text");
+
+    // Try to parse as Datadog logs URL
+    let added = false;
+    if (text && isValidDatadogLogsViewUrl(text)) {
+      added = tryAddDatadogContextFromUrl(text);
+    }
+
+    // NOTE: we will have other checks in future, that's why we have this `added` pattern
+    if (added) {
+      e.preventDefault();
+    }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (userInput.trim()) {
+      if (userInput.trim() || contextItems.length > 0) {
         handleSendMessage();
       }
     }
@@ -100,9 +88,10 @@ function ChatInputArea() {
 
   // Send message function
   const handleSendMessage = async () => {
-    if (!userInput.trim() || isThinking) return;
+    if ((!userInput.trim() && contextItems.length === 0) || isThinking) return;
 
     // Call the send function from the store
+    // The sendMessage function in the store will use the context items
     await sendMessage();
 
     // Reset textarea height after sending
@@ -118,26 +107,55 @@ function ChatInputArea() {
   return (
     <div className="p-4 border-t border-border bg-background-lighter">
       <div className="relative max-w-[90%] mx-auto">
-        <textarea
+        {/* Context Items Cards */}
+        {contextItems.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {contextItems.map((item, index) => (
+              <div
+                key={index}
+                className="bg-background-alt border border-border rounded-md px-2 py-1 text-xs flex items-center gap-1.5"
+              >
+                <span className="font-medium text-gray-300 truncate max-w-[200px]">
+                  {item.type === "logSearchInput"
+                    ? item.query || "Datadog Log Search"
+                    : "Context Item"}
+                </span>
+                {item.type === "logSearchInput" && (
+                  <span className="text-gray-400">{formatDateRange(item.start, item.end)}</span>
+                )}
+                <button
+                  className="text-gray-400 hover:text-gray-200"
+                  onClick={() => removeContextItem(index)}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <TextareaAutosize
           ref={textareaRef}
           className={cn(
             "w-full p-3 pr-10 bg-background border border-border rounded-lg",
-            "resize-none min-h-[50px] max-h-[200px] outline-none focus-ring",
+            "resize-none outline-none focus-ring",
             "placeholder:text-gray-500 text-sm shadow-sm",
-            "align-middle leading-normal pt-[13px] overflow-y-hidden"
+            "align-middle leading-normal pt-[13px]"
           )}
           placeholder="Type your message here..."
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          rows={1}
+          onPaste={handlePaste}
           disabled={isThinking}
+          minRows={1}
+          maxRows={6}
         />
         <Button
-          className="absolute right-2 top-2 shadow-sm size-8 p-1"
+          className="absolute right-2 bottom-2 shadow-sm size-8 p-1"
           size="sm"
           onClick={handleSendMessage}
-          disabled={userInput.trim() === "" || isThinking}
+          disabled={(userInput.trim() === "" && contextItems.length === 0) || isThinking}
         >
           <SendIcon className="h-3.5 w-3.5" />
         </Button>

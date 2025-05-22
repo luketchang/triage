@@ -10,7 +10,6 @@ import { useChatStore, useUIStore } from "../store/index.js";
 import { AssistantMessage, CodePostprocessingFact, LogPostprocessingFact } from "../types/index.js";
 
 function ChatView() {
-  const currentChatId = useChatStore((state) => state.currentChatId);
   const messages = useChatStore((state) =>
     state.currentChatId !== undefined
       ? state.chatDetailsById[state.currentChatId]?.messages
