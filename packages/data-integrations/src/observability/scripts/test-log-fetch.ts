@@ -10,7 +10,7 @@ import {
   GrafanaClient,
   GrafanaConfig,
   LogsWithPagination,
-} from "../src";
+} from "..";
 
 // Setup command line options
 const program = new Command();

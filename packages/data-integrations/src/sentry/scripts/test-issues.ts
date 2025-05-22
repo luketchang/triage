@@ -1,8 +1,9 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
 import { Command } from "commander";
-import { SentryClient } from "../src";
-import { SentryEvent, SentryListEvent } from "../src/types";
+
+import { SentryClient } from "../";
+import { SentryEvent, SentryListEvent } from "../types";
 
 // Setup command line options
 const program = new Command();
