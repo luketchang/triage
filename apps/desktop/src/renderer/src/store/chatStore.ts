@@ -33,9 +33,9 @@ interface ChatState {
   selectChat: (chatId: number | undefined) => void;
   deleteChat: (chatId: number) => Promise<boolean>;
   setUserInput: (message: string) => void;
+  addContextItem: (item: ContextItem) => void;
   removeContextItem: (index: number) => void;
   sendMessage: () => Promise<void>;
-  tryAddDatadogContextFromUrl: (url: string) => boolean;
 }
 
 const useChatStoreBase = create<ChatState>((set, get) => ({
@@ -50,41 +50,22 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     },
   },
 
-  tryAddDatadogContextFromUrl: (text) => {
-    if (!text || !isValidDatadogLogsViewUrl(text)) return false;
+  addContextItem: (item) => {
+    set((state) => {
+      // Always use the current chat ID (which might be NO_CHAT_SELECTED)
+      const targetId = state.currentChatId;
+      const current = state.chatDetailsById[targetId]?.contextItems ?? [];
 
-    try {
-      const logSearchInput = datadogLogsViewUrlToLogSearchInput(text);
-      if (!logSearchInput) return false;
-
-      set((state) => {
-        // Always use the current chat ID (which might be NO_CHAT_SELECTED)
-        const targetId = state.currentChatId;
-
-        const current = state.chatDetailsById[targetId]?.contextItems ?? [];
-        const exists = current.some(
-          (item) =>
-            item.type === "logSearchInput" &&
-            item.query === logSearchInput.query &&
-            item.start === logSearchInput.start &&
-            item.end === logSearchInput.end
-        );
-
-        return {
-          chatDetailsById: {
-            ...state.chatDetailsById,
-            [targetId]: {
-              ...state.chatDetailsById[targetId],
-              contextItems: [...current, logSearchInput],
-            },
+      return {
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [targetId]: {
+            ...state.chatDetailsById[targetId],
+            contextItems: [...current, item],
           },
-        };
-      });
-
-      return true;
-    } catch {
-      return false;
-    }
+        },
+      };
+    });
   },
 
   loadChats: async () => {

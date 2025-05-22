@@ -5,6 +5,10 @@ import TextareaAutosize from "react-textarea-autosize";
 import { SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { useChatStore } from "../store/index.js";
+import {
+  datadogLogsViewUrlToLogSearchInput,
+  isValidDatadogLogsViewUrl,
+} from "../utils/parse/logs.js";
 import { Button } from "./ui/Button.jsx";
 
 function ChatInputArea() {
@@ -29,7 +33,7 @@ function ChatInputArea() {
   const setUserInput = useChatStore.use.setUserInput();
   const removeContextItem = useChatStore.use.removeContextItem();
   const sendMessage = useChatStore.use.sendMessage();
-  const tryAddDatadogContextFromUrl = useChatStore.use.tryAddDatadogContextFromUrl();
+  const addContextItem = useChatStore.use.addContextItem();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -48,11 +52,27 @@ function ChatInputArea() {
     return () => clearTimeout(focusTimeout);
   }, [isThinking]);
 
+  const tryAddDatadogContextFromUrl = (text: string): boolean => {
+    const logSearchInput = datadogLogsViewUrlToLogSearchInput(text);
+    if (logSearchInput) {
+      addContextItem(logSearchInput);
+      return true;
+    }
+    return false;
+  };
+
   // Handle paste event to detect Datadog URLs
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const text = e.clipboardData.getData("text");
-    if (tryAddDatadogContextFromUrl(text)) {
-      // Intercepted a valid URL - don't insert it
+
+    // Try to parse as Datadog logs URL
+    let added = false;
+    if (text && isValidDatadogLogsViewUrl(text)) {
+      added = tryAddDatadogContextFromUrl(text);
+    }
+
+    // NOTE: we will have other checks in future, that's why we have this `added` pattern
+    if (added) {
       e.preventDefault();
     }
   };
