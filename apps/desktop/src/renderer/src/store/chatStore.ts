@@ -167,6 +167,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     const chatDetails = chatDetailsById[currentChatId];
 
     // Check if we have pending context items when no chat is selected
+    // This is to enable us to send a message with no user input and only context items
     let pendingContextItems: ContextItem[] = [];
     if (currentChatId === NO_CHAT_SELECTED) {
       pendingContextItems = chatDetailsById[NO_CHAT_SELECTED]?.contextItems || [];
