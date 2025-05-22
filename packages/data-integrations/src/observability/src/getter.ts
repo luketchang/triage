@@ -1,21 +1,19 @@
+import { DatadogClient } from "./clients/datadog";
+import { GrafanaClient } from "./clients/grafana";
 import { ObservabilityConfig } from "./config";
-import { ObservabilityPlatform } from "./observability.interface";
-import { DatadogPlatform } from "./platforms/datadog";
-import { GrafanaPlatform } from "./platforms/grafana";
+import { ObservabilityClient } from "./observability.interface";
 
-export function getObservabilityPlatform(
-  observabilityCfg: ObservabilityConfig
-): ObservabilityPlatform {
-  if (observabilityCfg.observabilityPlatform === "datadog") {
+export function getObservabilityClient(observabilityCfg: ObservabilityConfig): ObservabilityClient {
+  if (observabilityCfg.observabilityClient === "datadog") {
     if (!observabilityCfg.datadog) {
-      throw new Error("Datadog platform not configured");
+      throw new Error("Datadog client not configured");
     }
-    return new DatadogPlatform(observabilityCfg.datadog);
-  } else if (observabilityCfg.observabilityPlatform === "grafana") {
+    return new DatadogClient(observabilityCfg.datadog);
+  } else if (observabilityCfg.observabilityClient === "grafana") {
     if (!observabilityCfg.grafana) {
-      throw new Error("Grafana platform not configured");
+      throw new Error("Grafana client not configured");
     }
-    return new GrafanaPlatform(observabilityCfg.grafana);
+    return new GrafanaClient(observabilityCfg.grafana);
   }
-  throw new Error("No observability platform configured");
+  throw new Error("No observability client configured");
 }

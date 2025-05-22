@@ -3,11 +3,11 @@ import { logger } from "@triage/common";
 import { Command } from "commander";
 import {
   DatadogCfgSchema,
+  DatadogClient,
   DatadogConfig,
-  DatadogPlatform,
   GrafanaCfgSchema,
+  GrafanaClient,
   GrafanaConfig,
-  GrafanaPlatform,
   LogsWithPagination,
 } from "../src";
 
@@ -16,8 +16,8 @@ const program = new Command();
 
 program
   .name("test-log-fetch")
-  .description("Test log fetching from Datadog and Grafana observability platforms")
-  .option("-p, --platform <platform>", "Platform to test (datadog, grafana, or both)", "both")
+  .description("Test log fetching from Datadog and Grafana observability clients")
+  .option("-p, --client <client>", "Client to test (datadog, grafana, or both)", "both")
   .option("-q, --query <query>", "Log query to execute", "*")
   .option(
     "-s, --start <datetime>",
@@ -30,19 +30,17 @@ program
 
 const options = program.opts();
 
-// Validate platform option
-const validPlatforms = ["datadog", "grafana", "both"];
-if (!validPlatforms.includes(options.platform)) {
-  logger.error(
-    `Invalid platform: ${options.platform}. Must be one of: ${validPlatforms.join(", ")}`
-  );
+// Validate client option
+const validClients = ["datadog", "grafana", "both"];
+if (!validClients.includes(options.client)) {
+  logger.error(`Invalid client: ${options.client}. Must be one of: ${validClients.join(", ")}`);
   process.exit(1);
 }
 
 // Display formatted logs
-function displayLogs(logsWithPagination: LogsWithPagination, platform: string): void {
+function displayLogs(logsWithPagination: LogsWithPagination, client: string): void {
   const logs = logsWithPagination.logs;
-  logger.info(`\n${platform.toUpperCase()} LOGS (${logs.length} logs found):`);
+  logger.info(`\n${client.toUpperCase()} LOGS (${logs.length} logs found):`);
 
   if (logs.length === 0) {
     logger.info("No logs found for the given query.");
@@ -70,8 +68,8 @@ async function testDatadogLogFetch(datadogCfg: DatadogConfig): Promise<void> {
     logger.info(`Time range: ${options.start} to ${options.end}`);
     logger.info(`Limit: ${options.limit}`);
 
-    const datadogPlatform = new DatadogPlatform(datadogCfg);
-    const logs = await datadogPlatform.fetchLogs({
+    const datadogClient = new DatadogClient(datadogCfg);
+    const logs = await datadogClient.fetchLogs({
       type: "logSearchInput",
       query: options.query,
       start: options.start,
@@ -105,8 +103,8 @@ async function testGrafanaLogFetch(grafanaCfg: GrafanaConfig): Promise<void> {
 
     logger.info(`Formatted Grafana query: ${grafanaQuery}`);
 
-    const grafanaPlatform = new GrafanaPlatform(grafanaCfg);
-    const logs = await grafanaPlatform.fetchLogs({
+    const grafanaClient = new GrafanaClient(grafanaCfg);
+    const logs = await grafanaClient.fetchLogs({
       type: "logSearchInput",
       query: grafanaQuery,
       start: options.start,
@@ -123,14 +121,14 @@ async function testGrafanaLogFetch(grafanaCfg: GrafanaConfig): Promise<void> {
 async function main(): Promise<void> {
   logger.info("Starting log fetch test...");
 
-  if (options.platform === "datadog" || options.platform === "both") {
+  if (options.client === "datadog" || options.client === "both") {
     const datadogCfg = DatadogCfgSchema.parse({
       apiKey: process.env.DATADOG_API_KEY,
       appKey: process.env.DATADOG_APP_KEY,
     });
     await testDatadogLogFetch(datadogCfg);
   }
-  if (options.platform === "grafana" || options.platform === "both") {
+  if (options.client === "grafana" || options.client === "both") {
     const grafanaCfg = GrafanaCfgSchema.parse({
       baseUrl: process.env.GRAFANA_BASE_URL,
       username: process.env.GRAFANA_USERNAME,

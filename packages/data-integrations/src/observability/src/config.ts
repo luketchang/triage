@@ -16,7 +16,7 @@ export const GrafanaCfgSchema = z.object({
 export type GrafanaConfig = z.infer<typeof GrafanaCfgSchema>;
 
 export const ObservabilityCfgSchema = z.object({
-  observabilityPlatform: z.enum(["datadog", "grafana"]).default("datadog"),
+  observabilityClient: z.enum(["datadog", "grafana"]).default("datadog"),
   observabilityFeatures: z.array(z.enum(["logs", "spans"])).default(["logs"]),
   datadog: DatadogCfgSchema.optional(),
   grafana: GrafanaCfgSchema.optional(),

@@ -73,13 +73,13 @@ export const logSearchInputSchema = z.object({
     .describe(
       "End time in ISO 8601 format with timezone (e.g., '2025-03-19T04:40:00Z'). Be generous and give +15 minutes if user provided exact time."
     ),
-  query: z.string().describe("Log search query in the observability platform query language"),
+  query: z.string().describe("Log search query in the observability client query language"),
   limit: z.number().describe("Maximum number of logs to return, default to 500"),
   pageCursor: z
     .string()
     .optional()
     .describe(
-      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
+      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other observability clients. Always set to null when no cursor is needed."
     ),
 });
 
@@ -107,13 +107,13 @@ export const traceSearchInputSchema = z.object({
     .describe(
       "End time in ISO 8601 format with timezone (e.g., '2025-03-19T04:40:00Z'). Be generous and give +/- 15 minutes if user provided exact time."
     ),
-  query: z.string().describe("Trace search query in the observability platform query language"),
+  query: z.string().describe("Trace search query in the observability client query language"),
   limit: z.number().describe("Maximum number of traces to return, default to 20"),
   pageCursor: z
     .string()
     .optional()
     .describe(
-      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other platforms. Always set to null when no cursor is needed."
+      "Cursor for pagination. This is only a feature for Datadog. Do not use this for other observability clients. Always set to null when no cursor is needed."
     ),
   reasoning: z
     .string()

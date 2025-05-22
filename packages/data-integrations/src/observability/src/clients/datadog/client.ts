@@ -2,7 +2,7 @@ import { client, v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
 
 import { DatadogConfig } from "../../config";
-import { ObservabilityPlatform } from "../../observability.interface";
+import { ObservabilityClient } from "../../observability.interface";
 import {
   IntegrationType,
   Log,
@@ -76,7 +76,7 @@ Use Datadog Log Search Syntax to search for logs.
 const DATADOG_DEFAULT_FACET_LIST_LOGS = ["service", "status"];
 const DATADOG_DEFAULT_FACET_LIST_SPANS = ["service"]; // TODO: add operation_name, resource, status
 
-export class DatadogPlatform implements ObservabilityPlatform {
+export class DatadogClient implements ObservabilityClient {
   integrationType: IntegrationType = IntegrationType.DATADOG;
   private apiKey: string;
   private appKey: string;

@@ -1,7 +1,7 @@
 import { exec } from "child_process";
 
 import { logger } from "@triage/common";
-import { ObservabilityPlatform } from "@triage/data-integrations";
+import { ObservabilityClient } from "@triage/data-integrations";
 
 import { CodeSearchAgentResponse } from "../nodes/code-search";
 import { LogSearchAgentResponse } from "../nodes/log-search";
@@ -72,10 +72,10 @@ export async function handleGrepRequest(
 
 export async function handleLogSearchRequest(
   toolCall: LogSearchRequest,
-  observabilityPlatform: ObservabilityPlatform
+  observabilityClient: ObservabilityClient
 ): Promise<LogSearchResult | LLMToolCallError> {
   try {
-    const logContext = await observabilityPlatform.fetchLogs(toolCall);
+    const logContext = await observabilityClient.fetchLogs(toolCall);
     return { type: "result", toolCallType: "logSearchInput", ...logContext };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));

@@ -2,9 +2,9 @@ export * from "./config";
 export * from "./observability.interface";
 export * from "./types";
 
-// Export platforms
-export { DatadogPlatform } from "./platforms/datadog";
-export { GrafanaPlatform } from "./platforms/grafana";
+// Export clients
+export { DatadogClient } from "./clients/datadog";
+export { GrafanaClient } from "./clients/grafana";
 
 // Export getter
-export { getObservabilityPlatform } from "./getter";
+export { getObservabilityClient } from "./getter";

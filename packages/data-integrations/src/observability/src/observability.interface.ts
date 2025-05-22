@@ -10,20 +10,20 @@ import {
 } from "./types";
 
 /**
- * Interface for observability platforms like Datadog and Grafana
+ * Interface for observability clients like Datadog and Grafana
  * Provides a common abstraction layer for fetching observability data
  */
-export interface ObservabilityPlatform {
+export interface ObservabilityClient {
   integrationType: IntegrationType;
 
   /**
-   * Get instructions for span search query specific to platform's query language
+   * Get instructions for span search query specific to client's query language
    * @returns Instructions for span search query
    */
   getSpanSearchQueryInstructions(): string;
 
   /**
-   * Get instructions for log search query specific to platform's query language
+   * Get instructions for log search query specific to client's query language
    * @returns Instructions for log search query
    */
   getLogSearchQueryInstructions(): string;
@@ -60,7 +60,7 @@ export interface ObservabilityPlatform {
   ): Promise<Map<string, string[]>>;
 
   /**
-   * Fetch spans from the observability platform
+   * Fetch spans from the observability client
    * @param query - Query string to filter spans
    * @param start - Start time in ISO format
    * @param end - End time in ISO format
@@ -71,7 +71,7 @@ export interface ObservabilityPlatform {
   fetchSpans(params: SpanSearchInput): Promise<SpansWithPagination>;
 
   /**
-   * Fetch logs from the observability platform
+   * Fetch logs from the observability client
    * @param query - Query string to filter logs
    * @param start - Start time in ISO format
    * @param end - End time in ISO format
@@ -82,7 +82,7 @@ export interface ObservabilityPlatform {
   fetchLogs(params: LogSearchInput): Promise<LogsWithPagination>;
 
   /**
-   * Fetch traces from the observability platform
+   * Fetch traces from the observability client
    * @param query - Query string to filter traces (returns traces containing matching spans)
    * @param start - Start time in ISO format
    * @param end - End time in ISO format
