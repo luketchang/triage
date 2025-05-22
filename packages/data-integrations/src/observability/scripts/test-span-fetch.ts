@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
 import { Command } from "commander";
+
 import { DatadogCfgSchema, DatadogClient, DatadogConfig, Span, SpansWithPagination } from "../src";
 
 // Setup command line options
@@ -8,7 +9,7 @@ const program = new Command();
 
 program
   .name("test-span-fetch")
-  .description("Test span fetching from Datadog observability client")
+  .description("Test span fetching from Datadog observability platform")
   .option("-p, --client <client>", "Client to test (datadog)", "datadog")
   .option("-q, --query <query>", "Span query to execute", "*")
   .option(

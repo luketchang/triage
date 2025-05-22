@@ -34,7 +34,7 @@ function createLogSearchPrompt(params: {
   query: string;
   timezone: string;
   logRequest: string;
-  observabilityClientSpecificInstructions: string;
+  platformSpecificInstructions: string;
   previousLogSearchToolCallsWithResults: LogSearchToolCallWithResult[];
   lastLogSearchToolCallWithResult?: LogSearchToolCallWithResult;
   logLabelsMap: Map<string, string[]>;
@@ -93,9 +93,9 @@ ${params.query}
 ${formatFacetValues(params.logLabelsMap)}
 </log_labels>
 
-<observability_client_specific_instructions>
-${params.observabilityClientSpecificInstructions}
-</observability_client_specific_instructions>
+<platform_specific_instructions>
+${params.platformSpecificInstructions}
+</platform_specific_instructions>
 
 <previous_log_query_result>
 ${formattedLastLogSearchStep}
@@ -139,8 +139,7 @@ class LogSearch {
   }): Promise<LogSearchResponse> {
     const prompt = createLogSearchPrompt({
       ...params,
-      observabilityClientSpecificInstructions:
-        this.observabilityClient.getLogSearchQueryInstructions(),
+      platformSpecificInstructions: this.observabilityClient.getLogSearchQueryInstructions(),
     });
 
     try {
@@ -268,7 +267,7 @@ export class LogSearchAgent {
         logger.info("Fetching logs from observability client...");
         const logContext = await handleLogSearchRequest(
           // TODO: remove this once we allow multiple log search tool calls
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+
           response.actions[0]!,
           this.config.observabilityClient
         );

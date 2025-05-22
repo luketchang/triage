@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
 import { Command } from "commander";
+
 import {
   DatadogCfgSchema,
   DatadogClient,
@@ -16,7 +17,7 @@ const program = new Command();
 
 program
   .name("test-log-fetch")
-  .description("Test log fetching from Datadog and Grafana observability clients")
+  .description("Test log fetching from Datadog and Grafana observability platforms")
   .option("-p, --client <client>", "Client to test (datadog, grafana, or both)", "both")
   .option("-q, --query <query>", "Log query to execute", "*")
   .option(

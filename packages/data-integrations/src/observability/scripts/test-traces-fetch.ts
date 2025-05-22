@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
 import { Command } from "commander";
+
 import { DatadogCfgSchema, DatadogConfig, Trace, TracesWithPagination } from "../src";
 import { DatadogClient } from "../src/clients/datadog";
 
@@ -9,7 +10,7 @@ const program = new Command();
 
 program
   .name("test-traces-fetch")
-  .description("Test trace fetching from Datadog observability client")
+  .description("Test trace fetching from Datadog observability platform")
   .option("-p, --client <client>", "Client to test (datadog)", "datadog")
   .option("-q, --query <query>", "Span query to find traces", "*") // Query is based on spans
   .option(

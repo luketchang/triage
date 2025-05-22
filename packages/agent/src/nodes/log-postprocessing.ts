@@ -21,7 +21,7 @@ function createPrompt(params: {
   query: string;
   logLabelsMap: Map<string, string[]>;
   logSearchToolCallsWithResults: LogSearchToolCallWithResult[];
-  observabilityClientSpecificInstructions: string;
+  platformSpecificInstructions: string;
   answer: string;
 }): string {
   return `
@@ -39,7 +39,7 @@ function createPrompt(params: {
   - You must output a single log postprocessing tool call. A postprocessing tool call may list multiple facts. DO NOT output multiple tool calls.
 
   Tips:
-  - Strictly follow the observability client specific instructions provided below for guidance on the DOs and DONTs of writing log search queries.
+  - Strictly follow the platform specific instructions provided below for guidance on the DOs and DONTs of writing log search queries.
   
   <query>
   ${params.query}
@@ -53,9 +53,9 @@ function createPrompt(params: {
   ${formatFacetValues(params.logLabelsMap)}
   </log_labels>
 
-  <observability_client_specific_instructions>
-  ${params.observabilityClientSpecificInstructions}
-  </observability_client_specific_instructions>
+  <platform_specific_instructions>
+  ${params.platformSpecificInstructions}
+  </platform_specific_instructions>
     
   <previous_log_context>
   ${formatLogSearchToolCallsWithResults(params.logSearchToolCallsWithResults)}
@@ -81,8 +81,7 @@ export class LogPostprocessor {
       logLabelsMap: this.config.logLabelsMap,
       logSearchToolCallsWithResults: this.state.getLogSearchToolCallsWithResults(StepsType.CURRENT),
       answer: this.state.getAnswer()!,
-      observabilityClientSpecificInstructions:
-        this.config.observabilityClient.getLogSearchQueryInstructions(),
+      platformSpecificInstructions: this.config.observabilityClient.getLogSearchQueryInstructions(),
     });
 
     logger.info(`Log postprocessing prompt:\n${prompt}`);

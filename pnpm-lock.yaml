@@ -343,9 +343,6 @@ importers:
       '@triage/config':
         specifier: workspace:*
         version: link:../config
-      '@triage/data-integrations':
-        specifier: workspace:*
-        version: link:../data-integrations
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0

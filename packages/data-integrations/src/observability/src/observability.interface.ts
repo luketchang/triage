@@ -10,7 +10,7 @@ import {
 } from "./types";
 
 /**
- * Interface for observability clients like Datadog and Grafana
+ * Interface for observability platforms like Datadog and Grafana
  * Provides a common abstraction layer for fetching observability data
  */
 export interface ObservabilityClient {
@@ -60,7 +60,7 @@ export interface ObservabilityClient {
   ): Promise<Map<string, string[]>>;
 
   /**
-   * Fetch spans from the observability client
+   * Fetch spans from the observability platform
    * @param query - Query string to filter spans
    * @param start - Start time in ISO format
    * @param end - End time in ISO format
@@ -71,7 +71,7 @@ export interface ObservabilityClient {
   fetchSpans(params: SpanSearchInput): Promise<SpansWithPagination>;
 
   /**
-   * Fetch logs from the observability client
+   * Fetch logs from the observability platform
    * @param query - Query string to filter logs
    * @param start - Start time in ISO format
    * @param end - End time in ISO format
@@ -82,7 +82,7 @@ export interface ObservabilityClient {
   fetchLogs(params: LogSearchInput): Promise<LogsWithPagination>;
 
   /**
-   * Fetch traces from the observability client
+   * Fetch traces from the observability platform
    * @param query - Query string to filter traces (returns traces containing matching spans)
    * @param start - Start time in ISO format
    * @param end - End time in ISO format
