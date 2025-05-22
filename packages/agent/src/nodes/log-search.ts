@@ -266,8 +266,8 @@ export class LogSearchAgent {
 
         logger.info("Fetching logs from observability client...");
         const logContext = await handleLogSearchRequest(
-          // TODO: remove this once we allow multiple log search tool calls
-
+          // TODO: remove once we allow multiple log search tool calls
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           response.actions[0]!,
           this.config.observabilityClient
         );
