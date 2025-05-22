@@ -98,6 +98,11 @@ function initApp(mainWindow: BrowserWindow): void {
   const agentCfgStore = new AgentConfigStore(configStore);
   const observabilityCfgStore = new ObservabilityConfigStore(configStore);
   const sentryCfgStore = new SentryConfigStore(configStore);
+  sentryCfgStore.setValues({
+    sentry: {
+      authToken: "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",
+    },
+  });
 
   // Set up all IPC handlers
   setupAgentHandlers(mainWindow, agentCfgStore);

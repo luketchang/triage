@@ -6,6 +6,8 @@ import {
   DatadogCfgSchema,
   DatadogClient,
   DatadogConfig,
+  formatLogQuery,
+  formatSingleLog,
   GrafanaCfgSchema,
   GrafanaClient,
   GrafanaConfig,
@@ -49,15 +51,14 @@ function displayLogs(logsWithPagination: LogsWithPagination, client: string): vo
   }
 
   logs.forEach((log, index) => {
-    logger.info(`[${index + 1}] ${log.service} | ${log.timestamp} | ${log.level} | ${log.message}`);
-
-    // Only show metadata if it's not empty
+    // Use the formatSingleLog function from the formatting module
+    const formattedLog = formatSingleLog(log);
+    logger.info(`[${index + 1}] ${formattedLog}`);
+    
+    // Only show metadata if it's not empty and not already included in the formatted log
     const metadataEntries = Object.entries(log.metadata || {});
     if (metadataEntries.length > 0) {
       logger.info(`    Metadata: ${JSON.stringify(log.metadata, null, 2)}`);
-    }
-    if (log.attributes) {
-      logger.info(`    Attributes: ${JSON.stringify(log.attributes, null, 2)}`);
     }
   });
 }
@@ -65,17 +66,21 @@ function displayLogs(logsWithPagination: LogsWithPagination, client: string): vo
 async function testDatadogLogFetch(datadogCfg: DatadogConfig): Promise<void> {
   try {
     logger.info("Testing Datadog log fetching...");
-    logger.info(`Query: ${options.query}`);
-    logger.info(`Time range: ${options.start} to ${options.end}`);
-    logger.info(`Limit: ${options.limit}`);
-
-    const datadogClient = new DatadogClient(datadogCfg);
-    const logs = await datadogClient.fetchLogs({
-      type: "logSearchInput",
+    
+    const logSearchInput = {
       query: options.query,
       start: options.start,
       end: options.end,
       limit: parseInt(options.limit, 10),
+    };
+    
+    // Use the formatLogQuery function to display the query
+    logger.info(formatLogQuery(logSearchInput));
+
+    const datadogClient = new DatadogClient(datadogCfg);
+    const logs = await datadogClient.fetchLogs({
+      type: "logSearchInput",
+      ...logSearchInput,
     });
 
     displayLogs(logs, "datadog");
@@ -87,10 +92,7 @@ async function testDatadogLogFetch(datadogCfg: DatadogConfig): Promise<void> {
 async function testGrafanaLogFetch(grafanaCfg: GrafanaConfig): Promise<void> {
   try {
     logger.info("Testing Grafana log fetching...");
-    logger.info(`Query: ${options.query}`);
-    logger.info(`Time range: ${options.start} to ${options.end}`);
-    logger.info(`Limit: ${options.limit}`);
-
+    
     // For Grafana, we need to ensure the query is in the correct format (LogQL)
     // If user provided simple query, format it as a LogQL query
     let grafanaQuery = options.query;
@@ -102,15 +104,21 @@ async function testGrafanaLogFetch(grafanaCfg: GrafanaConfig): Promise<void> {
       }
     }
 
+    const logSearchInput = {
+      query: grafanaQuery,
+      start: options.start,
+      end: options.end,
+      limit: parseInt(options.limit, 10),
+    };
+    
+    // Use the formatLogQuery function to display the query
+    logger.info(formatLogQuery(logSearchInput));
     logger.info(`Formatted Grafana query: ${grafanaQuery}`);
 
     const grafanaClient = new GrafanaClient(grafanaCfg);
     const logs = await grafanaClient.fetchLogs({
       type: "logSearchInput",
-      query: grafanaQuery,
-      start: options.start,
-      end: options.end,
-      limit: parseInt(options.limit, 10),
+      ...logSearchInput,
     });
 
     displayLogs(logs, "grafana");

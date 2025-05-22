@@ -1,10 +1,4 @@
-import {
-  Log,
-  LogSearchInput,
-  LogsWithPagination,
-  RetrieveSentryEventInput,
-  SentryEvent,
-} from "@triage/data-integrations";
+import { formatLogQuery, formatSentryEvent, formatSingleLog } from "@triage/data-integrations";
 
 import {
   CatToolCallWithResult,
@@ -33,55 +27,11 @@ export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: 
   return toolCall;
 }
 
-export function formatLogQuery(logQuery: Partial<LogSearchInput>): string {
-  return `Query: ${logQuery.query}\nStart: ${logQuery.start}\nEnd: ${logQuery.end}\nLimit: ${logQuery.limit}${
-    logQuery.pageCursor ? `\nPage Cursor: ${logQuery.pageCursor}` : ""
-  }`;
-}
-
-export function formatSingleLog(log: Log): string {
-  const attributesString = log.attributes
-    ? Object.entries(log.attributes)
-        .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
-        .join(", ")
-    : "";
-
-  return `[${log.timestamp}] ${log.level.toUpperCase()} [${log.service}] ${log.message}${
-    attributesString ? ` [attributes: ${attributesString}]` : ""
-  }`;
-}
-
-export function formatLogResults(
-  logResults: Map<Partial<LogSearchInput>, LogsWithPagination | string>
-): string {
-  return Array.from(logResults.entries())
-    .map(([input, logsOrError]) => {
-      let formattedContent: string;
-      let pageCursor: string | undefined;
-
-      if (typeof logsOrError === "string") {
-        // It's an error message
-        formattedContent = `Error: ${logsOrError}`;
-        pageCursor = undefined;
-      } else {
-        // It's a log array
-        formattedContent = logsOrError.logs.map((log) => formatSingleLog(log)).join("\n");
-        if (!formattedContent) {
-          formattedContent = "No logs found";
-        }
-        pageCursor = logsOrError.pageCursorOrIndicator;
-      }
-
-      return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
-    })
-    .join("\n\n");
-}
-
-export const formatFacetValues = (facetValues: Map<string, Array<string>>): string => {
+export function formatFacetValues(facetValues: Map<string, Array<string>>): string {
   return Array.from(facetValues.entries())
     .map(([facet, values]) => `${facet}: ${values.join(", ")}`)
     .join("\n");
-};
+}
 
 export function formatSingleLogSearchToolCallWithResult(step: LogSearchToolCallWithResult): string {
   const input = step.input;
@@ -171,106 +121,6 @@ export function formatMaterializedContextItem(item: MaterializedContextItem): st
   }
 
   return "Unknown context item type";
-}
-
-// TODO: potentially cut out some fields to reduce noise
-export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEventInput): string {
-  const parts: string[] = [];
-
-  // Add query information if input is provided
-  if (input) {
-    parts.push(
-      `Query: Issue ID ${input.issueId}${input.eventSpecifier ? `, Event ID ${input.eventSpecifier}` : ""}`
-    );
-  }
-
-  // Basic information
-  parts.push(`Event ID: ${event.eventID}`);
-  parts.push(`Group ID: ${event.groupID}`);
-  parts.push(`Project ID: ${event.projectID}`);
-  parts.push(`Date Created: ${event.dateCreated}`);
-  parts.push(`Date Received: ${event.dateReceived || "(not provided)"}`);
-  parts.push(`Title: ${event.title}`);
-  parts.push(`Message: ${event.message || "(no message)"}`);
-  parts.push(`Platform: ${event.platform}`);
-  parts.push(`Culprit: ${event.culprit || "(not provided)"}`);
-
-  // User information
-  if (event.user) {
-    parts.push("\nUser:");
-    parts.push(`  ID: ${event.user.id || "(anonymous)"}`);
-    parts.push(`  Email: ${event.user.email || "(not provided)"}`);
-    parts.push(`  Username: ${event.user.username || "(not provided)"}`);
-    parts.push(`  Name: ${event.user.name || "(not provided)"}`);
-
-    if (event.user.geo) {
-      parts.push("  Geo:");
-      Object.entries(event.user.geo).forEach(([key, value]) => {
-        parts.push(`    ${key}: ${value}`);
-      });
-    }
-  }
-
-  // Tags
-  if (event.tags && event.tags.length > 0) {
-    parts.push("\nTags:");
-    event.tags.forEach((tag) => {
-      parts.push(`  ${tag.key}: ${tag.value}${tag.query ? ` (query: ${tag.query})` : ""}`);
-    });
-  }
-
-  // Error information
-  if (event.entries && event.entries.length > 0) {
-    parts.push("\nEntries:");
-    event.entries.forEach((entry: any, index: number) => {
-      parts.push(`  [${index + 1}] Type: ${entry.type}`);
-
-      // Handle different entry types
-      if (entry.type === "exception" && entry.data?.values) {
-        parts.push("    Exceptions:");
-        entry.data.values.forEach((exception: any, excIndex: number) => {
-          parts.push(`      [${excIndex + 1}] ${exception.type}: ${exception.value}`);
-          if (exception.stacktrace?.frames) {
-            parts.push("        Stacktrace (most relevant frames):");
-            // Get the last few frames as they're usually most relevant
-            const relevantFrames = exception.stacktrace.frames.slice(-5);
-            relevantFrames.forEach((frame: any) => {
-              parts.push(
-                `          at ${frame.function || "<unknown>"} (${frame.filename}:${frame.lineno}:${frame.colno})`
-              );
-            });
-          }
-        });
-      } else if (entry.type === "breadcrumbs" && entry.data?.values) {
-        parts.push("    Breadcrumbs:");
-        entry.data.values.slice(0, 10).forEach((crumb: any, crumbIndex: number) => {
-          parts.push(
-            `      [${crumbIndex + 1}] ${crumb.timestamp} | ${crumb.level} | ${crumb.category}: ${crumb.message}`
-          );
-        });
-        if (entry.data.values.length > 10) {
-          parts.push(`      ... and ${entry.data.values.length - 10} more breadcrumbs`);
-        }
-      } else if (entry.type === "message" && entry.data) {
-        parts.push(`    Message: ${entry.data.message || ""}`);
-        parts.push(`    Formatted: ${entry.data.formatted || ""}`);
-      } else if (entry.type === "request" && entry.data) {
-        parts.push("    Request:");
-        parts.push(`      URL: ${entry.data.url || ""}`);
-        parts.push(`      Method: ${entry.data.method || ""}`);
-      }
-    });
-  }
-
-  // Context (additional data)
-  if (event.context && Object.keys(event.context).length > 0) {
-    parts.push("\nContext:");
-    Object.entries(event.context).forEach(([key, value]) => {
-      parts.push(`  ${key}: ${JSON.stringify(value)}`);
-    });
-  }
-
-  return parts.join("\n");
 }
 
 export function formatLogSearchToolCallsWithResults(steps: LogSearchToolCallWithResult[]): string {

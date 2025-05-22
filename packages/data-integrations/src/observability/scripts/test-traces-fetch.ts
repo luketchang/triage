@@ -2,7 +2,7 @@
 import { logger } from "@triage/common";
 import { Command } from "commander";
 
-import { DatadogCfgSchema, DatadogConfig, Trace, TracesWithPagination } from "../";
+import { DatadogCfgSchema, DatadogConfig, Trace, TracesWithPagination, formatTraces } from "../";
 import { DatadogClient } from "../clients/datadog";
 
 // Setup command line options
@@ -31,52 +31,13 @@ if (!validClients.includes(options.client)) {
   throw new Error(`Invalid client: ${options.client}. Must be one of: ${validClients.join(", ")}`);
 }
 
-// Format duration helper
-const formatDuration = (durationMs: number): string => {
-  if (durationMs < 1) {
-    return `${(durationMs * 1000).toFixed(2)}µs`;
-  }
-  if (durationMs < 1000) {
-    return `${durationMs.toFixed(2)}ms`;
-  }
-  return `${(durationMs / 1000).toFixed(2)}s`;
-};
+// We'll use the formatDuration from the formatting module
 
 // Display traces results
 function displayTraces(tracesWithPagination: TracesWithPagination, client: string): void {
-  const traces = tracesWithPagination.traces;
-  logger.info(`\n${client.toUpperCase()} TRACES (${traces.length} traces found):`);
-
-  if (traces.length === 0) {
-    logger.info("No traces found for the given query.");
-    return;
-  }
-
-  traces.forEach((trace: Trace, index: number) => {
-    logger.info(`[${index + 1}] Trace ID: ${trace.traceId}`);
-    logger.info(`    Root Service: ${trace.rootService}`);
-    logger.info(`    Root Operation: ${trace.rootOperation}`);
-    logger.info(`    Root Resource: ${trace.rootResource}`);
-    logger.info(`    Start Time: ${trace.startTime.toISOString()}`);
-    logger.info(`    Duration: ${formatDuration(trace.duration)}`);
-    logger.info(`    HTTP Status: ${trace.httpStatus || "N/A"}`);
-    logger.info(`    Has Error: ${trace.hasError}`);
-
-    // NEW: show the latency percentile on the root span
-    // (we annotated root.latencyPercentile in fetchTraces())
-    const latencyPct = trace.rootLatencyPercentile ?? "N/A";
-    logger.info(`    Latency Percentile: ${latencyPct}`);
-
-    // Optionally display service breakdown
-    // logger.info(`    Service Breakdown: ${JSON.stringify(trace.serviceBreakdown, null, 2)}`);
-    logger.info("---");
-  });
-
-  if (tracesWithPagination.pageCursorOrIndicator) {
-    logger.info(`\nNext Page Cursor: ${tracesWithPagination.pageCursorOrIndicator}`);
-  } else {
-    logger.info("\nNo more pages available.");
-  }
+  // Use the formatTraces function from the formatting module
+  const formattedTraces = formatTraces(tracesWithPagination);
+  logger.info(`\n${client.toUpperCase()} ${formattedTraces}`);
 }
 
 async function testDatadogTraceFetch(datadogCfg: DatadogConfig): Promise<void> {
