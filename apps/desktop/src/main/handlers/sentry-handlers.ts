@@ -29,7 +29,7 @@ export function setupSentryHandlers(sentryCfgStore: SentryConfigStore): void {
 
         // Call the client API to fetch the event
         logger.info(`Fetching Sentry event for org ${params.orgSlug}, issue ${params.issueId}`);
-        const result = await client.fetchEventBySpecifier(
+        const result = await client.getEventForIssue(
           params.orgSlug,
           params.issueId,
           params.eventSpecifier
