@@ -23,6 +23,8 @@ import {
   Log,
   LogSearchInput,
   LogsWithPagination,
+  RetrieveSentryEventInput,
+  SentryEventSpecifier,
   ServiceLatency,
   Span,
   SpansWithPagination,
@@ -53,6 +55,8 @@ export type {
   LogSearchToolCallWithResult,
   LogsWithPagination,
   ReasoningStep,
+  RetrieveSentryEventInput,
+  SentryEventSpecifier,
   ServiceLatency,
   Span,
   SpansWithPagination,
@@ -78,16 +82,6 @@ export interface FacetData {
 
 // Interface for chat messages
 export type ChatMessage = UserMessage | AssistantMessage;
-
-// TODO: this will move to sentry package once we add api wrapper
-export type SentryEventSpecifier = "latest" | "oldest" | "recommended" | string;
-
-export interface RetrieveSentryEventInput {
-  type: "retrieveSentryEventInput";
-  orgSlug: string;
-  issueId: string;
-  eventSpecifier: SentryEventSpecifier;
-}
 
 export type ContextItem = LogSearchInput | RetrieveSentryEventInput;
 

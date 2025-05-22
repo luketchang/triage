@@ -1,8 +1,7 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
 import { Command } from "commander";
-import { DatadogCfgSchema, DatadogConfig, SpansWithPagination } from "../../../dist";
-import { DatadogClient } from "../src";
+import { DatadogCfgSchema, DatadogClient, DatadogConfig, Span, SpansWithPagination } from "../src";
 
 // Setup command line options
 const program = new Command();
@@ -41,7 +40,7 @@ function displaySpans(spansWithPagination: SpansWithPagination, client: string):
   }
 
   const formattedSpans = spans
-    .map((span, index) => {
+    .map((span: Span, index: number) => {
       return `[${index + 1}] Span ID: ${span.spanId}
     Service: ${span.service}
     Operation: ${span.operation}
