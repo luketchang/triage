@@ -1,14 +1,15 @@
 import { formatLogQuery, formatSentryEvent, formatSingleLog } from "@triage/data-integrations";
 
 import {
+  AgentStep,
   CatToolCallWithResult,
   CodeSearchToolCallWithResult,
   GrepToolCallWithResult,
   LogSearchToolCallWithResult,
+  ReasoningStep,
 } from "./pipeline/state";
-import { MaterializedContextItem } from "./types/message.js";
-
-import { AgentStep, ChatMessage, ReasoningStep } from ".";
+import { ChatMessage, MaterializedContextItem } from "./types";
+import { UserMessage } from "./types/message";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {
@@ -42,7 +43,7 @@ export function formatSingleLogSearchToolCallWithResult(step: LogSearchToolCallW
 
   if (logsOrError.type === "error") {
     // It's an error message
-    formattedContent = `Error: ${logsOrError}`;
+    formattedContent = `Error: ${logsOrError.error}`;
     pageCursor = undefined;
   } else {
     // It's a log array
@@ -54,6 +55,44 @@ export function formatSingleLogSearchToolCallWithResult(step: LogSearchToolCallW
   }
 
   return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
+}
+
+/**
+ * Format a UserMessage with its context items
+ * @param userMessage The user message to format
+ * @returns Formatted string with content and context items
+ */
+export function formatUserMessageWithContext(userMessage: UserMessage): string {
+  let formattedMessage = userMessage.content;
+
+  // Add materialized context items if they exist
+  if (userMessage.contextItems && userMessage.contextItems.length > 0) {
+    formattedMessage += "\n\nAttached Context:";
+
+    userMessage.contextItems.forEach((item) => {
+      if (item.type === "log") {
+        formattedMessage += `\n\nLog Query:\n${formatLogQuery(item.input)}`;
+
+        // Check if there are any logs
+        if (item.output.logs.length > 0) {
+          const firstLog = item.output.logs[0];
+          if (firstLog) {
+            formattedMessage += `\n\nLog Results:\n${formatSingleLog(firstLog)}`;
+            // If there are multiple logs, add a summary
+            if (item.output.logs.length > 1) {
+              formattedMessage += `\n...and ${item.output.logs.length - 1} more logs`;
+            }
+          }
+        } else {
+          formattedMessage += "\n\nNo logs found matching this query.";
+        }
+      } else if (item.type === "sentry") {
+        formattedMessage += `\n\nSentry Event:\n${formatSentryEvent(item.output)}`;
+      }
+    });
+  }
+
+  return formattedMessage;
 }
 
 export function formatSingleCatToolCallWithResult(
@@ -71,7 +110,7 @@ export function formatSingleCatToolCallWithResult(
       const lines = source.split("\n");
       const maxLineNumberWidth = String(lines.length).length;
       source = lines
-        .map((line, index) => {
+        .map((line: string, index: number) => {
           const lineNumber = String(index + 1).padStart(maxLineNumberWidth, " ");
           return `${lineNumber} | ${line}`;
         })
@@ -94,7 +133,7 @@ export function formatSingleGrepToolCallWithResult(step: GrepToolCallWithResult)
     const lines = source.split("\n");
     const maxLineNumberWidth = String(lines.length).length;
     source = lines
-      .map((line, index) => {
+      .map((line: string, index: number) => {
         const lineNumber = String(index + 1).padStart(maxLineNumberWidth, " ");
         return `${lineNumber} | ${line}`;
       })
@@ -186,6 +225,7 @@ export function formatAgentSteps(steps: AgentStep[]): string {
     .join("\n\n");
 }
 
+// TODO: extract assistant message formatting into its own function
 export function formatCurrentChatHistory(
   chatHistory: ChatMessage[],
   currSteps: AgentStep[]
@@ -197,7 +237,7 @@ export function formatCurrentChatHistory(
   const chatHistoryString = chatHistory
     .map((message) => {
       if (message.role === "user") {
-        return `User:\n${message.content}`;
+        return formatUserMessageWithContext(message);
       } else {
         let formattedMessage = "Assistant:";
 

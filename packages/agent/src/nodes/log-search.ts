@@ -8,11 +8,12 @@ import { TriagePipelineConfig } from "../pipeline";
 import { LogSearchStep, LogSearchToolCallWithResult, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
 import { handleLogSearchRequest } from "../tools";
-import { logSearchInputToolSchema, LogSearchRequest, TaskComplete } from "../types";
+import { logSearchInputToolSchema, LogSearchRequest, TaskComplete, UserMessage } from "../types";
 import {
   ensureSingleToolCall,
   formatFacetValues,
   formatLogSearchToolCallsWithResults,
+  formatUserMessageWithContext,
 } from "../utils";
 
 export interface LogSearchAgentResponse {
@@ -31,7 +32,7 @@ You are an expert AI assistant that helps engineers debug production issues by s
 `;
 
 function createLogSearchPrompt(params: {
-  query: string;
+  userMessage: UserMessage;
   timezone: string;
   logRequest: string;
   platformSpecificInstructions: string;
@@ -86,7 +87,7 @@ ${currentTime}
 </current_time_in_user_local_timezone>
 
 <query>
-${params.query}
+${formatUserMessageWithContext(params.userMessage)}
 </query>
 
 <log_labels>
@@ -128,7 +129,7 @@ class LogSearch {
 
   async invoke(params: {
     logSearchId: string;
-    query: string;
+    userMessage: UserMessage;
     timezone: string;
     logRequest: string;
     previousLogSearchToolCallsWithResults: LogSearchToolCallWithResult[];
@@ -244,7 +245,7 @@ export class LogSearchAgent {
       const logSearchId = uuidv4();
       response = await this.logSearch.invoke({
         logSearchId,
-        query: this.config.query,
+        userMessage: this.config.userMessage,
         timezone: this.config.timezone,
         logRequest: params.logRequest,
         logLabelsMap: this.config.logLabelsMap,

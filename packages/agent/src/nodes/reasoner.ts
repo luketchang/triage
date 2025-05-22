@@ -5,18 +5,23 @@ import { v4 as uuidv4 } from "uuid";
 import { TriagePipelineConfig } from "../pipeline";
 import { ReasoningStep } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
-import { codeRequestToolSchema, logRequestToolSchema, RequestSubAgentCalls } from "../types";
-import { formatFacetValues } from "../utils";
+import {
+  codeRequestToolSchema,
+  logRequestToolSchema,
+  RequestSubAgentCalls,
+  UserMessage,
+} from "../types";
+import { formatFacetValues, formatUserMessageWithContext } from "../utils";
 type ReasoningResponse = ReasoningStep | RequestSubAgentCalls;
 
 export const createPrompt = ({
-  query,
+  userMessage,
   repoPath,
   codebaseOverview,
   fileTree,
   logLabelsMap,
 }: {
-  query: string;
+  userMessage: UserMessage;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
@@ -49,7 +54,7 @@ Tips:
   - Do not miss the forest for the trees and suggest a narrow bandaid fix. Think about how the system should ideally function if it were fully correct. Then simulate how the system would behave under your proposed fixes to validate that your fix is fully correct and doesn't introduce new issues or fail to solve the original problem. If it does fail, try to reason about what the root cause is and propose a new fix.
 
 <query>
-${query}
+${formatUserMessageWithContext(userMessage)}
 </query>
 
 <repo_path>
@@ -83,7 +88,7 @@ export class Reasoner {
 
   @timer
   async invoke(params: { parentId: string; maxSteps?: number }): Promise<ReasoningResponse> {
-    logger.info(`Reasoning about query: ${this.config.query}`);
+    logger.info(`Reasoning about query: ${this.config.userMessage.content}`);
 
     // HACK: stream single reasoning update just to start the step in the UI
     this.state.addStreamingUpdate("reasoning", params.parentId, "");
