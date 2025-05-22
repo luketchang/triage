@@ -79,11 +79,14 @@ export interface FacetData {
 // Interface for chat messages
 export type ChatMessage = UserMessage | AssistantMessage;
 
+export type ContextItem = LogSearchInput;
+
 export interface UserMessage {
   id: string;
   role: "user";
   timestamp: Date;
   content: string;
+  contextItems?: ContextItem[];
 }
 
 export interface AssistantMessage {
