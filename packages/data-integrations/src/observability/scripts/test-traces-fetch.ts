@@ -89,6 +89,7 @@ async function testDatadogTraceFetch(datadogCfg: DatadogConfig): Promise<void> {
 
     const datadogPlatform = new DatadogPlatform(datadogCfg);
     const tracesResult = await datadogPlatform.fetchTraces({
+      type: "traceSearchInput",
       query: options.query,
       start: options.start,
       end: options.end,

@@ -72,6 +72,7 @@ async function testDatadogLogFetch(datadogCfg: DatadogConfig): Promise<void> {
 
     const datadogPlatform = new DatadogPlatform(datadogCfg);
     const logs = await datadogPlatform.fetchLogs({
+      type: "logSearchInput",
       query: options.query,
       start: options.start,
       end: options.end,
@@ -106,6 +107,7 @@ async function testGrafanaLogFetch(grafanaCfg: GrafanaConfig): Promise<void> {
 
     const grafanaPlatform = new GrafanaPlatform(grafanaCfg);
     const logs = await grafanaPlatform.fetchLogs({
+      type: "logSearchInput",
       query: grafanaQuery,
       start: options.start,
       end: options.end,

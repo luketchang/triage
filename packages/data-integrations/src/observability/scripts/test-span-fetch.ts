@@ -70,6 +70,7 @@ async function testDatadogSpanFetch(datadogCfg: DatadogConfig): Promise<void> {
 
     const datadogPlatform = new DatadogPlatform(datadogCfg);
     const spans = await datadogPlatform.fetchSpans({
+      type: "spanSearchInput",
       query: options.query,
       start: options.start,
       end: options.end,
