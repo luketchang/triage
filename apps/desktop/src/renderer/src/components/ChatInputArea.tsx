@@ -31,19 +31,13 @@ function ContextItemView({ item, index, onRemove }: ContextItemProps) {
     secondaryContent = (
       <span className="text-gray-400">{formatDateRange(item.start, item.end)}</span>
     );
-  } else if (item.type === "retrieveSentryEventInput") {
+  } else {
     primaryContent = (
       <span className="font-medium text-gray-300 truncate max-w-[200px]">
         Sentry Issue: {item.issueId}
       </span>
     );
     secondaryContent = <span className="text-gray-400">{item.eventSpecifier}</span>;
-  } else {
-    // Fallback for unknown item types
-    primaryContent = (
-      <span className="font-medium text-gray-300 truncate max-w-[200px]">Context Item</span>
-    );
-    secondaryContent = null;
   }
 
   return (

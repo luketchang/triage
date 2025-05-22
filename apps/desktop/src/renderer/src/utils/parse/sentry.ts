@@ -40,7 +40,7 @@ export function isValidSentryEventUrl(url: string): boolean {
   }
 }
 
-export function parseSentryEventUrl(fullUrl: string): RetrieveSentryEventInput {
+export function parseSentryEventUrl(fullUrl: string): RetrieveSentryEventInput | undefined {
   const u = new URL(fullUrl);
 
   // extract org slug from subdomain
@@ -51,7 +51,7 @@ export function parseSentryEventUrl(fullUrl: string): RetrieveSentryEventInput {
   // parts: ["issues","{issueId}", maybe "events","{specifier}", …]
   const issueIdx = parts.indexOf("issues");
   if (issueIdx < 0 || parts.length < issueIdx + 2) {
-    throw new Error(`Not a valid Sentry issue URL: ${fullUrl}`);
+    return undefined;
   }
 
   const issueId = parts[issueIdx + 1];
