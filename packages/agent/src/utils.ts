@@ -1,4 +1,10 @@
-import { Log, LogSearchInput, LogsWithPagination } from "@triage/data-integrations";
+import {
+  Log,
+  LogSearchInput,
+  LogsWithPagination,
+  SentryEvent,
+  RetrieveSentryEventInput
+} from "@triage/data-integrations";
 
 import {
   CatToolCallWithResult,
@@ -6,6 +12,8 @@ import {
   GrepToolCallWithResult,
   LogSearchToolCallWithResult,
 } from "./pipeline/state";
+
+import { MaterializedContextItem } from "./types/message.js";
 
 import { AgentStep, ChatMessage, ReasoningStep } from ".";
 
@@ -145,6 +153,123 @@ export function formatSingleGrepToolCallWithResult(step: GrepToolCallWithResult)
 
     return `${separator}\n${inputArgs}\n${separator}\n${source}\n`;
   }
+}
+
+export function formatMaterializedContextItem(item: MaterializedContextItem): string {
+  if (item.type === "log") {
+    const input = item.input;
+    const output = item.output;
+    
+    let formattedContent: string;
+    let pageCursor: string | undefined;
+    
+    formattedContent = output.logs.map((log) => formatSingleLog(log)).join("\n");
+    if (!formattedContent) {
+      formattedContent = "No logs found";
+    }
+    pageCursor = output.pageCursorOrIndicator;
+    
+    return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
+  } else if (item.type === "sentry") {
+    return formatSentryEvent(item.output, item.input);
+  }
+  
+  return "Unknown context item type";
+}
+
+export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEventInput): string {
+  const parts: string[] = [];
+  
+  // Add query information if input is provided
+  if (input) {
+    parts.push(`Query: Issue ID ${input.issueId}${input.eventId ? `, Event ID ${input.eventId}` : ""}`);
+  }
+  
+  // Basic information
+  parts.push(`Event ID: ${event.eventID}`);
+  parts.push(`Group ID: ${event.groupID}`);
+  parts.push(`Project ID: ${event.projectID}`);
+  parts.push(`Date Created: ${event.dateCreated}`);
+  parts.push(`Date Received: ${event.dateReceived || "(not provided)"}`);
+  parts.push(`Title: ${event.title}`);
+  parts.push(`Message: ${event.message || "(no message)"}`);
+  parts.push(`Platform: ${event.platform}`);
+  parts.push(`Culprit: ${event.culprit || "(not provided)"}`);
+  
+  // User information
+  if (event.user) {
+    parts.push("\nUser:");
+    parts.push(`  ID: ${event.user.id || "(anonymous)"}`);
+    parts.push(`  Email: ${event.user.email || "(not provided)"}`);
+    parts.push(`  Username: ${event.user.username || "(not provided)"}`);
+    parts.push(`  Name: ${event.user.name || "(not provided)"}`);
+    
+    if (event.user.geo) {
+      parts.push("  Geo:");
+      Object.entries(event.user.geo).forEach(([key, value]) => {
+        parts.push(`    ${key}: ${value}`);
+      });
+    }
+  }
+  
+  // Tags
+  if (event.tags && event.tags.length > 0) {
+    parts.push("\nTags:");
+    event.tags.forEach((tag) => {
+      parts.push(`  ${tag.key}: ${tag.value}${tag.query ? ` (query: ${tag.query})` : ""}`);
+    });
+  }
+  
+  // Error information
+  if (event.entries && event.entries.length > 0) {
+    parts.push("\nEntries:");
+    event.entries.forEach((entry: any, index: number) => {
+      parts.push(`  [${index + 1}] Type: ${entry.type}`);
+      
+      // Handle different entry types
+      if (entry.type === "exception" && entry.data?.values) {
+        parts.push("    Exceptions:");
+        entry.data.values.forEach((exception: any, excIndex: number) => {
+          parts.push(`      [${excIndex + 1}] ${exception.type}: ${exception.value}`);
+          if (exception.stacktrace?.frames) {
+            parts.push("        Stacktrace (most relevant frames):");
+            // Get the last few frames as they're usually most relevant
+            const relevantFrames = exception.stacktrace.frames.slice(-5);
+            relevantFrames.forEach((frame: any) => {
+              parts.push(`          at ${frame.function || "<unknown>"} (${frame.filename}:${frame.lineno}:${frame.colno})`);
+            });
+          }
+        });
+      } else if (entry.type === "breadcrumbs" && entry.data?.values) {
+        parts.push("    Breadcrumbs:");
+        entry.data.values.slice(0, 10).forEach((crumb: any, crumbIndex: number) => {
+          parts.push(
+            `      [${crumbIndex + 1}] ${crumb.timestamp} | ${crumb.level} | ${crumb.category}: ${crumb.message}`
+          );
+        });
+        if (entry.data.values.length > 10) {
+          parts.push(`      ... and ${entry.data.values.length - 10} more breadcrumbs`);
+        }
+      } else if (entry.type === "message" && entry.data) {
+        parts.push(`    Message: ${entry.data.message || ""}`);
+        parts.push(`    Formatted: ${entry.data.formatted || ""}`);
+      } else if (entry.type === "request" && entry.data) {
+        parts.push("    Request:");
+        parts.push(`      URL: ${entry.data.url || ""}`);
+        parts.push(`      Method: ${entry.data.method || ""}`);
+      }
+    });
+  }
+  
+  // Context (additional data)
+  if (event.context && Object.keys(event.context).length > 0) {
+    parts.push("\nContext:");
+    Object.entries(event.context).forEach(([key, value]) => {
+      parts.push(`  ${key}: ${JSON.stringify(value)}`);
+    });
+  }
+  
+  return parts.join("\n");
 }
 
 export function formatLogSearchToolCallsWithResults(steps: LogSearchToolCallWithResult[]): string {
