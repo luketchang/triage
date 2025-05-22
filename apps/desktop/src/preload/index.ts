@@ -85,6 +85,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("observability:get-spans-facet-values", start, end),
 
   /**
+   * Fetch a Sentry event by specifier
+   * @param params Parameters for fetching the Sentry event
+   */
+  fetchSentryEvent: (params: unknown) => ipcRenderer.invoke("sentry:fetch-event", params),
+
+  /**
    * Create a new chat
    */
   createChat: () => ipcRenderer.invoke("db:create-chat"),

@@ -2,7 +2,7 @@ import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import * as Sentry from "@sentry/electron";
 import { AgentConfigStore } from "@triage/agent";
 import { logger } from "@triage/common";
-import { ObservabilityConfigStore } from "@triage/data-integrations";
+import { ObservabilityConfigStore, SentryConfigStore } from "@triage/data-integrations";
 import { app, BrowserWindow, dialog, protocol, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
@@ -15,11 +15,13 @@ import {
   cleanupConfigHandlers,
   cleanupDbHandlers,
   cleanupObservabilityHandlers,
+  cleanupSentryHandlers,
   setupAgentHandlers,
   setupCodebaseHandlers,
   setupConfigHandlers,
   setupDbHandlers,
   setupObservabilityHandlers,
+  setupSentryHandlers,
 } from "./handlers/index.js";
 import { setupDesktopLogger } from "./setup/logger-setup.js";
 
@@ -95,6 +97,7 @@ function initApp(mainWindow: BrowserWindow): void {
   const appCfgStore = new AppConfigStore(configStore);
   const agentCfgStore = new AgentConfigStore(configStore);
   const observabilityCfgStore = new ObservabilityConfigStore(configStore);
+  const sentryCfgStore = new SentryConfigStore(configStore);
 
   // Set up all IPC handlers
   setupAgentHandlers(mainWindow, agentCfgStore);
@@ -102,6 +105,7 @@ function initApp(mainWindow: BrowserWindow): void {
   setupCodebaseHandlers(mainWindow, appCfgStore);
   setupConfigHandlers(appCfgStore);
   setupObservabilityHandlers(observabilityCfgStore);
+  setupSentryHandlers(sentryCfgStore);
 }
 
 // This method will be called when Electron has finished
@@ -166,4 +170,5 @@ app.on("before-quit", () => {
   cleanupDbHandlers();
   cleanupConfigHandlers();
   cleanupObservabilityHandlers();
+  cleanupSentryHandlers();
 });

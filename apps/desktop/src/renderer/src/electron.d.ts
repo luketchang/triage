@@ -16,6 +16,8 @@ import {
   FacetData,
   LogSearchInput,
   LogsWithPagination,
+  RetrieveSentryEventInput,
+  SentryEvent,
   StreamUpdate,
   TraceSearchInput,
   TracesWithPagination,
@@ -91,6 +93,13 @@ declare global {
        * @returns Promise with the fetched facet values
        */
       getSpansFacetValues: (start: string, end: string) => Promise<FacetData[]>;
+
+      /**
+       * Fetch a Sentry event by specifier
+       * @param params Parameters for fetching the Sentry event
+       * @returns Promise with the fetched Sentry event
+       */
+      fetchSentryEvent: (params: RetrieveSentryEventInput) => Promise<SentryEvent>;
 
       /**
        * Create a new chat

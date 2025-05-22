@@ -11,6 +11,8 @@ import {
   CodebaseOverviewProgressUpdate,
   FacetData,
   LogSearchInput,
+  RetrieveSentryEventInput,
+  SentryEvent,
   TraceSearchInput,
   UserMessage,
 } from "../types/index.js";
@@ -166,6 +168,34 @@ const api = {
       } catch (error) {
         console.error("Error in getSpansFacetValues:", error);
         return []; // Return empty array on error
+      }
+    }
+  },
+
+  fetchSentryEvent: async (params: RetrieveSentryEventInput): Promise<SentryEvent> => {
+    console.info("[API DEBUG] fetchSentryEvent called with params:", params);
+    const shouldUseMock = USE_MOCK_API || !isMethodAvailable("fetchSentryEvent");
+    console.info("[API DEBUG] Using mock implementation:", shouldUseMock);
+
+    if (shouldUseMock) {
+      console.info("Using mock fetchSentryEvent");
+      try {
+        const response = await mockElectronAPI.fetchSentryEvent(params);
+        console.info("[API DEBUG] Mock response:", response);
+        return response;
+      } catch (error) {
+        console.error("Error in fetchSentryEvent:", error);
+        throw error; // Propagate error to caller
+      }
+    } else {
+      try {
+        console.info("Using real electronAPI.fetchSentryEvent");
+        const response = await window.electronAPI.fetchSentryEvent(params);
+        console.info("[API DEBUG] Real API response:", response);
+        return response;
+      } catch (error) {
+        console.error("Error in fetchSentryEvent:", error);
+        throw error; // Propagate error to caller
       }
     }
   },
