@@ -197,20 +197,7 @@ export function formatUserMessage(userMessage: UserMessage): string {
     userMessage.contextItems.forEach((item) => {
       if (item.type === "log") {
         formattedMessage += `\n\nLog Query:\n${formatLogQuery(item.input)}`;
-
-        // Check if there are any logs
-        if (item.output.logs.length > 0) {
-          const firstLog = item.output.logs[0];
-          if (firstLog) {
-            formattedMessage += `\n\nLog Results:\n${formatSingleLog(firstLog)}`;
-            // If there are multiple logs, add a summary
-            if (item.output.logs.length > 1) {
-              formattedMessage += `\n...and ${item.output.logs.length - 1} more logs`;
-            }
-          }
-        } else {
-          formattedMessage += "\n\nNo logs found matching this query.";
-        }
+        formattedMessage += `\n\nLog Results:\n${item.output.logs.map(formatSingleLog).join("\n")}`;
       } else if (item.type === "sentry") {
         formattedMessage += `\n\nSentry Event:\n${formatSentryEvent(item.output)}`;
       }

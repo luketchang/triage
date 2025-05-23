@@ -8,6 +8,7 @@ import { AppConfig } from "../../common/AppConfig.js";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
+  AgentUserMessage,
   AssistantMessage,
   Chat,
   ChatMessage,
@@ -21,7 +22,6 @@ import {
   StreamUpdate,
   TraceSearchInput,
   TracesWithPagination,
-  UserMessage,
 } from "./types";
 
 // Augment `window` to include everyting exposed in `preload/index.ts`
@@ -40,7 +40,7 @@ declare global {
        * @returns Promise with the agent response
        */
       invokeAgent: (
-        userMessage: UserMessage,
+        userMessage: AgentUserMessage,
         chatHistory: AgentChatMessage[]
       ) => Promise<AgentAssistantMessage>;
 

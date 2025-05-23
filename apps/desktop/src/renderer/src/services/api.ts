@@ -4,6 +4,7 @@ import {
   AgentAssistantMessage,
   AgentChatMessage,
   AgentStreamUpdate,
+  AgentUserMessage,
   AssistantMessage,
   Chat,
   ChatMessage,
@@ -58,7 +59,7 @@ const api = {
   },
 
   invokeAgent: async (
-    userMessage: UserMessage,
+    userMessage: AgentUserMessage,
     chatHistory: AgentChatMessage[]
   ): Promise<AgentAssistantMessage> => {
     if (USE_MOCK_API || !isMethodAvailable("invokeAgent")) {

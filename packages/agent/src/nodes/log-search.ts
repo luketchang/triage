@@ -44,6 +44,8 @@ function createLogSearchPrompt(params: {
 }): string {
   const currentTime = DateTime.now().setZone(params.timezone).toISO();
 
+  logger.info(`User message: ${formatUserMessage(params.userMessage)}`);
+
   // Format the previous log query result for display
   const formattedLastLogSearchStep = params.lastLogSearchToolCallWithResult
     ? formatLogSearchToolCallsWithResults([params.lastLogSearchToolCallWithResult])

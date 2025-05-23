@@ -52,6 +52,9 @@ export async function invokeAgent({
   if (!agentCfg.repoPath) {
     throw new Error("Repo path is required");
   }
+
+  logger.info(`User message: ${userMessage}`);
+
   const fileTree = await getDirectoryTree(agentCfg.repoPath);
 
   const observabilityClient = getObservabilityClient(agentCfg);

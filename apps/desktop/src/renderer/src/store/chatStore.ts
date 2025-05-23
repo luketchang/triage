@@ -8,7 +8,10 @@ import {
   MaterializedContextItem,
   UserMessage,
 } from "../types/index.js";
-import { convertToAgentChatMessages } from "../utils/agentDesktopConversion.js";
+import {
+  convertToAgentChatMessages,
+  convertToAgentUserMessage,
+} from "../utils/agentDesktopConversion.js";
 import { handleUpdate } from "../utils/agentUpdateHandlers.js";
 import { generateId } from "../utils/formatters.js";
 import { MessageUpdater } from "../utils/MessageUpdater.js";
@@ -205,10 +208,6 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       steps: [],
     };
 
-    // Materialize context items
-    const materialized = await materializeContextItems(contextItems);
-    console.info("Materialized context items:", materialized);
-
     // Optimistically update UI state to clear current input and add user message + empty assistant message
     set((s) => {
       const existing = s.chatDetailsById[chatId] || { messages: [] };
@@ -225,6 +224,11 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
         },
       };
     });
+
+    // Materialize context items
+    const materialized = await materializeContextItems(contextItems);
+    userMessage.materializedContextItems = materialized;
+    console.info("Materialized context items:", materialized);
 
     // Persist user message
     try {
@@ -256,8 +260,11 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
 
     try {
       // Invoke agent with full conversation
-      const agentMessages = convertToAgentChatMessages([...(messages || []), userMessage]);
-      const agentResponse = await api.invokeAgent(userMessage, agentMessages);
+      const agentUserMessage = convertToAgentUserMessage(userMessage);
+      const agentMessages = convertToAgentChatMessages([...(messages || [])]);
+
+      console.info("Calling with user message:", agentUserMessage);
+      const agentResponse = await api.invokeAgent(agentUserMessage, agentMessages);
 
       if (agentResponse?.error) {
         updater.update((cell) => ({
