@@ -22,6 +22,7 @@ import { TriagePipeline, TriagePipelineConfig } from "./pipeline";
 import { StepsType, StreamUpdateFn } from "./pipeline/state";
 import { PipelineStateManager } from "./pipeline/state-manager";
 import { AssistantMessage, ChatMessage, UserMessage } from "./types/message";
+import { DataSource } from "./types/tools";
 
 /**
  * Arguments for invoking the agent
@@ -30,6 +31,7 @@ export interface AgentArgs {
   userMessage: UserMessage;
   chatHistory: ChatMessage[];
   agentCfg: AgentConfig;
+  dataSources?: DataSource[];
   startDate?: Date;
   endDate?: Date;
   onUpdate: StreamUpdateFn;
@@ -42,6 +44,7 @@ export async function invokeAgent({
   userMessage,
   chatHistory,
   agentCfg,
+  dataSources = ["code"],
   startDate = new Date("2025-04-01T21:00:00Z"),
   endDate = new Date("2025-04-01T22:00:00Z"),
   onUpdate,
@@ -74,6 +77,7 @@ export async function invokeAgent({
     reasoningClient: getModelWrapper(agentCfg.reasoningModel, agentCfg),
     fastClient: getModelWrapper(agentCfg.fastModel, agentCfg),
     observabilityClient,
+    dataSources,
   };
 
   const state = new PipelineStateManager(onUpdate, chatHistory);
