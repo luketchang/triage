@@ -1,3 +1,4 @@
+import { logger } from "@triage/common";
 import { ObservabilityClient } from "@triage/data-integrations";
 import { LanguageModelV1 } from "ai";
 
@@ -43,13 +44,19 @@ export class TriagePipeline {
   async run(): Promise<TriagePipelineResponse> {
     // TODO -- skip pre-processing if we have results in chat history
     const preProcessing = new PreProcessing(this.config, this.state);
+    logger.info("Running pre-processing");
     await preProcessing.run();
+    logger.info("Pre-processing completed successfully");
 
     const reasoning = new Reasoning(this.config, this.state);
+    logger.info("Running reasoning");
     await reasoning.run();
+    logger.info("Reasoning completed successfully");
 
     const postProcessing = new PostProcessing(this.config, this.state);
+    logger.info("Running post-processing");
     await postProcessing.run();
+    logger.info("Post-processing completed successfully");
 
     return {
       answer: this.state.getAnswer()!,

@@ -197,8 +197,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       role: "user",
       timestamp: new Date(),
       content: userInput.trim(),
-      contextItems,
-      materializedContextItems: [], // Don't wait to materialize context items for updating UI
+      contextItems, // Pass original context items
     };
     const assistantMessage: AssistantMessage = {
       id: generateId(),
@@ -209,8 +208,10 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     };
 
     // Optimistically update UI state to clear current input and add user message + empty assistant message
+    // Capture the messages *before* adding the current user message for agent history conversion
+    const messagesForHistory = [...(messages || [])];
     set((s) => {
-      const existing = s.chatDetailsById[chatId] || { messages: [] };
+      const existing = s.chatDetailsById[chatId] || { messages: [] }; // Ensure 'messages' exists
       return {
         chatDetailsById: {
           ...s.chatDetailsById,
@@ -225,13 +226,11 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       };
     });
 
-    // Materialize context items
-    const materialized = await materializeContextItems(contextItems);
-    userMessage.materializedContextItems = materialized;
-    console.info("Materialized context items:", materialized);
-
-    // Persist user message
+    // Persist user message (potentially after materialization if that's a separate backend concern)
+    // For now, let's assume saveUserMessage can handle userMessage without pre-materialized items or it's done later
     try {
+      // If materialization is strictly needed before saving, it should be done here, separately from agent call path
+      // For now, replicating working version which doesn't show explicit materialization before saveUserMessage either
       await api.saveUserMessage(userMessage, chatId);
     } catch (err) {
       console.error("Error saving user message:", err);
@@ -255,13 +254,15 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       });
     });
     const unregister = api.onAgentUpdate((update) => {
+      console.info("Received agent update:", update);
       handleUpdate(updater, update);
     });
 
     try {
       // Invoke agent with full conversation
       const agentUserMessage = convertToAgentUserMessage(userMessage);
-      const agentMessages = convertToAgentChatMessages([...(messages || [])]);
+      // IMPORTANT: Pass history INCLUDING the current userMessage
+      const agentMessages = convertToAgentChatMessages([...messagesForHistory, userMessage]);
 
       console.info("Calling with user message:", agentUserMessage);
       const agentResponse = await api.invokeAgent(agentUserMessage, agentMessages);

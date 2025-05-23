@@ -86,6 +86,7 @@ export async function invokeAgent({
     const pipeline = new TriagePipeline(pipelineConfig, state);
     const response = await pipeline.run();
 
+    logger.info(`Pipeline run completed successfully. Response: ${JSON.stringify(response)}`);
     return {
       role: "assistant",
       steps: state.getSteps(StepsType.CURRENT),
@@ -93,6 +94,7 @@ export async function invokeAgent({
       error: undefined,
     };
   } catch (error) {
+    logger.error(`Error in invokeAgent: ${JSON.stringify(error)}`);
     return {
       role: "assistant",
       steps: state.getSteps(StepsType.CURRENT),

@@ -96,7 +96,31 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
 
         // Send updates to renderer via window
         const onUpdate = (update: any) => {
-          window.webContents.send("agent:agent-update", update);
+          logger.info(`Sending agent update to renderer: ${JSON.stringify(update)}`);
+          try {
+            // Optional: Log the update being sent to see the last one before potential failure
+            // logger.info(`[Main Process] Sending agent update to renderer: type=${update.type}, id=${update.id}`);
+            if (window && window.webContents && !window.webContents.isDestroyed()) {
+              window.webContents.send("agent:agent-update", update);
+            } else {
+              logger.warn(
+                "[Main Process] BrowserWindow or webContents not available/destroyed. Cannot send agent update."
+              );
+            }
+          } catch (e: any) {
+            logger.error("[Main Process] Critical error in onUpdate when sending to renderer:", {
+              errorMessage: e.message,
+              errorStack: e.stack,
+              updateId: update.id,
+              updateType: update.type,
+              // Avoid logging the full 'update' object if it might be huge or sensitive,
+              // or stringify a snippet of it.
+              updatePartial: JSON.stringify(update).substring(0, 200),
+            });
+            // IMPORTANT: This error, if it occurs, might be what's preventing
+            // invokeAgent from resolving. The invokeAgent might not be designed
+            // to handle its onUpdate callback throwing.
+          }
         };
 
         // Calculate date range for last two weeks
@@ -109,8 +133,9 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
           agentCfg,
           startDate,
           endDate,
-          onUpdate: onUpdate,
+          onUpdate,
         });
+        console.info("Returning agent response:", result);
 
         return result;
       } catch (error) {
