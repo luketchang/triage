@@ -27,60 +27,6 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
       chatHistory: AgentChatMessage[]
     ): Promise<AgentAssistantMessage> => {
       try {
-        // ***** NEW DETAILED IPC DEBUGGING *****
-        console.log("--- agent-handlers.ts: Received userMessage from IPC ---");
-        console.log(`Timestamp: ${new Date().toISOString()}`);
-        console.log("Type of userMessage argument as received:", typeof userMessage);
-
-        if (userMessage && typeof userMessage === "object") {
-          console.log("Keys of userMessage object:", Object.keys(userMessage));
-          // Iterate over properties and log them individually
-          for (const key in userMessage) {
-            if (Object.prototype.hasOwnProperty.call(userMessage, key)) {
-              // @ts-ignore - accessing dynamically
-              const value = userMessage[key];
-              let valueToLog = value;
-              try {
-                // Attempt to stringify complex values, but keep it brief
-                if (typeof value === "object" && value !== null) {
-                  valueToLog =
-                    JSON.stringify(value)?.substring(0, 200) +
-                    (JSON.stringify(value)?.length > 200 ? "..." : "");
-                }
-              } catch (e) {
-                valueToLog = `[Error stringifying value for key ${key}]`;
-              }
-              console.log(`  userMessage['${key}'] (type: ${typeof value}):`, valueToLog);
-            }
-          }
-          // Final check on content specifically
-          // @ts-ignore
-          console.log("userMessage.content specifically:", userMessage.content);
-          // @ts-ignore
-          console.log("Type of userMessage.content specifically:", typeof userMessage.content);
-
-          // Attempt to stringify the whole object, but catch errors
-          try {
-            console.log(
-              "userMessage (full JSON.stringify attempt):",
-              JSON.stringify(userMessage, null, 2)
-            );
-          } catch (e: any) {
-            console.error(
-              "Error stringifying the entire userMessage object in agent-handlers:",
-              e.message
-            );
-          }
-        } else {
-          console.log(
-            "userMessage is not a valid object or is null/undefined upon arrival:",
-            userMessage
-          );
-        }
-        console.log("------------------------------------------------------");
-        // ***************************************
-
-        // Original logging (can be kept for comparison or modified)
         logger.info("Invoking agent with message content:", userMessage?.content);
         logger.info(
           "Context items received in userMessage:",
