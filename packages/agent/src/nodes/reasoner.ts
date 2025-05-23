@@ -170,14 +170,12 @@ export class Reasoner {
             break;
           }
           case "codeRequest": {
-            if (this.config.dataSources.includes("code")) {
-              output.subAgentCalls.push({
-                type: "codeRequest",
-                toolCallId: toolCall.toolCallId,
-                request: toolCall.args.request,
-                reasoning: toolCall.args.reasoning,
-              });
-            }
+            output.subAgentCalls.push({
+              type: "codeRequest",
+              toolCallId: toolCall.toolCallId,
+              request: toolCall.args.request,
+              reasoning: toolCall.args.reasoning,
+            });
             break;
           }
         }
