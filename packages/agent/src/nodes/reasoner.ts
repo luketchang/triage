@@ -104,15 +104,21 @@ export class Reasoner {
     logger.info(`Calling LLM with ${chatHistory.length} messages and maxSteps: ${params.maxSteps}`);
     logger.info(`Reasoner whole prompt:\n${JSON.stringify(chatHistory, null, 2)}\n`);
 
+    // Build tools object based on enabled data sources
+    const tools: Record<string, typeof logRequestToolSchema | typeof codeRequestToolSchema> = {};
+    if (this.config.dataSources.includes("logs")) {
+      tools.logRequest = logRequestToolSchema;
+    }
+    if (this.config.dataSources.includes("code")) {
+      tools.codeRequest = codeRequestToolSchema;
+    }
+
     // Stream reasoning response and collect text and tool calls
     const { toolCalls, fullStream } = streamText({
       model: this.config.reasoningClient,
       messages: chatHistory,
       maxSteps: params.maxSteps || 1,
-      tools: {
-        logRequest: logRequestToolSchema,
-        codeRequest: codeRequestToolSchema,
-      },
+      tools,
       toolChoice: "auto",
     });
 
@@ -154,7 +160,7 @@ export class Reasoner {
       for (const toolCall of finalizedToolCalls) {
         // TODO: generate these tool calls in toolbox
         switch (toolCall.toolName) {
-          case "logRequest":
+          case "logRequest": {
             output.subAgentCalls.push({
               type: "logRequest",
               toolCallId: toolCall.toolCallId,
@@ -162,14 +168,18 @@ export class Reasoner {
               reasoning: toolCall.args.reasoning,
             });
             break;
-          case "codeRequest":
-            output.subAgentCalls.push({
-              type: "codeRequest",
-              toolCallId: toolCall.toolCallId,
-              request: toolCall.args.request,
-              reasoning: toolCall.args.reasoning,
-            });
+          }
+          case "codeRequest": {
+            if (this.config.dataSources.includes("code")) {
+              output.subAgentCalls.push({
+                type: "codeRequest",
+                toolCallId: toolCall.toolCallId,
+                request: toolCall.args.request,
+                reasoning: toolCall.args.reasoning,
+              });
+            }
             break;
+          }
         }
       }
     }
