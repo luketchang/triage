@@ -42,7 +42,6 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
 
         // Send updates to renderer via window
         const onUpdate = (update: any) => {
-          logger.info(`Sending agent update to renderer: ${JSON.stringify(update)}`);
           window.webContents.send("agent:agent-update", update);
         };
 
@@ -58,7 +57,6 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
           endDate,
           onUpdate,
         });
-        console.info("Returning agent response:", result);
 
         return result;
       } catch (error) {
