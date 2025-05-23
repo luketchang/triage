@@ -15,6 +15,7 @@ import {
   IntegrationType,
 } from "@triage/data-integrations";
 import { Command as CommanderCommand } from "commander";
+import { DateTime } from "luxon";
 import { z } from "zod";
 
 import { AgentConfig } from "./config";
@@ -31,9 +32,11 @@ export interface AgentArgs {
   userMessage: UserMessage;
   chatHistory: ChatMessage[];
   agentCfg: AgentConfig;
-  dataSources?: DataSource[];
-  startDate?: Date;
-  endDate?: Date;
+  options?: {
+    dataSources?: DataSource[];
+    startDate?: Date;
+    endDate?: Date;
+  };
   onUpdate: StreamUpdateFn;
 }
 
@@ -44,9 +47,7 @@ export async function invokeAgent({
   userMessage,
   chatHistory,
   agentCfg,
-  dataSources = ["code"],
-  startDate = new Date("2025-04-01T21:00:00Z"),
-  endDate = new Date("2025-04-01T22:00:00Z"),
+  options,
   onUpdate,
 }: AgentArgs): Promise<AssistantMessage> {
   if (!agentCfg.codebaseOverview) {
@@ -56,12 +57,20 @@ export async function invokeAgent({
     throw new Error("Repo path is required");
   }
 
+  // Default date range is last 2 weeks
+  const currentTime = DateTime.now().setZone(agentCfg.timezone);
+  const endDate = options?.endDate ?? currentTime.toJSDate();
+  const startDate = options?.startDate ?? currentTime.minus({ days: 14 }).toJSDate();
+
+  // Default data sources is code
+  const dataSources = options?.dataSources ?? ["code"];
+
   logger.info(`User message: ${userMessage}`);
 
   const fileTree = await getDirectoryTree(agentCfg.repoPath);
 
   const observabilityClient = getObservabilityClient(agentCfg);
-  // Get formatted labels map for time range
+
   const logLabelsMap = await observabilityClient.getLogsFacetValues(
     startDate.toISOString(),
     endDate.toISOString()
@@ -207,8 +216,11 @@ async function main(): Promise<void> {
     userMessage,
     chatHistory,
     agentCfg,
-    startDate,
-    endDate,
+    options: {
+      dataSources: ["code"],
+      startDate,
+      endDate,
+    },
     onUpdate,
   });
 
