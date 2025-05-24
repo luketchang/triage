@@ -184,11 +184,11 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     }
 
     // Ensure we have a real materialized chat ID
-    let chatId = currentChatId;
-    if (chatId === NO_CHAT_SELECTED) {
+    let materializedChatId = currentChatId;
+    if (materializedChatId === NO_CHAT_SELECTED) {
       const newChat = await state.createChat();
       if (!newChat) return;
-      chatId = newChat.id;
+      materializedChatId = newChat.id;
     }
 
     // Build user and assistant messages
@@ -210,19 +210,26 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
 
     // Optimistically update UI state to clear current input and add user message + empty assistant message
     set((state) => {
-      const existing = state.chatDetailsById[chatId] || { messages: [] };
-      return {
-        chatDetailsById: {
-          ...state.chatDetailsById,
-          [chatId]: {
-            ...existing,
-            messages: [...(existing.messages || []), userMessage, assistantMessage],
-            userInput: "",
-            contextItems: [],
-            isThinking: true,
-          },
+      const newChatDetailsById = {
+        ...state.chatDetailsById,
+        [materializedChatId]: {
+          ...state.chatDetailsById[materializedChatId],
+          messages: [
+            ...(state.chatDetailsById[materializedChatId]?.messages || []),
+            userMessage,
+            assistantMessage,
+          ],
+          userInput: "",
+          contextItems: [],
+          isThinking: true,
         },
       };
+
+      // Delete/reset the "new chat" state if we were in it
+      if (currentChatId === NO_CHAT_SELECTED) {
+        delete newChatDetailsById[NO_CHAT_SELECTED];
+      }
+      return { chatDetailsById: newChatDetailsById };
     });
 
     // Materialize context items
@@ -232,7 +239,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
 
     // Persist user message
     try {
-      await api.saveUserMessage(userMessage, chatId);
+      await api.saveUserMessage(userMessage, materializedChatId);
     } catch (err) {
       console.error("Error saving user message:", err);
     }
@@ -240,11 +247,11 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     // Handle streamed assistant updates
     const updater = new MessageUpdater(assistantMessage, (updated) => {
       set((state) => {
-        const chat = state.chatDetailsById[chatId];
+        const chat = state.chatDetailsById[materializedChatId];
         return {
           chatDetailsById: {
             ...state.chatDetailsById,
-            [chatId]: {
+            [materializedChatId]: {
               ...chat,
               messages: chat.messages!.map((m) =>
                 m.id === assistantMessage.id ? { ...m, ...updated } : m
@@ -289,12 +296,12 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     } finally {
       // Persist assistant message and clear thinking state
       const finalMessage = updater.getMessage();
-      api.saveAssistantMessage(finalMessage, chatId);
+      api.saveAssistantMessage(finalMessage, materializedChatId);
       set((state) => ({
         chatDetailsById: {
           ...state.chatDetailsById,
-          [chatId]: {
-            ...state.chatDetailsById[chatId],
+          [materializedChatId]: {
+            ...state.chatDetailsById[materializedChatId],
             isThinking: false,
           },
         },
