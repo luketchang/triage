@@ -323,7 +323,7 @@ async function fetchContextItems(contextItems: ContextItem[]): Promise<Materiali
         if (item.type === "logSearchInput") {
           const logs = await api.fetchLogs(item);
           materializedItems.push({ type: "log", input: item, output: logs });
-        } else if (item.type === "retrieveSentryEventInput") {
+        } else if (item.type === "getSentryEventInput") {
           const sentryEvent = await api.fetchSentryEvent(item);
           materializedItems.push({ type: "sentry", input: item, output: sentryEvent });
         } else {

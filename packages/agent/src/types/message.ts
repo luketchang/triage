@@ -1,7 +1,7 @@
 import {
+  GetSentryEventInput,
   LogSearchInput,
   LogsWithPagination,
-  RetrieveSentryEventInput,
   SentryEvent,
 } from "@triage/data-integrations";
 
@@ -23,7 +23,7 @@ export type MaterializedContextItem =
     }
   | {
       type: "sentry";
-      input: RetrieveSentryEventInput;
+      input: GetSentryEventInput;
       output: SentryEvent;
     };
 

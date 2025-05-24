@@ -1,4 +1,4 @@
-import type { RetrieveSentryEventInput, SentryEvent, SentryListEvent } from "./types";
+import type { GetSentryEventInput, SentryEvent, SentryListEvent } from "./types";
 
 // Define a type for dynamic Sentry data structures
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -10,7 +10,7 @@ type SentryDataRecord = Record<string, any>;
  * @param input Optional input parameters used to retrieve the event
  * @returns Formatted string representation of the Sentry event
  */
-export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEventInput): string {
+export function formatSentryEvent(event: SentryEvent, input?: GetSentryEventInput): string {
   const parts: string[] = [];
 
   // Add query information if input is provided
@@ -158,7 +158,7 @@ export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEven
   if (event.packages && Object.keys(event.packages).length > 0) {
     const packageCount = Object.keys(event.packages).length;
     parts.push(`\nPackages (${packageCount} total):`);
-    
+
     // Show packages (limited to reduce verbosity)
     const packagesToShow = Object.entries(event.packages).slice(0, 10);
     packagesToShow.forEach(([name, version]) => {
@@ -188,7 +188,7 @@ export function formatSentryEvent(event: SentryEvent, input?: RetrieveSentryEven
  */
 export function formatSentryEventList(events: SentryListEvent[]): string {
   const parts: string[] = [];
-  
+
   parts.push(`EVENT LIST (${events.length} events found):`);
 
   if (events.length === 0) {
