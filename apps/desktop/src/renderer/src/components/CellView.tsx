@@ -138,6 +138,11 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
               );
             } else if (toolCall.type === "grep") {
               const grepToolCall = toolCall;
+              // NOTE: when using git grep, the number of results is actually the number of lines
+              const numLines =
+                grepToolCall.output && !("error" in grepToolCall.output)
+                  ? grepToolCall.output.content.split("\n").length
+                  : 0;
               return (
                 <div
                   key={`${step.id}-search-${index}`}
@@ -146,6 +151,14 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
                   <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
                     <Search size={16} className="text-blue-300 flex-shrink-0" />
                     <div className="font-mono text-xs truncate">{grepToolCall.input.pattern}</div>
+                  </div>
+                  <div className="flex items-center">
+                    {grepToolCall.output && !("error" in grepToolCall.output) && (
+                      <div className="px-2 py-1 text-xs text-blue-300">
+                        {numLines} result
+                        {numLines !== 1 ? "s" : ""}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
