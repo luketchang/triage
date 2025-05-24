@@ -2,6 +2,7 @@ import { AppConfig } from "src/common/AppConfig.js";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
+  AgentUserMessage,
   Chat,
   CodebaseOverview,
   FacetData,
@@ -212,15 +213,15 @@ const mockElectronAPI = {
    * Invoke the agent with a UserMessage and return a mock response
    */
   invokeAgent: async (
-    userMessage: { content: string; contextItems?: any[] },
+    _userMessage: AgentUserMessage,
     _chatHistory: AgentChatMessage[]
   ): Promise<AgentAssistantMessage> => {
     // Simulate delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Log the query for debugging
-    console.info("Invoking agent with message:", userMessage.content);
-    console.info("Context items:", userMessage.contextItems || []);
+    console.info("Invoking agent with message:", _userMessage.content);
+    console.info("Context items:", _userMessage.contextItems || []);
     console.info("Chat history:", _chatHistory);
 
     // Create a much fuller response content with detailed analysis

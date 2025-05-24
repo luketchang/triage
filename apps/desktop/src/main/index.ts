@@ -100,11 +100,11 @@ function initApp(mainWindow: BrowserWindow): void {
   const sentryCfgStore = new SentryConfigStore(configStore);
 
   // TODO: remove this once we add ability to fill sentry auth token in Settings tab
-  // sentryCfgStore.setValues({
-  //   sentry: {
-  //     authToken: "<YOUR_SENTRY_AUTH_TOKEN>",
-  //   },
-  // });
+  sentryCfgStore.setValues({
+    sentry: {
+      authToken: "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",
+    },
+  });
 
   // Set up all IPC handlers
   setupAgentHandlers(mainWindow, agentCfgStore);

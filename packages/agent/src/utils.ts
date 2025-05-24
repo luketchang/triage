@@ -9,7 +9,7 @@ import {
   ReasoningStep,
 } from "./pipeline/state";
 import { ChatMessage, MaterializedContextItem } from "./types";
-import { AssistantMessage, UserMessage } from "./types/message";
+import { UserMessage } from "./types/message";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {
@@ -188,19 +188,14 @@ export function formatAgentSteps(steps: AgentStep[]): string {
 }
 
 export function formatUserMessage(userMessage: UserMessage): string {
-  let formattedMessage = userMessage.content;
+  let formattedMessage = `User:\n${userMessage.content}`;
 
   // Add materialized context items if they exist
   if (userMessage.contextItems && userMessage.contextItems.length > 0) {
     formattedMessage += "\n\nAttached Context:";
 
     userMessage.contextItems.forEach((item) => {
-      if (item.type === "log") {
-        formattedMessage += `\n\nLog Query:\n${formatLogQuery(item.input)}`;
-        formattedMessage += `\n\nLog Results:\n${item.output.logs.map(formatSingleLog).join("\n")}`;
-      } else if (item.type === "sentry") {
-        formattedMessage += `\n\nSentry Event:\n${formatSentryEvent(item.output)}`;
-      }
+      formattedMessage += `\n\n${formatMaterializedContextItem(item)}`;
     });
   }
 
@@ -212,8 +207,8 @@ export function formatAssistantMessage(message: ChatMessage): string {
     throw new Error("Expected assistant message");
   }
 
-  const assistantMessage: AssistantMessage = message;
-  let formattedMessage = "Assistant:";
+  const assistantMessage = message;
+  let formattedMessage = "Assistant:\n";
 
   // Add gathered context if there are steps
   if (assistantMessage.steps && assistantMessage.steps.length > 0) {

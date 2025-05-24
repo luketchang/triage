@@ -66,6 +66,7 @@ const api = {
       // For mock API, create a simplified object that matches the expected type
       return mockElectronAPI.invokeAgent(
         {
+          role: "user",
           content: userMessage.content,
           contextItems: userMessage.contextItems,
         },

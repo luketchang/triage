@@ -209,11 +209,11 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     };
 
     // Optimistically update UI state to clear current input and add user message + empty assistant message
-    set((s) => {
-      const existing = s.chatDetailsById[chatId] || { messages: [] };
+    set((state) => {
+      const existing = state.chatDetailsById[chatId] || { messages: [] };
       return {
         chatDetailsById: {
-          ...s.chatDetailsById,
+          ...state.chatDetailsById,
           [chatId]: {
             ...existing,
             messages: [...(existing.messages || []), userMessage, assistantMessage],
@@ -226,7 +226,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
     });
 
     // Materialize context items
-    const materialized = await materializeContextItems(contextItems);
+    const materialized = await fetchContextItems(contextItems);
     userMessage.materializedContextItems = materialized;
     console.info("Materialized context items:", materialized);
 
@@ -239,11 +239,11 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
 
     // Handle streamed assistant updates
     const updater = new MessageUpdater(assistantMessage, (updated) => {
-      set((s) => {
-        const chat = s.chatDetailsById[chatId];
+      set((state) => {
+        const chat = state.chatDetailsById[chatId];
         return {
           chatDetailsById: {
-            ...s.chatDetailsById,
+            ...state.chatDetailsById,
             [chatId]: {
               ...chat,
               messages: chat.messages!.map((m) =>
@@ -290,11 +290,11 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       // Persist assistant message and clear thinking state
       const finalMessage = updater.getMessage();
       api.saveAssistantMessage(finalMessage, chatId);
-      set((s) => ({
+      set((state) => ({
         chatDetailsById: {
-          ...s.chatDetailsById,
+          ...state.chatDetailsById,
           [chatId]: {
-            ...s.chatDetailsById[chatId],
+            ...state.chatDetailsById[chatId],
             isThinking: false,
           },
         },
@@ -309,9 +309,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
  * @param contextItems Array of context items to materialize
  * @returns Array of materialized context items
  */
-async function materializeContextItems(
-  contextItems: ContextItem[]
-): Promise<MaterializedContextItem[]> {
+async function fetchContextItems(contextItems: ContextItem[]): Promise<MaterializedContextItem[]> {
   const materializedItems: MaterializedContextItem[] = [];
 
   if (!contextItems || contextItems.length === 0) {
