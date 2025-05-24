@@ -20,10 +20,11 @@ import {
 } from "@triage/agent";
 import { CodebaseOverview, CodebaseOverviewProgressUpdate } from "@triage/codebase-overviews";
 import {
+  GetSentryEventInput,
   Log,
   LogSearchInput,
   LogsWithPagination,
-  RetrieveSentryEventInput,
+  SentryEvent,
   SentryEventSpecifier,
   ServiceLatency,
   Span,
@@ -46,6 +47,7 @@ export type {
   CodePostprocessingFact,
   CodePostprocessingStep,
   CodeSearchStep,
+  GetSentryEventInput,
   GrepToolCallWithResult,
   Log,
   LogPostprocessingFact,
@@ -55,7 +57,7 @@ export type {
   LogSearchToolCallWithResult,
   LogsWithPagination,
   ReasoningStep,
-  RetrieveSentryEventInput,
+  SentryEvent,
   SentryEventSpecifier,
   ServiceLatency,
   Span,
@@ -83,7 +85,7 @@ export interface FacetData {
 // Interface for chat messages
 export type ChatMessage = UserMessage | AssistantMessage;
 
-export type ContextItem = LogSearchInput | RetrieveSentryEventInput;
+export type ContextItem = LogSearchInput | GetSentryEventInput;
 
 export interface UserMessage {
   id: string;

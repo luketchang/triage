@@ -1,4 +1,4 @@
-import { RetrieveSentryEventInput, SentryEventSpecifier } from "../../types";
+import { GetSentryEventInput, SentryEventSpecifier } from "../../types";
 
 /**
  * Checks if a URL is a valid Sentry event URL
@@ -40,7 +40,7 @@ export function isValidSentryEventUrl(url: string): boolean {
   }
 }
 
-export function parseSentryEventUrl(fullUrl: string): RetrieveSentryEventInput | undefined {
+export function parseSentryEventUrl(fullUrl: string): GetSentryEventInput | undefined {
   const u = new URL(fullUrl);
 
   // extract org slug from subdomain
@@ -63,7 +63,7 @@ export function parseSentryEventUrl(fullUrl: string): RetrieveSentryEventInput |
     eventSpecifier = normalizeEventSpecifier(maybeSpecifier);
   }
 
-  return { type: "retrieveSentryEventInput", orgSlug, issueId, eventSpecifier };
+  return { type: "getSentryEventInput", orgSlug, issueId, eventSpecifier };
 }
 
 function normalizeEventSpecifier(value?: string): SentryEventSpecifier {

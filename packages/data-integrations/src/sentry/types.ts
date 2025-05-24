@@ -1,7 +1,7 @@
 export type SentryEventSpecifier = "latest" | "oldest" | "recommended" | string;
 
-export interface RetrieveSentryEventInput {
-  type: "retrieveSentryEventInput";
+export interface GetSentryEventInput {
+  type: "getSentryEventInput";
   orgSlug: string;
   issueId: string;
   eventSpecifier: SentryEventSpecifier;

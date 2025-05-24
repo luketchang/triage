@@ -178,6 +178,9 @@ async function main(): Promise<void> {
               password: process.env.GRAFANA_PASSWORD!,
             })
           : undefined,
+      sentry: {
+        authToken: process.env.SENTRY_AUTH_TOKEN!,
+      },
     },
     startDate,
     endDate,
