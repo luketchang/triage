@@ -11,3 +11,4 @@ export {
   cleanupObservabilityHandlers,
   setupObservabilityHandlers,
 } from "./observability-handlers.js";
+export { cleanupSentryHandlers, setupSentryHandlers } from "./sentry-handlers.js";

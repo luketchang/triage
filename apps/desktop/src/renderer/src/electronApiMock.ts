@@ -5,9 +5,11 @@ import {
   Chat,
   CodebaseOverview,
   FacetData,
+  GetSentryEventInput,
   Log,
   LogSearchInput,
   LogsWithPagination,
+  SentryEvent,
   TraceSearchInput,
   TracesWithPagination,
 } from "./types/index.js";
@@ -602,6 +604,105 @@ The primary issue appears to be in the authentication middleware where token val
       repoPath: `${repoPath}/.triage/codebase-overview.md`,
       createdAt: new Date(),
     };
+  },
+
+  /**
+   * Mock implementation of fetching a Sentry event
+   */
+  fetchSentryEvent: async (params: GetSentryEventInput): Promise<SentryEvent> => {
+    console.info("[MOCK API] fetchSentryEvent called with params:", params);
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // Check if we have required parameters
+        if (!params.orgSlug || !params.issueId || !params.eventSpecifier) {
+          reject(new Error("Missing required parameters"));
+          return;
+        }
+
+        // Create a mock Sentry event
+        const mockEvent: SentryEvent = {
+          id: "1234567890",
+          groupID: params.issueId,
+          eventID:
+            typeof params.eventSpecifier === "string" &&
+            params.eventSpecifier !== "latest" &&
+            params.eventSpecifier !== "oldest" &&
+            params.eventSpecifier !== "recommended"
+              ? params.eventSpecifier
+              : `event-${Date.now()}`,
+          projectID: "project-123",
+          message: "Error: Something went wrong in the application",
+          title: "Error: Something went wrong",
+          location: "src/components/App.tsx",
+          user: {
+            id: "user-123",
+            email: "user@example.com",
+            username: "testuser",
+            ip_address: "192.168.1.1",
+            name: "Test User",
+            geo: { country: "US", city: "San Francisco" },
+            data: { lastLogin: new Date().toISOString() },
+          },
+          tags: [
+            { key: "environment", value: "production" },
+            { key: "release", value: "v1.0.0" },
+            { key: "browser", value: "Chrome" },
+          ],
+          platform: "javascript",
+          dateReceived: new Date().toISOString(),
+          contexts: {
+            browser: { name: "Chrome", version: "91.0.4472.124" },
+            os: { name: "Windows", version: "10" },
+          },
+          size: 1024,
+          entries: [
+            {
+              type: "exception",
+              data: {
+                values: [
+                  {
+                    type: "Error",
+                    value: "Something went wrong",
+                    stacktrace: {
+                      frames: [
+                        { filename: "src/components/App.tsx", function: "handleClick", lineno: 42 },
+                        { filename: "src/utils/api.ts", function: "fetchData", lineno: 15 },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+          dist: "1.0.0",
+          sdk: { name: "sentry.javascript.react", version: "6.19.7" },
+          context: { state: { user: "authenticated" } },
+          packages: { react: "17.0.2", typescript: "4.5.5" },
+          type: "error",
+          metadata: { type: "Error", value: "Something went wrong" },
+          errors: [],
+          occurrence: null,
+          _meta: {},
+          crashFile: null,
+          culprit: "handleClick in App.tsx",
+          dateCreated: new Date().toISOString(),
+          fingerprints: ["{{ default }}"],
+          groupingConfig: {},
+          startTimestamp: new Date(Date.now() - 1000).toISOString(),
+          endTimestamp: new Date().toISOString(),
+          measurements: {},
+          breakdowns: {},
+          release: { version: "1.0.0" },
+          userReport: null,
+          sdkUpdates: [],
+          resolvedWith: [],
+          nextEventID: null,
+          previousEventID: null,
+        };
+
+        resolve(mockEvent);
+      }, 500);
+    });
   },
 
   // Note: onCodebaseOverviewProgress is handled in api.ts with simulation
