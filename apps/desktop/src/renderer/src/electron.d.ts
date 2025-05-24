@@ -14,9 +14,9 @@ import {
   CodebaseOverview,
   CodebaseOverviewProgressUpdate,
   FacetData,
+  GetSentryEventInput,
   LogSearchInput,
   LogsWithPagination,
-  RetrieveSentryEventInput,
   SentryEvent,
   StreamUpdate,
   TraceSearchInput,
@@ -99,7 +99,7 @@ declare global {
        * @param params Parameters for fetching the Sentry event
        * @returns Promise with the fetched Sentry event
        */
-      fetchSentryEvent: (params: RetrieveSentryEventInput) => Promise<SentryEvent>;
+      fetchSentryEvent: (params: GetSentryEventInput) => Promise<SentryEvent>;
 
       /**
        * Create a new chat

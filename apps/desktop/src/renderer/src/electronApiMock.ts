@@ -5,10 +5,10 @@ import {
   Chat,
   CodebaseOverview,
   FacetData,
+  GetSentryEventInput,
   Log,
   LogSearchInput,
   LogsWithPagination,
-  RetrieveSentryEventInput,
   SentryEvent,
   TraceSearchInput,
   TracesWithPagination,
@@ -609,7 +609,7 @@ The primary issue appears to be in the authentication middleware where token val
   /**
    * Mock implementation of fetching a Sentry event
    */
-  fetchSentryEvent: async (params: RetrieveSentryEventInput): Promise<SentryEvent> => {
+  fetchSentryEvent: async (params: GetSentryEventInput): Promise<SentryEvent> => {
     console.info("[MOCK API] fetchSentryEvent called with params:", params);
     return new Promise((resolve, reject) => {
       setTimeout(() => {

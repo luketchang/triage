@@ -213,7 +213,7 @@ async function main(): Promise<void> {
       logger.info(`Fetching event (${idToUse}) for issue ${issueId}...`);
 
       const event = await sentryClient.getEventForIssue({
-        type: "retrieveSentryEventInput",
+        type: "getSentryEventInput",
         orgSlug,
         issueId,
         eventSpecifier: idToUse,

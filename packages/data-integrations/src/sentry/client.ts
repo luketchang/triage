@@ -17,7 +17,7 @@
 import { logger } from "@triage/common";
 import axios, { AxiosInstance } from "axios";
 
-import { RetrieveSentryEventInput, SentryEvent, SentryListEvent } from "./types";
+import { GetSentryEventInput, SentryEvent, SentryListEvent } from "./types";
 
 /**
  * A low-level Sentry client. Constructor only needs an API token.
@@ -49,7 +49,7 @@ export class SentryClient {
     orgSlug,
     issueId,
     eventSpecifier = "latest",
-  }: RetrieveSentryEventInput): Promise<SentryEvent> {
+  }: GetSentryEventInput): Promise<SentryEvent> {
     const isKeyword =
       eventSpecifier === "latest" ||
       eventSpecifier === "oldest" ||

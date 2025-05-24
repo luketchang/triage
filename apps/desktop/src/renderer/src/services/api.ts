@@ -10,8 +10,8 @@ import {
   CodebaseOverview,
   CodebaseOverviewProgressUpdate,
   FacetData,
+  GetSentryEventInput,
   LogSearchInput,
-  RetrieveSentryEventInput,
   SentryEvent,
   TraceSearchInput,
   UserMessage,
@@ -172,7 +172,7 @@ const api = {
     }
   },
 
-  fetchSentryEvent: async (params: RetrieveSentryEventInput): Promise<SentryEvent> => {
+  fetchSentryEvent: async (params: GetSentryEventInput): Promise<SentryEvent> => {
     console.info("[API DEBUG] fetchSentryEvent called with params:", params);
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("fetchSentryEvent");
     console.info("[API DEBUG] Using mock implementation:", shouldUseMock);

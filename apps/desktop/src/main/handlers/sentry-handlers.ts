@@ -1,6 +1,6 @@
 import { logger } from "@triage/common";
 import {
-  RetrieveSentryEventInput,
+  GetSentryEventInput,
   SentryClient,
   SentryConfigStore,
   SentryEvent,
@@ -17,7 +17,7 @@ export function setupSentryHandlers(sentryCfgStore: SentryConfigStore): void {
   // Fetch Sentry event by specifier
   registerHandler(
     "sentry:fetch-event",
-    async (_event: any, params: RetrieveSentryEventInput): Promise<SentryEvent> => {
+    async (_event: any, params: GetSentryEventInput): Promise<SentryEvent> => {
       try {
         const sentryCfg = await sentryCfgStore.getValues();
 
