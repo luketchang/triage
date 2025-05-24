@@ -57,13 +57,15 @@ const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => (
             </div>
             <div className="flex items-center">
               <div className="px-2 py-1 text-xs text-purple-300">
-                {toolCall.output && "error" in toolCall.output
-                  ? "Error"
-                  : toolCall.output && "logs" in toolCall.output
-                    ? `${toolCall.output.logs.length} results`
-                    : "Processing..."}
+                {toolCall.output && "error" in toolCall.output ? (
+                  <span className="text-gray-300">Failed to fetch logs</span>
+                ) : toolCall.output && "logs" in toolCall.output ? (
+                  `${toolCall.output.logs.length} results`
+                ) : (
+                  "Processing..."
+                )}
               </div>
-              {toolCall.output && !("error" in toolCall.output) && (
+              {toolCall.output && !("error" in toolCall.output) && "logs" in toolCall.output && (
                 <a
                   href={logSearchInputToDatadogLogsViewUrl(toolCall.input)}
                   target="_blank"
@@ -108,6 +110,10 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
               const output =
                 catToolCall.output && !("error" in catToolCall.output) ? catToolCall.output : null;
               const numLines = output ? output.content.split("\n").length : 0;
+              const error =
+                catToolCall.output && "error" in catToolCall.output
+                  ? catToolCall.output.error
+                  : "Failed to read file";
               return (
                 <div
                   key={`${step.id}-search-${index}`}
@@ -118,20 +124,22 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
                     <div className="font-mono text-xs truncate">{filepath}</div>
                   </div>
                   <div className="flex items-center">
-                    {output && (
-                      <div className="px-2 py-1 text-xs text-blue-300">
-                        {numLines} line{numLines !== 1 ? "s" : ""}
-                      </div>
-                    )}
-                    {output && (
-                      <a
-                        href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, filepath)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
-                      >
-                        Open in GitHub <ExternalLink className="ml-1" size={12} />
-                      </a>
+                    {output ? (
+                      <>
+                        <div className="px-2 py-1 text-xs text-blue-300">
+                          {numLines} line{numLines !== 1 ? "s" : ""}
+                        </div>
+                        <a
+                          href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, filepath)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
+                        >
+                          Open in GitHub <ExternalLink className="ml-1" size={12} />
+                        </a>
+                      </>
+                    ) : (
+                      <div className="px-2 py-1 text-xs text-gray-300">Failed to fetch code</div>
                     )}
                   </div>
                 </div>
@@ -153,11 +161,12 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
                     <div className="font-mono text-xs truncate">{grepToolCall.input.pattern}</div>
                   </div>
                   <div className="flex items-center">
-                    {grepToolCall.output && !("error" in grepToolCall.output) && (
+                    {grepToolCall.output && !("error" in grepToolCall.output) ? (
                       <div className="px-2 py-1 text-xs text-blue-300">
-                        {numLines} result
-                        {numLines !== 1 ? "s" : ""}
+                        {numLines} result{numLines !== 1 ? "s" : ""}
                       </div>
+                    ) : (
+                      <div className="px-2 py-1 text-xs text-gray-300">Failed to search code</div>
                     )}
                   </div>
                 </div>
