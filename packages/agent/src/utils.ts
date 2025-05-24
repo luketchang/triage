@@ -188,9 +188,9 @@ export function formatAgentSteps(steps: AgentStep[]): string {
 }
 
 export function formatUserMessage(userMessage: UserMessage): string {
-  let formattedMessage = `User:\n${userMessage.content}`;
+  let formattedMessage = `--- User ---\n${userMessage.content}`;
 
-  // Add materialized context items if they exist
+  // Add context items if they exist
   if (userMessage.contextItems && userMessage.contextItems.length > 0) {
     formattedMessage += "\n\nAttached Context:";
 
@@ -208,21 +208,21 @@ export function formatAssistantMessage(message: ChatMessage): string {
   }
 
   const assistantMessage = message;
-  let formattedMessage = "Assistant:\n";
+  let formattedMessage = `--- Assistant ---\n`;
 
-  // Add gathered context if there are steps
+  // Add context if there are steps
   if (assistantMessage.steps && assistantMessage.steps.length > 0) {
     formattedMessage += `\nGathered Context:\n${formatAgentSteps(assistantMessage.steps)}`;
   }
 
   // Add response if it exists
   if (assistantMessage.response) {
-    formattedMessage += `\n\nResponse: ${assistantMessage.response}`;
+    formattedMessage += `\n\nResponse:\n${assistantMessage.response}`;
   }
 
   // Add error if it exists
   if (assistantMessage.error) {
-    formattedMessage += `\n\nError: ${assistantMessage.error}`;
+    formattedMessage += `\n\nError:\n${assistantMessage.error}`;
   }
 
   return formattedMessage;
