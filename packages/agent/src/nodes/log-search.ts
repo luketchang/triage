@@ -269,7 +269,6 @@ export class LogSearchAgent {
         logger.info("Fetching logs from observability client...");
         const logContext = await handleLogSearchRequest(
           // TODO: remove once we allow multiple log search tool calls
-
           response.actions[0]!,
           this.config.observabilityClient
         );
