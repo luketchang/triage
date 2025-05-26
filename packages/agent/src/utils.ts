@@ -85,7 +85,7 @@ export function formatSingleCatToolCallWithResult(
 
 export function formatSingleGrepToolCallWithResult(step: GrepToolCallWithResult): string {
   // Format input arguments on one line
-  const inputArgs = `git grep ${step.input.pattern} ${step.input.flags ? ` -${step.input.flags}` : ""}`;
+  const inputArgs = `git grep ${step.input.flags ? ` -${step.input.flags}` : ""} ${step.input.pattern}`;
   const separator = "-".repeat(inputArgs.length);
 
   if (step.output.type === "error") {

@@ -61,7 +61,7 @@ export async function handleGrepRequest(
           if (error.code === 1) {
             resolve({
               type: "result",
-              content: "No matches found",
+              content: "",
               toolCallType: "grepRequest",
             });
           } else {
@@ -74,6 +74,7 @@ export async function handleGrepRequest(
           }
         } else {
           // Matches found
+          logger.info(`Result for grep request ${toolCall.pattern}: ${stdout}`);
           resolve({
             type: "result",
             content: stdout,

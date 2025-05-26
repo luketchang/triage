@@ -107,20 +107,23 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
             // Handle different types of code search tool calls
             if (toolCall.type === "cat") {
               const catToolCall = toolCall;
-              const filepath = absoluteToRepoRelativePath(
+              const relativePath = absoluteToRepoRelativePath(
                 appConfig.repoPath!,
                 catToolCall.input.path
               );
 
+              // Check if the file is outside the repository
+              const displayPath = relativePath ? relativePath : catToolCall.input.path;
+
               // Compute display content based on output state
               const resultContent =
-                catToolCall.output && !("error" in catToolCall.output) ? (
+                catToolCall.output && !("error" in catToolCall.output) && relativePath ? (
                   <>
                     <div className="px-2 py-1 text-xs text-blue-300">
                       {`${catToolCall.output.content.split("\n").length} lines`}
                     </div>
                     <a
-                      href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, filepath)}
+                      href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, displayPath!)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
@@ -139,7 +142,7 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
                 >
                   <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
                     <FileCode size={16} className="text-blue-300 flex-shrink-0" />
-                    <div className="font-mono text-xs truncate">{filepath}</div>
+                    <div className="font-mono text-xs truncate">{displayPath}</div>
                   </div>
                   <div className="flex items-center">{resultContent}</div>
                 </div>
@@ -151,7 +154,7 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
                 grepToolCall.output && !("error" in grepToolCall.output) ? (
                   <div className="px-2 py-1 text-xs text-blue-300">
                     {/* NOTE: when using git grep, the number of results is actually the number of lines */}
-                    {`${grepToolCall.output.content.split("\n").length} results`}
+                    {`${grepToolCall.output.content.split("\n").filter((line) => line.trim() !== "").length} results`}
                   </div>
                 ) : (
                   <div className="px-2 py-1 text-xs text-gray-300">Failed to fetch code</div>
