@@ -1,19 +1,19 @@
+import { DataIntegrationsConfig } from "../config";
 import { DatadogTracesClient } from "./clients/datadog";
 import { GrafanaTracesClient } from "./clients/grafana";
-import { ObservabilityConfig } from "../config";
 import { TracesClient } from "./traces.interface";
 
-export function getTracesClient(observabilityCfg: ObservabilityConfig): TracesClient {
-  if (observabilityCfg.observabilityClient === "datadog") {
-    if (!observabilityCfg.datadog) {
+export function getTracesClient(dataIntegrationsCfg: DataIntegrationsConfig): TracesClient {
+  if (dataIntegrationsCfg.observabilityClient === "datadog") {
+    if (!dataIntegrationsCfg.datadog) {
       throw new Error("Datadog client not configured");
     }
-    return new DatadogTracesClient(observabilityCfg.datadog);
-  } else if (observabilityCfg.observabilityClient === "grafana") {
-    if (!observabilityCfg.grafana) {
+    return new DatadogTracesClient(dataIntegrationsCfg.datadog);
+  } else if (dataIntegrationsCfg.observabilityClient === "grafana") {
+    if (!dataIntegrationsCfg.grafana) {
       throw new Error("Grafana client not configured");
     }
-    return new GrafanaTracesClient(observabilityCfg.grafana);
+    return new GrafanaTracesClient(dataIntegrationsCfg.grafana);
   }
   throw new Error("No traces client configured");
 }

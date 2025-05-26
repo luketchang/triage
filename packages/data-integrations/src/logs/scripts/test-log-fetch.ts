@@ -2,11 +2,11 @@
 import { logger } from "@triage/common";
 import { Command } from "commander";
 
-import { ObservabilityConfig, DatadogCfgSchema, GrafanaCfgSchema } from "../../config";
+import { DatadogCfgSchema, DatadogConfig, GrafanaCfgSchema, GrafanaConfig } from "../../config";
 import { DatadogLogsClient } from "../clients/datadog";
 import { GrafanaLogsClient } from "../clients/grafana";
-import { LogsWithPagination } from "../types";
 import { formatLogQuery, formatSingleLog } from "../formatting";
+import { LogsWithPagination } from "../types";
 
 // Setup command line options
 const program = new Command();
@@ -57,7 +57,7 @@ function displayLogs(logsWithPagination: LogsWithPagination, client: string): vo
   });
 }
 
-async function testDatadogLogFetch(datadogCfg: ObservabilityConfig["datadog"]): Promise<void> {
+async function testDatadogLogFetch(datadogCfg: DatadogConfig): Promise<void> {
   try {
     logger.info("Testing Datadog log fetching...");
 
@@ -83,7 +83,7 @@ async function testDatadogLogFetch(datadogCfg: ObservabilityConfig["datadog"]): 
   }
 }
 
-async function testGrafanaLogFetch(grafanaCfg: ObservabilityConfig["grafana"]): Promise<void> {
+async function testGrafanaLogFetch(grafanaCfg: GrafanaConfig): Promise<void> {
   try {
     logger.info("Testing Grafana log fetching...");
 

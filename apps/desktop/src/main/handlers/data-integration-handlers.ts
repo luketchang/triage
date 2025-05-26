@@ -1,9 +1,8 @@
 import { logger } from "@triage/common";
 import {
+  DataIntegrationsConfigStore,
   GetSentryEventInput,
-  ObservabilityConfigStore,
   SentryClient,
-  SentryConfigStore,
   SentryEvent,
   getLogsClient,
   getTracesClient,
@@ -22,8 +21,7 @@ import { registerHandler } from "./register-util.js";
  * Set up all IPC handlers related to data integrations (logs, traces, sentry)
  */
 export function setupDataIntegrationHandlers(
-  observabilityCfgStore: ObservabilityConfigStore,
-  sentryCfgStore: SentryConfigStore
+  dataIntegrationsCfgStore: DataIntegrationsConfigStore
 ): void {
   logger.info("Setting up data integration handlers...");
 
@@ -32,8 +30,8 @@ export function setupDataIntegrationHandlers(
     "logs:fetch",
     async (_event: any, params: LogSearchInput): Promise<LogsWithPagination> => {
       try {
-        const observabilityCfg = await observabilityCfgStore.getValues();
-        const logsClient = getLogsClient(observabilityCfg);
+        const dataIntegrationsCfg = await dataIntegrationsCfgStore.getValues();
+        const logsClient = getLogsClient(dataIntegrationsCfg);
 
         // Call the real client API
         const result = await logsClient.fetchLogs({
@@ -58,8 +56,8 @@ export function setupDataIntegrationHandlers(
     "logs:get-facet-values",
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
-        const observabilityCfg = await observabilityCfgStore.getValues();
-        const logsClient = getLogsClient(observabilityCfg);
+        const dataIntegrationsCfg = await dataIntegrationsCfgStore.getValues();
+        const logsClient = getLogsClient(dataIntegrationsCfg);
 
         // Call the real client API
         logger.info("Getting log facet values for time range:", { start, end });
@@ -85,8 +83,8 @@ export function setupDataIntegrationHandlers(
     "traces:fetch",
     async (_event: any, params: TraceSearchInput): Promise<TracesWithPagination> => {
       try {
-        const observabilityCfg = await observabilityCfgStore.getValues();
-        const tracesClient = getTracesClient(observabilityCfg);
+        const dataIntegrationsCfg = await dataIntegrationsCfgStore.getValues();
+        const tracesClient = getTracesClient(dataIntegrationsCfg);
 
         // Call the real client API
         logger.info("Fetching traces for time range:", { start: params.start, end: params.end });
@@ -112,8 +110,8 @@ export function setupDataIntegrationHandlers(
     "traces:get-spans-facet-values",
     async (_event: any, start: string, end: string): Promise<FacetData[]> => {
       try {
-        const observabilityCfg = await observabilityCfgStore.getValues();
-        const tracesClient = getTracesClient(observabilityCfg);
+        const dataIntegrationsCfg = await dataIntegrationsCfgStore.getValues();
+        const tracesClient = getTracesClient(dataIntegrationsCfg);
 
         // Call the real client API
         logger.info("Getting span facet values for time range:", { start, end });
@@ -139,13 +137,13 @@ export function setupDataIntegrationHandlers(
     "sentry:fetch-event",
     async (_event: any, params: GetSentryEventInput): Promise<SentryEvent> => {
       try {
-        const sentryCfg = await sentryCfgStore.getValues();
+        const dataIntegrationsCfg = await dataIntegrationsCfgStore.getValues();
 
-        if (!sentryCfg.sentry?.authToken) {
+        if (!dataIntegrationsCfg.sentry?.authToken) {
           throw new Error("Sentry auth token not configured");
         }
 
-        const client = new SentryClient(sentryCfg.sentry.authToken);
+        const client = new SentryClient(dataIntegrationsCfg.sentry.authToken);
 
         // Call the client API to fetch the event
         logger.info(`Fetching Sentry event for org ${params.orgSlug}, issue ${params.issueId}`);

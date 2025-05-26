@@ -2,10 +2,10 @@
 import { logger } from "@triage/common";
 import { Command } from "commander";
 
-import { ObservabilityConfig, DatadogCfgSchema } from "../../config";
+import { DatadogCfgSchema, DatadogConfig } from "../../config";
 import { DatadogTracesClient } from "../clients/datadog";
-import { SpansWithPagination } from "../types";
 import { formatSpans } from "../formatting";
+import { SpansWithPagination } from "../types";
 
 // Setup command line options
 const program = new Command();
@@ -40,7 +40,7 @@ function displaySpans(spansWithPagination: SpansWithPagination, client: string):
   logger.info(`\n${client.toUpperCase()} ${formattedSpans}`);
 }
 
-async function testDatadogSpanFetch(datadogCfg: ObservabilityConfig["datadog"]): Promise<void> {
+async function testDatadogSpanFetch(datadogCfg: DatadogConfig): Promise<void> {
   try {
     logger.info("Testing Datadog span fetching...");
     logger.info(`Query: ${options.query}`);

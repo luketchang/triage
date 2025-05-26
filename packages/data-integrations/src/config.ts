@@ -15,16 +15,21 @@ export const GrafanaCfgSchema = z.object({
 });
 export type GrafanaConfig = z.infer<typeof GrafanaCfgSchema>;
 
-export const ObservabilityCfgSchema = z.object({
+export const SentryInternalCfgSchema = z.object({
+  authToken: configSecret(z.string()),
+});
+
+export const DataIntegrationsCfgSchema = z.object({
   observabilityClient: z.enum(["datadog", "grafana"]).default("datadog"),
   observabilityFeatures: z.array(z.enum(["logs", "spans"])).default(["logs"]),
   datadog: DatadogCfgSchema.optional(),
   grafana: GrafanaCfgSchema.optional(),
+  sentry: SentryInternalCfgSchema.optional(),
 });
-export type ObservabilityConfig = z.infer<typeof ObservabilityCfgSchema>;
+export type DataIntegrationsConfig = z.infer<typeof DataIntegrationsCfgSchema>;
 
-export class ObservabilityConfigStore extends DelegatingConfigStore<ObservabilityConfig> {
-  constructor(parentStore: ConfigStore<ObservabilityConfig>) {
-    super(parentStore, ObservabilityCfgSchema);
+export class DataIntegrationsConfigStore extends DelegatingConfigStore<DataIntegrationsConfig> {
+  constructor(parentStore: ConfigStore<DataIntegrationsConfig>) {
+    super(parentStore, DataIntegrationsCfgSchema);
   }
 }

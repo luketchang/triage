@@ -2,10 +2,10 @@
 import { logger } from "@triage/common";
 import { Command } from "commander";
 
-import { ObservabilityConfig, DatadogCfgSchema } from "../../config";
+import { DatadogCfgSchema, DatadogConfig } from "../../config";
 import { DatadogTracesClient } from "../clients/datadog";
-import { TracesWithPagination } from "../types";
 import { formatTraces } from "../formatting";
+import { TracesWithPagination } from "../types";
 
 // Setup command line options
 const program = new Command();
@@ -40,7 +40,7 @@ function displayTraces(tracesWithPagination: TracesWithPagination, client: strin
   logger.info(`\n${client.toUpperCase()} ${formattedTraces}`);
 }
 
-async function testDatadogTraceFetch(datadogCfg: ObservabilityConfig["datadog"]): Promise<void> {
+async function testDatadogTraceFetch(datadogCfg: DatadogConfig): Promise<void> {
   try {
     logger.info("Testing Datadog trace fetching...");
     logger.info(`Query: ${options.query}`);

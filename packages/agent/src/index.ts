@@ -10,7 +10,7 @@ import {
 } from "@triage/common";
 import {
   DatadogCfgSchema,
-  getObservabilityClient,
+  getLogsClient,
   GrafanaCfgSchema,
   IntegrationType,
 } from "@triage/data-integrations";
@@ -71,9 +71,9 @@ export async function invokeAgent({
 
   const fileTree = await getDirectoryTree(agentCfg.repoPath);
 
-  const observabilityClient = getObservabilityClient(agentCfg);
+  const logsClient = getLogsClient(agentCfg);
 
-  const logLabelsMap = await observabilityClient.getLogsFacetValues(
+  const logLabelsMap = await logsClient.getLogsFacetValues(
     startDate.toISOString(),
     endDate.toISOString()
   );
@@ -87,7 +87,7 @@ export async function invokeAgent({
     logLabelsMap,
     reasoningClient: getModelWrapper(agentCfg.reasoningModel, agentCfg),
     fastClient: getModelWrapper(agentCfg.fastModel, agentCfg),
-    observabilityClient,
+    observabilityClient: logsClient,
     dataSources,
     abortSignal,
   };

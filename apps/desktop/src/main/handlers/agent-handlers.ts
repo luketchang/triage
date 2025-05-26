@@ -67,17 +67,17 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
           const endDate = new Date();
           const startDate = new Date(endDate.getTime() - TWO_WEEKS_MS);
 
-          await invokeAgent({
-            userMessage,
-            chatHistory,
-            agentCfg,
-            options: {
-              startDate,
-              endDate,
-            },
-            onUpdate,
-            abortSignal: controller.signal,
-          });
+        const result = await invokeAgent({
+          userMessage,
+          chatHistory,
+          agentCfg,
+          options: {
+            startDate,
+            endDate,
+            dataSources: ["code", "logs"],
+          },
+          onUpdate,
+        });
 
           // At this point, all updates have been sent and all processing is complete,
           // so just send the "done" signal
