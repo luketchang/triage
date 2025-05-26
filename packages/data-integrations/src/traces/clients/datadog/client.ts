@@ -2,9 +2,9 @@ import { client, v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
 
 import { DatadogConfig } from "../../../config";
+import { IntegrationType } from "../../../shared";
 import { TracesClient } from "../../traces.interface";
 import {
-  IntegrationType,
   Span,
   SpanSearchInput,
   SpansWithPagination,
@@ -12,7 +12,6 @@ import {
   TraceSearchInput,
   TracesWithPagination,
 } from "../../types";
-
 import { convertSpansToTrace, extractTraceIds } from "./utils";
 
 const DATADOG_SPAN_SEARCH_INSTRUCTIONS = `

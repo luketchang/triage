@@ -2,8 +2,9 @@ import { client, v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
 
 import { DatadogConfig } from "../../../config";
+import { IntegrationType } from "../../../shared";
 import { LogsClient } from "../../logs.interface";
-import { IntegrationType, Log, LogSearchInput, LogsWithPagination } from "../../types";
+import { Log, LogSearchInput, LogsWithPagination } from "../../types";
 
 const DATADOG_LOG_SEARCH_INSTRUCTIONS = `
 Use Datadog Log Search Syntax to search for logs.

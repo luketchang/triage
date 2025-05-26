@@ -1,7 +1,7 @@
 import { GrafanaConfig } from "../../../config";
+import { IntegrationType } from "../../../shared";
 import { TracesClient } from "../../traces.interface";
 import {
-  IntegrationType,
   SpanSearchInput,
   SpansWithPagination,
   Trace,

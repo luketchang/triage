@@ -2,14 +2,9 @@ import { logger, toUnixNano } from "@triage/common";
 import axios from "axios";
 
 import { GrafanaConfig } from "../../../config";
+import { IntegrationType, PaginationStatus } from "../../../shared";
 import { LogsClient } from "../../logs.interface";
-import {
-  IntegrationType,
-  Log,
-  LogSearchInput,
-  LogsWithPagination,
-  PaginationStatus,
-} from "../../types";
+import { Log, LogSearchInput, LogsWithPagination } from "../../types";
 
 export const GRAFANA_LOG_SEARCH_INSTRUCTIONS = `
 ## LogQL Syntax

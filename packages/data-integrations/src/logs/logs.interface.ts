@@ -1,4 +1,5 @@
-import { IntegrationType, LogSearchInput, LogsWithPagination } from "./types";
+import { IntegrationType } from "../shared";
+import { LogSearchInput, LogsWithPagination } from "./types";
 
 /**
  * Interface for logs platforms like Datadog and Grafana

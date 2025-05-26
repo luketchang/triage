@@ -1,4 +1,4 @@
-import { ObservabilityClient } from "@triage/data-integrations";
+import { LogsClient } from "@triage/data-integrations";
 import { LanguageModelV1 } from "ai";
 
 import { UserMessage } from "../types/message";
@@ -13,7 +13,7 @@ import { PipelineStateManager } from "./state-manager";
 export type TriagePipelineConfig = {
   reasoningClient: LanguageModelV1;
   fastClient: LanguageModelV1;
-  observabilityClient: ObservabilityClient;
+  logsClient: LogsClient;
   userMessage: UserMessage;
   timezone: string;
   repoPath: string;

@@ -1,5 +1,5 @@
+import { IntegrationType } from "../shared";
 import {
-  IntegrationType,
   SpanSearchInput,
   SpansWithPagination,
   Trace,

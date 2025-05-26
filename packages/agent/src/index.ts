@@ -87,7 +87,7 @@ export async function invokeAgent({
     logLabelsMap,
     reasoningClient: getModelWrapper(agentCfg.reasoningModel, agentCfg),
     fastClient: getModelWrapper(agentCfg.fastModel, agentCfg),
-    observabilityClient: logsClient,
+    logsClient: logsClient,
     dataSources,
     abortSignal,
   };
