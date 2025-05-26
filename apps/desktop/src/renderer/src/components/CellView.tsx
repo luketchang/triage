@@ -149,14 +149,14 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
               // NOTE: when using git grep, the number of results is actually the number of lines
 
               // Compute display content based on output state
-              const hasSuccess = grepToolCall.output && !("error" in grepToolCall.output);
-              const resultContent = hasSuccess ? (
-                <div className="px-2 py-1 text-xs text-blue-300">
-                  {`${grepToolCall.output.content.split("\n").length} results`}
-                </div>
-              ) : (
-                <div className="px-2 py-1 text-xs text-gray-300">Failed to fetch code</div>
-              );
+              const resultContent =
+                grepToolCall.output && !("error" in grepToolCall.output) ? (
+                  <div className="px-2 py-1 text-xs text-blue-300">
+                    {`${grepToolCall.output.content.split("\n").length} results`}
+                  </div>
+                ) : (
+                  <div className="px-2 py-1 text-xs text-gray-300">Failed to fetch code</div>
+                );
 
               return (
                 <div
