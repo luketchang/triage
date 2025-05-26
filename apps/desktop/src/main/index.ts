@@ -13,15 +13,13 @@ import {
   cleanupAgentHandlers,
   cleanupCodebaseHandlers,
   cleanupConfigHandlers,
+  cleanupDataIntegrationHandlers,
   cleanupDbHandlers,
-  cleanupObservabilityHandlers,
-  cleanupSentryHandlers,
   setupAgentHandlers,
   setupCodebaseHandlers,
   setupConfigHandlers,
+  setupDataIntegrationHandlers,
   setupDbHandlers,
-  setupObservabilityHandlers,
-  setupSentryHandlers,
 } from "./handlers/index.js";
 import { setupDesktopLogger } from "./setup/logger-setup.js";
 
@@ -104,8 +102,7 @@ function initApp(mainWindow: BrowserWindow): void {
   setupDbHandlers();
   setupCodebaseHandlers(mainWindow, appCfgStore);
   setupConfigHandlers(appCfgStore);
-  setupObservabilityHandlers(observabilityCfgStore);
-  setupSentryHandlers(sentryCfgStore);
+  setupDataIntegrationHandlers(observabilityCfgStore, sentryCfgStore);
 }
 
 // This method will be called when Electron has finished
@@ -170,6 +167,5 @@ app.on("before-quit", () => {
   cleanupCodebaseHandlers();
   cleanupDbHandlers();
   cleanupConfigHandlers();
-  cleanupObservabilityHandlers();
-  cleanupSentryHandlers();
+  cleanupDataIntegrationHandlers();
 });

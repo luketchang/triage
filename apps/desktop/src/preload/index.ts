@@ -68,7 +68,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * Fetch logs based on query parameters
    * @param params Query parameters for fetching logs
    */
-  fetchLogs: (params: unknown) => ipcRenderer.invoke("observability:fetch-logs", params),
+  fetchLogs: (params: unknown) => ipcRenderer.invoke("logs:fetch", params),
 
   /**
    * Get log facet values for a given time range
@@ -76,13 +76,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param end End date of the time range
    */
   getLogsFacetValues: (start: string, end: string) =>
-    ipcRenderer.invoke("observability:get-logs-facet-values", start, end),
+    ipcRenderer.invoke("logs:get-facet-values", start, end),
 
   /**
    * Fetch traces based on query parameters
    * @param params Query parameters for fetching traces
    */
-  fetchTraces: (params: unknown) => ipcRenderer.invoke("observability:fetch-traces", params),
+  fetchTraces: (params: unknown) => ipcRenderer.invoke("traces:fetch", params),
 
   /**
    * Get span facet values for a given time range
@@ -90,7 +90,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param end End date of the time range
    */
   getSpansFacetValues: (start: string, end: string) =>
-    ipcRenderer.invoke("observability:get-spans-facet-values", start, end),
+    ipcRenderer.invoke("traces:get-spans-facet-values", start, end),
 
   /**
    * Fetch a Sentry event by specifier
