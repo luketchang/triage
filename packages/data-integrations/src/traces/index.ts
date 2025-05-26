@@ -1,5 +1,6 @@
 export * from "./types";
 export * from "./traces.interface";
+export * from "./formatting";
 
 // Export clients
 export { DatadogTracesClient } from "./clients/datadog";
