@@ -20,8 +20,8 @@ export const SentryInternalCfgSchema = z.object({
 });
 
 export const DataIntegrationsCfgSchema = z.object({
-  observabilityClient: z.enum(["datadog", "grafana"]).default("datadog"),
-  observabilityFeatures: z.array(z.enum(["logs", "spans"])).default(["logs"]),
+  logsProvider: z.enum(["datadog", "grafana"]).optional().default("datadog"),
+  tracesProvider: z.enum(["datadog", "grafana"]).optional().default("datadog"),
   datadog: DatadogCfgSchema.optional(),
   grafana: GrafanaCfgSchema.optional(),
   sentry: SentryInternalCfgSchema.optional(),

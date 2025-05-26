@@ -8,12 +8,7 @@ import {
   logger,
   OpenAIModel,
 } from "@triage/common";
-import {
-  DatadogCfgSchema,
-  getLogsClient,
-  GrafanaCfgSchema,
-  IntegrationType,
-} from "@triage/data-integrations";
+import { DatadogCfgSchema, getLogsClient, GrafanaCfgSchema } from "@triage/data-integrations";
 import { Command as CommanderCommand } from "commander";
 import { DateTime } from "luxon";
 import { z } from "zod";
@@ -96,7 +91,7 @@ export async function invokeAgent({
 
   console.info("Chat history invokeAgent: ", JSON.stringify(chatHistory));
 
-  logger.info(`Observability features: ${agentCfg.observabilityFeatures}`);
+  logger.info(`Logs provider: ${agentCfg.logsProvider}`);
 
   try {
     const pipeline = new TriagePipeline(pipelineConfig, state);
@@ -120,26 +115,31 @@ export async function invokeAgent({
   }
 }
 
-async function main(): Promise<void> {
+const parseArgs = (): {
+  logsProvider: "datadog" | "grafana";
+  tracesProvider: "datadog" | "grafana";
+} => {
   const argsSchema = z.object({
     orgId: z.string().optional(),
-    integration: z
+    logsProvider: z
       .enum(["datadog", "grafana"])
       .default("datadog")
-      .transform((value) => value as IntegrationType),
-    features: z
-      .string()
-      .default("logs")
-      .transform((str) => str.split(",").map((f) => f.trim()))
-      .refine((f) => f.every((feat) => ["logs", "spans"].includes(feat)), {
-        message: "Features must be: logs, spans",
-      }),
+      .transform((value) => value),
+    tracesProvider: z
+      .enum(["datadog", "grafana"])
+      .default("datadog")
+      .transform((value) => value),
   });
   const program = new CommanderCommand()
-    .option("-i, --integration <integration>", "Integration type (datadog or grafana)")
-    .option("-f, --features <features>", "Features to enable (logs,spans)")
+    .option("-l, --logs-provider <logsProvider>", "Logs provider (datadog or grafana)")
+    .option("-t, --traces-provider <tracesProvider>", "Traces provider (datadog or grafana)")
     .parse();
-  const { integration, features: observabilityFeatures } = argsSchema.parse(program.opts());
+
+  return argsSchema.parse(program.opts());
+};
+
+async function main(): Promise<void> {
+  const { logsProvider, tracesProvider } = parseArgs();
 
   // Get formatted labels map for time range
   const startDate = new Date("2025-05-02T02:00:00Z");
@@ -172,20 +172,20 @@ async function main(): Promise<void> {
       content: codebaseOverview,
       repoPath,
     },
-    observabilityClient: integration as IntegrationType,
+    logsProvider,
+    tracesProvider,
     reasoningModel: OpenAIModel.GPT_4_1,
     balancedModel: OpenAIModel.GPT_4_1,
     fastModel: GeminiModel.GEMINI_2_5_FLASH,
-    observabilityFeatures: observabilityFeatures as ("logs" | "spans")[],
     datadog:
-      integration === "datadog"
+      logsProvider === "datadog"
         ? DatadogCfgSchema.parse({
             apiKey: process.env.DATADOG_API_KEY!,
             appKey: process.env.DATADOG_APP_KEY!,
           })
         : undefined,
     grafana:
-      integration === "grafana"
+      logsProvider === "grafana"
         ? GrafanaCfgSchema.parse({
             baseUrl: process.env.GRAFANA_BASE_URL!,
             username: process.env.GRAFANA_USERNAME!,

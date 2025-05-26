@@ -4,12 +4,12 @@ import { GrafanaTracesClient } from "./clients/grafana";
 import { TracesClient } from "./traces.interface";
 
 export function getTracesClient(dataIntegrationsCfg: DataIntegrationsConfig): TracesClient {
-  if (dataIntegrationsCfg.observabilityClient === "datadog") {
+  if (dataIntegrationsCfg.tracesProvider === "datadog") {
     if (!dataIntegrationsCfg.datadog) {
       throw new Error("Datadog client not configured");
     }
     return new DatadogTracesClient(dataIntegrationsCfg.datadog);
-  } else if (dataIntegrationsCfg.observabilityClient === "grafana") {
+  } else if (dataIntegrationsCfg.tracesProvider === "grafana") {
     if (!dataIntegrationsCfg.grafana) {
       throw new Error("Grafana client not configured");
     }
