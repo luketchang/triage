@@ -31,7 +31,7 @@ export default {
       },
       backgroundImage: {
         "shine-white":
-          "linear-gradient(90deg, transparent 0%, transparent 45%, rgba(255,255,255,0.6) 50%, transparent 55%, transparent 100%)",
+          "linear-gradient(90deg, #6b7280 0%, #6b7280 45%, rgba(255,255,255,1) 50%, #6b7280 55%, #6b7280 100%)",
       },
       colors: {
         primary: {

@@ -324,18 +324,21 @@ function CellView({
         />
 
         {/* Show waiting indicator with less restrictive conditions */}
-        {isThinking && showWaitingIndicator && (
-          <div className="waiting-indicator p-2 text-left text-gray-400">
-            {/* Show "Reasoning..." if the last step is a reasoning step */}
-            {steps.length > 0 && steps[steps.length - 1].type === "reasoning" ? (
-              <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
-                Reasoning
-              </div>
-            ) : (
-              <AnimatedEllipsis />
-            )}
-          </div>
-        )}
+        {isThinking &&
+          showWaitingIndicator &&
+          !logPostprocessingStep &&
+          !codePostprocessingStep && (
+            <div className="waiting-indicator p-2 text-left">
+              {/* Show "Reasoning..." if the last step is a reasoning step */}
+              {steps.length > 0 && steps[steps.length - 1].type === "reasoning" ? (
+                <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
+                  Reasoning
+                </div>
+              ) : (
+                <AnimatedEllipsis />
+              )}
+            </div>
+          )}
 
         {/* Render error if present */}
         {message.error && (
