@@ -17,6 +17,7 @@ import {
 import { absoluteToRepoRelativePath, filepathToGitHubUrl } from "../utils/parse/code.js";
 import { logSearchInputToDatadogLogsViewUrl } from "../utils/parse/logs.js";
 import AnimatedEllipsis from "./AnimatedEllipsis.jsx";
+import { Markdown } from "./ui/Markdown.jsx";
 
 const GenericStep: React.FC<{ step: AgentStep }> = ({ step }) => {
   switch (step.type) {
@@ -38,8 +39,7 @@ const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => {
       {/* Reasoning */}
       {step.reasoning && (
         <div className="mb-4 text-sm leading-relaxed search-step-reasoning break-all w-full min-w-0">
-          {/* <Markdown>{step.reasoning}</Markdown> */}
-          {step.reasoning}
+          <Markdown>{step.reasoning}</Markdown>
         </div>
       )}
 
@@ -99,8 +99,7 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
       {/* Reasoning */}
       {step.reasoning && (
         <div className="mb-4 text-sm leading-relaxed search-step-reasoning break-all w-full min-w-0">
-          {/* <Markdown>{step.reasoning}</Markdown> */}
-          {step.reasoning}
+          <Markdown>{step.reasoning}</Markdown>
         </div>
       )}
 
@@ -198,7 +197,7 @@ const ReasoningStepView: React.FC<{ step: ReasoningStep }> = ({ step }) => (
     {/* Reasoning */}
     {step.data && (
       <div className="mb-4 text-sm leading-relaxed w-full overflow-hidden break-all min-w-0">
-        {step.data}
+        <Markdown>{step.data}</Markdown>
       </div>
     )}
   </div>
