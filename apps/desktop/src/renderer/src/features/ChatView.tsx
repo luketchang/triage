@@ -59,7 +59,7 @@ function ChatView() {
     <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Chat header */}
       <div className="flex justify-between items-center py-3 px-4 border-b border-border bg-background-lighter backdrop-blur-sm shadow-sm z-10">
-        <h1 className="text-lg font-semibold text-primary">Chat</h1>
+        <h1 className="text-lg font-semibold text-primary break-all">Chat</h1>
       </div>
 
       <div className="flex flex-1 relative min-h-0 overflow-hidden">
@@ -77,7 +77,14 @@ function ChatView() {
             type="always"
             scrollHideDelay={0}
           >
-            <div className="flex flex-col justify-start h-auto w-full min-w-0">
+            <div
+              className="flex flex-col justify-start h-auto w-full min-w-0"
+              style={{
+                minWidth: "0 !important",
+                display: "flex !important",
+                width: "100%",
+              }}
+            >
               {messages?.map((message) =>
                 message.role === "user" ? (
                   <div key={`user-${message.id}`} className="py-4 px-4 bg-background-assistant">
@@ -94,7 +101,7 @@ function ChatView() {
                             ))}
                           </div>
                         )}
-                        <div className="bg-background-alt p-4 rounded-lg shadow-sm w-full break-words">
+                        <div className="bg-background-alt p-4 rounded-lg shadow-sm w-full break-words break-all">
                           {/* <Markdown>{message.content}</Markdown> */}
                           {message.content}
                         </div>

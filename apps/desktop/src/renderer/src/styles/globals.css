@@ -235,3 +235,27 @@ code {
 .search-step-reasoning .prose * {
   color: inherit !important;
 }
+
+/* Fix Radix ScrollArea preventing content shrinking */
+[data-radix-scroll-area-viewport] > div {
+  min-width: 0 !important;
+  display: flex !important;
+  width: 100% !important;
+}
+
+/* Ensure scroll container allows shrinking */
+.scroll-container [data-radix-scroll-area-viewport] > div {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Override any table display on scroll content */
+.scroll-container * {
+  max-width: 100% !important;
+}
+
+.scroll-container [style*="display: table"] {
+  display: flex !important;
+  min-width: 0 !important;
+}

@@ -57,7 +57,10 @@ export function Markdown({ children, className }: MarkdownProps) {
               <CodeBlock language={match[1]} value={String(children).replace(/\n$/, "")} />
             ) : (
               <code
-                className={cn("bg-background-alt px-1 py-0.5 rounded text-sm font-mono", className)}
+                className={cn(
+                  "bg-background-alt px-1 py-0.5 rounded text-sm font-mono break-all",
+                  className
+                )}
                 {...props}
               >
                 {children}
@@ -65,38 +68,38 @@ export function Markdown({ children, className }: MarkdownProps) {
             );
           },
           p({ children }) {
-            return <p className="my-3 leading-relaxed">{children}</p>;
+            return <p className="my-3 leading-relaxed break-all">{children}</p>;
           },
           h1({ children }) {
-            return <h1 className="text-2xl font-bold mt-6 mb-3">{children}</h1>;
+            return <h1 className="text-2xl font-bold mt-6 mb-3 break-all">{children}</h1>;
           },
           h2({ children }) {
-            return <h2 className="text-xl font-bold mt-5 mb-2">{children}</h2>;
+            return <h2 className="text-xl font-bold mt-5 mb-2 break-all">{children}</h2>;
           },
           h3({ children }) {
-            return <h3 className="text-lg font-bold mt-4 mb-2">{children}</h3>;
+            return <h3 className="text-lg font-bold mt-4 mb-2 break-all">{children}</h3>;
           },
           h4({ children }) {
-            return <h4 className="text-base font-bold mt-4 mb-2">{children}</h4>;
+            return <h4 className="text-base font-bold mt-4 mb-2 break-all">{children}</h4>;
           },
           h5({ children }) {
-            return <h5 className="text-sm font-bold mt-3 mb-1">{children}</h5>;
+            return <h5 className="text-sm font-bold mt-3 mb-1 break-all">{children}</h5>;
           },
           h6({ children }) {
-            return <h6 className="text-xs font-bold mt-3 mb-1">{children}</h6>;
+            return <h6 className="text-xs font-bold mt-3 mb-1 break-all">{children}</h6>;
           },
           ul({ children }) {
-            return <ul className="list-disc pl-6 my-3 space-y-1">{children}</ul>;
+            return <ul className="list-disc pl-6 my-3 space-y-1 break-all">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="list-decimal pl-6 my-3 space-y-1">{children}</ol>;
+            return <ol className="list-decimal pl-6 my-3 space-y-1 break-all">{children}</ol>;
           },
           li({ children }) {
-            return <li className="mb-1">{children}</li>;
+            return <li className="mb-1 break-all">{children}</li>;
           },
           blockquote({ children }) {
             return (
-              <blockquote className="border-l-2 border-primary/50 pl-4 italic text-gray-300">
+              <blockquote className="border-l-2 border-primary/50 pl-4 italic text-gray-300 break-all">
                 {children}
               </blockquote>
             );
@@ -105,7 +108,7 @@ export function Markdown({ children, className }: MarkdownProps) {
             return (
               <a
                 href={href}
-                className="text-primary-light hover:underline"
+                className="text-primary-light hover:underline break-all"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -129,13 +132,13 @@ export function Markdown({ children, className }: MarkdownProps) {
           },
           th({ children }) {
             return (
-              <th className="border border-border/60 bg-background-lighter p-2 text-left font-medium">
+              <th className="border border-border/60 bg-background-lighter p-2 text-left font-medium break-all">
                 {children}
               </th>
             );
           },
           td({ children }) {
-            return <td className="border border-border/60 p-2">{children}</td>;
+            return <td className="border border-border/60 p-2 break-all">{children}</td>;
           },
         }}
       >
