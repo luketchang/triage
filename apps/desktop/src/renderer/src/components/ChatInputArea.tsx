@@ -111,7 +111,7 @@ function ChatInputArea() {
 
   return (
     <div className="p-4 border-t border-border bg-background-lighter">
-      <div className="relative max-w-[90%] mx-auto">
+      <div className="relative w-full mx-auto px-4 sm:px-8 md:px-12">
         {/* Context Items Cards */}
         {contextItems.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
@@ -157,7 +157,7 @@ function ChatInputArea() {
           </Button>
         )}
       </div>
-      <div className="mt-1.5 text-xs text-gray-500 text-left max-w-[90%] mx-auto">
+      <div className="mt-1.5 text-xs text-gray-500 text-left w-full mx-auto px-4 sm:px-8 md:px-12">
         Press Enter to send, Shift+Enter for new line
       </div>
     </div>
