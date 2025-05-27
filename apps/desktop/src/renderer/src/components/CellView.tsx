@@ -1,5 +1,5 @@
 import { useAppConfig } from "@renderer/context/useAppConfig.js";
-import { BarChart, ExternalLink, FileCode, Search } from "lucide-react";
+import { BarChart, ExternalLink, FileCode, Loader2, Search } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "../components/ui/Markdown.js";
 import { cn } from "../lib/utils.js";
@@ -28,9 +28,11 @@ const GenericStep: React.FC<{ step: AgentStep }> = ({ step }) => {
     case "reasoning":
       return <ReasoningStepView step={step} />;
     case "logPostprocessing":
-      return <LogPostprocessingStepView step={step} />;
+      // Don't render postprocessing UI - handled by PostprocessingSpinner
+      return null;
     case "codePostprocessing":
-      return <CodePostprocessingStepView step={step} />;
+      // Don't render postprocessing UI - handled by PostprocessingSpinner
+      return null;
   }
 };
 
@@ -192,62 +194,38 @@ const ReasoningStepView: React.FC<{ step: ReasoningStep }> = ({ step }) => (
   </div>
 );
 
-const LogPostprocessingStepView: React.FC<{ step: LogPostprocessingStep }> = ({ step }) => (
-  <div className="mb-6">
-    {/* Title */}
-    <div className="mb-3 flex items-center">
-      <div className="text-sm font-medium text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
-        Log Analysis
+const PostprocessingSpinner: React.FC<{
+  hasLogStep: boolean;
+  hasCodeStep: boolean;
+  isThinking: boolean;
+}> = ({ hasLogStep, hasCodeStep, isThinking }) => {
+  // Only show spinner if we're thinking and have postprocessing steps
+  if (!isThinking || (!hasLogStep && !hasCodeStep)) {
+    return null;
+  }
+
+  // Determine caption based on which postprocessing steps are present
+  let caption = "Analyzing";
+  if (hasLogStep && hasCodeStep) {
+    caption = "Analyzing logs and code";
+  } else if (hasLogStep) {
+    caption = "Analyzing logs";
+  } else if (hasCodeStep) {
+    caption = "Analyzing code";
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-3 p-4 rounded-lg bg-background-lighter/20 border border-border/30">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <div className="text-sm text-gray-300">
+          {caption}
+          <AnimatedEllipsis />
+        </div>
       </div>
     </div>
-
-    {/* Facts */}
-    <div className="space-y-3">
-      {step.data.map((fact, index) => (
-        <div
-          key={`fact-${index}`}
-          className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex flex-col"
-        >
-          <div className="flex items-center justify-between p-2.5 border-b border-white/10">
-            <div className="text-xs font-medium">{fact.title || "Log Fact"}</div>
-          </div>
-          <div className="p-3">
-            <div className="text-xs text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-const CodePostprocessingStepView: React.FC<{ step: CodePostprocessingStep }> = ({ step }) => (
-  <div className="mb-6">
-    {/* Title */}
-    <div className="mb-3 flex items-center">
-      <div className="text-sm font-medium text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
-        Code Analysis
-      </div>
-    </div>
-
-    {/* Facts */}
-    <div className="space-y-3">
-      {step.data.map((fact, index) => (
-        <div
-          key={`fact-${index}`}
-          className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex flex-col"
-        >
-          <div className="flex items-center justify-between p-2.5 border-b border-white/10">
-            <div className="text-xs font-medium">{fact.title || "Code Fact"}</div>
-          </div>
-          <div className="p-3">
-            <div className="text-xs text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
-            {fact.filepath && <div className="mt-1 text-xs text-gray-500">{fact.filepath}</div>}
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 interface CellViewProps {
   message: AssistantMessage;
@@ -342,6 +320,13 @@ function CellView({
             <GenericStep step={step} />
           </React.Fragment>
         ))}
+
+        {/* Show postprocessing spinner when thinking and postprocessing steps exist */}
+        <PostprocessingSpinner
+          hasLogStep={!!logPostprocessingStep}
+          hasCodeStep={!!codePostprocessingStep}
+          isThinking={isThinking}
+        />
 
         {/* Show waiting indicator with less restrictive conditions */}
         {isThinking && showWaitingIndicator && (
