@@ -259,3 +259,15 @@ code {
   display: flex !important;
   min-width: 0 !important;
 }
+
+/* Prevent textarea from responding to viewport changes */
+textarea[class*="TextareaAutosize"] {
+  height: auto !important;
+  max-height: 120px !important;
+  min-height: 50px !important;
+}
+
+/* Ensure ChatInputArea maintains consistent height */
+.chat-input-container {
+  flex-shrink: 0;
+}

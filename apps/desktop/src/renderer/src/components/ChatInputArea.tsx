@@ -110,7 +110,7 @@ function ChatInputArea() {
   };
 
   return (
-    <div className="p-4 border-t border-border bg-background-lighter">
+    <div className="chat-input-container p-4 border-t border-border bg-background-lighter">
       <div className="relative w-full mx-auto px-4 sm:px-8 md:px-12">
         {/* Context Items Cards */}
         {contextItems.length > 0 && (
