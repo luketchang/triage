@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils.js";
  */
 export const CodeBlock = ({ language, value }: { language: string; value: string }) => {
   return (
-    <div className="relative my-3 rounded-lg overflow-hidden">
+    <div className="relative my-3 rounded-lg overflow-hidden w-full">
       <div className="absolute top-0 right-0 px-2 py-1 text-xs bg-background-alt text-gray-400 rounded-bl-md z-10">
         {language}
       </div>
@@ -48,7 +48,7 @@ interface CodeProps {
 
 export function Markdown({ children, className }: MarkdownProps) {
   return (
-    <div className={cn("prose prose-invert max-w-none markdown-trim-margins", className)}>
+    <div className={cn("max-w-none markdown-trim-margins", className)}>
       <ReactMarkdown
         components={{
           code({ node, inline, className, children, ...props }: CodeProps) {
@@ -115,7 +115,7 @@ export function Markdown({ children, className }: MarkdownProps) {
           },
           pre({ children }) {
             return (
-              <pre className="my-4 bg-background-alt rounded-lg p-3 text-sm overflow-x-auto">
+              <pre className="my-4 bg-background-alt rounded-lg p-3 text-sm overflow-x-auto w-full break-all">
                 {children}
               </pre>
             );
