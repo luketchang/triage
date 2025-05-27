@@ -15,7 +15,7 @@ export const GrafanaCfgSchema = z.object({
 });
 export type GrafanaConfig = z.infer<typeof GrafanaCfgSchema>;
 
-export const SentryInternalCfgSchema = z.object({
+export const SentryCfgSchema = z.object({
   authToken: configSecret(z.string()),
 });
 
@@ -24,7 +24,7 @@ export const DataIntegrationsCfgSchema = z.object({
   tracesProvider: z.enum(["datadog", "grafana"]).optional().default("datadog"),
   datadog: DatadogCfgSchema.optional(),
   grafana: GrafanaCfgSchema.optional(),
-  sentry: SentryInternalCfgSchema.optional(),
+  sentry: SentryCfgSchema.optional(),
 });
 export type DataIntegrationsConfig = z.infer<typeof DataIntegrationsCfgSchema>;
 
