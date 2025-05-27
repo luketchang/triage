@@ -99,6 +99,13 @@ function initApp(mainWindow: BrowserWindow): void {
   const observabilityCfgStore = new ObservabilityConfigStore(configStore);
   const sentryCfgStore = new SentryConfigStore(configStore);
 
+  // TODO: remove this once we add ability to fill sentry auth token in Settings tab
+  // sentryCfgStore.setValues({
+  //   sentry: {
+  //     authToken: "<add sentry auth token here>",
+  //   },
+  // });
+
   // Set up all IPC handlers
   setupAgentHandlers(mainWindow, agentCfgStore);
   setupDbHandlers();

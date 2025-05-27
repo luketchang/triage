@@ -8,11 +8,12 @@ import { TriagePipelineConfig } from "../pipeline";
 import { LogSearchStep, LogSearchToolCallWithResult, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
 import { handleLogSearchRequest } from "../tools";
-import { logSearchInputToolSchema, LogSearchRequest, TaskComplete } from "../types";
+import { logSearchInputToolSchema, LogSearchRequest, TaskComplete, UserMessage } from "../types";
 import {
   ensureSingleToolCall,
   formatFacetValues,
   formatLogSearchToolCallsWithResults,
+  formatUserMessage,
 } from "../utils";
 
 export interface LogSearchAgentResponse {
@@ -31,7 +32,7 @@ You are an expert AI assistant that helps engineers debug production issues by s
 `;
 
 function createLogSearchPrompt(params: {
-  query: string;
+  userMessage: UserMessage;
   timezone: string;
   logRequest: string;
   platformSpecificInstructions: string;
@@ -68,6 +69,7 @@ Given all available log labels, a user query about the issue/event, and previous
   - Use attribute filters in place of plain keyword filters
   - Widen time range
   - Add more services to the query
+- Anchor your queries around the timestamps provided in the user query or the attached context, if any.
 
 ## Rules:
 - Output  one  \`LogSearchInput\` at a time. DO NOT output multiple \`LogSearchInput\` tool calls.
@@ -86,7 +88,7 @@ ${currentTime}
 </current_time_in_user_local_timezone>
 
 <query>
-${params.query}
+${formatUserMessage(params.userMessage)}
 </query>
 
 <log_labels>
@@ -128,7 +130,7 @@ class LogSearch {
 
   async invoke(params: {
     logSearchId: string;
-    query: string;
+    userMessage: UserMessage;
     timezone: string;
     logRequest: string;
     previousLogSearchToolCallsWithResults: LogSearchToolCallWithResult[];
@@ -244,7 +246,7 @@ export class LogSearchAgent {
       const logSearchId = uuidv4();
       response = await this.logSearch.invoke({
         logSearchId,
-        query: this.config.query,
+        userMessage: this.config.userMessage,
         timezone: this.config.timezone,
         logRequest: params.logRequest,
         logLabelsMap: this.config.logLabelsMap,
@@ -267,7 +269,6 @@ export class LogSearchAgent {
         logger.info("Fetching logs from observability client...");
         const logContext = await handleLogSearchRequest(
           // TODO: remove once we allow multiple log search tool calls
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           response.actions[0]!,
           this.config.observabilityClient
         );

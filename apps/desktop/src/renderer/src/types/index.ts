@@ -16,6 +16,7 @@ import {
   LogPostprocessingStep,
   LogSearchStep,
   LogSearchToolCallWithResult,
+  MaterializedContextItem,
   ReasoningStep,
 } from "@triage/agent";
 import { CodebaseOverview, CodebaseOverviewProgressUpdate } from "@triage/codebase-overviews";
@@ -56,6 +57,7 @@ export type {
   LogSearchStep,
   LogSearchToolCallWithResult,
   LogsWithPagination,
+  MaterializedContextItem,
   ReasoningStep,
   SentryEvent,
   SentryEventSpecifier,
@@ -93,6 +95,7 @@ export interface UserMessage {
   timestamp: Date;
   content: string;
   contextItems?: ContextItem[];
+  materializedContextItems?: MaterializedContextItem[];
 }
 
 export interface AssistantMessage {

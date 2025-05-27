@@ -8,6 +8,7 @@ import { AppConfig } from "../../common/AppConfig.js";
 import {
   AgentAssistantMessage,
   AgentChatMessage,
+  AgentUserMessage,
   AssistantMessage,
   Chat,
   ChatMessage,
@@ -21,7 +22,6 @@ import {
   StreamUpdate,
   TraceSearchInput,
   TracesWithPagination,
-  UserMessage,
 } from "./types";
 
 // Augment `window` to include everyting exposed in `preload/index.ts`
@@ -35,12 +35,12 @@ declare global {
     electronAPI: {
       /**
        * Invoke the agent with a query and return the result
-       * @param query The query to send to the agent
+       * @param userMessage The user message to send to the agent
        * @param chatHistory The chat history to send to the agent
        * @returns Promise with the agent response
        */
       invokeAgent: (
-        query: string,
+        userMessage: AgentUserMessage,
         chatHistory: AgentChatMessage[]
       ) => Promise<AgentAssistantMessage>;
 

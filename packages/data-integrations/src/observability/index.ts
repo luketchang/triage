@@ -1,4 +1,5 @@
 export * from "./config";
+export * from "./formatting";
 export * from "./observability.interface";
 export * from "./types";
 

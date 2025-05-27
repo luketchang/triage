@@ -24,12 +24,12 @@ contextBridge.exposeInMainWorld("env", {
  */
 contextBridge.exposeInMainWorld("electronAPI", {
   /**
-   * Invoke the agent with a query and return the result
-   * @param query The query to send to the agent
+   * Invoke the agent with a UserMessage and return the result
+   * @param userMessage The UserMessage object containing content and context items
    * @param chatHistory The chat history to send to the agent
    */
-  invokeAgent: (query: string, chatHistory: ChatMessage[]) => {
-    return ipcRenderer.invoke("agent:invoke-agent", query, chatHistory);
+  invokeAgent: (userMessage: UserMessage, chatHistory: ChatMessage[]) => {
+    return ipcRenderer.invoke("agent:invoke-agent", userMessage, chatHistory);
   },
 
   /**

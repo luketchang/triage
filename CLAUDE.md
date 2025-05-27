@@ -9,7 +9,7 @@
 
 - Formatting: Follow Prettier config with double quotes, semicolons, es5 trailing commas, 100 char line length, 2 space indentation
 - TypeScript: Strict typing required, use explicit return types
-- Imports: Group and sort imports (external libs before internal, alphabetical within each group); use NodeNext import statements (while all files are TS, import their transpiled version via .js); avoid dynamic imports
+- Imports: Group and sort imports (external libs before internal, alphabetical within each group); use NodeNext import statements (while all files are TS, import their transpiled version via .js); avoid dynamic imports; when possible import from top level directories or packages rather than specifying deep subdirectories unnecessarily
 - Naming: camelCase for variables/functions, PascalCase for classes/components/types, and PascalCase or camelCase for filenames
 - Error Handling: Use try/catch and typed Error objects
 - Global variables: Prefer using variables from closures over defining new singletons
@@ -18,7 +18,7 @@
 - Making Code Changes: Avoid "drive-by" changes of anything unrelated to what the user asked you to do.
 - Scripts: Parse any command line arguments with commander
 - Installing Dependencies: If you need to add a dependency, NEVER add it to the workspace root `package.json`. Always add it to the specific `package.json` of the app or package that needs it.
-- Question-Answering: Even when asked questions that do not require modifying code, be sure to actually read files and explore the codebase before giving an answer. All answers should be backed by evidence from the codebase itself.
+- Consistency: Before making changes or answering a question, _always_ look around the codebase for files that may be related or provide hints on structure. Without doing this you will often do bad things like answer questions that are not grounded in real code context, write duplicated code that was actually sitting in another file, or fail to follow structure of existing codebase.
 - Throwing Errors: When throwing errors, nest the information in an object so the stack trace is preserved. For example, throw new Error("<error message>", { param: <param> }); also prefer throwing errors instead of calling process.exit(1)
 
 ### UI
