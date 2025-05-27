@@ -58,21 +58,22 @@ function NavigationSidebar() {
             chats.map((chat) => (
               <div
                 key={chat.id}
-                className={`flex items-center justify-between p-2 rounded-md text-gray-200 group cursor-pointer min-h-[40px] ${
+                className={`flex items-center justify-between p-2 rounded-md text-gray-200 group cursor-pointer min-h-[40px] w-full ${
                   currentChatId === chat.id ? "bg-background-alt" : "hover:bg-background-lighter"
                 }`}
                 onClick={() => handleSelectChat(chat.id)}
+                style={{ minWidth: "100%", width: "100%" }}
               >
-                <div className="flex items-center flex-grow min-h-full">
-                  <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white" />
-                  <div className="text-sm truncate break-all">Chat {chat.id}</div>
+                <div className="flex items-center flex-grow min-h-full min-w-0">
+                  <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white flex-shrink-0" />
+                  <div className="text-sm truncate break-all flex-1">Chat {chat.id}</div>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 hover:bg-background-alt"
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 hover:bg-background-alt flex-shrink-0"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <MoreHorizontalIcon className="h-3.5 w-3.5" />
