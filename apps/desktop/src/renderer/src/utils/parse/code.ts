@@ -21,7 +21,10 @@ export function filepathToGitHubUrl(
   return url;
 }
 
-export function absoluteToRepoRelativePath(repoBasePath: string, filePath: string): string {
+export function absoluteToRepoRelativePath(
+  repoBasePath: string,
+  filePath: string
+): string | undefined {
   const normalize = (p: string) =>
     p
       .replace(/\\/g, "/") // backslashes → forward
@@ -37,7 +40,8 @@ export function absoluteToRepoRelativePath(repoBasePath: string, filePath: strin
   const prefix = repo + "/";
 
   if (!fp.startsWith(prefix)) {
-    throw new Error(`Path "${filePath}" is not inside repository "${repoBasePath}".`);
+    // Return null instead of throwing an error when path is not inside repository
+    return undefined;
   }
 
   return fp.slice(prefix.length);
