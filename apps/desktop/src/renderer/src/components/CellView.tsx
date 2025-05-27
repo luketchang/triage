@@ -34,52 +34,58 @@ const GenericStep: React.FC<{ step: AgentStep }> = ({ step }) => {
   }
 };
 
-const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => (
-  <div className="mb-6">
-    {/* Reasoning */}
-    {step.reasoning && (
-      <div className="mb-4 text-sm leading-relaxed">
-        <Markdown>{step.reasoning}</Markdown>
-      </div>
-    )}
+const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => {
+  return (
+    <div className="mb-6">
+      {/* Reasoning */}
+      {step.reasoning && (
+        <div className="mb-4 text-sm leading-relaxed">
+          <Markdown>{step.reasoning}</Markdown>
+        </div>
+      )}
 
-    {/* Tool calls */}
-    {
-      <div className="space-y-3">
-        {step.data.map((toolCall: LogSearchToolCallWithResult, index) => (
-          <div
-            key={`${step.id}-search-${index}`}
-            className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex items-center justify-between"
-          >
-            <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
-              <BarChart size={16} className="text-purple-300 flex-shrink-0" />
-              <div className="font-mono text-xs truncate">{toolCall.input.query}</div>
-            </div>
-            <div className="flex items-center">
-              <div className="px-2 py-1 text-xs text-purple-300">
-                {toolCall.output && "error" in toolCall.output
-                  ? "Error"
-                  : toolCall.output && "logs" in toolCall.output
-                    ? `${toolCall.output.logs.length} results`
-                    : "Processing..."}
+      {/* Tool calls */}
+      {
+        <div className="space-y-3">
+          {step.data.map((toolCall: LogSearchToolCallWithResult, index) => {
+            // Compute display content based on output state
+            const resultContent =
+              toolCall.output && !("error" in toolCall.output) ? (
+                <>
+                  <div className="px-2 py-1 text-xs text-purple-300">
+                    {`${toolCall.output.logs.length} results`}
+                  </div>
+                  <a
+                    href={logSearchInputToDatadogLogsViewUrl(toolCall.input)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
+                  >
+                    Open in Datadog <ExternalLink className="ml-1" size={12} />
+                  </a>
+                </>
+              ) : (
+                <div className="px-2 py-1 text-xs text-gray-300">Failed to fetch logs</div>
+              );
+
+            return (
+              <div
+                key={`${step.id}-search-${index}`}
+                className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex items-center justify-between"
+              >
+                <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
+                  <BarChart size={16} className="text-purple-300 flex-shrink-0" />
+                  <div className="font-mono text-xs truncate">{toolCall.input.query}</div>
+                </div>
+                <div className="flex items-center">{resultContent}</div>
               </div>
-              {toolCall.output && !("error" in toolCall.output) && (
-                <a
-                  href={logSearchInputToDatadogLogsViewUrl(toolCall.input)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
-                >
-                  Open in Datadog <ExternalLink className="ml-1" size={12} />
-                </a>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    }
-  </div>
-);
+            );
+          })}
+        </div>
+      }
+    </div>
+  );
+};
 
 const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
   const { appConfig } = useAppConfig();
@@ -101,13 +107,34 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
             // Handle different types of code search tool calls
             if (toolCall.type === "cat") {
               const catToolCall = toolCall;
-              const filepath = absoluteToRepoRelativePath(
+              const relativePath = absoluteToRepoRelativePath(
                 appConfig.repoPath!,
                 catToolCall.input.path
               );
-              const output =
-                catToolCall.output && !("error" in catToolCall.output) ? catToolCall.output : null;
-              const numLines = output ? output.content.split("\n").length : 0;
+
+              // Check if the file is outside the repository
+              const displayPath = relativePath ? relativePath : catToolCall.input.path;
+
+              // Compute display content based on output state
+              const resultContent =
+                catToolCall.output && !("error" in catToolCall.output) && relativePath ? (
+                  <>
+                    <div className="px-2 py-1 text-xs text-blue-300">
+                      {`${catToolCall.output.content.split("\n").length} lines`}
+                    </div>
+                    <a
+                      href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, displayPath!)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
+                    >
+                      Open in GitHub <ExternalLink className="ml-1" size={12} />
+                    </a>
+                  </>
+                ) : (
+                  <div className="px-2 py-1 text-xs text-gray-300">Failed to fetch code</div>
+                );
+
               return (
                 <div
                   key={`${step.id}-search-${index}`}
@@ -115,29 +142,24 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
                 >
                   <div className="flex items-center space-x-3 p-2.5 flex-1 overflow-hidden">
                     <FileCode size={16} className="text-blue-300 flex-shrink-0" />
-                    <div className="font-mono text-xs truncate">{filepath}</div>
+                    <div className="font-mono text-xs truncate">{displayPath}</div>
                   </div>
-                  <div className="flex items-center">
-                    {output && (
-                      <div className="px-2 py-1 text-xs text-blue-300">
-                        {numLines} line{numLines !== 1 ? "s" : ""}
-                      </div>
-                    )}
-                    {output && (
-                      <a
-                        href={filepathToGitHubUrl(appConfig.githubRepoBaseUrl!, filepath)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-gray-700/30 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100 px-3 py-2 text-xs flex items-center transition-colors border-l border-white/10"
-                      >
-                        Open in GitHub <ExternalLink className="ml-1" size={12} />
-                      </a>
-                    )}
-                  </div>
+                  <div className="flex items-center">{resultContent}</div>
                 </div>
               );
             } else if (toolCall.type === "grep") {
               const grepToolCall = toolCall;
+              // Compute display content based on output state
+              const resultContent =
+                grepToolCall.output && !("error" in grepToolCall.output) ? (
+                  <div className="px-2 py-1 text-xs text-blue-300">
+                    {/* NOTE: when using git grep, the number of results is actually the number of lines */}
+                    {`${grepToolCall.output.content.split("\n").filter((line) => line.trim() !== "").length} results`}
+                  </div>
+                ) : (
+                  <div className="px-2 py-1 text-xs text-gray-300">Failed to fetch code</div>
+                );
+
               return (
                 <div
                   key={`${step.id}-search-${index}`}
@@ -147,6 +169,7 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
                     <Search size={16} className="text-blue-300 flex-shrink-0" />
                     <div className="font-mono text-xs truncate">{grepToolCall.input.pattern}</div>
                   </div>
+                  <div className="flex items-center">{resultContent}</div>
                 </div>
               );
             }
