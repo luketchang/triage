@@ -236,8 +236,8 @@ code {
   color: inherit !important;
 }
 
-/* Fix Radix ScrollArea preventing content shrinking */
-[data-radix-scroll-area-viewport] > div {
+/* Fix Radix ScrollArea preventing content shrinking - but exclude navigation sidebar */
+.scroll-container [data-radix-scroll-area-viewport] > div {
   min-width: 0 !important;
   display: flex !important;
   width: 100% !important;
@@ -250,7 +250,7 @@ code {
   flex-direction: column !important;
 }
 
-/* Override any table display on scroll content */
+/* Override any table display on scroll content - only for chat messages */
 .scroll-container * {
   max-width: 100% !important;
 }

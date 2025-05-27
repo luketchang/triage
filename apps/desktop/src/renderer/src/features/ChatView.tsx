@@ -130,6 +130,9 @@ function ChatView() {
               <div ref={messagesEndRef} className="h-4" />
             </div>
           </ScrollArea>
+
+          {/* Chat input area - moved inside the main container */}
+          <ChatInputArea />
         </div>
 
         {/* Facts sidebar - fixed position with transform-based animation */}
@@ -142,8 +145,6 @@ function ChatView() {
           <FactsSidebar logFacts={logFacts} codeFacts={codeFacts} onClose={closeFactsSidebar} />
         </div>
       </div>
-
-      <ChatInputArea />
     </div>
   );
 }
