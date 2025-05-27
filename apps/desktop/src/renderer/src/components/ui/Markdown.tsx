@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils.js";
  */
 export const CodeBlock = ({ language, value }: { language: string; value: string }) => {
   return (
-    <div className="relative my-3 rounded-lg overflow-hidden w-full">
+    <div className="relative my-3 rounded-lg overflow-hidden">
       <div className="absolute top-0 right-0 px-2 py-1 text-xs bg-background-alt text-gray-400 rounded-bl-md z-10">
         {language}
       </div>
@@ -48,7 +48,7 @@ interface CodeProps {
 
 export function Markdown({ children, className }: MarkdownProps) {
   return (
-    <div className={cn("max-w-none markdown-trim-margins", className)}>
+    <div className={cn("prose prose-invert max-w-none markdown-trim-margins", className)}>
       <ReactMarkdown
         components={{
           code({ node, inline, className, children, ...props }: CodeProps) {
@@ -64,58 +64,58 @@ export function Markdown({ children, className }: MarkdownProps) {
               </code>
             );
           },
-          p: ({ children }) => {
+          p({ children }) {
             return <p className="my-3 leading-relaxed">{children}</p>;
           },
-          h1: ({ children }) => {
+          h1({ children }) {
             return <h1 className="text-2xl font-bold mt-6 mb-3">{children}</h1>;
           },
-          h2: ({ children }) => {
+          h2({ children }) {
             return <h2 className="text-xl font-bold mt-5 mb-2">{children}</h2>;
           },
-          h3: ({ children }) => {
+          h3({ children }) {
             return <h3 className="text-lg font-bold mt-4 mb-2">{children}</h3>;
           },
-          h4: ({ children }) => {
+          h4({ children }) {
             return <h4 className="text-base font-bold mt-4 mb-2">{children}</h4>;
           },
-          h5: ({ children }) => {
+          h5({ children }) {
             return <h5 className="text-sm font-bold mt-3 mb-1">{children}</h5>;
           },
-          h6: ({ children }) => {
+          h6({ children }) {
             return <h6 className="text-xs font-bold mt-3 mb-1">{children}</h6>;
           },
-          ul: ({ children }) => {
+          ul({ children }) {
             return <ul className="list-disc pl-6 my-3 space-y-1">{children}</ul>;
           },
-          ol: ({ children }) => {
+          ol({ children }) {
             return <ol className="list-decimal pl-6 my-3 space-y-1">{children}</ol>;
           },
-          li: ({ children }) => {
+          li({ children }) {
             return <li className="mb-1">{children}</li>;
           },
-          blockquote: ({ children }) => {
+          blockquote({ children }) {
             return (
               <blockquote className="border-l-2 border-primary/50 pl-4 italic text-gray-300">
                 {children}
               </blockquote>
             );
           },
-          a: ({ href, children }) => {
+          a({ children, href }) {
             return (
               <a
                 href={href}
+                className="text-primary-light hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary-light hover:underline"
               >
                 {children}
               </a>
             );
           },
-          pre: ({ children }) => {
+          pre({ children }) {
             return (
-              <pre className="my-4 bg-background-alt rounded-lg p-3 text-sm overflow-x-auto w-full">
+              <pre className="my-4 bg-background-alt rounded-lg p-3 text-sm overflow-x-auto">
                 {children}
               </pre>
             );
@@ -127,14 +127,14 @@ export function Markdown({ children, className }: MarkdownProps) {
               </div>
             );
           },
-          th: ({ children }) => {
+          th({ children }) {
             return (
               <th className="border border-border/60 bg-background-lighter p-2 text-left font-medium">
                 {children}
               </th>
             );
           },
-          td: ({ children }) => {
+          td({ children }) {
             return <td className="border border-border/60 p-2">{children}</td>;
           },
         }}

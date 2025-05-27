@@ -41,7 +41,7 @@ export const SentryCfgSchema = z.object({
 });
 
 const SectionHeader = ({ children }: { children: React.ReactNode }) => {
-  return <h2 className="text-xl font-semibold mb-4 mt-6 text-white break-all">{children}</h2>;
+  return <h2 className="text-xl font-semibold mb-4 mt-6 text-white">{children}</h2>;
 };
 
 const SettingsGroup = ({ children }: { children: React.ReactNode }) => {
@@ -50,18 +50,18 @@ const SettingsGroup = ({ children }: { children: React.ReactNode }) => {
 
 const SettingField = ({
   label,
-  description,
   children,
+  description,
 }: {
   label: string;
-  description?: React.ReactNode;
   children: React.ReactNode;
+  description?: React.ReactNode;
 }) => {
   return (
     <div className="grid grid-cols-12 items-start gap-4">
       <div className="col-span-4">
-        <label className="text-sm font-medium text-gray-200 break-all">{label}</label>
-        {description && <div className="text-xs text-gray-500 mt-1 break-all">{description}</div>}
+        <label className="text-sm font-medium text-gray-200">{label}</label>
+        {description && <div className="text-xs text-gray-500 mt-1">{description}</div>}
       </div>
       <div className="col-span-8">{children}</div>
     </div>
@@ -97,22 +97,21 @@ const DeleteButton = ({
   return (
     <>
       <Button size={size} variant="destructiveOutline" onClick={() => setShowDeleteDialog(true)}>
-        <X className="h-4 w-4 mr-1" /> <span className="break-all">{buttonText}</span>
+        <X className="h-4 w-4 mr-1" /> {buttonText}
       </Button>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="break-all">Delete {title}?</AlertDialogTitle>
-            <AlertDialogDescription className="break-all">{description}</AlertDialogDescription>
+            <AlertDialogTitle>Delete {title}?</AlertDialogTitle>
+            <AlertDialogDescription>{description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="break-all">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
               variant="destructiveOutline"
-              className="break-all"
             >
               {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
@@ -260,11 +259,11 @@ const SettingIntegrationCard = <T extends Record<string, any>>({
   };
 
   return (
-    <div ref={cardRef} className="p-4 rounded-lg border border-border bg-background-lighter">
-      <div className="flex justify-between items-start mb-4">
+    <div ref={cardRef} className="border border-border rounded-md p-4 mb-4">
+      <div className="flex justify-between items-start mb-2">
         <div>
-          <h3 className="text-lg font-medium text-white break-all">{title}</h3>
-          <p className="text-sm text-gray-400 break-all">{description}</p>
+          <h3 className="text-lg font-medium text-white">{title}</h3>
+          <p className="text-sm text-gray-400">{description}</p>
         </div>
         {isVisible ? (
           <div className="mt-2 flex justify-end gap-3">
