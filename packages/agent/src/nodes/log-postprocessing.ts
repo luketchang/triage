@@ -77,6 +77,17 @@ export class LogPostprocessor {
   async invoke(): Promise<LogPostprocessingStep> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
 
+    const stepId = uuidv4();
+
+    // Send initial update with empty data to indicate that the postprocessing started
+    const initialStep: LogPostprocessingStep = {
+      id: stepId,
+      type: "logPostprocessing",
+      data: [],
+      timestamp: new Date(),
+    };
+    this.state.addUpdate(initialStep);
+
     const prompt = createPrompt({
       userMessage: this.config.userMessage,
       logLabelsMap: this.config.logLabelsMap,
@@ -129,15 +140,16 @@ export class LogPostprocessor {
       pageCursor: fact.pageCursor,
     }));
 
-    const step: LogPostprocessingStep = {
-      id: uuidv4(),
+    // Send second update with populated data
+    const finalStep: LogPostprocessingStep = {
+      id: stepId,
       type: "logPostprocessing",
       data: augmentedFacts,
       timestamp: new Date(),
     };
 
-    this.state.addUpdate(step);
+    this.state.addUpdate(finalStep);
 
-    return step;
+    return finalStep;
   }
 }

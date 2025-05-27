@@ -194,13 +194,11 @@ const ReasoningStepView: React.FC<{ step: ReasoningStep }> = ({ step }) => (
   </div>
 );
 
-const PostprocessingSpinner: React.FC<{
-  hasLogStep: boolean;
-  hasCodeStep: boolean;
-  isThinking: boolean;
-}> = ({ hasLogStep, hasCodeStep, isThinking }) => {
-  // Only show spinner if we're thinking and have postprocessing steps
-  if (!isThinking || (!hasLogStep && !hasCodeStep)) {
+const StatusIndicator: React.FC<{
+  text: string;
+  isVisible: boolean;
+}> = ({ text, isVisible }) => {
+  if (!isVisible) {
     return null;
   }
 
@@ -209,11 +207,31 @@ const PostprocessingSpinner: React.FC<{
       <div className="flex items-center gap-3 p-4 rounded-lg bg-background-lighter/20 border border-border/30">
         <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
         <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
-          Gathering Citations
+          {text}
         </div>
       </div>
     </div>
   );
+};
+
+const PostprocessingSpinner: React.FC<{
+  hasLogStep: boolean;
+  hasCodeStep: boolean;
+  isThinking: boolean;
+}> = ({ hasLogStep, hasCodeStep, isThinking }) => {
+  return (
+    <StatusIndicator
+      text="Extracting Timeline"
+      isVisible={isThinking && (hasLogStep || hasCodeStep)}
+    />
+  );
+};
+
+const ReasoningSpinner: React.FC<{
+  hasReasoningStep: boolean;
+  isThinking: boolean;
+}> = ({ hasReasoningStep, isThinking }) => {
+  return <StatusIndicator text="Reasoning" isVisible={isThinking && hasReasoningStep} />;
 };
 
 interface CellViewProps {
@@ -316,6 +334,12 @@ function CellView({
           </React.Fragment>
         ))}
 
+        {/* Show reasoning spinner when thinking and last step is reasoning */}
+        <ReasoningSpinner
+          hasReasoningStep={steps.length > 0 && steps[steps.length - 1]?.type === "reasoning"}
+          isThinking={isThinking && showWaitingIndicator}
+        />
+
         {/* Show postprocessing spinner when thinking and postprocessing steps exist */}
         <PostprocessingSpinner
           hasLogStep={!!logPostprocessingStep}
@@ -323,38 +347,21 @@ function CellView({
           isThinking={isThinking}
         />
 
-        {/* Show waiting indicator with less restrictive conditions */}
+        {/* Show waiting indicator with simplified logic */}
         {isThinking && showWaitingIndicator && (
           <div className="waiting-indicator p-2 text-left">
-            {/* Show "Reasoning..." if the last step is a reasoning step */}
             {(() => {
               const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
-              const secondToLastStep = steps.length > 1 ? steps[steps.length - 2] : null;
-              const thirdToLastStep = steps.length > 2 ? steps[steps.length - 3] : null;
+              const hasPostprocessingSteps = logPostprocessingStep || codePostprocessingStep;
 
-              // Case 1: Last step is reasoning - show "Reasoning" with shine
+              // Case 1: Last step is reasoning - handled by ReasoningSpinner above
               if (lastStep?.type === "reasoning") {
-                return (
-                  <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
-                    Reasoning
-                  </div>
-                );
+                return null;
               }
 
-              // Case 2: 2nd or 3rd to last was reasoning AND current is not logSearch or codeSearch - show postprocessing style
-              if (
-                (secondToLastStep?.type === "reasoning" || thirdToLastStep?.type === "reasoning") &&
-                lastStep?.type !== "logSearch" &&
-                lastStep?.type !== "codeSearch"
-              ) {
-                return (
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                    <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
-                      Gathering Citations
-                    </div>
-                  </div>
-                );
+              // Case 2: Has postprocessing steps - handled by PostprocessingSpinner above
+              if (hasPostprocessingSteps) {
+                return null;
               }
 
               // Case 3: Default - show animated ellipsis
