@@ -218,7 +218,7 @@ const PostprocessingSpinner: React.FC<{
 }> = ({ hasLogStep, hasCodeStep, isThinking }) => {
   return (
     <StatusIndicator
-      text="Extracting Timeline"
+      text="Extracting Facts"
       isVisible={isThinking && (hasLogStep || hasCodeStep)}
     />
   );
