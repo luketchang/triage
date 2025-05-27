@@ -2,6 +2,7 @@ import { ObservabilityClient } from "@triage/data-integrations";
 import { LanguageModelV1 } from "ai";
 
 import { UserMessage } from "../types/message";
+import { DataSource } from "../types/tools";
 
 import { PostProcessing } from "./post-processing";
 import { PreProcessing } from "./pre-processing";
@@ -19,6 +20,7 @@ export type TriagePipelineConfig = {
   codebaseOverview: string;
   fileTree: string;
   logLabelsMap: Map<string, string[]>;
+  dataSources: DataSource[];
 };
 
 export type TriagePipelineState = {

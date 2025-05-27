@@ -56,14 +56,29 @@ export async function handleGrepRequest(
     exec(
       `cd ${repoPath} && git grep ${toolCall.flags ? `-${toolCall.flags}` : ""} -e "${toolCall.pattern}"`,
       (error, stdout, stderr) => {
-        // grep returns exit code 1 if no matches are found, but that's not an error for our use case.
-        // error.code === 1 means "no ma  tches"
-        if (error && typeof error.code === "number" && error.code !== 1) {
-          logger.error(`Error grepping patter ${toolCall.pattern}: ${error} \n ${stderr}`);
-          resolve({ type: "error", toolCallType: "grepRequest", error: error.message });
+        if (error) {
+          // grep exit code 1 means no matches found
+          if (error.code === 1) {
+            resolve({
+              type: "result",
+              content: "No matches found",
+              toolCallType: "grepRequest",
+            });
+          } else {
+            logger.error(`Error grepping pattern ${toolCall.pattern}: ${error} \n ${stderr}`);
+            resolve({
+              type: "error",
+              toolCallType: "grepRequest",
+              error: error.message,
+            });
+          }
         } else {
-          // If error.code === 1, stdout will be empty (no matches), which is fine.
-          resolve({ type: "result", content: "No matches found", toolCallType: "grepRequest" });
+          // Matches found
+          resolve({
+            type: "result",
+            content: stdout,
+            toolCallType: "grepRequest",
+          });
         }
       }
     );

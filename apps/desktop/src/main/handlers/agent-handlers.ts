@@ -53,8 +53,10 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
           userMessage,
           chatHistory,
           agentCfg,
-          startDate,
-          endDate,
+          options: {
+            startDate,
+            endDate,
+          },
           onUpdate,
         });
 

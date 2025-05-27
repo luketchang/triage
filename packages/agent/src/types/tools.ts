@@ -3,6 +3,8 @@ import { z, infer as zInfer } from "zod";
 
 import { SubAgentCall } from "../tools";
 
+export type DataSource = "logs" | "code";
+
 const BASIC_REASONING_DESCRIPTION =
   "Intermediate reasoning where you can explain what you see from the given information and what information you need next (if any).";
 
