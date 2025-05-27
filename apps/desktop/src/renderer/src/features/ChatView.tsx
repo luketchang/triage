@@ -4,6 +4,7 @@ import CellView from "../components/CellView.js";
 import ChatInputArea from "../components/ChatInputArea.js";
 import ContextItemView from "../components/ContextItemView.js";
 import FactsSidebar from "../components/FactsSidebar.js";
+import { Markdown } from "../components/ui/Markdown.jsx";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
 import { cn } from "../lib/utils.js";
 import { useChatStore, useUIStore } from "../store/index.js";
@@ -102,8 +103,7 @@ function ChatView() {
                           </div>
                         )}
                         <div className="bg-background-alt p-4 rounded-lg shadow-sm w-full break-words break-all">
-                          {/* <Markdown>{message.content}</Markdown> */}
-                          {message.content}
+                          <Markdown>{message.content}</Markdown>
                         </div>
                       </div>
                     </div>
