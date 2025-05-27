@@ -41,7 +41,7 @@ const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => {
     <div className="mb-6">
       {/* Reasoning */}
       {step.reasoning && (
-        <div className="mb-4 text-sm leading-relaxed">
+        <div className="mb-4 text-sm leading-relaxed search-step-reasoning">
           <Markdown>{step.reasoning}</Markdown>
         </div>
       )}
@@ -97,7 +97,7 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
     <div className="mb-6">
       {/* Reasoning */}
       {step.reasoning && (
-        <div className="mb-4 text-sm leading-relaxed">
+        <div className="mb-4 text-sm leading-relaxed search-step-reasoning">
           <Markdown>{step.reasoning}</Markdown>
         </div>
       )}
@@ -204,23 +204,12 @@ const PostprocessingSpinner: React.FC<{
     return null;
   }
 
-  // Determine caption based on which postprocessing steps are present
-  let caption = "Analyzing";
-  if (hasLogStep && hasCodeStep) {
-    caption = "Analyzing logs and code";
-  } else if (hasLogStep) {
-    caption = "Analyzing logs";
-  } else if (hasCodeStep) {
-    caption = "Analyzing code";
-  }
-
   return (
     <div className="mb-6">
       <div className="flex items-center gap-3 p-4 rounded-lg bg-background-lighter/20 border border-border/30">
-        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-        <div className="text-sm text-gray-300">
-          {caption}
-          <AnimatedEllipsis />
+        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+        <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
+          Gathering Citations
         </div>
       </div>
     </div>
@@ -265,6 +254,12 @@ function CellView({
         (codePostprocessingStep?.data?.length || 0) > 0),
     [isThinking, message.response, logPostprocessingStep, codePostprocessingStep]
   );
+
+  // Check if the response is already shown in reasoning step (to avoid duplication)
+  const isResponseAlreadyShown = useMemo(() => {
+    const lastReasoningStep = steps.filter((step) => step.type === "reasoning").pop();
+    return lastReasoningStep && lastReasoningStep.data === message.response;
+  }, [steps, message.response]);
 
   // Set up a time-based check for showing the waiting indicator
   useEffect(() => {
@@ -333,9 +328,8 @@ function CellView({
           <div className="waiting-indicator p-2 text-left text-gray-400">
             {/* Show "Reasoning..." if the last step is a reasoning step */}
             {steps.length > 0 && steps[steps.length - 1].type === "reasoning" ? (
-              <div className="flex items-center">
-                <span className="mr-1">Reasoning</span>
-                <AnimatedEllipsis />
+              <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
+                Reasoning
               </div>
             ) : (
               <AnimatedEllipsis />
@@ -351,42 +345,42 @@ function CellView({
         )}
 
         {/* Render final response if present */}
-        {message.response && message.response !== "Thinking..." && (
+        {message.response && message.response !== "Thinking..." && !isResponseAlreadyShown && (
           <div className="response-content prose prose-invert max-w-none">
             <div className="text-base leading-relaxed break-words min-w-0 max-w-full">
               <Markdown className="prose-base">{message.response || ""}</Markdown>
             </div>
+          </div>
+        )}
 
-            {/* Facts button - only shown when facts are available */}
-            {hasFacts && onShowFacts && (
-              <div className="mt-3 flex justify-end">
-                <button
-                  className={cn(
-                    "px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-standard",
-                    activeInFactsSidebar
-                      ? "bg-primary text-white shadow-sm"
-                      : "bg-background-lighter hover:bg-background-alt text-primary border border-border/50"
-                  )}
-                  onClick={handleShowFacts}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  {activeInFactsSidebar ? "Facts Open" : "View Facts"}
-                </button>
-              </div>
-            )}
+        {/* Facts button - only shown when facts are available */}
+        {hasFacts && onShowFacts && (
+          <div className="mt-3 flex justify-end">
+            <button
+              className={cn(
+                "px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-standard",
+                activeInFactsSidebar
+                  ? "bg-primary text-white shadow-sm"
+                  : "bg-background-lighter hover:bg-background-alt text-primary border border-border/50"
+              )}
+              onClick={handleShowFacts}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              {activeInFactsSidebar ? "Facts Open" : "View Facts"}
+            </button>
           </div>
         )}
       </div>
