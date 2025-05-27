@@ -60,7 +60,7 @@ function ChatView() {
     <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Chat header */}
       <div className="flex justify-between items-center py-3 px-4 border-b border-border bg-background-lighter backdrop-blur-sm shadow-sm z-10">
-        <h1 className="text-lg font-semibold text-primary break-all">Chat</h1>
+        <h1 className="text-lg font-semibold text-primary">Chat</h1>
       </div>
 
       <div className="flex flex-1 relative min-h-0 overflow-hidden">

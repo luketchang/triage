@@ -20,20 +20,20 @@ function ContextItemView({ item, index, onRemove }: ContextItemViewProps) {
 
   if (item.type === "logSearchInput") {
     primaryContent = (
-      <span className="font-medium text-gray-300 truncate max-w-[200px] break-all">
+      <span className="font-medium text-gray-300 truncate max-w-[200px]">
         {item.query || "Datadog Log Search"}
       </span>
     );
     secondaryContent = (
-      <span className="text-gray-400 break-all">{formatDateRange(item.start, item.end)}</span>
+      <span className="text-gray-400">{formatDateRange(item.start, item.end)}</span>
     );
   } else {
     primaryContent = (
-      <span className="font-medium text-gray-300 truncate max-w-[200px] break-all">
+      <span className="font-medium text-gray-300 truncate max-w-[200px]">
         Sentry Issue: {item.issueId}
       </span>
     );
-    secondaryContent = <span className="text-gray-400 break-all">{item.eventSpecifier}</span>;
+    secondaryContent = <span className="text-gray-400">{item.eventSpecifier}</span>;
   }
 
   return (

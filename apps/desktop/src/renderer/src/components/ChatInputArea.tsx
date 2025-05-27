@@ -157,7 +157,7 @@ function ChatInputArea() {
           </Button>
         )}
       </div>
-      <div className="mt-1.5 text-xs text-gray-500 text-left w-full mx-auto px-4 sm:px-8 md:px-12 break-all">
+      <div className="mt-1.5 text-xs text-gray-500 text-left w-full mx-auto px-4 sm:px-8 md:px-12">
         Press Enter to send, Shift+Enter for new line
       </div>
     </div>

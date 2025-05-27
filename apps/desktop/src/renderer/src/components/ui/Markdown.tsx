@@ -57,68 +57,65 @@ export function Markdown({ children, className }: MarkdownProps) {
               <CodeBlock language={match[1]} value={String(children).replace(/\n$/, "")} />
             ) : (
               <code
-                className={cn(
-                  "bg-background-alt px-1 py-0.5 rounded text-sm font-mono break-all",
-                  className
-                )}
+                className={cn("bg-background-alt px-1 py-0.5 rounded text-sm font-mono", className)}
                 {...props}
               >
                 {children}
               </code>
             );
           },
-          p({ children }) {
-            return <p className="my-3 leading-relaxed break-all">{children}</p>;
+          p: ({ children }) => {
+            return <p className="my-3 leading-relaxed">{children}</p>;
           },
-          h1({ children }) {
-            return <h1 className="text-2xl font-bold mt-6 mb-3 break-all">{children}</h1>;
+          h1: ({ children }) => {
+            return <h1 className="text-2xl font-bold mt-6 mb-3">{children}</h1>;
           },
-          h2({ children }) {
-            return <h2 className="text-xl font-bold mt-5 mb-2 break-all">{children}</h2>;
+          h2: ({ children }) => {
+            return <h2 className="text-xl font-bold mt-5 mb-2">{children}</h2>;
           },
-          h3({ children }) {
-            return <h3 className="text-lg font-bold mt-4 mb-2 break-all">{children}</h3>;
+          h3: ({ children }) => {
+            return <h3 className="text-lg font-bold mt-4 mb-2">{children}</h3>;
           },
-          h4({ children }) {
-            return <h4 className="text-base font-bold mt-4 mb-2 break-all">{children}</h4>;
+          h4: ({ children }) => {
+            return <h4 className="text-base font-bold mt-4 mb-2">{children}</h4>;
           },
-          h5({ children }) {
-            return <h5 className="text-sm font-bold mt-3 mb-1 break-all">{children}</h5>;
+          h5: ({ children }) => {
+            return <h5 className="text-sm font-bold mt-3 mb-1">{children}</h5>;
           },
-          h6({ children }) {
-            return <h6 className="text-xs font-bold mt-3 mb-1 break-all">{children}</h6>;
+          h6: ({ children }) => {
+            return <h6 className="text-xs font-bold mt-3 mb-1">{children}</h6>;
           },
-          ul({ children }) {
-            return <ul className="list-disc pl-6 my-3 space-y-1 break-all">{children}</ul>;
+          ul: ({ children }) => {
+            return <ul className="list-disc pl-6 my-3 space-y-1">{children}</ul>;
           },
-          ol({ children }) {
-            return <ol className="list-decimal pl-6 my-3 space-y-1 break-all">{children}</ol>;
+          ol: ({ children }) => {
+            return <ol className="list-decimal pl-6 my-3 space-y-1">{children}</ol>;
           },
-          li({ children }) {
-            return <li className="mb-1 break-all">{children}</li>;
+          li: ({ children }) => {
+            return <li className="mb-1">{children}</li>;
           },
-          blockquote({ children }) {
+          blockquote: ({ children }) => {
             return (
-              <blockquote className="border-l-2 border-primary/50 pl-4 italic text-gray-300 break-all">
+              <blockquote className="border-l-2 border-primary/50 pl-4 italic text-gray-300">
                 {children}
               </blockquote>
             );
           },
-          a({ children, href }) {
+          a: ({ href, children }) => {
             return (
               <a
                 href={href}
-                className="text-primary-light hover:underline break-all"
                 target="_blank"
                 rel="noopener noreferrer"
+                className="text-primary-light hover:underline"
               >
                 {children}
               </a>
             );
           },
-          pre({ children }) {
+          pre: ({ children }) => {
             return (
-              <pre className="my-4 bg-background-alt rounded-lg p-3 text-sm overflow-x-auto w-full break-all">
+              <pre className="my-4 bg-background-alt rounded-lg p-3 text-sm overflow-x-auto w-full">
                 {children}
               </pre>
             );
@@ -130,15 +127,15 @@ export function Markdown({ children, className }: MarkdownProps) {
               </div>
             );
           },
-          th({ children }) {
+          th: ({ children }) => {
             return (
-              <th className="border border-border/60 bg-background-lighter p-2 text-left font-medium break-all">
+              <th className="border border-border/60 bg-background-lighter p-2 text-left font-medium">
                 {children}
               </th>
             );
           },
-          td({ children }) {
-            return <td className="border border-border/60 p-2 break-all">{children}</td>;
+          td: ({ children }) => {
+            return <td className="border border-border/60 p-2">{children}</td>;
           },
         }}
       >

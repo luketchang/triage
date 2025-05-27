@@ -29,12 +29,12 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
         className="p-3 rounded-lg bg-background-lighter border border-border/60 shadow-sm hover:shadow-md transition-shadow duration-200"
       >
         <div className="flex items-center justify-between mb-1.5">
-          <h4 className="font-medium text-sm break-all">{fact.title}</h4>
-          <span className="fact-type px-2 py-0.5 text-xs rounded-md bg-blue-900/60 text-blue-200 ml-2 break-all">
+          <h4 className="font-medium text-sm">{fact.title}</h4>
+          <span className="fact-type px-2 py-0.5 text-xs rounded-md bg-blue-900/60 text-blue-200 ml-2">
             CODE
           </span>
         </div>
-        <p className="text-sm text-gray-300 mb-1.5 leading-relaxed break-all">{fact.fact}</p>
+        <p className="text-sm text-gray-300 mb-1.5 leading-relaxed">{fact.fact}</p>
         <div className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -50,7 +50,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
               d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
             />
           </svg>
-          <span className="break-all">
+          <span>
             {fact.filepath} (Lines {fact.startLine}-{fact.endLine})
           </span>
         </div>
@@ -58,7 +58,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
           href={githubUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-blue-400 hover:text-blue-300 hover:underline mt-2 flex items-center gap-1 break-all"
+          className="text-xs text-blue-400 hover:text-blue-300 hover:underline mt-2 flex items-center gap-1"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -88,12 +88,12 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
         className="p-3 rounded-lg bg-background-lighter border border-border/60 shadow-sm hover:shadow-md transition-shadow duration-200"
       >
         <div className="flex items-center justify-between mb-1.5">
-          <h4 className="font-medium text-sm break-all">{fact.title}</h4>
-          <span className="fact-type px-2 py-0.5 text-xs rounded-md bg-amber-900/60 text-amber-200 ml-2 break-all">
+          <h4 className="font-medium text-sm">{fact.title}</h4>
+          <span className="fact-type px-2 py-0.5 text-xs rounded-md bg-amber-900/60 text-amber-200 ml-2">
             LOG
           </span>
         </div>
-        <p className="text-sm text-gray-300 mb-1.5 leading-relaxed break-all">{fact.fact}</p>
+        <p className="text-sm text-gray-300 mb-1.5 leading-relaxed">{fact.fact}</p>
         <div className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -109,13 +109,13 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
               d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <span className="break-all">Query: {fact.query}</span>
+          <span>Query: {fact.query}</span>
         </div>
         <a
           href={datadogUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-purple-400 hover:text-purple-300 hover:underline mt-2 flex items-center gap-1 break-all"
+          className="text-xs text-purple-400 hover:text-purple-300 hover:underline mt-2 flex items-center gap-1"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -145,10 +145,10 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
     return (
       <div className="w-full h-full bg-background-sidebar border-l border-border flex flex-col animate-fade-in">
         <div className="p-3 border-b border-border flex justify-between items-center bg-background-lighter/70 backdrop-blur-sm">
-          <h2 className="font-medium text-sm break-all">Facts</h2>
+          <h2 className="font-medium text-sm">Facts</h2>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-gray-400 text-sm break-all">Loading facts...</span>
+          <span className="text-gray-400 text-sm">Loading facts...</span>
         </div>
       </div>
     );
@@ -157,7 +157,7 @@ const FactsSidebar: React.FC<FactsSidebarProps> = ({ logFacts, codeFacts, onClos
   return (
     <div className="h-full bg-background-sidebar border-l border-border flex flex-col animate-fade-in shadow-md">
       <div className="p-3 border-b border-border flex justify-between items-center bg-background-lighter/70 backdrop-blur-sm">
-        <h2 className="font-medium text-sm break-all">Facts</h2>
+        <h2 className="font-medium text-sm">Facts</h2>
         {onClose && (
           <button
             onClick={onClose}
