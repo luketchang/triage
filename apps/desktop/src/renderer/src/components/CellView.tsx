@@ -324,21 +324,44 @@ function CellView({
         />
 
         {/* Show waiting indicator with less restrictive conditions */}
-        {isThinking &&
-          showWaitingIndicator &&
-          !logPostprocessingStep &&
-          !codePostprocessingStep && (
-            <div className="waiting-indicator p-2 text-left">
-              {/* Show "Reasoning..." if the last step is a reasoning step */}
-              {steps.length > 0 && steps[steps.length - 1].type === "reasoning" ? (
-                <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
-                  Reasoning
-                </div>
-              ) : (
-                <AnimatedEllipsis />
-              )}
-            </div>
-          )}
+        {isThinking && showWaitingIndicator && (
+          <div className="waiting-indicator p-2 text-left">
+            {/* Show "Reasoning..." if the last step is a reasoning step */}
+            {(() => {
+              const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
+              const secondToLastStep = steps.length > 1 ? steps[steps.length - 2] : null;
+              const thirdToLastStep = steps.length > 2 ? steps[steps.length - 3] : null;
+
+              // Case 1: Last step is reasoning - show "Reasoning" with shine
+              if (lastStep?.type === "reasoning") {
+                return (
+                  <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
+                    Reasoning
+                  </div>
+                );
+              }
+
+              // Case 2: 2nd or 3rd to last was reasoning AND current is not logSearch or codeSearch - show postprocessing style
+              if (
+                (secondToLastStep?.type === "reasoning" || thirdToLastStep?.type === "reasoning") &&
+                lastStep?.type !== "logSearch" &&
+                lastStep?.type !== "codeSearch"
+              ) {
+                return (
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                    <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
+                      Gathering Citations
+                    </div>
+                  </div>
+                );
+              }
+
+              // Case 3: Default - show animated ellipsis
+              return <AnimatedEllipsis />;
+            })()}
+          </div>
+        )}
 
         {/* Render error if present */}
         {message.error && (

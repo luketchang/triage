@@ -22,12 +22,9 @@ export default {
         },
       },
       animation: {
-        shine: "shine 3s linear infinite",
+        shine: "shine 3s linear infinite", // 3s duration, linear, infinite loop
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-      },
-      backgroundSize: {
-        "200%": "200% 100%",
       },
       backgroundImage: {
         "shine-white":
