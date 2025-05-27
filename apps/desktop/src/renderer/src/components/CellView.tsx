@@ -211,26 +211,6 @@ const StatusIndicator: React.FC<{
   );
 };
 
-const PostprocessingSpinner: React.FC<{
-  hasLogStep: boolean;
-  hasCodeStep: boolean;
-  isThinking: boolean;
-}> = ({ hasLogStep, hasCodeStep, isThinking }) => {
-  return (
-    <StatusIndicator
-      text="Extracting Facts"
-      isVisible={isThinking && (hasLogStep || hasCodeStep)}
-    />
-  );
-};
-
-const ReasoningSpinner: React.FC<{
-  hasReasoningStep: boolean;
-  isThinking: boolean;
-}> = ({ hasReasoningStep, isThinking }) => {
-  return <StatusIndicator text="Reasoning" isVisible={isThinking && hasReasoningStep} />;
-};
-
 interface CellViewProps {
   message: AssistantMessage;
   isThinking?: boolean;
@@ -325,41 +305,26 @@ function CellView({
           </React.Fragment>
         ))}
 
-        {/* Show reasoning spinner when thinking and last step is reasoning */}
-        <ReasoningSpinner
-          hasReasoningStep={steps.length > 0 && steps[steps.length - 1]?.type === "reasoning"}
-          isThinking={isThinking && showWaitingIndicator}
-        />
+        {/* Show waiting indicator based on current state */}
+        {isThinking &&
+          showWaitingIndicator &&
+          (() => {
+            const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
 
-        {/* Show postprocessing spinner when thinking and postprocessing steps exist */}
-        <PostprocessingSpinner
-          hasLogStep={!!logPostprocessingStep}
-          hasCodeStep={!!codePostprocessingStep}
-          isThinking={isThinking}
-        />
+            if (lastStep?.type === "reasoning") {
+              return <StatusIndicator text="Reasoning" isVisible={true} />;
+            }
 
-        {/* Show waiting indicator with simplified logic */}
-        {isThinking && showWaitingIndicator && (
-          <div className="waiting-indicator p-2 text-left">
-            {(() => {
-              const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
-              const hasPostprocessingSteps = logPostprocessingStep || codePostprocessingStep;
+            if (logPostprocessingStep || codePostprocessingStep) {
+              return <StatusIndicator text="Extracting Facts" isVisible={true} />;
+            }
 
-              // Case 1: Last step is reasoning - handled by ReasoningSpinner above
-              if (lastStep?.type === "reasoning") {
-                return null;
-              }
-
-              // Case 2: Has postprocessing steps - handled by PostprocessingSpinner above
-              if (hasPostprocessingSteps) {
-                return null;
-              }
-
-              // Case 3: Default - show animated ellipsis
-              return <AnimatedEllipsis />;
-            })()}
-          </div>
-        )}
+            return (
+              <div className="waiting-indicator p-2 text-left">
+                <AnimatedEllipsis />
+              </div>
+            );
+          })()}
 
         {/* Render error if present */}
         {message.error && (
