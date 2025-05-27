@@ -27,11 +27,8 @@ const GenericStep: React.FC<{ step: AgentStep }> = ({ step }) => {
       return <CodeSearchStepView step={step} />;
     case "reasoning":
       return <ReasoningStepView step={step} />;
-    case "logPostprocessing":
-      // Don't render postprocessing UI - handled by PostprocessingSpinner
-      return null;
-    case "codePostprocessing":
-      // Don't render postprocessing UI - handled by PostprocessingSpinner
+    default:
+      // NOTE: we do not show anything for postprocessing steps
       return null;
   }
 };
@@ -273,12 +270,6 @@ function CellView({
     [isThinking, message.response, logPostprocessingStep, codePostprocessingStep]
   );
 
-  // Check if the response is already shown in reasoning step (to avoid duplication)
-  const isResponseAlreadyShown = useMemo(() => {
-    const lastReasoningStep = steps.filter((step) => step.type === "reasoning").pop();
-    return lastReasoningStep && lastReasoningStep.data === message.response;
-  }, [steps, message.response]);
-
   // Set up a time-based check for showing the waiting indicator
   useEffect(() => {
     if (waitingCheckIntervalRef.current) {
@@ -374,15 +365,6 @@ function CellView({
         {message.error && (
           <div className="error-message p-3 my-2 bg-red-900/30 border border-red-700 rounded-lg text-red-200 text-sm">
             {message.error}
-          </div>
-        )}
-
-        {/* Render final response if present */}
-        {message.response && message.response !== "Thinking..." && !isResponseAlreadyShown && (
-          <div className="response-content prose prose-invert max-w-none">
-            <div className="text-base leading-relaxed break-words min-w-0 max-w-full">
-              <Markdown className="prose-base">{message.response || ""}</Markdown>
-            </div>
           </div>
         )}
 
