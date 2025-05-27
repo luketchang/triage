@@ -16,10 +16,12 @@ import {
   CodeSearchInput,
   grepRequestToolSchema,
   TaskComplete,
+  UserMessage,
 } from "../types";
 import {
   formatCodeSearchToolCallsWithResults,
   formatLogSearchToolCallsWithResults,
+  formatUserMessage,
 } from "../utils";
 
 export interface CodeSearchAgentResponse {
@@ -43,7 +45,7 @@ You are an expert AI assistant that helps engineers debug production issues by s
 `;
 
 function createCodeSearchPrompt(params: {
-  query: string;
+  userMessage: UserMessage;
   codeRequest: string;
   fileTree: string;
   logSearchToolCallsWithResults: LogSearchToolCallWithResult[];
@@ -88,7 +90,7 @@ ${currentTime}
 </current_time>
 
 <query>
-${params.query}
+${formatUserMessage(params.userMessage)}
 </query>
 
 <file_tree>
@@ -120,7 +122,7 @@ class CodeSearch {
 
   async invoke(params: {
     codeSearchId: string;
-    query: string;
+    userMessage: UserMessage;
     codeRequest: string;
     fileTree: string;
     logSearchToolCallsWithResults: LogSearchToolCallWithResult[];
@@ -233,7 +235,7 @@ export class CodeSearchAgent {
       const codeSearchId = uuidv4();
       response = await this.codeSearch.invoke({
         codeSearchId,
-        query: this.config.query,
+        userMessage: this.config.userMessage,
         codeRequest: params.codeRequest,
         fileTree: this.config.fileTree,
         logSearchToolCallsWithResults: this.state.getLogSearchToolCallsWithResults(StepsType.BOTH),

@@ -2,6 +2,7 @@ import {
   AssistantMessage as AgentAssistantMessage,
   ChatMessage as AgentChatMessage,
   AgentConfigStore,
+  UserMessage as AgentUserMessage,
   invokeAgent,
 } from "@triage/agent";
 import { logger } from "@triage/common";
@@ -22,12 +23,16 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
     "agent:invoke-agent",
     async (
       _event: any,
-      query: string,
+      userMessage: AgentUserMessage,
       chatHistory: AgentChatMessage[]
     ): Promise<AgentAssistantMessage> => {
       try {
-        logger.info("Invoking agent with query:", query);
-        logger.info("IPC chat history:", chatHistory);
+        logger.info("Invoking agent with message content:", userMessage?.content);
+        logger.info(
+          "Context items received in userMessage:",
+          userMessage?.contextItems ? userMessage.contextItems.length : "No contextItems field"
+        );
+        logger.info("IPC chat history length:", chatHistory?.length);
 
         const agentCfg = await agentCfgStore.getValues();
 
@@ -45,12 +50,12 @@ export function setupAgentHandlers(window: BrowserWindow, agentCfgStore: AgentCo
         const startDate = new Date(endDate.getTime() - TWO_WEEKS_MS);
 
         const result = await invokeAgent({
-          query,
+          userMessage,
           chatHistory,
           agentCfg,
           startDate,
           endDate,
-          onUpdate: onUpdate,
+          onUpdate,
         });
 
         return result;

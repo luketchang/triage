@@ -4,6 +4,7 @@ import {
   AgentAssistantMessage,
   AgentChatMessage,
   AgentStreamUpdate,
+  AgentUserMessage,
   AssistantMessage,
   Chat,
   ChatMessage,
@@ -58,13 +59,21 @@ const api = {
   },
 
   invokeAgent: async (
-    query: string,
+    userMessage: AgentUserMessage,
     chatHistory: AgentChatMessage[]
   ): Promise<AgentAssistantMessage> => {
     if (USE_MOCK_API || !isMethodAvailable("invokeAgent")) {
-      return mockElectronAPI.invokeAgent(query, chatHistory);
+      // For mock API, create a simplified object that matches the expected type
+      return mockElectronAPI.invokeAgent(
+        {
+          role: "user",
+          content: userMessage.content,
+          contextItems: userMessage.contextItems,
+        },
+        chatHistory
+      );
     } else {
-      return window.electronAPI.invokeAgent(query, chatHistory);
+      return window.electronAPI.invokeAgent(userMessage, chatHistory);
     }
   },
 

@@ -2,7 +2,8 @@
 import { logger } from "@triage/common";
 import { Command } from "commander";
 
-import { DatadogCfgSchema, DatadogClient, DatadogConfig, Span, SpansWithPagination } from "../";
+import { DatadogCfgSchema, DatadogClient, DatadogConfig, SpansWithPagination } from "../";
+import { formatSpans } from "../formatting";
 
 // Setup command line options
 const program = new Command();
@@ -32,31 +33,9 @@ if (!validClients.includes(options.client)) {
 
 // Display spans results
 function displaySpans(spansWithPagination: SpansWithPagination, client: string): void {
-  const spans = spansWithPagination.spans;
-  logger.info(`\n${client.toUpperCase()} SPANS:`);
-
-  if (spans.length === 0) {
-    logger.info("No spans found for the given query.");
-    return;
-  }
-
-  const formattedSpans = spans
-    .map((span: Span, index: number) => {
-      return `[${index + 1}] Span ID: ${span.spanId}
-    Service: ${span.service}
-    Operation: ${span.operation}
-    Trace ID: ${span.traceId}
-    Start: ${span.startTime}
-    End: ${span.endTime}
-    Duration: ${span.duration} ms
-    Status: ${span.status || "N/A"}
-    Environment: ${span.environment || "N/A"}
-    Metadata: ${JSON.stringify(span.metadata, null, 2)}
-    `;
-    })
-    .join("\n\n");
-
-  logger.info(formattedSpans);
+  // Use the formatSpans function from the formatting module
+  const formattedSpans = formatSpans(spansWithPagination);
+  logger.info(`\n${client.toUpperCase()} ${formattedSpans}`);
 }
 
 async function testDatadogSpanFetch(datadogCfg: DatadogConfig): Promise<void> {

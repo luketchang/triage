@@ -174,6 +174,13 @@ function handleLogSearchTools(
   toolCalls: LogSearchToolCallWithResult[]
 ): AssistantMessage {
   return findAndUpdateStep<LogSearchStep>(assistantMessage, stepId, {
+    createNewStepFn: () => ({
+      type: "logSearch",
+      timestamp: new Date(),
+      id: stepId,
+      reasoning: "",
+      data: toolCalls,
+    }),
     updateExistingStepFn: (step) => ({
       ...step,
       data: toolCalls,
@@ -190,6 +197,13 @@ function handleCodeSearchTools(
   toolCalls: CodeSearchToolCallWithResult[]
 ): AssistantMessage {
   return findAndUpdateStep<CodeSearchStep>(assistantMessage, stepId, {
+    createNewStepFn: () => ({
+      type: "codeSearch",
+      timestamp: new Date(),
+      id: stepId,
+      reasoning: "",
+      data: toolCalls,
+    }),
     updateExistingStepFn: (step) => ({
       ...step,
       data: toolCalls,

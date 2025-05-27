@@ -1,13 +1,15 @@
-import { Log, LogSearchInput, LogsWithPagination } from "@triage/data-integrations";
+import { formatLogQuery, formatSentryEvent, formatSingleLog } from "@triage/data-integrations";
 
 import {
+  AgentStep,
   CatToolCallWithResult,
   CodeSearchToolCallWithResult,
   GrepToolCallWithResult,
   LogSearchToolCallWithResult,
+  ReasoningStep,
 } from "./pipeline/state";
-
-import { AgentStep, ChatMessage, ReasoningStep } from ".";
+import { ChatMessage, MaterializedContextItem } from "./types";
+import { UserMessage } from "./types/message";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {
@@ -26,55 +28,11 @@ export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: 
   return toolCall;
 }
 
-export function formatLogQuery(logQuery: Partial<LogSearchInput>): string {
-  return `Query: ${logQuery.query}\nStart: ${logQuery.start}\nEnd: ${logQuery.end}\nLimit: ${logQuery.limit}${
-    logQuery.pageCursor ? `\nPage Cursor: ${logQuery.pageCursor}` : ""
-  }`;
-}
-
-export function formatSingleLog(log: Log): string {
-  const attributesString = log.attributes
-    ? Object.entries(log.attributes)
-        .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
-        .join(", ")
-    : "";
-
-  return `[${log.timestamp}] ${log.level.toUpperCase()} [${log.service}] ${log.message}${
-    attributesString ? ` [attributes: ${attributesString}]` : ""
-  }`;
-}
-
-export function formatLogResults(
-  logResults: Map<Partial<LogSearchInput>, LogsWithPagination | string>
-): string {
-  return Array.from(logResults.entries())
-    .map(([input, logsOrError]) => {
-      let formattedContent: string;
-      let pageCursor: string | undefined;
-
-      if (typeof logsOrError === "string") {
-        // It's an error message
-        formattedContent = `Error: ${logsOrError}`;
-        pageCursor = undefined;
-      } else {
-        // It's a log array
-        formattedContent = logsOrError.logs.map((log) => formatSingleLog(log)).join("\n");
-        if (!formattedContent) {
-          formattedContent = "No logs found";
-        }
-        pageCursor = logsOrError.pageCursorOrIndicator;
-      }
-
-      return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
-    })
-    .join("\n\n");
-}
-
-export const formatFacetValues = (facetValues: Map<string, Array<string>>): string => {
+export function formatFacetValues(facetValues: Map<string, Array<string>>): string {
   return Array.from(facetValues.entries())
     .map(([facet, values]) => `${facet}: ${values.join(", ")}`)
     .join("\n");
-};
+}
 
 export function formatSingleLogSearchToolCallWithResult(step: LogSearchToolCallWithResult): string {
   const input = step.input;
@@ -85,7 +43,7 @@ export function formatSingleLogSearchToolCallWithResult(step: LogSearchToolCallW
 
   if (logsOrError.type === "error") {
     // It's an error message
-    formattedContent = `Error: ${logsOrError}`;
+    formattedContent = `Error: ${logsOrError.error}`;
     pageCursor = undefined;
   } else {
     // It's a log array
@@ -114,7 +72,7 @@ export function formatSingleCatToolCallWithResult(
       const lines = source.split("\n");
       const maxLineNumberWidth = String(lines.length).length;
       source = lines
-        .map((line, index) => {
+        .map((line: string, index: number) => {
           const lineNumber = String(index + 1).padStart(maxLineNumberWidth, " ");
           return `${lineNumber} | ${line}`;
         })
@@ -137,7 +95,7 @@ export function formatSingleGrepToolCallWithResult(step: GrepToolCallWithResult)
     const lines = source.split("\n");
     const maxLineNumberWidth = String(lines.length).length;
     source = lines
-      .map((line, index) => {
+      .map((line: string, index: number) => {
         const lineNumber = String(index + 1).padStart(maxLineNumberWidth, " ");
         return `${lineNumber} | ${line}`;
       })
@@ -145,6 +103,25 @@ export function formatSingleGrepToolCallWithResult(step: GrepToolCallWithResult)
 
     return `${separator}\n${inputArgs}\n${separator}\n${source}\n`;
   }
+}
+
+export function formatMaterializedContextItem(item: MaterializedContextItem): string {
+  if (item.type === "log") {
+    let formattedContent: string;
+    let pageCursor: string | undefined;
+
+    formattedContent = item.output.logs.map((log) => formatSingleLog(log)).join("\n");
+    if (!formattedContent) {
+      formattedContent = "No logs found";
+    }
+    pageCursor = item.output.pageCursorOrIndicator;
+
+    return `${formatLogQuery(item.input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
+  } else if (item.type === "sentry") {
+    return formatSentryEvent(item.output, item.input);
+  }
+
+  return "Unknown context item type";
 }
 
 export function formatLogSearchToolCallsWithResults(steps: LogSearchToolCallWithResult[]): string {
@@ -210,37 +187,61 @@ export function formatAgentSteps(steps: AgentStep[]): string {
     .join("\n\n");
 }
 
+export function formatUserMessage(userMessage: UserMessage): string {
+  let formattedMessage = `--- User ---\n${userMessage.content}`;
+
+  // Add context items if they exist
+  if (userMessage.contextItems && userMessage.contextItems.length > 0) {
+    formattedMessage += "\n\nAttached Context:";
+
+    userMessage.contextItems.forEach((item) => {
+      formattedMessage += `\n\n${formatMaterializedContextItem(item)}`;
+    });
+  }
+
+  return formattedMessage;
+}
+
+export function formatAssistantMessage(message: ChatMessage): string {
+  if (message.role !== "assistant") {
+    throw new Error("Expected assistant message");
+  }
+
+  const assistantMessage = message;
+  let formattedMessage = `--- Assistant ---\n`;
+
+  // Add context if there are steps
+  if (assistantMessage.steps && assistantMessage.steps.length > 0) {
+    formattedMessage += `\nGathered Context:\n${formatAgentSteps(assistantMessage.steps)}`;
+  }
+
+  // Add response if it exists
+  if (assistantMessage.response) {
+    formattedMessage += `\n\nResponse:\n${assistantMessage.response}`;
+  }
+
+  // Add error if it exists
+  if (assistantMessage.error) {
+    formattedMessage += `\n\nError:\n${assistantMessage.error}`;
+  }
+
+  return formattedMessage;
+}
+
 export function formatCurrentChatHistory(
   chatHistory: ChatMessage[],
   currSteps: AgentStep[]
 ): string {
   if (!chatHistory || chatHistory.length === 0) {
-    return "No conversation history.";
+    return "";
   }
 
   const chatHistoryString = chatHistory
     .map((message) => {
       if (message.role === "user") {
-        return `User:\n${message.content}`;
+        return formatUserMessage(message);
       } else {
-        let formattedMessage = "Assistant:";
-
-        // Add gathered context if there are steps
-        if (message.steps && message.steps.length > 0) {
-          formattedMessage += `\nGathered Context:\n${formatAgentSteps(message.steps)}`;
-        }
-
-        // Add response if it exists
-        if (message.response) {
-          formattedMessage += `\n\nResponse: ${message.response}`;
-        }
-
-        // Add error if it exists
-        if (message.error) {
-          formattedMessage += `\n\nError: ${message.error}`;
-        }
-
-        return formattedMessage;
+        return formatAssistantMessage(message);
       }
     })
     .filter(Boolean)
