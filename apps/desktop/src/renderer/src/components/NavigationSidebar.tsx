@@ -42,12 +42,8 @@ function NavigationSidebar() {
   return (
     <div className="w-60 h-full bg-background-sidebar border-r border-border flex flex-col">
       <div className="p-4 flex flex-col gap-4">
-        <div className="text-primary font-bold text-center text-lg break-all">TRIAGE</div>
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-2 break-all"
-          onClick={handleNewChat}
-        >
+        <div className="text-primary font-bold text-center text-lg">TRIAGE</div>
+        <Button variant="outline" className="w-full justify-start gap-2" onClick={handleNewChat}>
           <FaPlus size={12} /> New Chat
         </Button>
       </div>
@@ -58,22 +54,21 @@ function NavigationSidebar() {
             chats.map((chat) => (
               <div
                 key={chat.id}
-                className={`flex items-center justify-between p-2 rounded-md text-gray-200 group cursor-pointer min-h-[40px] w-full ${
+                className={`flex items-center justify-between p-2 rounded-md text-gray-200 group cursor-pointer min-h-[40px] ${
                   currentChatId === chat.id ? "bg-background-alt" : "hover:bg-background-lighter"
                 }`}
                 onClick={() => handleSelectChat(chat.id)}
-                style={{ minWidth: "100%", width: "100%" }}
               >
-                <div className="flex items-center flex-grow min-h-full min-w-0">
-                  <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white flex-shrink-0" />
-                  <div className="text-sm truncate break-all flex-1">Chat {chat.id}</div>
+                <div className="flex items-center flex-grow min-h-full">
+                  <ChatIcon className="w-4 h-4 mr-2 text-gray-400 group-hover:text-white" />
+                  <div className="text-sm truncate">Chat {chat.id}</div>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 hover:bg-background-alt flex-shrink-0"
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 hover:bg-background-alt"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <MoreHorizontalIcon className="h-3.5 w-3.5" />
@@ -85,7 +80,7 @@ function NavigationSidebar() {
                         e.stopPropagation();
                         deleteChat(chat.id);
                       }}
-                      className="text-red-500 cursor-pointer flex items-center gap-2 break-all"
+                      className="text-red-500 cursor-pointer flex items-center gap-2"
                     >
                       <Trash2Icon className="h-4 w-4" />
                       Delete chat
@@ -95,9 +90,7 @@ function NavigationSidebar() {
               </div>
             ))
           ) : (
-            <div className="text-center text-gray-500 text-sm p-4 break-all">
-              No chat history yet
-            </div>
+            <div className="text-center text-gray-500 text-sm p-4">No chat history yet</div>
           )}
         </div>
       </ScrollArea>
@@ -105,7 +98,7 @@ function NavigationSidebar() {
       <div className="p-3 border-t border-border">
         <Button
           variant="ghost"
-          className={`w-full justify-start text-sm break-all ${activeTab === "settings" ? "text-primary" : "text-gray-300"}`}
+          className={`w-full justify-start text-sm ${activeTab === "settings" ? "text-primary" : "text-gray-300"}`}
           onClick={() => setActiveTab("settings")}
         >
           <SettingsIcon className="w-4 h-4 mr-2" />

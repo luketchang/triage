@@ -92,7 +92,7 @@ const TimeRangePicker: React.FC<TimeRangePickerProps> = ({
         {timeRangePresets.map((preset) => (
           <button
             key={preset.label}
-            className={`time-preset-button break-all ${
+            className={`time-preset-button ${
               // For default preset, check if both dates match the default
               preset.value === "default" &&
               timeRange.start === DEFAULT_START_DATE.toISOString() &&
@@ -111,21 +111,21 @@ const TimeRangePicker: React.FC<TimeRangePickerProps> = ({
           <div className="date-picker">
             <input
               type="datetime-local"
-              className="date-input break-all"
+              className="date-input"
               value={formatForDateTimeInput(timeRange.start)}
               onChange={(e) => handleTimeFieldChange("start", toISOString(e.target.value))}
             />
-            <div className="date-display break-all">{formatDate(timeRange.start)}</div>
+            <div className="date-display">{formatDate(timeRange.start)}</div>
           </div>
-          <span className="date-separator break-all">to</span>
+          <span className="date-separator">to</span>
           <div className="date-picker">
             <input
               type="datetime-local"
-              className="date-input break-all"
+              className="date-input"
               value={formatForDateTimeInput(timeRange.end)}
               onChange={(e) => handleTimeFieldChange("end", toISOString(e.target.value))}
             />
-            <div className="date-display break-all">{formatDate(timeRange.end)}</div>
+            <div className="date-display">{formatDate(timeRange.end)}</div>
           </div>
         </div>
       </div>
