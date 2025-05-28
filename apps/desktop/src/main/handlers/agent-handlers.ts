@@ -67,7 +67,7 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
           const endDate = new Date();
           const startDate = new Date(endDate.getTime() - TWO_WEEKS_MS);
 
-          const result = await invokeAgent({
+          await invokeAgent({
             userMessage,
             chatHistory,
             agentCfg,
@@ -81,7 +81,7 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
 
           // At this point, all updates have been sent and all processing is complete,
           // so just send the "done" signal
-          window.webContents.send("agent:update", { id: streamId, done: true, result });
+          window.webContents.send("agent:update", { id: streamId, done: true });
         } catch (error) {
           logger.error(`Error in agent stream ${streamId}:`, error);
 

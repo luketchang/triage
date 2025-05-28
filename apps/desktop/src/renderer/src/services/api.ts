@@ -15,7 +15,7 @@ import {
   TraceSearchInput,
   UserMessage,
 } from "../types/index.js";
-import { invokeAndReturnAsyncIter } from "../utils/ipcHandlersToStream.js";
+import { invokeAndReturnStream } from "../utils/invokeAndReturnStream.js";
 
 // Get mock API setting from environment
 const USE_MOCK_API = window.env.USE_MOCK_API;
@@ -46,9 +46,12 @@ const isMethodAvailable = (methodName: string) => {
 
 // Create a wrapper API that will use either the real or mock API
 const api = {
-  sendAgentMessage: async (userMessage: AgentUserMessage, chatHistory: AgentChatMessage[] = []) => {
+  invokeAgentAsStream: async (
+    userMessage: AgentUserMessage,
+    chatHistory: AgentChatMessage[] = []
+  ) => {
     if (USE_MOCK_API) {
-      console.info("Using mock sendAgentMessage");
+      console.info("Using mock invokeAgentAsStream");
       // Create a fake stream with a single value for backward compatibility
       const response = await mockElectronAPI.invokeAgent(userMessage, chatHistory);
 
@@ -64,16 +67,8 @@ const api = {
         },
       };
     } else {
-      console.info("Using real electronAPI.sendAgentMessage");
-      return invokeAndReturnAsyncIter(
-        {
-          invoke: window.electronAPI.agent.invoke,
-          onChunk: window.electronAPI.agent.onChunk,
-          cancel: window.electronAPI.agent.cancel,
-        },
-        userMessage,
-        chatHistory
-      );
+      console.info("Using real electronAPI.invokeAgentAsStream");
+      return invokeAndReturnStream(window.electronAPI.agent, userMessage, chatHistory);
     }
   },
 

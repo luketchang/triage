@@ -58,7 +58,7 @@ declare global {
          * @param callback Function to call when chunk events are received
          * @returns Function to remove the listener
          */
-        onChunk(callback: (packet: any) => void): () => void;
+        onUpdate(callback: (packet: any) => void): () => void;
 
         /**
          * Cancel an agent stream

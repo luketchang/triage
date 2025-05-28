@@ -10,16 +10,16 @@ export interface BaseStreamPacket {
 }
 
 /**
- * Interface for IPC functions needed to create a ResponseStream
+ * Set of IPC functions needed to create a ResponseStream
  * @template TInvokeArgs Type of the arguments passed to invoke
- * @template TPacket Type of the packet received in onChunk callback
+ * @template TPacket Type of the packet received in onUpdate callback
  */
 export interface IpcFunctions<
   TInvokeArgs extends any[] = any[],
   TPacket extends BaseStreamPacket = BaseStreamPacket,
 > {
   invoke: (...args: TInvokeArgs) => Promise<any>;
-  onChunk: (callback: (packet: TPacket) => void) => () => void;
+  onUpdate: (callback: (packet: TPacket) => void) => () => void;
   cancel: (streamId: string) => void;
 }
 
@@ -39,11 +39,11 @@ export interface ResponseStream extends AsyncIterable<any> {
  * Converts a set of IPC functions into a stream that's compatible with the
  * ResponseStream interface.
  *
- * @param ipcFunctions Object containing invoke, onChunk, and cancel functions
+ * @param ipcFunctions Object containing invoke, onUpdate, and cancel functions
  * @param args Arguments to pass to the invoke function
  * @returns A ResponseStream for consuming the response
  */
-export async function invokeAndReturnAsyncIter<
+export async function invokeAndReturnStream<
   TInvokeArgs extends any[] = any[],
   TPacket extends BaseStreamPacket = BaseStreamPacket,
 >(ipcFunctions: IpcFunctions<TInvokeArgs, TPacket>, ...args: TInvokeArgs): Promise<ResponseStream> {
@@ -53,7 +53,7 @@ export async function invokeAndReturnAsyncIter<
   const queue: any[] = [];
 
   // attach once; dispose closes the listener
-  const dispose = ipcFunctions.onChunk((packet) => {
+  const dispose = ipcFunctions.onUpdate((packet) => {
     if (packet.id !== streamId) return;
 
     if (packet.chunk) queue.push(packet.chunk);

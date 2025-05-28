@@ -37,7 +37,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
      * @param callback Function to call when chunk events are received
      * @returns Function to remove the listener
      */
-    onChunk: (callback: (packet: any) => void) => {
+    onUpdate: (callback: (packet: any) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, packet: any) => callback(packet);
       ipcRenderer.on("agent:update", listener);
       return () => ipcRenderer.removeListener("agent:update", listener);
