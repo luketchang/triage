@@ -66,7 +66,7 @@ export function isAbortError(error: unknown): boolean {
     return true;
   }
 
-  // Check for message pattern that may indicate an abortion
+  // More flexible and comprehensive approach to detecting an AbortSignal abortion
   if (
     error instanceof Error &&
     (error.message.includes("aborted") ||

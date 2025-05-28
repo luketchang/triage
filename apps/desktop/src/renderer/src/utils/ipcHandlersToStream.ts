@@ -43,7 +43,7 @@ export interface ResponseStream extends AsyncIterable<any> {
  * @param args Arguments to pass to the invoke function
  * @returns A ResponseStream for consuming the response
  */
-export async function ipcHandlersToStream<
+export async function invokeAndReturnAsyncIter<
   TInvokeArgs extends any[] = any[],
   TPacket extends BaseStreamPacket = BaseStreamPacket,
 >(ipcFunctions: IpcFunctions<TInvokeArgs, TPacket>, ...args: TInvokeArgs): Promise<ResponseStream> {

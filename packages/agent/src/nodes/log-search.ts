@@ -273,9 +273,9 @@ export class LogSearchAgent {
 
       currentIter++;
 
-      if (Array.isArray(response.actions)) {
+      if (Array.isArray(response.actions) && response.actions[0]) {
         logger.info(
-          `Searching logs with query: ${response.actions[0]!.query} from ${response.actions[0]!.start} to ${response.actions[0]!.end}`
+          `Searching logs with query: ${response.actions[0].query} from ${response.actions[0]!.start} to ${response.actions[0].end}`
         );
 
         // TODO: convert this into loop when we have multiple tool calls output
@@ -295,7 +295,7 @@ export class LogSearchAgent {
         toolCallsWithResults.push({
           type: "logSearch",
           timestamp: new Date(),
-          input: response.actions[0]!,
+          input: response.actions[0],
           output: logContext,
         });
 

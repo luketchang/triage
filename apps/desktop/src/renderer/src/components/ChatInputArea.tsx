@@ -32,9 +32,9 @@ function ChatInputArea() {
         ? state.chatDetailsById[state.currentChatId]?.contextItems
         : [undefined]
     ) ?? [];
-  const hasNoInput = useMemo(
+  const inputIsEmpty = useMemo(
     () => userInput.trim() === "" && contextItems.length === 0,
-    [userInput.trim(), contextItems.length]
+    [userInput, contextItems.length]
   );
 
   const setUserInput = useChatStore.use.setUserInput();
@@ -88,20 +88,26 @@ function ChatInputArea() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!hasNoInput) {
+      if (!inputIsEmpty) {
         handleSendMessage();
       }
     }
   };
 
   const handleSendMessage = async () => {
-    if (hasNoInput || isThinking) return;
+    if (inputIsEmpty || isThinking) return;
     // Call the send function from the store
     // The sendMessage function in the store will use the context items
     await sendMessage();
   };
 
-  const handleCancelMessage = () => cancelStream?.();
+  const handleCancelMessage = () => {
+    if (cancelStream) {
+      cancelStream();
+    } else {
+      console.error("Tried to cancel message but no cancel stream found");
+    }
+  };
 
   return (
     <div className="p-4 border-t border-border bg-background-lighter">
@@ -137,7 +143,7 @@ function ChatInputArea() {
             className="absolute right-2 top-2 shadow-sm size-8 p-1"
             size="sm"
             onClick={handleSendMessage}
-            disabled={hasNoInput}
+            disabled={inputIsEmpty}
           >
             <Send className="h-3.5 w-3.5" />
           </Button>
