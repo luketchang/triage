@@ -39,8 +39,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
      */
     onChunk: (callback: (packet: any) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, packet: any) => callback(packet);
-      ipcRenderer.on("agent:chunk", listener);
-      return () => ipcRenderer.removeListener("agent:chunk", listener);
+      ipcRenderer.on("agent:update", listener);
+      return () => ipcRenderer.removeListener("agent:update", listener);
     },
 
     /**

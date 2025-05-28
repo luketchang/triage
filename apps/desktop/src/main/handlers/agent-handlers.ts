@@ -43,11 +43,18 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
       );
       logger.info("IPC chat history length:", chatHistory?.length);
 
-      const controller = new AbortController();
+      // Create a stream ID, to be immediately returned to the client after we
+      // start agent processing
       const streamId = randomUUID();
+      const controller = new AbortController();
       streams.set(streamId, { controller, win: window });
+      // Create a callback to asynchronously send updates to the client
+      const onUpdate = (update: any) => {
+        if (controller.signal.aborted) return;
+        window.webContents.send("agent:update", { id: streamId, chunk: update });
+      };
 
-      // Start agent processing asynchronously to return stream ID immediately
+      // Start agent processing
       setImmediate(async () => {
         try {
           const agentCfg = await cfgStore.getValues();
@@ -55,12 +62,6 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
           // NOTE: we set timezone every agent call to handle edge cases where timezone changes while app still open
           agentCfg.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
           console.info("Setting timezone to:", agentCfg.timezone);
-
-          // Send updates to renderer via window
-          const onUpdate = (update: any) => {
-            if (controller.signal.aborted) return;
-            window.webContents.send("agent:chunk", { id: streamId, chunk: update });
-          };
 
           // Calculate date range for last two weeks
           const endDate = new Date();
@@ -78,20 +79,21 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
             abortSignal: controller.signal,
           });
 
-          // Send completion signal
-          window.webContents.send("agent:chunk", { id: streamId, done: true, result });
+          // At this point, all updates have been sent and all processing is complete,
+          // so just send the "done" signal
+          window.webContents.send("agent:update", { id: streamId, done: true, result });
         } catch (error) {
           logger.error(`Error in agent stream ${streamId}:`, error);
 
-          // If aborted, send cancelled message, otherwise send error
+          // If aborted, send cancelled update, otherwise send error update
           if (controller.signal.aborted) {
-            window.webContents.send("agent:chunk", {
+            window.webContents.send("agent:update", {
               id: streamId,
               error: "cancelled",
               done: true,
             });
           } else {
-            window.webContents.send("agent:chunk", {
+            window.webContents.send("agent:update", {
               id: streamId,
               error: error instanceof Error ? error.message : String(error),
               done: true,

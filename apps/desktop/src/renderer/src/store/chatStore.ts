@@ -269,7 +269,7 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       const agentMessages = convertToAgentChatMessages([...messages, userMessage]);
 
       console.info("Calling with user message:", agentUserMessage);
-      const stream = await api.sendAgentMessage(userInput, agentMessages);
+      const stream = await api.sendAgentMessage(agentUserMessage, agentMessages);
 
       // Store the stream's cancel function
       set((state) => ({

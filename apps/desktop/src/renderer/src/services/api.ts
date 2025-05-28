@@ -46,7 +46,6 @@ const isMethodAvailable = (methodName: string) => {
 
 // Create a wrapper API that will use either the real or mock API
 const api = {
-  // Use the new ipcHandlersToStream implementation
   sendAgentMessage: async (userMessage: AgentUserMessage, chatHistory: AgentChatMessage[] = []) => {
     if (USE_MOCK_API) {
       console.info("Using mock sendAgentMessage");
