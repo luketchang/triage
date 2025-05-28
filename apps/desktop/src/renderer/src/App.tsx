@@ -8,7 +8,6 @@ import "./styles/globals.css";
 
 function App(): JSX.Element {
   const activeTab = useUIStore.use.activeTab();
-  const showFactsSidebar = useUIStore.use.showFactsSidebar();
   const toggleFactsSidebar = useUIStore.use.toggleFactsSidebar();
 
   // Set up keyboard shortcuts
@@ -36,9 +35,7 @@ function App(): JSX.Element {
         <NavigationSidebar />
 
         <div className="flex-1 h-full overflow-hidden flex shadow-sm">
-          <div
-            className={`${showFactsSidebar ? "flex-1" : "w-full"} h-full overflow-hidden transition-standard`}
-          >
+          <div className="w-full h-full overflow-hidden transition-standard">
             {renderActiveTabContent()}
           </div>
         </div>
