@@ -1,4 +1,4 @@
-import { logger, timer } from "@triage/common";
+import { isAbortError, logger, timer } from "@triage/common";
 import { LogsClient } from "@triage/data-integrations";
 import { LanguageModelV1, streamText } from "ai";
 import { DateTime } from "luxon";
@@ -117,11 +117,17 @@ class LogSearch {
   private llmClient: LanguageModelV1;
   private logsClient: LogsClient;
   private state: PipelineStateManager;
-
-  constructor(llmClient: LanguageModelV1, logsClient: LogsClient, state: PipelineStateManager) {
+  private config: TriagePipelineConfig;
+  constructor(
+    llmClient: LanguageModelV1,
+    logsClient: LogsClient,
+    state: PipelineStateManager,
+    config: TriagePipelineConfig
+  ) {
     this.llmClient = llmClient;
     this.logsClient = logsClient;
     this.state = state;
+    this.config = config;
   }
 
   async invoke(params: {
@@ -223,7 +229,12 @@ export class LogSearchAgent {
   constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
-    this.logSearch = new LogSearch(this.config.fastClient, this.config.logsClient, state);
+    this.logSearch = new LogSearch(
+      this.config.fastClient,
+      this.config.logsClient,
+      state,
+      this.config
+    );
   }
 
   @timer

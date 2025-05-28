@@ -299,12 +299,7 @@ The primary issue appears to be in the authentication middleware where token val
       },
     ];
 
-    return {
-      role: "assistant",
-      response: responseContent,
-      steps: [],
-      error: undefined,
-    };
+    return Math.random().toString(36).substring(2, 15);
   },
 
   /**
