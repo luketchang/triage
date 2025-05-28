@@ -36,6 +36,9 @@ export const GrafanaCfgSchema = z.object({
   username: z.string().optional(),
   password: z.string().optional(),
 });
+export const SentryCfgSchema = z.object({
+  authToken: z.string().optional(),
+});
 
 const SectionHeader = ({ children }: { children: React.ReactNode }) => {
   return <h2 className="text-xl font-semibold mb-4 mt-6 text-white">{children}</h2>;
@@ -385,6 +388,29 @@ const GrafanaIntegration = () => {
   );
 };
 
+const SentryIntegration = () => {
+  const { appConfig } = useAppConfig();
+
+  return (
+    <SettingIntegrationCard
+      title="Sentry"
+      description="Connect to let your AI agent read provided issues on Sentry."
+      integrationConfig={appConfig?.sentry}
+      integrationConfigKey="sentry"
+      schema={SentryCfgSchema}
+      fields={[
+        {
+          key: "authToken",
+          label: "Auth Token",
+          description: "Sentry authentication token scoped with read permissions",
+          type: "password",
+          placeholder: "sntrys_...",
+        },
+      ]}
+    />
+  );
+};
+
 function SettingsView() {
   const { appConfig, updateAppConfig, isLoading } = useAppConfig();
   // Config rendered in the UI. This may be different from the config in the server
@@ -724,6 +750,7 @@ function SettingsView() {
 
           <SectionHeader>Telemetry Access</SectionHeader>
           <DatadogIntegration />
+          <SentryIntegration />
           {/* <GrafanaIntegration /> */}
         </div>
       </ScrollArea>
