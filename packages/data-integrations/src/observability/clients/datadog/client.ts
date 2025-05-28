@@ -2,14 +2,17 @@ import { client, v2 } from "@datadog/datadog-api-client";
 import { logger } from "@triage/common";
 
 import { DatadogConfig } from "../../config";
-import { ObservabilityPlatform } from "../../observability.interface";
+import { ObservabilityClient } from "../../observability.interface";
 import {
   IntegrationType,
   Log,
+  LogSearchInput,
   LogsWithPagination,
   Span,
+  SpanSearchInput,
   SpansWithPagination,
   Trace,
+  TraceSearchInput,
   TracesWithPagination,
 } from "../../types";
 
@@ -73,7 +76,7 @@ Use Datadog Log Search Syntax to search for logs.
 const DATADOG_DEFAULT_FACET_LIST_LOGS = ["service", "status"];
 const DATADOG_DEFAULT_FACET_LIST_SPANS = ["service"]; // TODO: add operation_name, resource, status
 
-export class DatadogPlatform implements ObservabilityPlatform {
+export class DatadogClient implements ObservabilityClient {
   integrationType: IntegrationType = IntegrationType.DATADOG;
   private apiKey: string;
   private appKey: string;
@@ -229,13 +232,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
     return Array.from(uniqueValues);
   }
 
-  async fetchSpans(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<SpansWithPagination> {
+  async fetchSpans(params: SpanSearchInput): Promise<SpansWithPagination> {
     try {
       logger.info(`Executing GET query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);
@@ -322,13 +319,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
   /**
    * Fetch traces based on a span query
    */
-  async fetchTraces(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<TracesWithPagination> {
+  async fetchTraces(params: TraceSearchInput): Promise<TracesWithPagination> {
     try {
       logger.info(`Fetching traces with query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);
@@ -571,13 +562,7 @@ export class DatadogPlatform implements ObservabilityPlatform {
     });
   }
 
-  async fetchLogs(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<LogsWithPagination> {
+  async fetchLogs(params: LogSearchInput): Promise<LogsWithPagination> {
     try {
       logger.info(`Executing GET query: ${params.query}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);

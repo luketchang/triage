@@ -1,7 +1,12 @@
+import { ContextItem } from "@renderer/types/index.js";
 import { Send, Square } from "lucide-react";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
+import TextareaAutosize from "react-textarea-autosize";
 import { cn } from "../lib/utils.js";
 import { useChatStore } from "../store/index.js";
+import { datadogLogsViewUrlToLogSearchInput } from "../utils/parse/logs.js";
+import { parseSentryEventUrl } from "../utils/parse/sentry.js";
+import ContextItemView from "./ContextItemView.js";
 import { Button } from "./ui/Button.jsx";
 
 function ChatInputArea() {
@@ -21,8 +26,21 @@ function ChatInputArea() {
       ? state.chatDetailsById[state.currentChatId]?.cancelStream
       : undefined
   );
+  const contextItems =
+    useChatStore((state) =>
+      state.currentChatId !== undefined
+        ? state.chatDetailsById[state.currentChatId]?.contextItems
+        : [undefined]
+    ) ?? [];
+  const hasNoInput = useMemo(
+    () => userInput.trim() === "" && contextItems.length === 0,
+    [userInput.trim(), contextItems.length]
+  );
+
   const setUserInput = useChatStore.use.setUserInput();
+  const removeContextItem = useChatStore.use.removeContextItem();
   const sendMessage = useChatStore.use.sendMessage();
+  const addContextItem = useChatStore.use.addContextItem();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -31,28 +49,6 @@ function ChatInputArea() {
     }
   }, [currentChatId]);
 
-  // Auto-resize textarea function
-  const resizeTextarea = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Reset height to default
-    textarea.style.height = "50px";
-
-    // Adjust height based on content
-    const scrollHeight = textarea.scrollHeight;
-    if (scrollHeight > 50) {
-      const newHeight = Math.min(150, scrollHeight);
-      textarea.style.height = `${newHeight}px`;
-    }
-  };
-
-  // Auto-resize textarea when message changes
-  useEffect(() => {
-    resizeTextarea();
-  }, [userInput]);
-
-  // Focus input on mount and when thinking state changes
   useEffect(() => {
     const focusTimeout = setTimeout(() => {
       if (textareaRef.current && !isThinking) {
@@ -63,38 +59,45 @@ function ChatInputArea() {
     return () => clearTimeout(focusTimeout);
   }, [isThinking]);
 
-  // Resize textarea when pasting or typing
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const handlePaste = () => setTimeout(resizeTextarea, 0);
-    const handleInput = () => resizeTextarea();
-    textarea.addEventListener("paste", handlePaste);
-    textarea.addEventListener("input", handleInput);
-    return () => {
-      textarea.removeEventListener("paste", handlePaste);
-      textarea.removeEventListener("input", handleInput);
-    };
-  }, []);
-  // Reset textarea height when empty
-  useEffect(() => {
-    if (userInput === "" && textareaRef.current) {
-      textareaRef.current.style.height = "50px";
+  const tryAddContextFromUrl = <T extends (text: string) => ContextItem | undefined>(
+    fn: T,
+    text: string
+  ): boolean => {
+    const contextItem = fn(text);
+    if (contextItem) {
+      addContextItem(contextItem);
+      return true;
     }
-  }, [userInput]);
+    return false;
+  };
+
+  // Handle paste event to detect Datadog and Sentry URLs
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const text = e.clipboardData.getData("text");
+
+    const added =
+      tryAddContextFromUrl(datadogLogsViewUrlToLogSearchInput, text) ||
+      tryAddContextFromUrl(parseSentryEventUrl, text);
+
+    if (added) {
+      e.preventDefault();
+    }
+  };
 
   // Submit message when Enter is pressed
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (userInput.trim()) {
+      if (!hasNoInput) {
         handleSendMessage();
       }
     }
   };
 
   const handleSendMessage = async () => {
-    if (!userInput.trim() || isThinking) return;
+    if (hasNoInput || isThinking) return;
+    // Call the send function from the store
+    // The sendMessage function in the store will use the context items
     await sendMessage();
   };
 
@@ -103,27 +106,38 @@ function ChatInputArea() {
   return (
     <div className="p-4 border-t border-border bg-background-lighter">
       <div className="relative max-w-[90%] mx-auto">
-        <textarea
+        {/* Context Items Cards */}
+        {contextItems.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {contextItems.map((item, index) => (
+              <ContextItemView key={index} item={item} index={index} onRemove={removeContextItem} />
+            ))}
+          </div>
+        )}
+
+        <TextareaAutosize
           ref={textareaRef}
           className={cn(
             "w-full p-3 pr-10 bg-background border border-border rounded-lg",
-            "resize-none min-h-[50px] max-h-[200px] outline-none focus-ring",
+            "resize-none outline-none focus-ring",
             "placeholder:text-gray-500 text-sm shadow-sm",
-            "align-middle leading-normal pt-[13px] overflow-y-hidden"
+            "align-middle leading-normal pt-[13px]"
           )}
           placeholder="Type your message here..."
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          rows={1}
+          onPaste={handlePaste}
           disabled={isThinking}
+          minRows={1}
+          maxRows={6}
         />
         {!isThinking ? (
           <Button
             className="absolute right-2 top-2 shadow-sm size-8 p-1"
             size="sm"
             onClick={handleSendMessage}
-            disabled={userInput.trim() === ""}
+            disabled={hasNoInput}
           >
             <Send className="h-3.5 w-3.5" />
           </Button>

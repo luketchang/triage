@@ -5,15 +5,20 @@ import { v4 as uuidv4 } from "uuid";
 import { TriagePipelineConfig } from "../pipeline";
 import { CatToolCallWithResult, CodePostprocessingStep, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
-import { codePostprocessingToolSchema } from "../types";
-import { ensureSingleToolCall, formatCatToolCallsWithResults, normalizeFilePath } from "../utils";
+import { codePostprocessingToolSchema, UserMessage } from "../types";
+import {
+  ensureSingleToolCall,
+  formatCatToolCallsWithResults,
+  formatUserMessage,
+  normalizeFilePath,
+} from "../utils";
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from code.
 `;
 
 function createPrompt(params: {
-  query: string;
+  userMessage: UserMessage;
   repoPath: string;
   codebaseOverview: string;
   catToolCallsWithResults: CatToolCallWithResult[];
@@ -30,7 +35,7 @@ function createPrompt(params: {
   - Do not give references for code "fixes" only reference existing code that is in the previous code context.
 
   <query>
-  ${params.query}
+  ${formatUserMessage(params.userMessage)}
   </query>
 
   <answer>
@@ -65,7 +70,7 @@ export class CodePostprocessor {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
 
     const prompt = createPrompt({
-      query: this.config.query,
+      userMessage: this.config.userMessage,
       repoPath: this.config.repoPath,
       codebaseOverview: this.config.codebaseOverview,
       catToolCallsWithResults: this.state.getCatToolCallsWithResults(StepsType.CURRENT),

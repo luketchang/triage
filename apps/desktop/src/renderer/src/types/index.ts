@@ -14,22 +14,26 @@ import {
   GrepToolCallWithResult,
   LogPostprocessingFact,
   LogPostprocessingStep,
-  LogSearchInput,
   LogSearchStep,
   LogSearchToolCallWithResult,
+  MaterializedContextItem,
   ReasoningStep,
-  TraceSearchInput,
 } from "@triage/agent";
 import { CodebaseOverview, CodebaseOverviewProgressUpdate } from "@triage/codebase-overviews";
 import {
+  GetSentryEventInput,
   Log,
+  LogSearchInput,
   LogsWithPagination,
+  SentryEvent,
+  SentryEventSpecifier,
   ServiceLatency,
   Span,
   SpansWithPagination,
   Trace,
+  TraceSearchInput,
   TracesWithPagination,
-} from "@triage/observability";
+} from "@triage/data-integrations";
 
 // Re-export imported types
 export type {
@@ -44,6 +48,7 @@ export type {
   CodePostprocessingFact,
   CodePostprocessingStep,
   CodeSearchStep,
+  GetSentryEventInput,
   GrepToolCallWithResult,
   Log,
   LogPostprocessingFact,
@@ -52,7 +57,10 @@ export type {
   LogSearchStep,
   LogSearchToolCallWithResult,
   LogsWithPagination,
+  MaterializedContextItem,
   ReasoningStep,
+  SentryEvent,
+  SentryEventSpecifier,
   ServiceLatency,
   Span,
   SpansWithPagination,
@@ -61,7 +69,7 @@ export type {
   TracesWithPagination,
 };
 
-export { getObservabilityPlatform, IntegrationType } from "@triage/observability";
+export { getObservabilityClient, IntegrationType } from "@triage/data-integrations";
 
 // Define chat type for chat history
 export interface Chat {
@@ -79,11 +87,15 @@ export interface FacetData {
 // Interface for chat messages
 export type ChatMessage = UserMessage | AssistantMessage;
 
+export type ContextItem = LogSearchInput | GetSentryEventInput;
+
 export interface UserMessage {
   id: string;
   role: "user";
   timestamp: Date;
   content: string;
+  contextItems?: ContextItem[];
+  materializedContextItems?: MaterializedContextItem[];
 }
 
 export interface AssistantMessage {

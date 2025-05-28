@@ -1,5 +1,8 @@
-import { ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityClient } from "@triage/data-integrations";
 import { LanguageModelV1 } from "ai";
+
+import { UserMessage } from "../types/message";
+import { DataSource } from "../types/tools";
 
 import { PostProcessing } from "./post-processing";
 import { PreProcessing } from "./pre-processing";
@@ -10,13 +13,14 @@ import { PipelineStateManager } from "./state-manager";
 export type TriagePipelineConfig = {
   reasoningClient: LanguageModelV1;
   fastClient: LanguageModelV1;
-  observabilityPlatform: ObservabilityPlatform;
-  query: string;
+  observabilityClient: ObservabilityClient;
+  userMessage: UserMessage;
   timezone: string;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
   logLabelsMap: Map<string, string[]>;
+  dataSources: DataSource[];
   abortSignal?: AbortSignal;
 };
 

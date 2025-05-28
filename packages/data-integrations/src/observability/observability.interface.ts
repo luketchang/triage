@@ -1,8 +1,11 @@
 import {
   IntegrationType,
+  LogSearchInput,
   LogsWithPagination,
+  SpanSearchInput,
   SpansWithPagination,
   Trace,
+  TraceSearchInput,
   TracesWithPagination,
 } from "./types";
 
@@ -10,17 +13,17 @@ import {
  * Interface for observability platforms like Datadog and Grafana
  * Provides a common abstraction layer for fetching observability data
  */
-export interface ObservabilityPlatform {
+export interface ObservabilityClient {
   integrationType: IntegrationType;
 
   /**
-   * Get instructions for span search query specific to platform's query language
+   * Get instructions for span search query specific to client's query language
    * @returns Instructions for span search query
    */
   getSpanSearchQueryInstructions(): string;
 
   /**
-   * Get instructions for log search query specific to platform's query language
+   * Get instructions for log search query specific to client's query language
    * @returns Instructions for log search query
    */
   getLogSearchQueryInstructions(): string;
@@ -65,13 +68,7 @@ export interface ObservabilityPlatform {
    * @param pageCursor - Cursor for pagination
    * @returns SpansWithPagination object containing spans and pagination info
    */
-  fetchSpans(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<SpansWithPagination>;
+  fetchSpans(params: SpanSearchInput): Promise<SpansWithPagination>;
 
   /**
    * Fetch logs from the observability platform
@@ -82,13 +79,7 @@ export interface ObservabilityPlatform {
    * @param pageCursor - Cursor for pagination
    * @returns Array of Log objects
    */
-  fetchLogs(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<LogsWithPagination>;
+  fetchLogs(params: LogSearchInput): Promise<LogsWithPagination>;
 
   /**
    * Fetch traces from the observability platform
@@ -99,13 +90,7 @@ export interface ObservabilityPlatform {
    * @param pageCursor - Cursor for pagination
    * @returns TracesWithPagination object containing traces and pagination info
    */
-  fetchTraces(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursor?: string;
-  }): Promise<TracesWithPagination>;
+  fetchTraces(params: TraceSearchInput): Promise<TracesWithPagination>;
 
   /**
    * Fetch a single trace by its ID

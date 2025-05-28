@@ -1,6 +1,6 @@
 import { LLMCfgSchema } from "@triage/common";
 import { ConfigStore, DelegatingConfigStore } from "@triage/config";
-import { ObservabilityCfgSchema } from "@triage/observability";
+import { ObservabilityCfgSchema, SentryCfgSchema } from "@triage/data-integrations";
 import { z } from "zod";
 
 export const AgentCfgSchema = z.object({
@@ -24,6 +24,7 @@ export const AgentCfgSchema = z.object({
 
   ...LLMCfgSchema.shape,
   ...ObservabilityCfgSchema.shape,
+  ...SentryCfgSchema.shape,
 });
 export type AgentConfig = z.infer<typeof AgentCfgSchema>;
 

@@ -1,5 +1,5 @@
 import { isAbortError, logger, timer } from "@triage/common";
-import { ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityClient } from "@triage/data-integrations";
 import { LanguageModelV1, streamText } from "ai";
 import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
@@ -8,11 +8,12 @@ import { TriagePipelineConfig } from "../pipeline";
 import { LogSearchStep, LogSearchToolCallWithResult, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
 import { handleLogSearchRequest } from "../tools";
-import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types";
+import { logSearchInputToolSchema, LogSearchRequest, TaskComplete, UserMessage } from "../types";
 import {
   ensureSingleToolCall,
   formatFacetValues,
   formatLogSearchToolCallsWithResults,
+  formatUserMessage,
 } from "../utils";
 
 export interface LogSearchAgentResponse {
@@ -21,7 +22,7 @@ export interface LogSearchAgentResponse {
 
 export interface LogSearchResponse {
   reasoning: string;
-  actions: LogSearchInput[] | TaskComplete;
+  actions: LogSearchRequest[] | TaskComplete;
 }
 
 const MAX_ITERS = 12;
@@ -31,7 +32,7 @@ You are an expert AI assistant that helps engineers debug production issues by s
 `;
 
 function createLogSearchPrompt(params: {
-  query: string;
+  userMessage: UserMessage;
   timezone: string;
   logRequest: string;
   platformSpecificInstructions: string;
@@ -68,6 +69,7 @@ Given all available log labels, a user query about the issue/event, and previous
   - Use attribute filters in place of plain keyword filters
   - Widen time range
   - Add more services to the query
+- Anchor your queries around the timestamps provided in the user query or the attached context, if any.
 
 ## Rules:
 - Output  one  \`LogSearchInput\` at a time. DO NOT output multiple \`LogSearchInput\` tool calls.
@@ -86,7 +88,7 @@ ${currentTime}
 </current_time_in_user_local_timezone>
 
 <query>
-${params.query}
+${formatUserMessage(params.userMessage)}
 </query>
 
 <log_labels>
@@ -113,25 +115,25 @@ ${params.codebaseOverview}
 
 class LogSearch {
   private llmClient: LanguageModelV1;
-  private observabilityPlatform: ObservabilityPlatform;
+  private observabilityClient: ObservabilityClient;
   private config: Readonly<TriagePipelineConfig>;
   private state: PipelineStateManager;
 
   constructor(
     llmClient: LanguageModelV1,
-    observabilityPlatform: ObservabilityPlatform,
+    observabilityClient: ObservabilityClient,
     config: TriagePipelineConfig,
     state: PipelineStateManager
   ) {
     this.llmClient = llmClient;
-    this.observabilityPlatform = observabilityPlatform;
+    this.observabilityClient = observabilityClient;
     this.config = config;
     this.state = state;
   }
 
   async invoke(params: {
     logSearchId: string;
-    query: string;
+    userMessage: UserMessage;
     timezone: string;
     logRequest: string;
     previousLogSearchToolCallsWithResults: LogSearchToolCallWithResult[];
@@ -142,7 +144,7 @@ class LogSearch {
   }): Promise<LogSearchResponse> {
     const prompt = createLogSearchPrompt({
       ...params,
-      platformSpecificInstructions: this.observabilityPlatform.getLogSearchQueryInstructions(),
+      platformSpecificInstructions: this.observabilityClient.getLogSearchQueryInstructions(),
     });
 
     try {
@@ -230,7 +232,7 @@ export class LogSearchAgent {
     this.state = state;
     this.logSearch = new LogSearch(
       this.config.fastClient,
-      this.config.observabilityPlatform,
+      this.config.observabilityClient,
       this.config,
       state
     );
@@ -259,7 +261,7 @@ export class LogSearchAgent {
       const logSearchId = uuidv4();
       response = await this.logSearch.invoke({
         logSearchId,
-        query: this.config.query,
+        userMessage: this.config.userMessage,
         timezone: this.config.timezone,
         logRequest: params.logRequest,
         logLabelsMap: this.config.logLabelsMap,
@@ -279,10 +281,11 @@ export class LogSearchAgent {
         // TODO: convert this into loop when we have multiple tool calls output
         let toolCallsWithResults: LogSearchToolCallWithResult[] = [];
 
-        logger.info("Fetching logs from observability platform...");
+        logger.info("Fetching logs from observability client...");
         const logContext = await handleLogSearchRequest(
-          response.actions[0]!,
-          this.config.observabilityPlatform
+          // TODO: remove once we allow multiple log search tool calls
+          response.actions[0],
+          this.config.observabilityClient
         );
 
         const lastLogSearchResultsFormatted =

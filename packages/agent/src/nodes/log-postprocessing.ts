@@ -5,11 +5,12 @@ import { v4 as uuidv4 } from "uuid";
 import { TriagePipelineConfig } from "../pipeline";
 import { LogPostprocessingStep, LogSearchToolCallWithResult, StepsType } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
-import { LogPostprocessingFact, logPostprocessingToolSchema } from "../types";
+import { LogPostprocessingFact, logPostprocessingToolSchema, UserMessage } from "../types";
 import {
   ensureSingleToolCall,
   formatFacetValues,
   formatLogSearchToolCallsWithResults,
+  formatUserMessage,
   normalizeDatadogQueryString,
 } from "../utils";
 
@@ -18,7 +19,7 @@ You are an expert AI assistant that assists engineers debugging production issue
 `;
 
 function createPrompt(params: {
-  query: string;
+  userMessage: UserMessage;
   logLabelsMap: Map<string, string[]>;
   logSearchToolCallsWithResults: LogSearchToolCallWithResult[];
   platformSpecificInstructions: string;
@@ -42,7 +43,7 @@ function createPrompt(params: {
   - Strictly follow the platform specific instructions provided below for guidance on the DOs and DONTs of writing log search queries.
   
   <query>
-  ${params.query}
+  ${formatUserMessage(params.userMessage)}
   </query>
 
   <answer>
@@ -77,12 +78,11 @@ export class LogPostprocessor {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
 
     const prompt = createPrompt({
-      query: this.config.query,
+      userMessage: this.config.userMessage,
       logLabelsMap: this.config.logLabelsMap,
       logSearchToolCallsWithResults: this.state.getLogSearchToolCallsWithResults(StepsType.CURRENT),
       answer: this.state.getAnswer()!,
-      platformSpecificInstructions:
-        this.config.observabilityPlatform.getLogSearchQueryInstructions(),
+      platformSpecificInstructions: this.config.observabilityClient.getLogSearchQueryInstructions(),
     });
 
     logger.info(`Log postprocessing prompt:\n${prompt}`);
@@ -122,10 +122,7 @@ export class LogPostprocessor {
     const augmentedFacts: LogPostprocessingFact[] = normalizedFacts.map((fact) => ({
       title: fact.title,
       fact: fact.fact,
-      query: this.config.observabilityPlatform.addKeywordsToQuery(
-        fact.query,
-        fact.highlightKeywords
-      ),
+      query: this.config.observabilityClient.addKeywordsToQuery(fact.query, fact.highlightKeywords),
       start: fact.start,
       end: fact.end,
       limit: fact.limit,

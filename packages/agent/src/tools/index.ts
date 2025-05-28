@@ -1,7 +1,7 @@
 import { exec } from "child_process";
 
 import { logger } from "@triage/common";
-import { ObservabilityPlatform } from "@triage/observability";
+import { ObservabilityClient } from "@triage/data-integrations";
 
 import { CodeSearchAgentResponse } from "../nodes/code-search";
 import { LogSearchAgentResponse } from "../nodes/log-search";
@@ -13,7 +13,7 @@ import {
   GrepRequest,
   GrepRequestResult,
   LogRequest,
-  LogSearchInput,
+  LogSearchRequest,
   LogSearchResult,
 } from "../types";
 
@@ -21,7 +21,7 @@ type ToolCallID = {
   toolCallId: string;
 };
 
-export type LLMToolCall = ToolCallID & (LogSearchInput | CatRequest | GrepRequest);
+export type LLMToolCall = ToolCallID & (LogSearchRequest | CatRequest | GrepRequest);
 
 export type SubAgentCall = ToolCallID & (LogRequest | CodeRequest);
 
@@ -56,14 +56,30 @@ export async function handleGrepRequest(
     exec(
       `cd ${repoPath} && git grep ${toolCall.flags ? `-${toolCall.flags}` : ""} -e "${toolCall.pattern}"`,
       (error, stdout, stderr) => {
-        // grep returns exit code 1 if no matches are found, but that's not an error for our use case.
-        // error.code === 1 means "no ma  tches"
-        if (error && typeof error.code === "number" && error.code !== 1) {
-          logger.error(`Error grepping patter ${toolCall.pattern}: ${error} \n ${stderr}`);
-          resolve({ type: "error", toolCallType: "grepRequest", error: error.message });
+        if (error) {
+          // grep exit code 1 means no matches found
+          if (error.code === 1) {
+            resolve({
+              type: "result",
+              content: "",
+              toolCallType: "grepRequest",
+            });
+          } else {
+            logger.error(`Error grepping pattern ${toolCall.pattern}: ${error} \n ${stderr}`);
+            resolve({
+              type: "error",
+              toolCallType: "grepRequest",
+              error: error.message,
+            });
+          }
         } else {
-          // If error.code === 1, stdout will be empty (no matches), which is fine.
-          resolve({ type: "result", content: "No matches found", toolCallType: "grepRequest" });
+          // Matches found
+          logger.info(`Result for grep request ${toolCall.pattern}: ${stdout}`);
+          resolve({
+            type: "result",
+            content: stdout,
+            toolCallType: "grepRequest",
+          });
         }
       }
     );
@@ -71,16 +87,11 @@ export async function handleGrepRequest(
 }
 
 export async function handleLogSearchRequest(
-  toolCall: LogSearchInput,
-  observabilityPlatform: ObservabilityPlatform
+  toolCall: LogSearchRequest,
+  observabilityClient: ObservabilityClient
 ): Promise<LogSearchResult | LLMToolCallError> {
   try {
-    const logContext = await observabilityPlatform.fetchLogs({
-      query: toolCall.query,
-      start: toolCall.start,
-      end: toolCall.end,
-      limit: toolCall.limit,
-    });
+    const logContext = await observabilityClient.fetchLogs(toolCall);
     return { type: "result", toolCallType: "logSearchInput", ...logContext };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));

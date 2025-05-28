@@ -1,8 +1,9 @@
 #!/usr/bin/env tsx
 import { logger } from "@triage/common";
 import { Command } from "commander";
-import { DatadogCfgSchema, DatadogConfig, SpansWithPagination } from "../dist";
-import { DatadogPlatform } from "../src";
+
+import { DatadogCfgSchema, DatadogClient, DatadogConfig, SpansWithPagination } from "../";
+import { formatSpans } from "../formatting";
 
 // Setup command line options
 const program = new Command();
@@ -10,7 +11,7 @@ const program = new Command();
 program
   .name("test-span-fetch")
   .description("Test span fetching from Datadog observability platform")
-  .option("-p, --platform <platform>", "Platform to test (datadog)", "datadog")
+  .option("-p, --client <client>", "Client to test (datadog)", "datadog")
   .option("-q, --query <query>", "Span query to execute", "*")
   .option(
     "-s, --start <datetime>",
@@ -23,42 +24,18 @@ program
 
 const options = program.opts();
 
-// Validate platform option
-const validPlatforms = ["datadog"];
-if (!validPlatforms.includes(options.platform)) {
-  logger.error(
-    `Invalid platform: ${options.platform}. Must be one of: ${validPlatforms.join(", ")}`
-  );
-  process.exit(1);
+// Validate client option
+const validClients = ["datadog"];
+if (!validClients.includes(options.client)) {
+  logger.error(`Invalid client: ${options.client}. Must be one of: ${validClients.join(", ")}`);
+  throw new Error(`Invalid client: ${options.client}. Must be one of: ${validClients.join(", ")}`);
 }
 
 // Display spans results
-function displaySpans(spansWithPagination: SpansWithPagination, platform: string): void {
-  const spans = spansWithPagination.spans;
-  logger.info(`\n${platform.toUpperCase()} SPANS:`);
-
-  if (spans.length === 0) {
-    logger.info("No spans found for the given query.");
-    return;
-  }
-
-  const formattedSpans = spans
-    .map((span, index) => {
-      return `[${index + 1}] Span ID: ${span.spanId}
-    Service: ${span.service}
-    Operation: ${span.operation}
-    Trace ID: ${span.traceId}
-    Start: ${span.startTime}
-    End: ${span.endTime}
-    Duration: ${span.duration} ms
-    Status: ${span.status || "N/A"}
-    Environment: ${span.environment || "N/A"}
-    Metadata: ${JSON.stringify(span.metadata, null, 2)}
-    `;
-    })
-    .join("\n\n");
-
-  logger.info(formattedSpans);
+function displaySpans(spansWithPagination: SpansWithPagination, client: string): void {
+  // Use the formatSpans function from the formatting module
+  const formattedSpans = formatSpans(spansWithPagination);
+  logger.info(`\n${client.toUpperCase()} ${formattedSpans}`);
 }
 
 async function testDatadogSpanFetch(datadogCfg: DatadogConfig): Promise<void> {
@@ -68,8 +45,9 @@ async function testDatadogSpanFetch(datadogCfg: DatadogConfig): Promise<void> {
     logger.info(`Time range: ${options.start} to ${options.end}`);
     logger.info(`Limit: ${options.limit}`);
 
-    const datadogPlatform = new DatadogPlatform(datadogCfg);
-    const spans = await datadogPlatform.fetchSpans({
+    const datadogClient = new DatadogClient(datadogCfg);
+    const spans = await datadogClient.fetchSpans({
+      type: "spanSearchInput",
       query: options.query,
       start: options.start,
       end: options.end,
@@ -85,8 +63,8 @@ async function testDatadogSpanFetch(datadogCfg: DatadogConfig): Promise<void> {
 async function main(): Promise<void> {
   logger.info("Starting span fetch test...");
 
-  // Check if platform configs are available
-  if (options.platform === "datadog") {
+  // Check if client configs are available
+  if (options.client === "datadog") {
     const datadogCfg = DatadogCfgSchema.parse({
       apiKey: process.env.DATADOG_API_KEY,
       appKey: process.env.DATADOG_APP_KEY,
@@ -99,5 +77,5 @@ async function main(): Promise<void> {
 
 main().catch((error) => {
   logger.error("Fatal error:", error);
-  process.exit(1);
+  throw error;
 });

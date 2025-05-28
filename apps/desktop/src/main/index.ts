@@ -2,8 +2,8 @@ import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import * as Sentry from "@sentry/electron";
 import { AgentConfigStore } from "@triage/agent";
 import { logger } from "@triage/common";
-import { ObservabilityConfigStore } from "@triage/observability";
-import { app, BrowserWindow, dialog, shell } from "electron";
+import { ObservabilityConfigStore, SentryConfigStore } from "@triage/data-integrations";
+import { app, BrowserWindow, dialog, protocol, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
 import { AppCfgSchema, AppConfigStore } from "../common/AppConfig.js";
@@ -15,15 +15,25 @@ import {
   cleanupConfigHandlers,
   cleanupDbHandlers,
   cleanupObservabilityHandlers,
+  cleanupSentryHandlers,
   setupAgentHandlers,
   setupCodebaseHandlers,
   setupConfigHandlers,
   setupDbHandlers,
   setupObservabilityHandlers,
+  setupSentryHandlers,
 } from "./handlers/index.js";
 import { setupDesktopLogger } from "./setup/logger-setup.js";
 
 if (process.env.NODE_ENV === "production") {
+  // Register sentry-ipc scheme for Sentry's Electron SDK
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: "sentry-ipc",
+      privileges: { standard: true, secure: true, supportFetchAPI: true },
+    },
+  ]);
+
   Sentry.init({
     dsn: "https://0959c176189c84d818acd95b7add26ac@o4509322414063616.ingest.us.sentry.io/4509322496180224",
     environment: process.env.NODE_ENV,
@@ -87,6 +97,14 @@ function initApp(mainWindow: BrowserWindow): void {
   const appCfgStore = new AppConfigStore(configStore);
   const agentCfgStore = new AgentConfigStore(configStore);
   const observabilityCfgStore = new ObservabilityConfigStore(configStore);
+  const sentryCfgStore = new SentryConfigStore(configStore);
+
+  // TODO: remove this once we add ability to fill sentry auth token in Settings tab
+  // sentryCfgStore.setValues({
+  //   sentry: {
+  //     authToken: "<add sentry auth token here>",
+  //   },
+  // });
 
   // Set up all IPC handlers
   setupAgentHandlers(mainWindow, agentCfgStore);
@@ -94,6 +112,7 @@ function initApp(mainWindow: BrowserWindow): void {
   setupCodebaseHandlers(mainWindow, appCfgStore);
   setupConfigHandlers(appCfgStore);
   setupObservabilityHandlers(observabilityCfgStore);
+  setupSentryHandlers(sentryCfgStore);
 }
 
 // This method will be called when Electron has finished
@@ -159,4 +178,5 @@ app.on("before-quit", () => {
   cleanupDbHandlers();
   cleanupConfigHandlers();
   cleanupObservabilityHandlers();
+  cleanupSentryHandlers();
 });

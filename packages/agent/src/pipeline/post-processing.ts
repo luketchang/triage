@@ -17,16 +17,16 @@ export class PostProcessing {
   }
 
   async run(): Promise<void> {
-    const logPostprocessor = new LogPostprocessor(this.config, this.state);
-    const codePostprocessor = new CodePostprocessor(this.config, this.state);
+    const tasks = this.config.dataSources.map(async (source) => {
+      if (source === "logs") {
+        const response = await new LogPostprocessor(this.config, this.state).invoke();
+        logger.info(`Log postprocessing complete with ${response.data.length} relevant facts`);
+      } else if (source === "code") {
+        const response = await new CodePostprocessor(this.config, this.state).invoke();
+        logger.info(`Code postprocessing complete with ${response.data.length} relevant facts`);
+      }
+    });
 
-    const [logPostprocessingResponse, codePostprocessingResponse] = await Promise.all([
-      logPostprocessor.invoke(),
-      codePostprocessor.invoke(),
-    ]);
-
-    logger.info(
-      `Log postprocessing complete with ${logPostprocessingResponse.data.length} relevant facts. Code postprocessing complete with ${codePostprocessingResponse.data.length} relevant facts.`
-    );
+    await Promise.all(tasks);
   }
 }

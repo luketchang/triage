@@ -6,17 +6,20 @@
 // Import types from types.ts - this is the single source of truth for types
 import { AppConfig } from "../../common/AppConfig.js";
 import {
+  AgentChatMessage,
+  AgentUserMessage,
   AssistantMessage,
   Chat,
   ChatMessage,
   CodebaseOverview,
   CodebaseOverviewProgressUpdate,
   FacetData,
+  GetSentryEventInput,
   LogSearchInput,
   LogsWithPagination,
+  SentryEvent,
   TraceSearchInput,
   TracesWithPagination,
-  UserMessage,
 } from "./types";
 
 /**
@@ -43,12 +46,12 @@ declare global {
        */
       agent: {
         /**
-         * Send a message to the agent via IPC and get a stream ID
-         * @param prompt The prompt to send
-         * @param history Chat history as plain objects
-         * @returns Promise that resolves to a stream ID (string)
+         * Invoke the agent with a query and return the result
+         * @param userMessage The user message to send to the agent
+         * @param chatHistory The chat history to send to the agent
+         * @returns Promise with the agent response
          */
-        invoke(prompt: string, history: { role: string; content: string }[]): Promise<string>;
+        invoke: (userMessage: AgentUserMessage, chatHistory: AgentChatMessage[]) => Promise<string>;
 
         /**
          * Subscribe to agent chunks for a stream
@@ -106,6 +109,13 @@ declare global {
        * @returns Promise with the fetched facet values
        */
       getSpansFacetValues: (start: string, end: string) => Promise<FacetData[]>;
+
+      /**
+       * Fetch a Sentry event by specifier
+       * @param params Parameters for fetching the Sentry event
+       * @returns Promise with the fetched Sentry event
+       */
+      fetchSentryEvent: (params: GetSentryEventInput) => Promise<SentryEvent>;
 
       /**
        * Create a new chat

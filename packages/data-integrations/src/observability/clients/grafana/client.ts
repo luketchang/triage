@@ -2,14 +2,17 @@ import { logger, toUnixNano } from "@triage/common";
 import axios from "axios";
 
 import { GrafanaConfig } from "../../config";
-import { ObservabilityPlatform } from "../../observability.interface";
+import { ObservabilityClient } from "../../observability.interface";
 import {
   IntegrationType,
   Log,
+  LogSearchInput,
   LogsWithPagination,
   PaginationStatus,
+  SpanSearchInput,
   SpansWithPagination,
   Trace,
+  TraceSearchInput,
   TracesWithPagination,
 } from "../../types";
 
@@ -60,7 +63,7 @@ interface GrafanaErrorResponse {
   error?: string;
 }
 
-export class GrafanaPlatform implements ObservabilityPlatform {
+export class GrafanaClient implements ObservabilityClient {
   integrationType: IntegrationType = IntegrationType.GRAFANA;
   private baseUrl: string;
   private username: string;
@@ -93,7 +96,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
   }
 
   getSpanSearchQueryInstructions(): string {
-    throw new Error("getSpanSearchQueryInstructions is not implemented for Grafana platform");
+    throw new Error("getSpanSearchQueryInstructions is not implemented for Grafana client");
   }
 
   getLogSearchQueryInstructions(): string {
@@ -102,7 +105,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getSpansFacetValues(start: string, end: string): Promise<Map<string, string[]>> {
-    throw new Error("getFacetToFacetValuesMapSpans is not implemented for Grafana platform");
+    throw new Error("getFacetToFacetValuesMapSpans is not implemented for Grafana client");
   }
 
   async getLogsFacetValues(
@@ -144,23 +147,11 @@ export class GrafanaPlatform implements ObservabilityPlatform {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  fetchSpans(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursorOrIndicator?: string;
-  }): Promise<SpansWithPagination> {
-    throw new Error("fetchSpans is not implemented for Grafana platform");
+  fetchSpans(params: SpanSearchInput): Promise<SpansWithPagination> {
+    throw new Error("fetchSpans is not implemented for Grafana client");
   }
 
-  async fetchLogs(params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursorOrIndicator?: string;
-  }): Promise<LogsWithPagination> {
+  async fetchLogs(params: LogSearchInput): Promise<LogsWithPagination> {
     try {
       const url = `${this.baseUrl}/loki/api/v1/query_range`;
 
@@ -221,14 +212,8 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     }
   }
 
-  fetchTraces(_params: {
-    query: string;
-    start: string;
-    end: string;
-    limit: number;
-    pageCursorOrIndicator?: string;
-  }): Promise<TracesWithPagination> {
-    throw new Error("fetchTraces is not implemented for Grafana platform");
+  fetchTraces(_params: TraceSearchInput): Promise<TracesWithPagination> {
+    throw new Error("fetchTraces is not implemented for Grafana client");
   }
 
   async fetchTraceById(_params: {
@@ -236,7 +221,7 @@ export class GrafanaPlatform implements ObservabilityPlatform {
     start?: string;
     end?: string;
   }): Promise<Trace | null> {
-    throw new Error("fetchTraceById is not implemented for Grafana platform");
+    throw new Error("fetchTraceById is not implemented for Grafana client");
   }
 
   // TODO: check if you need to destructure attributes same as in DD

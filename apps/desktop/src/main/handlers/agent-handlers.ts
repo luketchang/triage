@@ -1,7 +1,13 @@
-import { ChatMessage as AgentChatMessage, AgentConfigStore, invokeAgent } from "@triage/agent";
+import {
+  ChatMessage as AgentChatMessage,
+  AgentConfigStore,
+  UserMessage as AgentUserMessage,
+  invokeAgent,
+} from "@triage/agent";
 import { logger } from "@triage/common";
 import { randomUUID } from "crypto";
 import { BrowserWindow, ipcMain } from "electron";
+import { registerHandler } from "./register-util.js";
 
 interface StreamInfo {
   controller: AbortController;
@@ -23,13 +29,22 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
   logger.info("Setting up agent handlers...");
 
   // Handle agent invocation and return stream ID
-  ipcMain.handle(
+  registerHandler(
     "agent:invoke",
-    async (_event, query: string, chatHistory: AgentChatMessage[]): Promise<string> => {
-      const streamId = randomUUID();
-      logger.info(`Creating agent stream ${streamId} for query:`, query);
+    async (
+      _event: any,
+      userMessage: AgentUserMessage,
+      chatHistory: AgentChatMessage[]
+    ): Promise<string> => {
+      logger.info("Invoking agent with message content:", userMessage?.content);
+      logger.info(
+        "Context items received in userMessage:",
+        userMessage?.contextItems ? userMessage.contextItems.length : "No contextItems field"
+      );
+      logger.info("IPC chat history length:", chatHistory?.length);
 
       const controller = new AbortController();
+      const streamId = randomUUID();
       streams.set(streamId, { controller, win: window });
 
       // Start agent processing asynchronously to return stream ID immediately
@@ -52,11 +67,13 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
           const startDate = new Date(endDate.getTime() - TWO_WEEKS_MS);
 
           const result = await invokeAgent({
-            query,
+            userMessage,
             chatHistory,
             agentCfg,
-            startDate,
-            endDate,
+            options: {
+              startDate,
+              endDate,
+            },
             onUpdate,
             abortSignal: controller.signal,
           });

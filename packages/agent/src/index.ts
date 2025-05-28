@@ -10,29 +10,33 @@ import {
 } from "@triage/common";
 import {
   DatadogCfgSchema,
-  getObservabilityPlatform,
+  getObservabilityClient,
   GrafanaCfgSchema,
   IntegrationType,
-} from "@triage/observability";
+} from "@triage/data-integrations";
 import { Command as CommanderCommand } from "commander";
+import { DateTime } from "luxon";
 import { z } from "zod";
 
 import { AgentConfig } from "./config";
 import { TriagePipeline, TriagePipelineConfig } from "./pipeline";
 import { StepsType, StreamUpdateFn } from "./pipeline/state";
 import { PipelineStateManager } from "./pipeline/state-manager";
-import type { ChatMessage } from "./types";
-import { AssistantMessage } from "./types";
+import { AssistantMessage, ChatMessage, UserMessage } from "./types/message";
+import { DataSource } from "./types/tools";
 
 /**
  * Arguments for invoking the agent
  */
 export interface AgentArgs {
-  query: string;
+  userMessage: UserMessage;
   chatHistory: ChatMessage[];
   agentCfg: AgentConfig;
-  startDate?: Date;
-  endDate?: Date;
+  options?: {
+    dataSources?: DataSource[];
+    startDate?: Date;
+    endDate?: Date;
+  };
   onUpdate: StreamUpdateFn;
   abortSignal?: AbortSignal;
 }
@@ -41,11 +45,10 @@ export interface AgentArgs {
  * Invokes the agent with the given parameters
  */
 export async function invokeAgent({
-  query,
+  userMessage,
   chatHistory,
   agentCfg,
-  startDate = new Date("2025-04-01T21:00:00Z"),
-  endDate = new Date("2025-04-01T22:00:00Z"),
+  options,
   onUpdate,
   abortSignal,
 }: AgentArgs): Promise<AssistantMessage> {
@@ -55,17 +58,28 @@ export async function invokeAgent({
   if (!agentCfg.repoPath) {
     throw new Error("Repo path is required");
   }
+
+  // Default date range is last 2 weeks
+  const currentTime = DateTime.now().setZone(agentCfg.timezone);
+  const endDate = options?.endDate ?? currentTime.toJSDate();
+  const startDate = options?.startDate ?? currentTime.minus({ days: 14 }).toJSDate();
+
+  // Default data sources is code
+  const dataSources = options?.dataSources ?? ["code"];
+
+  logger.info(`User message: ${userMessage}`);
+
   const fileTree = await getDirectoryTree(agentCfg.repoPath);
 
-  const observabilityPlatform = getObservabilityPlatform(agentCfg);
-  // Get formatted labels map for time range
-  const logLabelsMap = await observabilityPlatform.getLogsFacetValues(
+  const observabilityClient = getObservabilityClient(agentCfg);
+
+  const logLabelsMap = await observabilityClient.getLogsFacetValues(
     startDate.toISOString(),
     endDate.toISOString()
   );
 
   const pipelineConfig: TriagePipelineConfig = {
-    query,
+    userMessage,
     timezone: agentCfg.timezone,
     repoPath: agentCfg.repoPath,
     codebaseOverview: agentCfg.codebaseOverview.content,
@@ -73,7 +87,8 @@ export async function invokeAgent({
     logLabelsMap,
     reasoningClient: getModelWrapper(agentCfg.reasoningModel, agentCfg),
     fastClient: getModelWrapper(agentCfg.fastModel, agentCfg),
-    observabilityPlatform,
+    observabilityClient,
+    dataSources,
     abortSignal,
   };
 
@@ -87,23 +102,25 @@ export async function invokeAgent({
     const pipeline = new TriagePipeline(pipelineConfig, state);
     const response = await pipeline.run();
 
+    logger.info(`Pipeline run completed successfully. Response: ${JSON.stringify(response)}`);
     return {
       role: "assistant",
       steps: state.getSteps(StepsType.CURRENT),
       response: response.answer,
-      error: null,
+      error: undefined,
     };
   } catch (error) {
+    logger.error(`Error in invokeAgent: ${JSON.stringify(error)}`);
     return {
       role: "assistant",
       steps: state.getSteps(StepsType.CURRENT),
-      response: null,
+      response: undefined,
       error: `${error}`,
     };
   }
 }
 
-const parseArgs = (): { integration: "datadog" | "grafana"; features: string[] } => {
+async function main(): Promise<void> {
   const argsSchema = z.object({
     orgId: z.string().optional(),
     integration: z
@@ -118,17 +135,11 @@ const parseArgs = (): { integration: "datadog" | "grafana"; features: string[] }
         message: "Features must be: logs, spans",
       }),
   });
-
   const program = new CommanderCommand()
     .option("-i, --integration <integration>", "Integration type (datadog or grafana)")
     .option("-f, --features <features>", "Features to enable (logs,spans)")
     .parse();
-
-  return argsSchema.parse(program.opts());
-};
-
-async function main(): Promise<void> {
-  const { integration, features: observabilityFeatures } = parseArgs();
+  const { integration, features: observabilityFeatures } = argsSchema.parse(program.opts());
 
   // Get formatted labels map for time range
   const startDate = new Date("2025-05-02T02:00:00Z");
@@ -143,56 +154,71 @@ async function main(): Promise<void> {
 
   const bug = await fs.readFile(bugPath, "utf-8");
 
-  const chatHistory: ChatMessage[] = [
-    {
-      role: "user",
-      content: bug,
-    },
-  ];
+  // Create a UserMessage object for the agent
+  const userMessage: UserMessage = {
+    role: "user",
+    content: bug,
+    contextItems: [], // No context items for CLI usage
+  };
 
-  // TODO: clean up args, we can use Zod to set defaults instead
-  const response = await invokeAgent({
-    query: bug,
-    chatHistory,
-    agentCfg: {
+  // Create an empty chat history
+  const chatHistory: ChatMessage[] = [];
+
+  // Configure the agent
+  const agentCfg: AgentConfig = {
+    repoPath,
+    timezone,
+    codebaseOverview: {
+      content: codebaseOverview,
       repoPath,
-      timezone,
-      codebaseOverview: {
-        content: codebaseOverview,
-        repoPath,
-      },
-      balancedModel: OpenAIModel.GPT_4_1,
-      reasoningModel: GeminiModel.GEMINI_2_5_PRO,
-      fastModel: GeminiModel.GEMINI_2_5_FLASH,
-      observabilityPlatform: integration,
-      observabilityFeatures: observabilityFeatures as ("logs" | "spans")[],
-      datadog:
-        integration === "datadog"
-          ? DatadogCfgSchema.parse({
-              apiKey: process.env.DATADOG_API_KEY!,
-              appKey: process.env.DATADOG_APP_KEY!,
-            })
-          : undefined,
-      grafana:
-        integration === "grafana"
-          ? GrafanaCfgSchema.parse({
-              baseUrl: process.env.GRAFANA_BASE_URL!,
-              username: process.env.GRAFANA_USERNAME!,
-              password: process.env.GRAFANA_PASSWORD!,
-            })
-          : undefined,
     },
-    startDate,
-    endDate,
-    onUpdate: (update) => {
-      if (update.type === "reasoning-chunk") {
-        process.stdout.write(`${update.chunk}\n`);
-      } else if (update.type === "logSearch-chunk") {
-        process.stdout.write(`${update.chunk}\n`);
-      } else if (update.type === "codeSearch-chunk") {
-        process.stdout.write(`${update.chunk}\n`);
-      }
+    observabilityClient: integration as IntegrationType,
+    reasoningModel: OpenAIModel.GPT_4_1,
+    balancedModel: OpenAIModel.GPT_4_1,
+    fastModel: GeminiModel.GEMINI_2_5_FLASH,
+    observabilityFeatures: observabilityFeatures as ("logs" | "spans")[],
+    datadog:
+      integration === "datadog"
+        ? DatadogCfgSchema.parse({
+            apiKey: process.env.DATADOG_API_KEY!,
+            appKey: process.env.DATADOG_APP_KEY!,
+          })
+        : undefined,
+    grafana:
+      integration === "grafana"
+        ? GrafanaCfgSchema.parse({
+            baseUrl: process.env.GRAFANA_BASE_URL!,
+            username: process.env.GRAFANA_USERNAME!,
+            password: process.env.GRAFANA_PASSWORD!,
+          })
+        : undefined,
+    sentry: {
+      authToken: process.env.SENTRY_AUTH_TOKEN!,
     },
+  };
+
+  // Define the update handler
+  const onUpdate: StreamUpdateFn = (update) => {
+    if (update.type === "reasoning-chunk") {
+      process.stdout.write(`${update.chunk}\n`);
+    } else if (update.type === "logSearch-chunk") {
+      process.stdout.write(`${update.chunk}\n`);
+    } else if (update.type === "codeSearch-chunk") {
+      process.stdout.write(`${update.chunk}\n`);
+    }
+  };
+
+  // Invoke the agent with the UserMessage
+  const response = await invokeAgent({
+    userMessage,
+    chatHistory,
+    agentCfg,
+    options: {
+      dataSources: ["code"],
+      startDate,
+      endDate,
+    },
+    onUpdate,
   });
 
   logger.info(`Steps: ${JSON.stringify(response.steps)}`);

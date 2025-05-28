@@ -2,13 +2,16 @@ import { AppConfig } from "src/common/AppConfig.js";
 import mockElectronAPI from "../electronApiMock.js";
 import {
   AgentChatMessage,
+  AgentUserMessage,
   AssistantMessage,
   Chat,
   ChatMessage,
   CodebaseOverview,
   CodebaseOverviewProgressUpdate,
   FacetData,
+  GetSentryEventInput,
   LogSearchInput,
+  SentryEvent,
   TraceSearchInput,
   UserMessage,
 } from "../types/index.js";
@@ -44,13 +47,11 @@ const isMethodAvailable = (methodName: string) => {
 // Create a wrapper API that will use either the real or mock API
 const api = {
   // Use the new ipcHandlersToStream implementation
-  sendAgentMessage: async (query: string, chatHistory: AgentChatMessage[] = []) => {
-    console.info("[API DEBUG] getAgentStream called with query:", query);
-
+  sendAgentMessage: async (userMessage: AgentUserMessage, chatHistory: AgentChatMessage[] = []) => {
     if (USE_MOCK_API) {
       console.info("Using mock getAgentStream");
       // Create a fake stream with a single value for backward compatibility
-      const response = await mockElectronAPI.invokeAgent(query, chatHistory);
+      const response = await mockElectronAPI.invokeAgent(userMessage, chatHistory);
 
       return {
         async *[Symbol.asyncIterator]() {
@@ -65,31 +66,14 @@ const api = {
       };
     } else {
       console.info("Using electronAPI.agent for streaming");
-      // Convert AgentChatMessages to plain objects with just role and content
-      const plainChatHistory = chatHistory.map((msg) => {
-        if (msg.role === "assistant") {
-          // For assistant messages, use the 'response' field as content
-          return {
-            role: msg.role,
-            content: msg.response || "",
-          };
-        } else {
-          // For user messages, use the 'content' field
-          return {
-            role: msg.role,
-            content: msg.content,
-          };
-        }
-      });
-
       return ipcHandlersToStream(
         {
           invoke: window.electronAPI.agent.invoke,
           onChunk: window.electronAPI.agent.onChunk,
           cancel: window.electronAPI.agent.cancel,
         },
-        query,
-        plainChatHistory
+        userMessage,
+        chatHistory
       );
     }
   },
@@ -194,6 +178,34 @@ const api = {
       } catch (error) {
         console.error("Error in getSpansFacetValues:", error);
         return []; // Return empty array on error
+      }
+    }
+  },
+
+  fetchSentryEvent: async (params: GetSentryEventInput): Promise<SentryEvent> => {
+    console.info("[API DEBUG] fetchSentryEvent called with params:", params);
+    const shouldUseMock = USE_MOCK_API || !isMethodAvailable("fetchSentryEvent");
+    console.info("[API DEBUG] Using mock implementation:", shouldUseMock);
+
+    if (shouldUseMock) {
+      console.info("Using mock fetchSentryEvent");
+      try {
+        const response = await mockElectronAPI.fetchSentryEvent(params);
+        console.info("[API DEBUG] Mock response:", response);
+        return response;
+      } catch (error) {
+        console.error("Error in fetchSentryEvent:", error);
+        throw error; // Propagate error to caller
+      }
+    } else {
+      try {
+        console.info("Using real electronAPI.fetchSentryEvent");
+        const response = await window.electronAPI.fetchSentryEvent(params);
+        console.info("[API DEBUG] Real API response:", response);
+        return response;
+      } catch (error) {
+        console.error("Error in fetchSentryEvent:", error);
+        throw error; // Propagate error to caller
       }
     }
   },

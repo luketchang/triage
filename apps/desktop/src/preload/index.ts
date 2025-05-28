@@ -1,10 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import {
-  AgentStreamUpdate,
-  AssistantMessage,
-  ChatMessage,
-  UserMessage,
-} from "../renderer/src/types/index.js";
+import { AssistantMessage, ChatMessage, UserMessage } from "../renderer/src/types/index.js";
 
 // Store the environment values we're exposing for logging
 const tracesEnabled = process.env.TRACES_ENABLED === "true";
@@ -33,9 +28,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
      * @param history Chat history as plain objects
      * @returns Promise that resolves to a stream ID (string)
      */
-    invoke: (prompt: string, history: { role: string; content: string }[]) => {
-      const clean = history.map(({ role, content }) => ({ role, content }));
-      return ipcRenderer.invoke("agent:invoke", prompt, clean);
+    invoke: (userMessage: UserMessage, chatHistory: ChatMessage[]) => {
+      return ipcRenderer.invoke("agent:invoke", userMessage, chatHistory);
     },
 
     /**
@@ -97,6 +91,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
    */
   getSpansFacetValues: (start: string, end: string) =>
     ipcRenderer.invoke("observability:get-spans-facet-values", start, end),
+
+  /**
+   * Fetch a Sentry event by specifier
+   * @param params Parameters for fetching the Sentry event
+   */
+  fetchSentryEvent: (params: unknown) => ipcRenderer.invoke("sentry:fetch-event", params),
 
   /**
    * Create a new chat

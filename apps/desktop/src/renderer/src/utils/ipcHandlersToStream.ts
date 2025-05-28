@@ -18,7 +18,7 @@ export interface IpcFunctions<
   TInvokeArgs extends any[] = any[],
   TPacket extends BaseStreamPacket = BaseStreamPacket,
 > {
-  invoke: (...args: TInvokeArgs) => Promise<string>;
+  invoke: (...args: TInvokeArgs) => Promise<any>;
   onChunk: (callback: (packet: TPacket) => void) => () => void;
   cancel: (streamId: string) => void;
 }

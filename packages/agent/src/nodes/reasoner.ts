@@ -5,18 +5,23 @@ import { v4 as uuidv4 } from "uuid";
 import { TriagePipelineConfig } from "../pipeline";
 import { ReasoningStep } from "../pipeline/state";
 import { PipelineStateManager } from "../pipeline/state-manager";
-import { codeRequestToolSchema, logRequestToolSchema, RequestSubAgentCalls } from "../types";
-import { formatFacetValues } from "../utils";
+import {
+  codeRequestToolSchema,
+  logRequestToolSchema,
+  RequestSubAgentCalls,
+  UserMessage,
+} from "../types";
+import { formatFacetValues, formatUserMessage } from "../utils";
 type ReasoningResponse = ReasoningStep | RequestSubAgentCalls;
 
 export const createPrompt = ({
-  query,
+  userMessage,
   repoPath,
   codebaseOverview,
   fileTree,
   logLabelsMap,
 }: {
-  query: string;
+  userMessage: UserMessage;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;
@@ -49,7 +54,7 @@ Tips:
   - Do not miss the forest for the trees and suggest a narrow bandaid fix. Think about how the system should ideally function if it were fully correct. Then simulate how the system would behave under your proposed fixes to validate that your fix is fully correct and doesn't introduce new issues or fail to solve the original problem. If it does fail, try to reason about what the root cause is and propose a new fix.
 
 <query>
-${query}
+${formatUserMessage(userMessage)}
 </query>
 
 <repo_path>
@@ -83,7 +88,7 @@ export class Reasoner {
 
   @timer
   async invoke(params: { parentId: string; maxSteps?: number }): Promise<ReasoningResponse> {
-    logger.info(`Reasoning about query: ${this.config.query}`);
+    logger.info(`Reasoning about query: ${this.config.userMessage.content}`);
 
     // HACK: stream single reasoning update just to start the step in the UI
     this.state.addStreamingUpdate("reasoning", params.parentId, "");
@@ -99,15 +104,21 @@ export class Reasoner {
     logger.info(`Calling LLM with ${chatHistory.length} messages and maxSteps: ${params.maxSteps}`);
     logger.info(`Reasoner whole prompt:\n${JSON.stringify(chatHistory, null, 2)}\n`);
 
+    // Build tools object based on enabled data sources
+    const tools: Record<string, typeof logRequestToolSchema | typeof codeRequestToolSchema> = {};
+    if (this.config.dataSources.includes("logs")) {
+      tools.logRequest = logRequestToolSchema;
+    }
+    if (this.config.dataSources.includes("code")) {
+      tools.codeRequest = codeRequestToolSchema;
+    }
+
     // Stream reasoning response and collect text and tool calls
     const { toolCalls, fullStream } = streamText({
       model: this.config.reasoningClient,
       messages: chatHistory,
       maxSteps: params.maxSteps || 1,
-      tools: {
-        logRequest: logRequestToolSchema,
-        codeRequest: codeRequestToolSchema,
-      },
+      tools,
       toolChoice: "auto",
       abortSignal: this.config.abortSignal,
     });
@@ -150,7 +161,7 @@ export class Reasoner {
       for (const toolCall of finalizedToolCalls) {
         // TODO: generate these tool calls in toolbox
         switch (toolCall.toolName) {
-          case "logRequest":
+          case "logRequest": {
             output.subAgentCalls.push({
               type: "logRequest",
               toolCallId: toolCall.toolCallId,
@@ -158,7 +169,8 @@ export class Reasoner {
               reasoning: toolCall.args.reasoning,
             });
             break;
-          case "codeRequest":
+          }
+          case "codeRequest": {
             output.subAgentCalls.push({
               type: "codeRequest",
               toolCallId: toolCall.toolCallId,
@@ -166,6 +178,7 @@ export class Reasoner {
               reasoning: toolCall.args.reasoning,
             });
             break;
+          }
         }
       }
     }
