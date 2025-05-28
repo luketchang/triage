@@ -4,7 +4,7 @@ import CellView from "../components/CellView.js";
 import ChatInputArea from "../components/ChatInputArea.js";
 import ContextItemView from "../components/ContextItemView.js";
 import FactsSidebar from "../components/FactsSidebar.js";
-import { Markdown } from "../components/ui/Markdown.js";
+import { Markdown } from "../components/ui/Markdown.jsx";
 import { ScrollArea } from "../components/ui/ScrollArea.jsx";
 import { cn } from "../lib/utils.js";
 import { useChatStore, useUIStore } from "../store/index.js";
@@ -67,7 +67,7 @@ function ChatView() {
         {/* Main chat area with conditional right padding when sidebar is open */}
         <div
           className={cn(
-            "transition-all duration-300 ease-in-out flex flex-col h-full w-full",
+            "transition-all duration-300 ease-in-out flex flex-col h-full w-full min-w-0",
             showFactsSidebar && "md:pr-[calc(33%+24px)]",
             "bg-background-assistant"
           )}
@@ -78,11 +78,18 @@ function ChatView() {
             type="always"
             scrollHideDelay={0}
           >
-            <div className="flex flex-col justify-start h-auto w-full">
+            <div
+              className="flex flex-col justify-start h-auto w-full min-w-0"
+              style={{
+                minWidth: "0 !important",
+                display: "flex !important",
+                width: "100%",
+              }}
+            >
               {messages?.map((message) =>
                 message.role === "user" ? (
                   <div key={`user-${message.id}`} className="py-4 px-4 bg-background-assistant">
-                    <div className="flex items-start max-w-[90%] mx-auto w-full">
+                    <div className="flex items-start w-full mx-auto px-4 sm:px-8 md:px-12">
                       <div className="w-9 h-9 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm bg-primary my-3">
                         <User className="h-5 w-5 text-white" />
                       </div>
@@ -95,7 +102,7 @@ function ChatView() {
                             ))}
                           </div>
                         )}
-                        <div className="bg-background-alt p-4 rounded-lg shadow-sm">
+                        <div className="bg-background-alt p-4 rounded-lg shadow-sm w-full break-words break-all">
                           <Markdown>{message.content}</Markdown>
                         </div>
                       </div>
@@ -103,7 +110,7 @@ function ChatView() {
                   </div>
                 ) : (
                   <div key={`assistant-${message.id}`} className="bg-background-assistant">
-                    <div className="max-w-[90%] mx-auto w-full">
+                    <div className="w-full mx-auto px-4 sm:px-8 md:px-12">
                       <CellView
                         message={message as AssistantMessage}
                         isThinking={
@@ -136,7 +143,15 @@ function ChatView() {
         </div>
       </div>
 
-      <ChatInputArea />
+      {/* Chat input area - moved outside the main container to avoid sidebar padding issues */}
+      <div
+        className={cn(
+          "transition-all duration-300 ease-in-out",
+          showFactsSidebar && "md:pr-[calc(33%+24px)]"
+        )}
+      >
+        <ChatInputArea />
+      </div>
     </div>
   );
 }

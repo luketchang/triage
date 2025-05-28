@@ -235,3 +235,39 @@ code {
 .search-step-reasoning .prose * {
   color: inherit !important;
 }
+
+/* Fix Radix ScrollArea preventing content shrinking - but exclude navigation sidebar */
+.scroll-container [data-radix-scroll-area-viewport] > div {
+  min-width: 0 !important;
+  display: flex !important;
+  width: 100% !important;
+}
+
+/* Ensure scroll container allows shrinking */
+.scroll-container [data-radix-scroll-area-viewport] > div {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Override any table display on scroll content - only for chat messages */
+.scroll-container * {
+  max-width: 100% !important;
+}
+
+.scroll-container [style*="display: table"] {
+  display: flex !important;
+  min-width: 0 !important;
+}
+
+/* Prevent textarea from responding to viewport changes */
+textarea[class*="TextareaAutosize"] {
+  height: auto !important;
+  max-height: 120px !important;
+  min-height: 50px !important;
+}
+
+/* Ensure ChatInputArea maintains consistent height */
+.chat-input-container {
+  flex-shrink: 0;
+}
