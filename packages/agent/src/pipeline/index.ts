@@ -21,6 +21,7 @@ export type TriagePipelineConfig = {
   fileTree: string;
   logLabelsMap: Map<string, string[]>;
   dataSources: DataSource[];
+  abortSignal?: AbortSignal;
 };
 
 export type TriagePipelineState = {

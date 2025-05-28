@@ -23,6 +23,7 @@ export interface ChatDetails {
   userInput?: string;
   isThinking?: boolean;
   contextItems?: ContextItem[];
+  cancelStream?: () => void;
 }
 
 interface ChatState {
@@ -261,10 +262,6 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
         };
       });
     });
-    const unregister = api.onAgentUpdate((update) => {
-      console.info("Received agent update:", update);
-      handleUpdate(updater, update);
-    });
 
     try {
       // Invoke agent with full conversation
@@ -272,41 +269,52 @@ const useChatStoreBase = create<ChatState>((set, get) => ({
       const agentMessages = convertToAgentChatMessages([...messages, userMessage]);
 
       console.info("Calling with user message:", agentUserMessage);
-      const agentResponse = await api.invokeAgent(agentUserMessage, agentMessages);
+      const stream = await api.invokeAgentAsStream(agentUserMessage, agentMessages);
 
-      if (agentResponse?.error) {
-        updater.update((cell) => ({
-          ...cell,
-          response: "Sorry, there was an error processing your request.",
-          error: agentResponse.error,
-        }));
-      } else {
-        updater.update((cell) => ({
-          ...cell,
-          response: agentResponse.response || "No response from agent.",
-        }));
+      // Store the stream's cancel function
+      set((state) => ({
+        chatDetailsById: {
+          ...state.chatDetailsById,
+          [materializedChatId]: {
+            ...state.chatDetailsById[materializedChatId],
+            cancelStream: stream.cancel,
+          },
+        },
+      }));
+
+      // Process the stream
+      for await (const update of stream) {
+        console.info("Received agent update:", update);
+        handleUpdate(updater, update);
       }
-    } catch (err) {
-      console.error("Agent call error:", err);
+
+      // Final update based on the last response
+      updater.update((cell) => ({
+        ...cell,
+        response: cell.response !== "Thinking..." ? cell.response : "I processed your request.",
+      }));
+    } catch (error) {
+      console.error("Error in chat API call:", error);
+      // Handle error response
       updater.update((cell) => ({
         ...cell,
         response: "Sorry, there was an error processing your request.",
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       }));
     } finally {
-      // Persist assistant message and clear thinking state
-      const finalMessage = updater.getMessage();
-      api.saveAssistantMessage(finalMessage, materializedChatId);
+      // Persist assistant message and clear pending chat's in-progress state
+      console.log("Saving assistant message", JSON.stringify(updater.getMessage()));
+      api.saveAssistantMessage(updater.getMessage(), materializedChatId);
       set((state) => ({
         chatDetailsById: {
           ...state.chatDetailsById,
           [materializedChatId]: {
             ...state.chatDetailsById[materializedChatId],
             isThinking: false,
+            cancelStream: undefined,
           },
         },
       }));
-      unregister();
     }
   },
 }));

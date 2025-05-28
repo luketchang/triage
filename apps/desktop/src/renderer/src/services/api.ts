@@ -1,9 +1,7 @@
 import { AppConfig } from "src/common/AppConfig.js";
 import mockElectronAPI from "../electronApiMock.js";
 import {
-  AgentAssistantMessage,
   AgentChatMessage,
-  AgentStreamUpdate,
   AgentUserMessage,
   AssistantMessage,
   Chat,
@@ -17,6 +15,7 @@ import {
   TraceSearchInput,
   UserMessage,
 } from "../types/index.js";
+import { invokeAndReturnStream } from "../utils/invokeAndReturnStream.js";
 
 // Get mock API setting from environment
 const USE_MOCK_API = window.env.USE_MOCK_API;
@@ -39,7 +38,7 @@ const isMethodAvailable = (methodName: string) => {
   if (electronAvailable) {
     methodAvailable =
       typeof window.electronAPI[methodName as keyof typeof window.electronAPI] === "function";
-    console.info(`[API DEBUG] Is method '${methodName}' available:`, methodAvailable);
+    console.info(`[API DEBUG] Is electronAPI.${methodName} available:`, methodAvailable);
   }
 
   return electronAvailable && methodAvailable;
@@ -47,33 +46,29 @@ const isMethodAvailable = (methodName: string) => {
 
 // Create a wrapper API that will use either the real or mock API
 const api = {
-  // Register for agent updates
-  onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => {
-    if (USE_MOCK_API || !isMethodAvailable("onAgentUpdate")) {
-      console.info("Mock onAgentUpdate - no streaming available in mock mode");
-      return () => {}; // Return no-op cleanup function
-    } else {
-      console.info("Using real electronAPI.onAgentUpdate");
-      return window.electronAPI.onAgentUpdate(callback);
-    }
-  },
-
-  invokeAgent: async (
+  invokeAgentAsStream: async (
     userMessage: AgentUserMessage,
-    chatHistory: AgentChatMessage[]
-  ): Promise<AgentAssistantMessage> => {
-    if (USE_MOCK_API || !isMethodAvailable("invokeAgent")) {
-      // For mock API, create a simplified object that matches the expected type
-      return mockElectronAPI.invokeAgent(
-        {
-          role: "user",
-          content: userMessage.content,
-          contextItems: userMessage.contextItems,
+    chatHistory: AgentChatMessage[] = []
+  ) => {
+    if (USE_MOCK_API) {
+      console.info("Using mock invokeAgentAsStream");
+      // Create a fake stream with a single value for backward compatibility
+      const response = await mockElectronAPI.invokeAgent(userMessage, chatHistory);
+
+      return {
+        async *[Symbol.asyncIterator]() {
+          // Yield all updates from the mock
+          if (response) {
+            yield response;
+          }
         },
-        chatHistory
-      );
+        cancel: () => {
+          // No-op for mock
+        },
+      };
     } else {
-      return window.electronAPI.invokeAgent(userMessage, chatHistory);
+      console.info("Using real electronAPI.invokeAgentAsStream");
+      return invokeAndReturnStream(window.electronAPI.agent, userMessage, chatHistory);
     }
   },
 

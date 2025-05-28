@@ -95,6 +95,7 @@ export class LogPostprocessor {
         logPostprocessing: logPostprocessingToolSchema,
       },
       toolChoice: "required",
+      abortSignal: this.config.abortSignal,
     });
 
     // If multiple tool calls are returned (on accident), we will just merge them

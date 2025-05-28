@@ -38,6 +38,7 @@ export interface AgentArgs {
     endDate?: Date;
   };
   onUpdate: StreamUpdateFn;
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -49,6 +50,7 @@ export async function invokeAgent({
   agentCfg,
   options,
   onUpdate,
+  abortSignal,
 }: AgentArgs): Promise<AssistantMessage> {
   if (!agentCfg.codebaseOverview) {
     throw new Error("Codebase overview is required");
@@ -87,6 +89,7 @@ export async function invokeAgent({
     fastClient: getModelWrapper(agentCfg.fastModel, agentCfg),
     observabilityClient,
     dataSources,
+    abortSignal,
   };
 
   const state = new PipelineStateManager(onUpdate, chatHistory);
@@ -117,7 +120,7 @@ export async function invokeAgent({
   }
 }
 
-const parseArgs = (): { integration: "datadog" | "grafana"; features: string[] } => {
+async function main(): Promise<void> {
   const argsSchema = z.object({
     orgId: z.string().optional(),
     integration: z
@@ -132,17 +135,11 @@ const parseArgs = (): { integration: "datadog" | "grafana"; features: string[] }
         message: "Features must be: logs, spans",
       }),
   });
-
   const program = new CommanderCommand()
     .option("-i, --integration <integration>", "Integration type (datadog or grafana)")
     .option("-f, --features <features>", "Features to enable (logs,spans)")
     .parse();
-
-  return argsSchema.parse(program.opts());
-};
-
-async function main(): Promise<void> {
-  const { integration, features: observabilityFeatures } = parseArgs();
+  const { integration, features: observabilityFeatures } = argsSchema.parse(program.opts());
 
   // Get formatted labels map for time range
   const startDate = new Date("2025-05-02T02:00:00Z");
@@ -175,7 +172,7 @@ async function main(): Promise<void> {
       content: codebaseOverview,
       repoPath,
     },
-    observabilityClient: integration,
+    observabilityClient: integration as IntegrationType,
     reasoningModel: OpenAIModel.GPT_4_1,
     balancedModel: OpenAIModel.GPT_4_1,
     fastModel: GeminiModel.GEMINI_2_5_FLASH,
