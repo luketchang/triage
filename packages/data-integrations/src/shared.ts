@@ -6,4 +6,5 @@ export enum PaginationStatus {
 export enum IntegrationType {
   DATADOG = "datadog",
   GRAFANA = "grafana",
+  GCLOUD = "gcloud",
 }

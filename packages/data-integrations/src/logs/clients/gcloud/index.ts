@@ -1,0 +1,1 @@
+export { GcloudLogsClient } from "./client";

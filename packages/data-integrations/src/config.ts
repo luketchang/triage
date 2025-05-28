@@ -15,15 +15,22 @@ export const GrafanaCfgSchema = z.object({
 });
 export type GrafanaConfig = z.infer<typeof GrafanaCfgSchema>;
 
+export const GcloudCfgSchema = z.object({
+  authToken: configSecret(z.string()),
+  projectId: z.string(),
+});
+export type GcloudConfig = z.infer<typeof GcloudCfgSchema>;
+
 export const SentryCfgSchema = z.object({
   authToken: configSecret(z.string()),
 });
 
 export const DataIntegrationsCfgSchema = z.object({
-  logsProvider: z.enum(["datadog", "grafana"]).optional().default("datadog"),
+  logsProvider: z.enum(["datadog", "grafana", "gcloud"]).optional().default("datadog"),
   tracesProvider: z.enum(["datadog", "grafana"]).optional().default("datadog"),
   datadog: DatadogCfgSchema.optional(),
   grafana: GrafanaCfgSchema.optional(),
+  gcloud: GcloudCfgSchema.optional(),
   sentry: SentryCfgSchema.optional(),
 });
 export type DataIntegrationsConfig = z.infer<typeof DataIntegrationsCfgSchema>;

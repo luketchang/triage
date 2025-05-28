@@ -1,6 +1,7 @@
 import { DataIntegrationsConfig } from "../config";
 import { DatadogLogsClient } from "./clients/datadog";
 import { GrafanaLogsClient } from "./clients/grafana";
+import { GcloudLogsClient } from "./clients/gcloud";
 import { LogsClient } from "./logs.interface";
 
 export function getLogsClient(dataIntegrationsCfg: DataIntegrationsConfig): LogsClient {
@@ -14,6 +15,11 @@ export function getLogsClient(dataIntegrationsCfg: DataIntegrationsConfig): Logs
       throw new Error("Grafana client not configured");
     }
     return new GrafanaLogsClient(dataIntegrationsCfg.grafana);
+  } else if (dataIntegrationsCfg.logsProvider === "gcloud") {
+    if (!dataIntegrationsCfg.gcloud) {
+      throw new Error("Google Cloud client not configured");
+    }
+    return new GcloudLogsClient(dataIntegrationsCfg.gcloud);
   }
   throw new Error("No logs client configured");
 }
