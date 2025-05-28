@@ -56,6 +56,7 @@ Given all available log labels, a user query about the issue/event, and previous
 ## Tips
 - DO NOT query logs from non-user-facing services. This includes services such as mongo, controller, agent, alloy, operator, nats, cluster-agent, desktop-vpnkit-controller, metrics-server, etcd, redis, etc (think anything collector or infrastructure related).
 - Early on in exploration, tag multiple services in your queries instead of doing multiple searches each with one service tagged.
+- Prioritize recall over precision, its better to over fetch results than not fetch enough data to understand the issue/event. This means you should not stop query for results until you feel you have everything you need.
 - As you make queries, pay attention to the results in <previous_log_query_result> to see the results of your last query and <log_results_history> to see the results of all previous queries. You should make decisions on future queries based on the results of your previous queries.
 - Look for important identifiers such as users or IDs and use those in future queries to narrow the context temporarily.
 - As you find log results indicative of the exact issue/event, you should try to find additional logs that precede and reveal information about the issue/event.

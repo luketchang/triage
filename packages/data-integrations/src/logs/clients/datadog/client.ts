@@ -64,6 +64,13 @@ export class DatadogLogsClient implements LogsClient {
     this.logsApiInstance = new v2.LogsApi(clientCfg);
   }
 
+  patchQuery(query: string): string {
+    // Fix missing colon in attribute filters: *"keyword" -> *:"keyword"
+    // Use regex to find patterns of * followed directly by quoted strings
+    const fixedQuery = query.replace(/\*"([^"]+)"/g, '*:"$1"');
+    return fixedQuery;
+  }
+
   addKeywordsToQuery(query: string, keywords: string[]): string {
     if (!keywords || keywords.length === 0) {
       return query;
@@ -139,14 +146,16 @@ export class DatadogLogsClient implements LogsClient {
   }
 
   async fetchLogs(params: LogSearchInput): Promise<LogsWithPagination> {
+    const patchedQuery = this.patchQuery(params.query);
+
     try {
-      logger.info(`Executing GET query: ${params.query}`);
+      logger.info(`Executing GET query: ${patchedQuery}`);
       logger.info(`Time range: ${params.start} to ${params.end}`);
       logger.info(`Limit: ${params.limit}`);
       logger.info(`Cursor: ${params.pageCursor}`);
 
       const response = await this.logsApiInstance.listLogsGet({
-        filterQuery: params.query,
+        filterQuery: patchedQuery,
         filterFrom: new Date(params.start),
         filterTo: new Date(params.end),
         sort: "timestamp",
