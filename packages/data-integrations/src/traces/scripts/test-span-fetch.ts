@@ -2,8 +2,10 @@
 import { logger } from "@triage/common";
 import { Command } from "commander";
 
-import { DatadogCfgSchema, DatadogClient, DatadogConfig, SpansWithPagination } from "../";
+import { DatadogCfgSchema, DatadogConfig } from "../../config";
+import { DatadogTracesClient } from "../clients/datadog";
 import { formatSpans } from "../formatting";
+import { SpansWithPagination } from "../types";
 
 // Setup command line options
 const program = new Command();
@@ -45,7 +47,7 @@ async function testDatadogSpanFetch(datadogCfg: DatadogConfig): Promise<void> {
     logger.info(`Time range: ${options.start} to ${options.end}`);
     logger.info(`Limit: ${options.limit}`);
 
-    const datadogClient = new DatadogClient(datadogCfg);
+    const datadogClient = new DatadogTracesClient(datadogCfg!);
     const spans = await datadogClient.fetchSpans({
       type: "spanSearchInput",
       query: options.query,

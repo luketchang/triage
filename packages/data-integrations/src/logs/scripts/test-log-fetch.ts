@@ -2,16 +2,11 @@
 import { logger } from "@triage/common";
 import { Command } from "commander";
 
-import {
-  DatadogCfgSchema,
-  DatadogClient,
-  DatadogConfig,
-  GrafanaCfgSchema,
-  GrafanaClient,
-  GrafanaConfig,
-  LogsWithPagination,
-} from "..";
+import { DatadogCfgSchema, DatadogConfig, GrafanaCfgSchema, GrafanaConfig } from "../../config";
+import { DatadogLogsClient } from "../clients/datadog";
+import { GrafanaLogsClient } from "../clients/grafana";
 import { formatLogQuery, formatSingleLog } from "../formatting";
+import { LogsWithPagination } from "../types";
 
 // Setup command line options
 const program = new Command();
@@ -76,7 +71,7 @@ async function testDatadogLogFetch(datadogCfg: DatadogConfig): Promise<void> {
     // Use the formatLogQuery function to display the query
     logger.info(formatLogQuery(logSearchInput));
 
-    const datadogClient = new DatadogClient(datadogCfg);
+    const datadogClient = new DatadogLogsClient(datadogCfg!);
     const logs = await datadogClient.fetchLogs({
       type: "logSearchInput",
       ...logSearchInput,
@@ -114,7 +109,7 @@ async function testGrafanaLogFetch(grafanaCfg: GrafanaConfig): Promise<void> {
     logger.info(formatLogQuery(logSearchInput));
     logger.info(`Formatted Grafana query: ${grafanaQuery}`);
 
-    const grafanaClient = new GrafanaClient(grafanaCfg);
+    const grafanaClient = new GrafanaLogsClient(grafanaCfg!);
     const logs = await grafanaClient.fetchLogs({
       type: "logSearchInput",
       ...logSearchInput,

@@ -1,6 +1,6 @@
 import { LLMCfgSchema } from "@triage/common";
 import { ConfigStore, DelegatingConfigStore } from "@triage/config";
-import { ObservabilityCfgSchema, SentryCfgSchema } from "@triage/data-integrations";
+import { DataIntegrationsCfgSchema } from "@triage/data-integrations";
 import { z } from "zod";
 
 export const AgentCfgSchema = z.object({
@@ -23,8 +23,7 @@ export const AgentCfgSchema = z.object({
   timezone: z.string().describe("Timezone to use for date formatting").default("UTC"),
 
   ...LLMCfgSchema.shape,
-  ...ObservabilityCfgSchema.shape,
-  ...SentryCfgSchema.shape,
+  ...DataIntegrationsCfgSchema.shape,
 });
 export type AgentConfig = z.infer<typeof AgentCfgSchema>;
 
