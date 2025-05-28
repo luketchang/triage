@@ -1,0 +1,1 @@
+export { DatadogLogsClient } from "./client";

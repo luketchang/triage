@@ -74,9 +74,9 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
             options: {
               startDate,
               endDate,
+              dataSources: ["code", "logs"],
             },
             onUpdate,
-            abortSignal: controller.signal,
           });
 
           // At this point, all updates have been sent and all processing is complete,

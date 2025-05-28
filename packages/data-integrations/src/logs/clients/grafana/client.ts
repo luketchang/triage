@@ -1,20 +1,10 @@
 import { logger, toUnixNano } from "@triage/common";
 import axios from "axios";
 
-import { GrafanaConfig } from "../../config";
-import { ObservabilityClient } from "../../observability.interface";
-import {
-  IntegrationType,
-  Log,
-  LogSearchInput,
-  LogsWithPagination,
-  PaginationStatus,
-  SpanSearchInput,
-  SpansWithPagination,
-  Trace,
-  TraceSearchInput,
-  TracesWithPagination,
-} from "../../types";
+import { GrafanaConfig } from "../../../config";
+import { IntegrationType, PaginationStatus } from "../../../shared";
+import { LogsClient } from "../../logs.interface";
+import { Log, LogSearchInput, LogsWithPagination } from "../../types";
 
 export const GRAFANA_LOG_SEARCH_INSTRUCTIONS = `
 ## LogQL Syntax
@@ -63,7 +53,7 @@ interface GrafanaErrorResponse {
   error?: string;
 }
 
-export class GrafanaClient implements ObservabilityClient {
+export class GrafanaLogsClient implements LogsClient {
   integrationType: IntegrationType = IntegrationType.GRAFANA;
   private baseUrl: string;
   private username: string;
@@ -95,17 +85,8 @@ export class GrafanaClient implements ObservabilityClient {
     }
   }
 
-  getSpanSearchQueryInstructions(): string {
-    throw new Error("getSpanSearchQueryInstructions is not implemented for Grafana client");
-  }
-
   getLogSearchQueryInstructions(): string {
     return GRAFANA_LOG_SEARCH_INSTRUCTIONS;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getSpansFacetValues(start: string, end: string): Promise<Map<string, string[]>> {
-    throw new Error("getFacetToFacetValuesMapSpans is not implemented for Grafana client");
   }
 
   async getLogsFacetValues(
@@ -144,11 +125,6 @@ export class GrafanaClient implements ObservabilityClient {
       logger.error(`Error fetching values for label '${label}': ${String(error)}`);
       return [];
     }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  fetchSpans(params: SpanSearchInput): Promise<SpansWithPagination> {
-    throw new Error("fetchSpans is not implemented for Grafana client");
   }
 
   async fetchLogs(params: LogSearchInput): Promise<LogsWithPagination> {
@@ -210,18 +186,6 @@ export class GrafanaClient implements ObservabilityClient {
         pageCursorOrIndicator: undefined,
       };
     }
-  }
-
-  fetchTraces(_params: TraceSearchInput): Promise<TracesWithPagination> {
-    throw new Error("fetchTraces is not implemented for Grafana client");
-  }
-
-  async fetchTraceById(_params: {
-    traceId: string;
-    start?: string;
-    end?: string;
-  }): Promise<Trace | null> {
-    throw new Error("fetchTraceById is not implemented for Grafana client");
   }
 
   // TODO: check if you need to destructure attributes same as in DD

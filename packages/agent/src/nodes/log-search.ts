@@ -1,5 +1,5 @@
 import { isAbortError, logger, timer } from "@triage/common";
-import { ObservabilityClient } from "@triage/data-integrations";
+import { LogsClient } from "@triage/data-integrations";
 import { LanguageModelV1, streamText } from "ai";
 import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
@@ -115,20 +115,19 @@ ${params.codebaseOverview}
 
 class LogSearch {
   private llmClient: LanguageModelV1;
-  private observabilityClient: ObservabilityClient;
-  private config: Readonly<TriagePipelineConfig>;
+  private logsClient: LogsClient;
   private state: PipelineStateManager;
-
+  private config: TriagePipelineConfig;
   constructor(
     llmClient: LanguageModelV1,
-    observabilityClient: ObservabilityClient,
-    config: TriagePipelineConfig,
-    state: PipelineStateManager
+    logsClient: LogsClient,
+    state: PipelineStateManager,
+    config: TriagePipelineConfig
   ) {
     this.llmClient = llmClient;
-    this.observabilityClient = observabilityClient;
-    this.config = config;
+    this.logsClient = logsClient;
     this.state = state;
+    this.config = config;
   }
 
   async invoke(params: {
@@ -144,7 +143,7 @@ class LogSearch {
   }): Promise<LogSearchResponse> {
     const prompt = createLogSearchPrompt({
       ...params,
-      platformSpecificInstructions: this.observabilityClient.getLogSearchQueryInstructions(),
+      platformSpecificInstructions: this.logsClient.getLogSearchQueryInstructions(),
     });
 
     try {
@@ -232,9 +231,9 @@ export class LogSearchAgent {
     this.state = state;
     this.logSearch = new LogSearch(
       this.config.fastClient,
-      this.config.observabilityClient,
-      this.config,
-      state
+      this.config.logsClient,
+      state,
+      this.config
     );
   }
 
@@ -284,8 +283,8 @@ export class LogSearchAgent {
         logger.info("Fetching logs from observability client...");
         const logContext = await handleLogSearchRequest(
           // TODO: remove once we allow multiple log search tool calls
-          response.actions[0],
-          this.config.observabilityClient
+          response.actions[0]!,
+          this.config.logsClient
         );
 
         const lastLogSearchResultsFormatted =

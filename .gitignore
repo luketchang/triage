@@ -23,6 +23,7 @@ coverage
 
 # Logs
 logs
+!packages/data-integrations/src/logs
 
 # Build Outputs
 .next/

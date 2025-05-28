@@ -69,7 +69,7 @@ export type {
   TracesWithPagination,
 };
 
-export { getObservabilityClient, IntegrationType } from "@triage/data-integrations";
+export { IntegrationType } from "@triage/data-integrations";
 
 // Define chat type for chat history
 export interface Chat {

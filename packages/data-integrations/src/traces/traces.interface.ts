@@ -1,7 +1,5 @@
+import { IntegrationType } from "../shared";
 import {
-  IntegrationType,
-  LogSearchInput,
-  LogsWithPagination,
   SpanSearchInput,
   SpansWithPagination,
   Trace,
@@ -10,10 +8,10 @@ import {
 } from "./types";
 
 /**
- * Interface for observability platforms like Datadog and Grafana
- * Provides a common abstraction layer for fetching observability data
+ * Interface for traces platforms like Datadog and Grafana
+ * Provides a common abstraction layer for fetching traces and spans data
  */
-export interface ObservabilityClient {
+export interface TracesClient {
   integrationType: IntegrationType;
 
   /**
@@ -21,12 +19,6 @@ export interface ObservabilityClient {
    * @returns Instructions for span search query
    */
   getSpanSearchQueryInstructions(): string;
-
-  /**
-   * Get instructions for log search query specific to client's query language
-   * @returns Instructions for log search query
-   */
-  getLogSearchQueryInstructions(): string;
 
   /**
    * Add keywords to a query
@@ -48,18 +40,6 @@ export interface ObservabilityClient {
   ): Promise<Map<string, string[]>>;
 
   /**
-   * Get a map of labels to their corresponding values for the given time range
-   * @param start - Start time in ISO format
-   * @param end - End time in ISO format
-   * @returns Map of facet names to their possible values
-   */
-  getLogsFacetValues(
-    start: string,
-    end: string,
-    facetList?: string[]
-  ): Promise<Map<string, string[]>>;
-
-  /**
    * Fetch spans from the observability platform
    * @param query - Query string to filter spans
    * @param start - Start time in ISO format
@@ -69,17 +49,6 @@ export interface ObservabilityClient {
    * @returns SpansWithPagination object containing spans and pagination info
    */
   fetchSpans(params: SpanSearchInput): Promise<SpansWithPagination>;
-
-  /**
-   * Fetch logs from the observability platform
-   * @param query - Query string to filter logs
-   * @param start - Start time in ISO format
-   * @param end - End time in ISO format
-   * @param limit - Maximum number of results to return
-   * @param pageCursor - Cursor for pagination
-   * @returns Array of Log objects
-   */
-  fetchLogs(params: LogSearchInput): Promise<LogsWithPagination>;
 
   /**
    * Fetch traces from the observability platform

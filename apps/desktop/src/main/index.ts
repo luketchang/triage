@@ -2,7 +2,7 @@ import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import * as Sentry from "@sentry/electron";
 import { AgentConfigStore } from "@triage/agent";
 import { logger } from "@triage/common";
-import { ObservabilityConfigStore, SentryConfigStore } from "@triage/data-integrations";
+import { DataIntegrationsConfigStore } from "@triage/data-integrations";
 import { app, BrowserWindow, dialog, protocol, shell } from "electron";
 import electronUpdater from "electron-updater";
 import path from "path";
@@ -13,15 +13,13 @@ import {
   cleanupAgentHandlers,
   cleanupCodebaseHandlers,
   cleanupConfigHandlers,
+  cleanupDataIntegrationHandlers,
   cleanupDbHandlers,
-  cleanupObservabilityHandlers,
-  cleanupSentryHandlers,
   setupAgentHandlers,
   setupCodebaseHandlers,
   setupConfigHandlers,
+  setupDataIntegrationHandlers,
   setupDbHandlers,
-  setupObservabilityHandlers,
-  setupSentryHandlers,
 } from "./handlers/index.js";
 import { setupDesktopLogger } from "./setup/logger-setup.js";
 
@@ -96,16 +94,14 @@ function initApp(mainWindow: BrowserWindow): void {
   // Create specialized views for each schema
   const appCfgStore = new AppConfigStore(configStore);
   const agentCfgStore = new AgentConfigStore(configStore);
-  const observabilityCfgStore = new ObservabilityConfigStore(configStore);
-  const sentryCfgStore = new SentryConfigStore(configStore);
+  const dataIntegrationsCfgStore = new DataIntegrationsConfigStore(configStore);
 
   // Set up all IPC handlers
   setupAgentHandlers(mainWindow, agentCfgStore);
   setupDbHandlers();
   setupCodebaseHandlers(mainWindow, appCfgStore);
   setupConfigHandlers(appCfgStore);
-  setupObservabilityHandlers(observabilityCfgStore);
-  setupSentryHandlers(sentryCfgStore);
+  setupDataIntegrationHandlers(dataIntegrationsCfgStore);
 }
 
 // This method will be called when Electron has finished
@@ -170,6 +166,5 @@ app.on("before-quit", () => {
   cleanupCodebaseHandlers();
   cleanupDbHandlers();
   cleanupConfigHandlers();
-  cleanupObservabilityHandlers();
-  cleanupSentryHandlers();
+  cleanupDataIntegrationHandlers();
 });

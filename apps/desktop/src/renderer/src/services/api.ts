@@ -101,7 +101,7 @@ const api = {
       console.info("Using mock fetchLogs");
       return mockElectronAPI.fetchLogs(params);
     } else {
-      console.info("Using real electronAPI.fetchLogs");
+      console.info("Using real electronAPI.fetchLogs (logs:fetch)");
       return window.electronAPI.fetchLogs(params);
     }
   },
@@ -123,7 +123,7 @@ const api = {
       }
     } else {
       try {
-        console.info("Using real electronAPI.getLogsFacetValues");
+        console.info("Using real electronAPI.getLogsFacetValues (logs:get-facet-values)");
         const response = await window.electronAPI.getLogsFacetValues(start, end);
         console.info("[API DEBUG] Real API response:", response);
         return response;
@@ -143,7 +143,7 @@ const api = {
       console.info("Using mock fetchTraces");
       return mockElectronAPI.fetchTraces(params);
     } else {
-      console.info("Using real electronAPI.fetchTraces");
+      console.info("Using real electronAPI.fetchTraces (traces:fetch)");
       return window.electronAPI.fetchTraces(params);
     }
   },
@@ -165,7 +165,7 @@ const api = {
       }
     } else {
       try {
-        console.info("Using real electronAPI.getSpansFacetValues");
+        console.info("Using real electronAPI.getSpansFacetValues (traces:get-spans-facet-values)");
         const response = await window.electronAPI.getSpansFacetValues(start, end);
         console.info("[API DEBUG] Real API response:", response);
         return response;
@@ -193,7 +193,7 @@ const api = {
       }
     } else {
       try {
-        console.info("Using real electronAPI.fetchSentryEvent");
+        console.info("Using real electronAPI.fetchSentryEvent (sentry:fetch-event)");
         const response = await window.electronAPI.fetchSentryEvent(params);
         console.info("[API DEBUG] Real API response:", response);
         return response;

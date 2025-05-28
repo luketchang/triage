@@ -2,9 +2,10 @@
 import { logger } from "@triage/common";
 import { Command } from "commander";
 
-import { DatadogCfgSchema, DatadogConfig, TracesWithPagination } from "../";
-import { DatadogClient } from "../clients/datadog";
+import { DatadogCfgSchema, DatadogConfig } from "../../config";
+import { DatadogTracesClient } from "../clients/datadog";
 import { formatTraces } from "../formatting";
+import { TracesWithPagination } from "../types";
 
 // Setup command line options
 const program = new Command();
@@ -32,8 +33,6 @@ if (!validClients.includes(options.client)) {
   throw new Error(`Invalid client: ${options.client}. Must be one of: ${validClients.join(", ")}`);
 }
 
-// We'll use the formatDuration from the formatting module
-
 // Display traces results
 function displayTraces(tracesWithPagination: TracesWithPagination, client: string): void {
   // Use the formatTraces function from the formatting module
@@ -48,7 +47,7 @@ async function testDatadogTraceFetch(datadogCfg: DatadogConfig): Promise<void> {
     logger.info(`Time range: ${options.start} to ${options.end}`);
     logger.info(`Limit: ${options.limit}`);
 
-    const datadogClient = new DatadogClient(datadogCfg);
+    const datadogClient = new DatadogTracesClient(datadogCfg!);
     const tracesResult = await datadogClient.fetchTraces({
       type: "traceSearchInput",
       query: options.query,
