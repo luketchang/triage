@@ -69,6 +69,17 @@ export class CodePostprocessor {
   async invoke(): Promise<CodePostprocessingStep> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Code " + "=".repeat(25));
 
+    const stepId = uuidv4();
+
+    // Send initial update with empty data
+    const initialStep: CodePostprocessingStep = {
+      id: stepId,
+      type: "codePostprocessing",
+      timestamp: new Date(),
+      data: [],
+    };
+    this.state.addUpdate(initialStep);
+
     const prompt = createPrompt({
       userMessage: this.config.userMessage,
       repoPath: this.config.repoPath,
@@ -109,15 +120,16 @@ export class CodePostprocessor {
         filepath: normalizeFilePath(fact.filepath, this.config.repoPath),
       })) || [];
 
-    const step: CodePostprocessingStep = {
-      id: uuidv4(),
+    // Send second update with populated data
+    const finalStep: CodePostprocessingStep = {
+      id: stepId,
       type: "codePostprocessing",
       timestamp: new Date(),
       data: normalizedFacts,
     };
 
-    this.state.addUpdate(step);
+    this.state.addUpdate(finalStep);
 
-    return step;
+    return finalStep;
   }
 }

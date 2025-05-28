@@ -1,5 +1,5 @@
 import { useAppConfig } from "@renderer/context/useAppConfig.js";
-import { BarChart, ExternalLink, FileCode, Search } from "lucide-react";
+import { BarChart, ExternalLink, FileCode, Loader2, Search } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "../components/ui/Markdown.js";
 import { cn } from "../lib/utils.js";
@@ -27,10 +27,9 @@ const GenericStep: React.FC<{ step: AgentStep }> = ({ step }) => {
       return <CodeSearchStepView step={step} />;
     case "reasoning":
       return <ReasoningStepView step={step} />;
-    case "logPostprocessing":
-      return <LogPostprocessingStepView step={step} />;
-    case "codePostprocessing":
-      return <CodePostprocessingStepView step={step} />;
+    default:
+      // NOTE: we do not show anything for postprocessing steps
+      return null;
   }
 };
 
@@ -39,7 +38,7 @@ const LogSearchStepView: React.FC<{ step: LogSearchStep }> = ({ step }) => {
     <div className="mb-6">
       {/* Reasoning */}
       {step.reasoning && (
-        <div className="mb-4 text-sm leading-relaxed">
+        <div className="mb-4 text-sm leading-relaxed search-step-reasoning">
           <Markdown>{step.reasoning}</Markdown>
         </div>
       )}
@@ -95,7 +94,7 @@ const CodeSearchStepView: React.FC<{ step: CodeSearchStep }> = ({ step }) => {
     <div className="mb-6">
       {/* Reasoning */}
       {step.reasoning && (
-        <div className="mb-4 text-sm leading-relaxed">
+        <div className="mb-4 text-sm leading-relaxed search-step-reasoning">
           <Markdown>{step.reasoning}</Markdown>
         </div>
       )}
@@ -192,62 +191,25 @@ const ReasoningStepView: React.FC<{ step: ReasoningStep }> = ({ step }) => (
   </div>
 );
 
-const LogPostprocessingStepView: React.FC<{ step: LogPostprocessingStep }> = ({ step }) => (
-  <div className="mb-6">
-    {/* Title */}
-    <div className="mb-3 flex items-center">
-      <div className="text-sm font-medium text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
-        Log Analysis
+const StatusIndicator: React.FC<{
+  text: string;
+  isVisible: boolean;
+}> = ({ text, isVisible }) => {
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-3 p-4 rounded-lg bg-background-lighter/20 border border-border/30">
+        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+        <div className="text-sm bg-shine-white bg-[length:200%_100%] animate-shine bg-clip-text text-transparent font-medium">
+          {text}
+        </div>
       </div>
     </div>
-
-    {/* Facts */}
-    <div className="space-y-3">
-      {step.data.map((fact, index) => (
-        <div
-          key={`fact-${index}`}
-          className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex flex-col"
-        >
-          <div className="flex items-center justify-between p-2.5 border-b border-white/10">
-            <div className="text-xs font-medium">{fact.title || "Log Fact"}</div>
-          </div>
-          <div className="p-3">
-            <div className="text-xs text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-const CodePostprocessingStepView: React.FC<{ step: CodePostprocessingStep }> = ({ step }) => (
-  <div className="mb-6">
-    {/* Title */}
-    <div className="mb-3 flex items-center">
-      <div className="text-sm font-medium text-transparent bg-shine-white bg-clip-text bg-[length:200%_100%] animate-shine">
-        Code Analysis
-      </div>
-    </div>
-
-    {/* Facts */}
-    <div className="space-y-3">
-      {step.data.map((fact, index) => (
-        <div
-          key={`fact-${index}`}
-          className="border border-white/20 rounded-md overflow-hidden bg-background-lighter/10 flex flex-col"
-        >
-          <div className="flex items-center justify-between p-2.5 border-b border-white/10">
-            <div className="text-xs font-medium">{fact.title || "Code Fact"}</div>
-          </div>
-          <div className="p-3">
-            <div className="text-xs text-gray-300 overflow-x-auto break-words">{fact.fact}</div>
-            {fact.filepath && <div className="mt-1 text-xs text-gray-500">{fact.filepath}</div>}
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 interface CellViewProps {
   message: AssistantMessage;
@@ -343,20 +305,26 @@ function CellView({
           </React.Fragment>
         ))}
 
-        {/* Show waiting indicator with less restrictive conditions */}
-        {isThinking && showWaitingIndicator && (
-          <div className="waiting-indicator p-2 text-left text-gray-400">
-            {/* Show "Reasoning..." if the last step is a reasoning step */}
-            {steps.length > 0 && steps[steps.length - 1].type === "reasoning" ? (
-              <div className="flex items-center">
-                <span className="mr-1">Reasoning</span>
+        {/* Show waiting indicator based on current state */}
+        {isThinking &&
+          showWaitingIndicator &&
+          (() => {
+            const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
+
+            if (lastStep?.type === "reasoning") {
+              return <StatusIndicator text="Reasoning" isVisible={true} />;
+            }
+
+            if (logPostprocessingStep || codePostprocessingStep) {
+              return <StatusIndicator text="Extracting Facts" isVisible={true} />;
+            }
+
+            return (
+              <div className="waiting-indicator p-2 text-left">
                 <AnimatedEllipsis />
               </div>
-            ) : (
-              <AnimatedEllipsis />
-            )}
-          </div>
-        )}
+            );
+          })()}
 
         {/* Render error if present */}
         {message.error && (
@@ -365,43 +333,34 @@ function CellView({
           </div>
         )}
 
-        {/* Render final response if present */}
-        {message.response && message.response !== "Thinking..." && (
-          <div className="response-content prose prose-invert max-w-none">
-            <div className="text-base leading-relaxed break-words min-w-0 max-w-full">
-              <Markdown className="prose-base">{message.response || ""}</Markdown>
-            </div>
-
-            {/* Facts button - only shown when facts are available */}
-            {hasFacts && onShowFacts && (
-              <div className="mt-3 flex justify-end">
-                <button
-                  className={cn(
-                    "px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-standard",
-                    activeInFactsSidebar
-                      ? "bg-primary text-white shadow-sm"
-                      : "bg-background-lighter hover:bg-background-alt text-primary border border-border/50"
-                  )}
-                  onClick={handleShowFacts}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  {activeInFactsSidebar ? "Facts Open" : "View Facts"}
-                </button>
-              </div>
-            )}
+        {/* Facts button - only shown when facts are available */}
+        {hasFacts && onShowFacts && (
+          <div className="mt-3 flex justify-end">
+            <button
+              className={cn(
+                "px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-standard",
+                activeInFactsSidebar
+                  ? "bg-primary text-white shadow-sm"
+                  : "bg-background-lighter hover:bg-background-alt text-primary border border-border/50"
+              )}
+              onClick={handleShowFacts}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              {activeInFactsSidebar ? "Facts Open" : "View Facts"}
+            </button>
           </div>
         )}
       </div>

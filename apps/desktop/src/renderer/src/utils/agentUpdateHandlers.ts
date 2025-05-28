@@ -223,6 +223,12 @@ function handlePostprocessingUpdate(
     step.id,
     {
       createNewStepFn: () => step,
+      updateExistingStepFn: (existingStep) =>
+        ({
+          ...existingStep,
+          data: step.data,
+          timestamp: step.timestamp,
+        }) as LogPostprocessingStep | CodePostprocessingStep,
     }
   );
 }

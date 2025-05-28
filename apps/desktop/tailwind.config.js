@@ -9,8 +9,8 @@ export default {
     extend: {
       keyframes: {
         shine: {
-          "0%": { backgroundPosition: "200% center" },
-          "100%": { backgroundPosition: "-200% center" },
+          "0%": { backgroundPosition: "100% center" },
+          "100%": { backgroundPosition: "-100% center" },
         },
         "accordion-down": {
           from: { height: "0" },
@@ -22,13 +22,13 @@ export default {
         },
       },
       animation: {
-        shine: "shine 6s linear infinite",
+        shine: "shine 3s linear infinite", // 3s duration, linear, infinite loop
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
       backgroundImage: {
         "shine-white":
-          "linear-gradient(90deg, #b0b0b0 0%, #b0b0b0 40%, rgba(255,255,255,0.5) 40%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.5) 60%, #b0b0b0 60%, #b0b0b0 100%)",
+          "linear-gradient(90deg, #6b7280 0%, #6b7280 45%, rgba(255,255,255,1) 50%, #6b7280 55%, #6b7280 100%)",
       },
       colors: {
         primary: {
