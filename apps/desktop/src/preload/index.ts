@@ -1,10 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import {
-  AgentStreamUpdate,
-  AssistantMessage,
-  ChatMessage,
-  UserMessage,
-} from "../renderer/src/types/index.js";
+import { AssistantMessage, ChatMessage, UserMessage } from "../renderer/src/types/index.js";
 
 // Store the environment values we're exposing for logging
 const tracesEnabled = process.env.TRACES_ENABLED === "true";
@@ -24,24 +19,37 @@ contextBridge.exposeInMainWorld("env", {
  */
 contextBridge.exposeInMainWorld("electronAPI", {
   /**
-   * Invoke the agent with a UserMessage and return the result
-   * @param userMessage The UserMessage object containing content and context items
-   * @param chatHistory The chat history to send to the agent
+   * Agent-related IPC functions
    */
-  invokeAgent: (userMessage: UserMessage, chatHistory: ChatMessage[]) => {
-    return ipcRenderer.invoke("agent:invoke-agent", userMessage, chatHistory);
-  },
+  agent: {
+    /**
+     * Send a message to the agent via IPC and get a stream ID
+     * @param prompt The prompt to send
+     * @param history Chat history as plain objects
+     * @returns Promise that resolves to a stream ID (string)
+     */
+    invoke: (userMessage: UserMessage, chatHistory: ChatMessage[]) => {
+      return ipcRenderer.invoke("agent:invoke", userMessage, chatHistory);
+    },
 
-  /**
-   * Register a callback for agent update events
-   * @param callback Function to call when an agent update is received
-   */
-  onAgentUpdate: (callback: (update: AgentStreamUpdate) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, update: AgentStreamUpdate) =>
-      callback(update);
-    ipcRenderer.on("agent:agent-update", listener);
-    // Return a function to remove the listener when no longer needed
-    return () => ipcRenderer.removeListener("agent:agent-update", listener);
+    /**
+     * Subscribe to agent chunks for a stream
+     * @param callback Function to call when chunk events are received
+     * @returns Function to remove the listener
+     */
+    onUpdate: (callback: (packet: any) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, packet: any) => callback(packet);
+      ipcRenderer.on("agent:update", listener);
+      return () => ipcRenderer.removeListener("agent:update", listener);
+    },
+
+    /**
+     * Cancel an agent stream
+     * @param streamId ID of the stream to cancel
+     */
+    cancel: (streamId: string) => {
+      ipcRenderer.send("agent:cancel", streamId);
+    },
   },
 
   /**

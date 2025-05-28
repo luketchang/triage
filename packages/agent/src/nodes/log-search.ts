@@ -1,4 +1,4 @@
-import { logger, timer } from "@triage/common";
+import { isAbortError, logger, timer } from "@triage/common";
 import { ObservabilityClient } from "@triage/data-integrations";
 import { LanguageModelV1, streamText } from "ai";
 import { DateTime } from "luxon";
@@ -116,15 +116,18 @@ ${params.codebaseOverview}
 class LogSearch {
   private llmClient: LanguageModelV1;
   private observabilityClient: ObservabilityClient;
+  private config: Readonly<TriagePipelineConfig>;
   private state: PipelineStateManager;
 
   constructor(
     llmClient: LanguageModelV1,
     observabilityClient: ObservabilityClient,
+    config: TriagePipelineConfig,
     state: PipelineStateManager
   ) {
     this.llmClient = llmClient;
     this.observabilityClient = observabilityClient;
+    this.config = config;
     this.state = state;
   }
 
@@ -153,6 +156,7 @@ class LogSearch {
           logSearchInput: logSearchInputToolSchema,
         },
         toolChoice: "auto",
+        abortSignal: this.config.abortSignal,
       });
 
       let text = "";
@@ -193,6 +197,12 @@ class LogSearch {
         throw new Error(`Unexpected tool name: ${toolCall.toolName}`);
       }
     } catch (error) {
+      // If the operation was aborted, propagate the error
+      if (isAbortError(error)) {
+        logger.info(`Log search aborted: ${error}`);
+        throw error; // Don't retry on abort
+      }
+
       logger.error("Error generating log search query:", error);
       // TODO: revisit fallback
       return {
@@ -220,7 +230,12 @@ export class LogSearchAgent {
   constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
-    this.logSearch = new LogSearch(this.config.fastClient, this.config.observabilityClient, state);
+    this.logSearch = new LogSearch(
+      this.config.fastClient,
+      this.config.observabilityClient,
+      this.config,
+      state
+    );
   }
 
   @timer
@@ -258,9 +273,9 @@ export class LogSearchAgent {
 
       currentIter++;
 
-      if (Array.isArray(response.actions)) {
+      if (Array.isArray(response.actions) && response.actions[0]) {
         logger.info(
-          `Searching logs with query: ${response.actions[0]!.query} from ${response.actions[0]!.start} to ${response.actions[0]!.end}`
+          `Searching logs with query: ${response.actions[0].query} from ${response.actions[0]!.start} to ${response.actions[0].end}`
         );
 
         // TODO: convert this into loop when we have multiple tool calls output
@@ -269,7 +284,7 @@ export class LogSearchAgent {
         logger.info("Fetching logs from observability client...");
         const logContext = await handleLogSearchRequest(
           // TODO: remove once we allow multiple log search tool calls
-          response.actions[0]!,
+          response.actions[0],
           this.config.observabilityClient
         );
 
@@ -280,7 +295,7 @@ export class LogSearchAgent {
         toolCallsWithResults.push({
           type: "logSearch",
           timestamp: new Date(),
-          input: response.actions[0]!,
+          input: response.actions[0],
           output: logContext,
         });
 

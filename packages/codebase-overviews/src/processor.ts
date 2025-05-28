@@ -6,6 +6,7 @@ import {
   getDirectoryTree,
   getGitCommitHash,
   getPathToSourceCodeMap,
+  isAbortError,
   logger,
 } from "@triage/common";
 import { LanguageModelV1 } from "ai";
@@ -49,6 +50,7 @@ export class CodebaseProcessor {
       outputDir?: string;
       maxConcurrentDirs?: number;
       onProgress?: (update: CodebaseOverviewProgressUpdate) => void;
+      abortSignal?: AbortSignal;
     } = {}
   ) {
     this.maxConcurrentDirs = options.maxConcurrentDirs || 8;
@@ -99,7 +101,8 @@ export class CodebaseProcessor {
       const serviceDirs = await identifyTopLevelServices(
         this.llmClient,
         this.repoPath,
-        repoFileTree
+        repoFileTree,
+        this.options.abortSignal
       );
       let directoriesToProcess: string[];
 
@@ -145,7 +148,8 @@ export class CodebaseProcessor {
             directory,
             directoryTree,
             pathToSourceCode,
-            repoFileTree
+            repoFileTree,
+            this.options.abortSignal
           );
 
           completedDirs++;
@@ -180,7 +184,8 @@ export class CodebaseProcessor {
         this.llmClient,
         this.options.systemDescription || "",
         summaries,
-        repoFileTree
+        repoFileTree,
+        this.options.abortSignal
       );
 
       this.updateProgress({
@@ -203,6 +208,12 @@ export class CodebaseProcessor {
         message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
         progress: 0,
       });
+
+      if (isAbortError(error)) {
+        logger.info("Codebase overview generation was aborted");
+        throw new Error("Codebase overview generation was aborted", { cause: error });
+      }
+
       throw new Error(`Error processing codebase`, { cause: error });
     }
   }

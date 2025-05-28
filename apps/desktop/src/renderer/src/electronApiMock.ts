@@ -1,6 +1,5 @@
 import { AppConfig } from "src/common/AppConfig.js";
 import {
-  AgentAssistantMessage,
   AgentChatMessage,
   AgentUserMessage,
   Chat,
@@ -215,7 +214,7 @@ const mockElectronAPI = {
   invokeAgent: async (
     _userMessage: AgentUserMessage,
     _chatHistory: AgentChatMessage[]
-  ): Promise<AgentAssistantMessage> => {
+  ): Promise<string> => {
     // Simulate delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 

@@ -1,4 +1,4 @@
-import { logger, timer } from "@triage/common";
+import { isAbortError, logger, timer } from "@triage/common";
 import { LanguageModelV1, streamText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
@@ -112,13 +112,11 @@ ${params.codebaseOverview}
 }
 
 class CodeSearch {
-  private llmClient: LanguageModelV1;
-  private state: PipelineStateManager;
-
-  constructor(llmClient: LanguageModelV1, state: PipelineStateManager) {
-    this.llmClient = llmClient;
-    this.state = state;
-  }
+  constructor(
+    private readonly llmClient: LanguageModelV1,
+    private readonly state: PipelineStateManager,
+    private readonly config: TriagePipelineConfig
+  ) {}
 
   async invoke(params: {
     codeSearchId: string;
@@ -145,6 +143,7 @@ class CodeSearch {
           grepRequest: grepRequestToolSchema,
         },
         toolChoice: "auto",
+        abortSignal: this.config.abortSignal,
       });
 
       let text = "";
@@ -190,6 +189,12 @@ class CodeSearch {
         actions: outputToolCalls,
       };
     } catch (error) {
+      // If the operation was aborted, propagate the error
+      if (isAbortError(error)) {
+        logger.info(`Code search aborted: ${error}`);
+        throw error; // Don't retry on abort
+      }
+
       // TODO: revisit this
       logger.error("Error generating code search output:", error);
       return {
@@ -208,7 +213,7 @@ export class CodeSearchAgent {
   constructor(config: TriagePipelineConfig, state: PipelineStateManager) {
     this.config = config;
     this.state = state;
-    this.codeSearch = new CodeSearch(this.config.fastClient, this.state);
+    this.codeSearch = new CodeSearch(this.config.fastClient, this.state, this.config);
   }
 
   @timer

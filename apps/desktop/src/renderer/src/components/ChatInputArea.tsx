@@ -1,13 +1,13 @@
 import { ContextItem } from "@renderer/types/index.js";
-import React, { useEffect, useRef } from "react";
+import { Send, Square } from "lucide-react";
+import React, { useEffect, useMemo, useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
-import { SendIcon } from "../icons/index.jsx";
 import { cn } from "../lib/utils.js";
 import { useChatStore } from "../store/index.js";
 import { datadogLogsViewUrlToLogSearchInput } from "../utils/parse/logs.js";
 import { parseSentryEventUrl } from "../utils/parse/sentry.js";
-import { Button } from "./ui/Button.jsx";
 import ContextItemView from "./ContextItemView.js";
+import { Button } from "./ui/Button.jsx";
 
 function ChatInputArea() {
   const currentChatId = useChatStore((state) => state.currentChatId);
@@ -21,12 +21,21 @@ function ChatInputArea() {
       ? state.chatDetailsById[state.currentChatId]?.isThinking || false
       : false
   );
+  const cancelStream = useChatStore((state) =>
+    state.currentChatId !== undefined
+      ? state.chatDetailsById[state.currentChatId]?.cancelStream
+      : undefined
+  );
   const contextItems =
     useChatStore((state) =>
       state.currentChatId !== undefined
         ? state.chatDetailsById[state.currentChatId]?.contextItems
         : [undefined]
     ) ?? [];
+  const inputIsEmpty = useMemo(
+    () => userInput.trim() === "" && contextItems.length === 0,
+    [userInput, contextItems.length]
+  );
 
   const setUserInput = useChatStore.use.setUserInput();
   const removeContextItem = useChatStore.use.removeContextItem();
@@ -75,30 +84,28 @@ function ChatInputArea() {
     }
   };
 
+  // Submit message when Enter is pressed
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (userInput.trim() || contextItems.length > 0) {
+      if (!inputIsEmpty) {
         handleSendMessage();
       }
     }
   };
 
-  // Send message function
   const handleSendMessage = async () => {
-    if ((!userInput.trim() && contextItems.length === 0) || isThinking) return;
-
+    if (inputIsEmpty || isThinking) return;
     // Call the send function from the store
     // The sendMessage function in the store will use the context items
     await sendMessage();
+  };
 
-    // Reset textarea height after sending
-    if (textareaRef.current) {
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.style.height = "50px";
-        }
-      }, 50);
+  const handleCancelMessage = () => {
+    if (cancelStream) {
+      cancelStream();
+    } else {
+      console.error("Tried to cancel message but no cancel stream found");
     }
   };
 
@@ -131,14 +138,24 @@ function ChatInputArea() {
           minRows={1}
           maxRows={6}
         />
-        <Button
-          className="absolute right-2 bottom-2 shadow-sm size-8 p-1"
-          size="sm"
-          onClick={handleSendMessage}
-          disabled={(userInput.trim() === "" && contextItems.length === 0) || isThinking}
-        >
-          <SendIcon className="h-3.5 w-3.5" />
-        </Button>
+        {!isThinking ? (
+          <Button
+            className="absolute right-2 top-2 shadow-sm size-8 p-1"
+            size="sm"
+            onClick={handleSendMessage}
+            disabled={inputIsEmpty}
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Button>
+        ) : (
+          <Button
+            className="absolute right-2 top-2 shadow-sm size-8 p-1"
+            size="sm"
+            onClick={handleCancelMessage}
+          >
+            <Square className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </div>
       <div className="mt-1.5 text-xs text-gray-500 text-left max-w-[90%] mx-auto">
         Press Enter to send, Shift+Enter for new line

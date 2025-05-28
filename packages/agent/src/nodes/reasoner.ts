@@ -120,6 +120,7 @@ export class Reasoner {
       maxSteps: params.maxSteps || 1,
       tools,
       toolChoice: "auto",
+      abortSignal: this.config.abortSignal,
     });
 
     let text = "";

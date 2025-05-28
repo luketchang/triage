@@ -56,3 +56,25 @@ export function getModelWrapper(model: Model, llmCfg: LLMApiKeyConfig): Language
     throw new Error(`Unsupported model: ${model}`);
   }
 }
+
+/**
+ * Checks if an error is caused by an AbortSignal abortion
+ */
+export function isAbortError(error: unknown): boolean {
+  // Check for standard AbortError name
+  if (error instanceof Error && error.name === "AbortError") {
+    return true;
+  }
+
+  // More flexible and comprehensive approach to detecting an AbortSignal abortion
+  if (
+    error instanceof Error &&
+    (error.message.includes("aborted") ||
+      error.message.includes("cancel") ||
+      error.message.toLowerCase().includes("abort"))
+  ) {
+    return true;
+  }
+
+  return false;
+}
