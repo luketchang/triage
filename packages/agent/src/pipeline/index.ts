@@ -4,13 +4,15 @@ import { LanguageModelV1 } from "ai";
 import { PostProcessing } from "./post-processing";
 import { PreProcessing } from "./pre-processing";
 import { Reasoning } from "./reasoning";
-import { AgentStep, PipelineStateManager, StepsType } from "./state";
+import { AgentStep, StepsType } from "./state";
+import { PipelineStateManager } from "./state-manager";
 
 export type TriagePipelineConfig = {
   reasoningClient: LanguageModelV1;
   fastClient: LanguageModelV1;
   observabilityPlatform: ObservabilityPlatform;
   query: string;
+  timezone: string;
   repoPath: string;
   codebaseOverview: string;
   fileTree: string;

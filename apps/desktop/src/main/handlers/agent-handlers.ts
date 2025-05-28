@@ -37,6 +37,10 @@ export function setupAgentHandlers(window: BrowserWindow, cfgStore: AgentConfigS
         try {
           const agentCfg = await cfgStore.getValues();
 
+          // NOTE: we set timezone every agent call to handle edge cases where timezone changes while app still open
+          agentCfg.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          console.info("Setting timezone to:", agentCfg.timezone);
+
           // Send updates to renderer via window
           const onUpdate = (update: any) => {
             if (controller.signal.aborted) return;

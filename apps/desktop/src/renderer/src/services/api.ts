@@ -8,8 +8,8 @@ import {
   CodebaseOverview,
   CodebaseOverviewProgressUpdate,
   FacetData,
-  LogQueryParams,
-  TraceQueryParams,
+  LogSearchInput,
+  TraceSearchInput,
   UserMessage,
 } from "../types/index.js";
 import { ipcHandlersToStream } from "../utils/ipcHandlersToStream.js";
@@ -114,7 +114,7 @@ const api = {
     }
   },
 
-  fetchLogs: async (params: LogQueryParams) => {
+  fetchLogs: async (params: LogSearchInput) => {
     console.info("[API DEBUG] fetchLogs called with params:", params);
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("fetchLogs");
     console.info("[API DEBUG] Using mock implementation:", shouldUseMock);
@@ -156,7 +156,7 @@ const api = {
     }
   },
 
-  fetchTraces: async (params: TraceQueryParams) => {
+  fetchTraces: async (params: TraceSearchInput) => {
     console.info("[API DEBUG] fetchTraces called with params:", params);
     const shouldUseMock = USE_MOCK_API || !isMethodAvailable("fetchTraces");
     console.info("[API DEBUG] Using mock implementation:", shouldUseMock);

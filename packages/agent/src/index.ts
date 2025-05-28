@@ -19,7 +19,8 @@ import { z } from "zod";
 
 import { AgentConfig } from "./config";
 import { TriagePipeline, TriagePipelineConfig } from "./pipeline";
-import { PipelineStateManager, StepsType, StreamUpdateFn } from "./pipeline/state";
+import { StepsType, StreamUpdateFn } from "./pipeline/state";
+import { PipelineStateManager } from "./pipeline/state-manager";
 import type { ChatMessage } from "./types";
 import { AssistantMessage } from "./types";
 
@@ -65,6 +66,7 @@ export async function invokeAgent({
 
   const pipelineConfig: TriagePipelineConfig = {
     query,
+    timezone: agentCfg.timezone,
     repoPath: agentCfg.repoPath,
     codebaseOverview: agentCfg.codebaseOverview.content,
     fileTree,
@@ -137,6 +139,7 @@ async function main(): Promise<void> {
   const codebaseOverview = await fs.readFile(overviewPath, "utf-8");
   const bugPath =
     "/Users/luketchang/code/triage/repos/ticketing/bugs/order-cancelled-publish-bug.txt";
+  const timezone = "America/Los_Angeles";
 
   const bug = await fs.readFile(bugPath, "utf-8");
 
@@ -153,6 +156,7 @@ async function main(): Promise<void> {
     chatHistory,
     agentCfg: {
       repoPath,
+      timezone,
       codebaseOverview: {
         content: codebaseOverview,
         repoPath,
@@ -181,16 +185,12 @@ async function main(): Promise<void> {
     startDate,
     endDate,
     onUpdate: (update) => {
-      if (update.type === "highLevelUpdate") {
-        process.stdout.write(`\nHighLevelUpdate: ${update.stage}\n`);
-      } else if (update.type === "intermediateUpdate") {
-        switch (update.step.type) {
-          case "reasoning":
-            process.stdout.write(`${update.step.contentChunk}\n`);
-            break;
-          default:
-            break;
-        }
+      if (update.type === "reasoning-chunk") {
+        process.stdout.write(`${update.chunk}\n`);
+      } else if (update.type === "logSearch-chunk") {
+        process.stdout.write(`${update.chunk}\n`);
+      } else if (update.type === "codeSearch-chunk") {
+        process.stdout.write(`${update.chunk}\n`);
       }
     },
   });
@@ -228,6 +228,6 @@ if (typeof require !== "undefined" && typeof module !== "undefined" && require.m
 export * from "./config";
 export * from "./nodes/log-search";
 export * from "./nodes/reasoner";
-export * from "./nodes/utils";
 export * from "./pipeline/state";
 export * from "./types";
+export * from "./utils";

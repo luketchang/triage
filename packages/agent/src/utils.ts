@@ -1,15 +1,14 @@
-import { Log, LogsWithPagination, Span, SpansWithPagination } from "@triage/observability";
+import { Log, LogsWithPagination } from "@triage/observability";
 
 import {
-  AgentStep,
-  CatStep,
-  ChatMessage,
-  CodeSearchStep,
-  GrepStep,
-  LogSearchStep,
-  ReasoningStep,
-} from "..";
-import { LogSearchInput, SpanSearchInput } from "../types/tools";
+  CatToolCallWithResult,
+  CodeSearchToolCallWithResult,
+  GrepToolCallWithResult,
+  LogSearchToolCallWithResult,
+} from "./pipeline/state";
+import { LogSearchInput } from "./types/tools";
+
+import { AgentStep, ChatMessage, ReasoningStep } from ".";
 
 export function ensureSingleToolCall<T extends { toolName: string }>(toolCalls: T[]): T {
   if (!toolCalls || toolCalls.length !== 1) {
@@ -34,12 +33,6 @@ export function formatLogQuery(logQuery: Partial<LogSearchInput>): string {
   }`;
 }
 
-export function formatSpanQuery(spanQuery: Partial<SpanSearchInput>): string {
-  return `Query: ${spanQuery.query}\nStart: ${spanQuery.start}\nEnd: ${spanQuery.end}\nPage Limit: ${spanQuery.pageLimit}${
-    spanQuery.pageCursor ? `\nPage Cursor: ${spanQuery.pageCursor}` : ""
-  }`;
-}
-
 export function formatSingleLog(log: Log): string {
   const attributesString = log.attributes
     ? Object.entries(log.attributes)
@@ -50,20 +43,6 @@ export function formatSingleLog(log: Log): string {
   return `[${log.timestamp}] ${log.level.toUpperCase()} [${log.service}] ${log.message}${
     attributesString ? ` [attributes: ${attributesString}]` : ""
   }`;
-}
-
-export function formatSingleSpan(span: Span, index?: number): string {
-  const indexPrefix = index !== undefined ? `[${index + 1}] ` : "";
-
-  return `${indexPrefix}Span ID: ${span.spanId}
-    Service: ${span.service}
-    Operation: ${span.operation}
-    Trace ID: ${span.traceId}
-    Start: ${span.startTime}
-    End: ${span.endTime}
-    Duration: ${span.duration} ms
-    Status: ${span.status || "N/A"}
-    Environment: ${span.environment || "N/A"}`;
 }
 
 export function formatLogResults(
@@ -92,46 +71,20 @@ export function formatLogResults(
     .join("\n\n");
 }
 
-export function formatSpanResults(
-  spanResults: Map<Partial<SpanSearchInput>, SpansWithPagination | string>
-): string {
-  return Array.from(spanResults.entries())
-    .map(([input, spansOrError]) => {
-      let formattedContent: string;
-      let pageCursor: string | undefined;
-
-      if (typeof spansOrError === "string") {
-        // It's an error message
-        formattedContent = `Error: ${spansOrError}`;
-        pageCursor = undefined;
-      } else {
-        // It's a spans object
-        formattedContent =
-          spansOrError.spans.length > 0
-            ? spansOrError.spans.map((span, index) => formatSingleSpan(span, index)).join("\n\n")
-            : "No spans found";
-        pageCursor = spansOrError.pageCursorOrIndicator;
-      }
-
-      return `${formatSpanQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
-    })
-    .join("\n\n");
-}
-
 export const formatFacetValues = (facetValues: Map<string, Array<string>>): string => {
   return Array.from(facetValues.entries())
     .map(([facet, values]) => `${facet}: ${values.join(", ")}`)
     .join("\n");
 };
 
-export function formatSingleLogSearchStep(step: LogSearchStep): string {
+export function formatSingleLogSearchToolCallWithResult(step: LogSearchToolCallWithResult): string {
   const input = step.input;
-  const logsOrError = step.results;
+  const logsOrError = step.output;
 
   let formattedContent: string;
   let pageCursor: string | undefined;
 
-  if (typeof logsOrError === "string") {
+  if (logsOrError.type === "error") {
     // It's an error message
     formattedContent = `Error: ${logsOrError}`;
     pageCursor = undefined;
@@ -147,15 +100,41 @@ export function formatSingleLogSearchStep(step: LogSearchStep): string {
   return `${formatLogQuery(input)}\nPage Cursor Or Indicator: ${pageCursor}\nResults:\n${formattedContent}`;
 }
 
-export function formatSingleCatStep(
-  step: CatStep,
+export function formatSingleCatToolCallWithResult(
+  step: CatToolCallWithResult,
   options: { lineNumbers?: boolean } = {}
 ): string {
-  const header = `File: ${step.path}`;
+  const header = `File: ${step.input.path}`;
   const separator = "-".repeat(header.length);
 
-  let source = step.source;
-  if (options.lineNumbers) {
+  if (step.output.type === "error") {
+    return `${separator}\n${header}\n${separator}\n${step.output.error}\n`;
+  } else {
+    let source = step.output.content;
+    if (options.lineNumbers) {
+      const lines = source.split("\n");
+      const maxLineNumberWidth = String(lines.length).length;
+      source = lines
+        .map((line, index) => {
+          const lineNumber = String(index + 1).padStart(maxLineNumberWidth, " ");
+          return `${lineNumber} | ${line}`;
+        })
+        .join("\n");
+    }
+
+    return `${separator}\n${header}\n${separator}\n${source}\n`;
+  }
+}
+
+export function formatSingleGrepToolCallWithResult(step: GrepToolCallWithResult): string {
+  // Format input arguments on one line
+  const inputArgs = `git grep ${step.input.pattern} ${step.input.flags ? ` -${step.input.flags}` : ""}`;
+  const separator = "-".repeat(inputArgs.length);
+
+  if (step.output.type === "error") {
+    return `${separator}\n${inputArgs}\n${separator}\n${step.output.error}\n`;
+  } else {
+    let source = step.output.content;
     const lines = source.split("\n");
     const maxLineNumberWidth = String(lines.length).length;
     source = lines
@@ -164,52 +143,55 @@ export function formatSingleCatStep(
         return `${lineNumber} | ${line}`;
       })
       .join("\n");
+
+    return `${separator}\n${inputArgs}\n${separator}\n${source}\n`;
   }
-
-  return `${separator}\n${header}\n${separator}\n${source}\n`;
 }
 
-export function formatSingleGrepStep(step: GrepStep): string {
-  // Format input arguments on one line
-  const inputArgs = `git grep ${step.pattern} ${step.flags ? ` -${step.flags}` : ""}`;
-  const separator = "-".repeat(inputArgs.length);
-
-  let source = step.output;
-  const lines = source.split("\n");
-  const maxLineNumberWidth = String(lines.length).length;
-  source = lines
-    .map((line, index) => {
-      const lineNumber = String(index + 1).padStart(maxLineNumberWidth, " ");
-      return `${lineNumber} | ${line}`;
-    })
-    .join("\n");
-
-  return `${separator}\n${inputArgs}\n${separator}\n${source}\n`;
-}
-
-export function formatLogSearchSteps(steps: LogSearchStep[]): string {
+export function formatLogSearchToolCallsWithResults(steps: LogSearchToolCallWithResult[]): string {
   return steps
-    .map((step) => formatSingleLogSearchStep(step))
+    .map((step) => formatSingleLogSearchToolCallWithResult(step))
     .filter(Boolean)
     .join("\n\n");
 }
 
-export function formatCatSteps(steps: CatStep[], options?: { lineNumbers?: boolean }): string {
-  return steps.map((step) => formatSingleCatStep(step, options)).join("\n\n");
+export function formatCatToolCallsWithResults(
+  steps: CatToolCallWithResult[],
+  options?: { lineNumbers?: boolean }
+): string {
+  return steps.map((step) => formatSingleCatToolCallWithResult(step, options)).join("\n\n");
 }
 
-export function formatGrepSteps(steps: GrepStep[]): string {
-  return steps.map((step) => formatSingleGrepStep(step)).join("\n\n");
+export function formatGrepToolCalls(steps: GrepToolCallWithResult[]): string {
+  return steps.map((step) => formatSingleGrepToolCallWithResult(step)).join("\n\n");
 }
 
-export function formatCodeSearchSteps(steps: CodeSearchStep[]): string {
-  return steps
-    .map((step) => (step.type == "cat" ? formatSingleCatStep(step) : formatSingleGrepStep(step)))
+export function formatCodeSearchToolCallsWithResults(
+  steps: CodeSearchToolCallWithResult[]
+): string {
+  const grepToolCalls = steps.filter(
+    (step): step is GrepToolCallWithResult => step.type === "grep"
+  );
+  const catToolCalls = steps.filter((step): step is CatToolCallWithResult => step.type === "cat");
+
+  const allToolCalls = [...grepToolCalls, ...catToolCalls].sort(
+    (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+  );
+
+  return allToolCalls
+    .map((step) => {
+      if (step.type === "grep") {
+        return formatSingleGrepToolCallWithResult(step);
+      } else {
+        return formatSingleCatToolCallWithResult(step);
+      }
+    })
+    .filter(Boolean)
     .join("\n\n");
 }
 
 export function formatReasoningStep(step: ReasoningStep): string {
-  return `Reasoning: ${step.content}`;
+  return `Reasoning: ${step.data}`;
 }
 
 export function formatAgentSteps(steps: AgentStep[]): string {
@@ -217,11 +199,9 @@ export function formatAgentSteps(steps: AgentStep[]): string {
   return steps
     .map((step) => {
       if (step.type === "logSearch") {
-        return formatSingleLogSearchStep(step);
-      } else if (step.type === "cat") {
-        return formatSingleCatStep(step);
-      } else if (step.type === "grep") {
-        return formatSingleGrepStep(step);
+        return formatLogSearchToolCallsWithResults(step.data);
+      } else if (step.type === "codeSearch") {
+        return formatCodeSearchToolCallsWithResults(step.data);
       } else if (step.type === "reasoning") {
         return formatReasoningStep(step);
       }

@@ -1,22 +1,17 @@
-import { isAbortError, logger, timer } from "@triage/common";
+import { logger, timer } from "@triage/common";
 import { generateText } from "ai";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import {
-  LogPostprocessingStep,
-  LogSearchStep,
-  PipelineStateManager,
-  StepsType,
-} from "../pipeline/state";
+import { LogPostprocessingStep, LogSearchToolCallWithResult, StepsType } from "../pipeline/state";
+import { PipelineStateManager } from "../pipeline/state-manager";
 import { LogPostprocessingFact, logPostprocessingToolSchema } from "../types";
-
 import {
   ensureSingleToolCall,
   formatFacetValues,
-  formatLogSearchSteps,
+  formatLogSearchToolCallsWithResults,
   normalizeDatadogQueryString,
-} from "./utils";
+} from "../utils";
 
 const SYSTEM_PROMPT = `
 You are an expert AI assistant that assists engineers debugging production issues. You specifically review answers to user queries (about a potential issue/event) and gather supporting context from logs.
@@ -25,7 +20,7 @@ You are an expert AI assistant that assists engineers debugging production issue
 function createPrompt(params: {
   query: string;
   logLabelsMap: Map<string, string[]>;
-  logSearchSteps: LogSearchStep[];
+  logSearchToolCallsWithResults: LogSearchToolCallWithResult[];
   platformSpecificInstructions: string;
   answer: string;
 }): string {
@@ -63,7 +58,7 @@ function createPrompt(params: {
   </platform_specific_instructions>
     
   <previous_log_context>
-  ${formatLogSearchSteps(params.logSearchSteps)}
+  ${formatLogSearchToolCallsWithResults(params.logSearchToolCallsWithResults)}
   </previous_log_context>
   `;
 }
@@ -80,13 +75,11 @@ export class LogPostprocessor {
   @timer
   async invoke(): Promise<LogPostprocessingStep> {
     logger.info("\n\n" + "=".repeat(25) + " Postprocess Logs " + "=".repeat(25));
-    const logPostprocessingId = uuidv4();
-    this.state.recordHighLevelStep("logPostprocessing", logPostprocessingId);
 
     const prompt = createPrompt({
       query: this.config.query,
       logLabelsMap: this.config.logLabelsMap,
-      logSearchSteps: this.state.getLogSearchSteps(StepsType.CURRENT),
+      logSearchToolCallsWithResults: this.state.getLogSearchToolCallsWithResults(StepsType.CURRENT),
       answer: this.state.getAnswer()!,
       platformSpecificInstructions:
         this.config.observabilityPlatform.getLogSearchQueryInstructions(),
@@ -94,80 +87,60 @@ export class LogPostprocessor {
 
     logger.info(`Log postprocessing prompt:\n${prompt}`);
 
-    try {
-      const { toolCalls } = await generateText({
-        model: this.config.fastClient,
-        system: SYSTEM_PROMPT,
-        prompt: prompt,
-        tools: {
-          logPostprocessing: logPostprocessingToolSchema,
+    const { toolCalls } = await generateText({
+      model: this.config.fastClient,
+      system: SYSTEM_PROMPT,
+      prompt: prompt,
+      tools: {
+        logPostprocessing: logPostprocessingToolSchema,
+      },
+      toolChoice: "required",
+      abortSignal: this.config.abortSignal,
+    });
+
+    // If multiple tool calls are returned (on accident), we will just merge them
+    let toolCall;
+    if (toolCalls.length > 1) {
+      logger.warn("Multiple tool calls detected, merging results");
+      toolCall = {
+        args: {
+          facts: toolCalls.flatMap((call) => call.args.facts || []),
         },
-        toolChoice: "required",
-        abortSignal: this.config.abortSignal,
-      });
-
-      // If multiple tool calls are returned (on accident), we will just merge them
-      let toolCall;
-      if (toolCalls.length > 1) {
-        logger.warn("Multiple tool calls detected, merging results");
-        toolCall = {
-          args: {
-            facts: toolCalls.flatMap((call) => call.args.facts || []),
-          },
-        };
-      } else {
-        toolCall = ensureSingleToolCall(toolCalls);
-      }
-
-      // Normalize Datadog query strings in each fact
-      const normalizedFacts =
-        toolCall.args.facts?.map((fact) => ({
-          ...fact,
-          query: normalizeDatadogQueryString(fact.query),
-        })) || [];
-
-      // Augment original query with highlight keywords
-      const augmentedFacts: LogPostprocessingFact[] = normalizedFacts.map((fact) => ({
-        title: fact.title,
-        fact: fact.fact,
-        query: this.config.observabilityPlatform.addKeywordsToQuery(
-          fact.query,
-          fact.highlightKeywords
-        ),
-        start: fact.start,
-        end: fact.end,
-        limit: fact.limit,
-        pageCursor: fact.pageCursor,
-      }));
-
-      this.state.addIntermediateStep(
-        {
-          type: "logPostprocessing",
-          facts: augmentedFacts,
-          timestamp: new Date(),
-        },
-        logPostprocessingId
-      );
-
-      return {
-        type: "logPostprocessing",
-        timestamp: new Date(),
-        facts: augmentedFacts,
       };
-    } catch (error) {
-      // If the operation was aborted, propagate the error
-      if (isAbortError(error)) {
-        logger.info(`Log postprocessing aborted: ${error}`);
-        throw error; // Don't retry on abort
-      }
-
-      logger.error(`Error in log postprocessing: ${error}`);
-      // Return empty facts on error
-      return {
-        type: "logPostprocessing",
-        timestamp: new Date(),
-        facts: [],
-      };
+    } else {
+      toolCall = ensureSingleToolCall(toolCalls);
     }
+
+    // Normalize Datadog query strings in each fact
+    const normalizedFacts =
+      toolCall.args.facts?.map((fact) => ({
+        ...fact,
+        query: normalizeDatadogQueryString(fact.query),
+      })) || [];
+
+    // Augment original query with highlight keywords
+    const augmentedFacts: LogPostprocessingFact[] = normalizedFacts.map((fact) => ({
+      title: fact.title,
+      fact: fact.fact,
+      query: this.config.observabilityPlatform.addKeywordsToQuery(
+        fact.query,
+        fact.highlightKeywords
+      ),
+      start: fact.start,
+      end: fact.end,
+      limit: fact.limit,
+      pageCursor: fact.pageCursor,
+    }));
+
+    const step: LogPostprocessingStep = {
+      id: uuidv4(),
+      type: "logPostprocessing",
+      data: augmentedFacts,
+      timestamp: new Date(),
+    };
+
+    this.state.addUpdate(step);
+
+    return step;
   }
 }

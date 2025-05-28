@@ -4,9 +4,9 @@ import { ipcMain } from "electron";
 import {
   FacetData,
   getObservabilityPlatform,
-  LogQueryParams,
+  LogSearchInput,
   LogsWithPagination,
-  TraceQueryParams,
+  TraceSearchInput,
   TracesWithPagination,
 } from "../../renderer/src/types/index.js";
 import { registerHandler } from "./register-util.js";
@@ -19,7 +19,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
   // Fetch logs based on query parameters
   registerHandler(
     "observability:fetch-logs",
-    async (_event: any, params: LogQueryParams): Promise<LogsWithPagination> => {
+    async (_event: any, params: LogSearchInput): Promise<LogsWithPagination> => {
       try {
         const observabilityCfg = await observabilityCfgStore.getValues();
         const platform = getObservabilityPlatform(observabilityCfg);
@@ -71,7 +71,7 @@ export function setupObservabilityHandlers(observabilityCfgStore: ObservabilityC
   // Fetch traces based on query parameters
   registerHandler(
     "observability:fetch-traces",
-    async (_event: any, params: TraceQueryParams): Promise<TracesWithPagination> => {
+    async (_event: any, params: TraceSearchInput): Promise<TracesWithPagination> => {
       try {
         const observabilityCfg = await observabilityCfgStore.getValues();
         const platform = getObservabilityPlatform(observabilityCfg);

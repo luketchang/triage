@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { AssistantMessage, UserMessage } from "../renderer/src/types/index.js";
+import {
+  AgentStreamUpdate,
+  AssistantMessage,
+  ChatMessage,
+  UserMessage,
+} from "../renderer/src/types/index.js";
 
 // Store the environment values we're exposing for logging
 const tracesEnabled = process.env.TRACES_ENABLED === "true";

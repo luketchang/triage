@@ -6,9 +6,9 @@ import {
   CodebaseOverview,
   FacetData,
   Log,
-  LogQueryParams,
+  LogSearchInput,
   LogsWithPagination,
-  TraceQueryParams,
+  TraceSearchInput,
   TracesWithPagination,
 } from "./types/index.js";
 
@@ -236,7 +236,7 @@ The primary issue appears to be in the authentication middleware where token val
         start: new Date(Date.now() - 86400000).toISOString(),
         end: new Date().toISOString(),
         limit: 100,
-        pageCursor: null,
+        pageCursor: undefined,
         type: "logSearchInput",
       },
       {
@@ -246,7 +246,7 @@ The primary issue appears to be in the authentication middleware where token val
         start: new Date(Date.now() - 86400000).toISOString(),
         end: new Date().toISOString(),
         limit: 100,
-        pageCursor: null,
+        pageCursor: undefined,
         type: "logSearchInput",
       },
       {
@@ -256,7 +256,7 @@ The primary issue appears to be in the authentication middleware where token val
         start: new Date(Date.now() - 86400000).toISOString(),
         end: new Date().toISOString(),
         limit: 100,
-        pageCursor: null,
+        pageCursor: undefined,
         type: "logSearchInput",
       },
       {
@@ -266,7 +266,7 @@ The primary issue appears to be in the authentication middleware where token val
         start: new Date(Date.now() - 86400000).toISOString(),
         end: new Date().toISOString(),
         limit: 100,
-        pageCursor: null,
+        pageCursor: undefined,
         type: "logSearchInput",
       },
     ];
@@ -296,23 +296,10 @@ The primary issue appears to be in the authentication middleware where token val
       },
     ];
 
-    // Create step objects with the correct type structure
-    const logPostprocessingStep = {
-      type: "logPostprocessing" as const,
-      timestamp: new Date(),
-      facts: logFacts,
-    };
-
-    const codePostprocessingStep = {
-      type: "codePostprocessing" as const,
-      timestamp: new Date(),
-      facts: codeFacts,
-    };
-
     return {
       role: "assistant",
       response: responseContent,
-      steps: [logPostprocessingStep, codePostprocessingStep],
+      steps: [],
       error: null,
     };
   },
@@ -342,7 +329,7 @@ The primary issue appears to be in the authentication middleware where token val
   /**
    * Fetch logs based on query parameters
    */
-  fetchLogs: async (params: LogQueryParams): Promise<LogsWithPagination> => {
+  fetchLogs: async (params: LogSearchInput): Promise<LogsWithPagination> => {
     console.info("Mock fetchLogs called with:", params);
 
     // Simulate processing time
@@ -487,7 +474,7 @@ The primary issue appears to be in the authentication middleware where token val
   /**
    * Fetch traces based on query parameters
    */
-  fetchTraces: async (params: TraceQueryParams): Promise<TracesWithPagination> => {
+  fetchTraces: async (params: TraceSearchInput): Promise<TracesWithPagination> => {
     console.info("Mock fetchTraces called with:", params);
 
     // Simulate processing time

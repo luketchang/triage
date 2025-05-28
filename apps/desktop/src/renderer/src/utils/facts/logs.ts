@@ -1,18 +1,18 @@
-import { LogPostprocessingFact, LogSearchInputCore } from "../../types/index.js"; // adjust path as needed
+import { LogPostprocessingFact, LogSearchInput } from "../../types/index.js"; // adjust path as needed
 
 /**
- * Converts a LogSearchInputCore or LogPostprocessingFact into a Datadog log viewer URL
+ * Converts a LogSearchInput or LogPostprocessingFact into a Datadog log viewer URL
  */
 export function logSearchInputToDatadogLogsViewUrl(
-  input: LogSearchInputCore | LogPostprocessingFact
+  input: LogSearchInput | LogPostprocessingFact
 ): string {
-  const core: LogSearchInputCore = {
+  const core: LogSearchInput = {
     type: "logSearchInput",
     query: input.query,
     start: input.start,
     end: input.end,
     limit: input.limit,
-    pageCursor: null,
+    pageCursor: undefined,
   };
 
   const fromTs = new Date(core.start).getTime();

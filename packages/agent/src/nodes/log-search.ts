@@ -1,21 +1,28 @@
 import { isAbortError, logger, timer } from "@triage/common";
 import { ObservabilityPlatform } from "@triage/observability";
-import { generateText, LanguageModelV1 } from "ai";
+import { LanguageModelV1, streamText } from "ai";
+import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { LogSearchStep, PipelineStateManager, StepsType } from "../pipeline/state";
+import { LogSearchStep, LogSearchToolCallWithResult, StepsType } from "../pipeline/state";
+import { PipelineStateManager } from "../pipeline/state-manager";
 import { handleLogSearchRequest } from "../tools";
 import { LogSearchInput, logSearchInputToolSchema, TaskComplete } from "../types";
-
-import { ensureSingleToolCall, formatFacetValues, formatLogSearchSteps } from "./utils";
+import {
+  ensureSingleToolCall,
+  formatFacetValues,
+  formatLogSearchToolCallsWithResults,
+} from "../utils";
 
 export interface LogSearchAgentResponse {
-  type: "logSearchAgentResponse";
   newLogSearchSteps: LogSearchStep[];
 }
 
-export type LogSearchResponse = LogSearchInput | TaskComplete;
+export interface LogSearchResponse {
+  reasoning: string;
+  actions: LogSearchInput[] | TaskComplete;
+}
 
 const MAX_ITERS = 12;
 
@@ -25,19 +32,20 @@ You are an expert AI assistant that helps engineers debug production issues by s
 
 function createLogSearchPrompt(params: {
   query: string;
+  timezone: string;
   logRequest: string;
-  previousLogSearchSteps: LogSearchStep[];
   platformSpecificInstructions: string;
-  lastLogSearchStep?: LogSearchStep;
+  previousLogSearchToolCallsWithResults: LogSearchToolCallWithResult[];
+  lastLogSearchToolCallWithResult?: LogSearchToolCallWithResult;
   logLabelsMap: Map<string, string[]>;
   remainingQueries: number;
   codebaseOverview: string;
 }): string {
-  const currentTime = new Date().toISOString();
+  const currentTime = DateTime.now().setZone(params.timezone).toISO();
 
   // Format the previous log query result for display
-  const formattedLastLogSearchStep = params.lastLogSearchStep
-    ? formatLogSearchSteps([params.lastLogSearchStep])
+  const formattedLastLogSearchStep = params.lastLogSearchToolCallWithResult
+    ? formatLogSearchToolCallsWithResults([params.lastLogSearchToolCallWithResult])
     : "";
 
   // TODO: consider removing the line about removing all filters
@@ -66,14 +74,16 @@ Given all available log labels, a user query about the issue/event, and previous
 - Look at the context previously gathered to see what logs you have already fetched and what queries you've tried, DO NOT repeat past queries.
 - DO NOT query the same services multiple times with slightly different configurations - this wastes iterations and provides redundant information.
 - If you're not finding any logs with specific error keywords, switch to service-only queries to get a system overview first.
+- Output your reasoning for each tool call outside the tool calls and explain where you are exploring and where you will likely explore next. Use 3-5 sentences max.
+
 
 <remaining_queries>
 ${params.remainingQueries}
 </remaining_queries>
 
-<current_time>
+<current_time_in_user_local_timezone>
 ${currentTime}
-</current_time>
+</current_time_in_user_local_timezone>
 
 <query>
 ${params.query}
@@ -92,7 +102,7 @@ ${formattedLastLogSearchStep}
 </previous_log_query_result>
 
 <log_results_history>
-${formatLogSearchSteps(params.previousLogSearchSteps)}
+${formatLogSearchToolCallsWithResults(params.previousLogSearchToolCallsWithResults)}
 </log_results_history>
 
 <system_overview>
@@ -105,22 +115,27 @@ class LogSearch {
   private llmClient: LanguageModelV1;
   private observabilityPlatform: ObservabilityPlatform;
   private config: Readonly<TriagePipelineConfig>;
+  private state: PipelineStateManager;
 
   constructor(
     llmClient: LanguageModelV1,
     observabilityPlatform: ObservabilityPlatform,
-    config: TriagePipelineConfig
+    config: TriagePipelineConfig,
+    state: PipelineStateManager
   ) {
     this.llmClient = llmClient;
     this.observabilityPlatform = observabilityPlatform;
     this.config = config;
+    this.state = state;
   }
 
   async invoke(params: {
+    logSearchId: string;
     query: string;
+    timezone: string;
     logRequest: string;
-    previousLogSearchSteps: LogSearchStep[];
-    lastLogSearchStep?: LogSearchStep;
+    previousLogSearchToolCallsWithResults: LogSearchToolCallWithResult[];
+    lastLogSearchToolCallWithResult?: LogSearchToolCallWithResult;
     logLabelsMap: Map<string, string[]>;
     remainingQueries: number;
     codebaseOverview: string;
@@ -131,7 +146,7 @@ class LogSearch {
     });
 
     try {
-      const { toolCalls, text } = await generateText({
+      const { toolCalls, textStream } = streamText({
         model: this.llmClient,
         system: SYSTEM_PROMPT,
         prompt: prompt,
@@ -142,21 +157,39 @@ class LogSearch {
         abortSignal: this.config.abortSignal,
       });
 
+      let text = "";
+      for await (const chunk of textStream) {
+        this.state.addStreamingUpdate("logSearch", params.logSearchId, chunk);
+        text += chunk;
+      }
+
+      logger.info(`Log search reasoning:\n${text}`);
+
+      const finalizedToolCalls = await toolCalls;
+
       // End loop if no tool calls returned, similar to Reasoner
-      if (!toolCalls || toolCalls.length === 0) {
+      if (!finalizedToolCalls || finalizedToolCalls.length === 0) {
         return {
-          type: "taskComplete",
           reasoning: text,
-          summary: "Log search task complete",
+          actions: {
+            type: "taskComplete",
+            reasoning: text,
+            summary: "Log search task complete",
+          },
         };
       }
 
-      const toolCall = ensureSingleToolCall(toolCalls);
+      const toolCall = ensureSingleToolCall(finalizedToolCalls);
 
       if (toolCall.toolName === "logSearchInput") {
         return {
-          type: "logSearchInput",
-          ...toolCall.args,
+          reasoning: text,
+          actions: [
+            {
+              type: "logSearchInput",
+              ...toolCall.args,
+            },
+          ],
         };
       } else {
         throw new Error(`Unexpected tool name: ${toolCall.toolName}`);
@@ -171,14 +204,17 @@ class LogSearch {
       logger.error("Error generating log search query:", error);
       // TODO: revisit fallback
       return {
-        type: "logSearchInput",
-        start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        end: new Date().toISOString(),
-        query: "service:orders OR service:payments OR service:tickets OR service:expiration",
-        limit: 500,
-        pageCursor: null,
-        reasoning:
-          "Failed to generate query with LLM. Using fallback query to get a broad view of microservices.",
+        reasoning: "Error generating log search query",
+        actions: [
+          {
+            type: "logSearchInput",
+            start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            end: new Date().toISOString(),
+            query: "service:orders OR service:payments OR service:tickets OR service:expiration",
+            limit: 500,
+            pageCursor: undefined,
+          },
+        ],
       };
     }
   }
@@ -195,88 +231,92 @@ export class LogSearchAgent {
     this.logSearch = new LogSearch(
       this.config.fastClient,
       this.config.observabilityPlatform,
-      this.config
+      this.config,
+      state
     );
   }
 
   @timer
   async invoke(params: { logRequest: string; maxIters?: number }): Promise<LogSearchAgentResponse> {
     logger.info("\n\n" + "=".repeat(25) + " Log Search " + "=".repeat(25));
-    const logSearchId = uuidv4();
-    this.state.recordHighLevelStep("logSearch", logSearchId);
 
     let response: LogSearchResponse | null = null;
     const maxIters = params.maxIters || MAX_ITERS;
     let currentIter = 0;
     let newLogSearchSteps: LogSearchStep[] = [];
 
-    while ((!response || response.type !== "taskComplete") && currentIter < maxIters) {
-      const previousLogSearchSteps = this.state.getLogSearchSteps(StepsType.BOTH);
-      let lastLogSearchStep: LogSearchStep | undefined = undefined;
-      if (previousLogSearchSteps.length > 0) {
-        lastLogSearchStep = previousLogSearchSteps[previousLogSearchSteps.length - 1];
+    while ((!response || Array.isArray(response.actions)) && currentIter < maxIters) {
+      const previousLogSearchToolCallsWithResults = this.state.getLogSearchToolCallsWithResults(
+        StepsType.BOTH
+      );
+      let lastLogSearchToolCallWithResult: LogSearchToolCallWithResult | undefined = undefined;
+      if (previousLogSearchToolCallsWithResults.length > 0) {
+        lastLogSearchToolCallWithResult =
+          previousLogSearchToolCallsWithResults[previousLogSearchToolCallsWithResults.length - 1];
       }
 
+      // TODO: should enable multiple log searches at once
+      const logSearchId = uuidv4();
       response = await this.logSearch.invoke({
+        logSearchId,
         query: this.config.query,
+        timezone: this.config.timezone,
         logRequest: params.logRequest,
         logLabelsMap: this.config.logLabelsMap,
-        previousLogSearchSteps,
-        lastLogSearchStep,
+        previousLogSearchToolCallsWithResults,
+        lastLogSearchToolCallWithResult,
         remainingQueries: maxIters - currentIter,
         codebaseOverview: this.config.codebaseOverview,
       });
 
       currentIter++;
 
-      if (response.type === "logSearchInput") {
+      if (Array.isArray(response.actions)) {
         logger.info(
-          `Searching logs with query: ${response.query} from ${response.start} to ${response.end}`
+          `Searching logs with query: ${response.actions[0]!.query} from ${response.actions[0]!.start} to ${response.actions[0]!.end}`
         );
+
+        // TODO: convert this into loop when we have multiple tool calls output
+        let toolCallsWithResults: LogSearchToolCallWithResult[] = [];
 
         logger.info("Fetching logs from observability platform...");
         const logContext = await handleLogSearchRequest(
-          response,
+          response.actions[0]!,
           this.config.observabilityPlatform
         );
 
-        // TODO: centralize the conversion from tool result + toolcall to step
-        let step: LogSearchStep;
-        if (logContext.type === "error") {
-          step = {
-            type: "logSearch",
-            timestamp: new Date(),
-            input: response,
-            results: logContext.error,
-          };
-        } else {
-          step = {
-            type: "logSearch",
-            timestamp: new Date(),
-            input: response,
-            results: logContext,
-          };
-        }
-
-        newLogSearchSteps.push(step);
-        lastLogSearchStep = step;
-        this.state.addIntermediateStep(step, logSearchId);
-
-        const lastLogSearchResultsFormatted = formatLogSearchSteps([step]);
+        const lastLogSearchResultsFormatted =
+          formatLogSearchToolCallsWithResults(toolCallsWithResults);
         logger.info(`Log search results:\n${lastLogSearchResultsFormatted}`);
+
+        toolCallsWithResults.push({
+          type: "logSearch",
+          timestamp: new Date(),
+          input: response.actions[0]!,
+          output: logContext,
+        });
+
+        const logSearchStep: LogSearchStep = {
+          id: logSearchId,
+          type: "logSearch",
+          timestamp: new Date(),
+          reasoning: response.reasoning,
+          data: toolCallsWithResults,
+        };
+        newLogSearchSteps.push(logSearchStep);
+        this.state.addUpdate(logSearchStep);
       } else {
         logger.info("Log search complete");
       }
     }
 
-    if (currentIter >= maxIters && (!response || response.type !== "taskComplete")) {
+    if (currentIter >= maxIters && (!response || Array.isArray(response.actions))) {
       logger.info(
         `Log search reached maximum iterations (${maxIters}). Completing search forcibly.`
       );
     }
 
     return {
-      type: "logSearchAgentResponse",
       newLogSearchSteps,
     };
   }

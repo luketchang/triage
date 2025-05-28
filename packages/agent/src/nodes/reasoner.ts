@@ -1,11 +1,12 @@
 import { logger, timer } from "@triage/common";
 import { streamText } from "ai";
+import { v4 as uuidv4 } from "uuid";
 
 import { TriagePipelineConfig } from "../pipeline";
-import { PipelineStateManager, ReasoningStep } from "../pipeline/state";
+import { ReasoningStep } from "../pipeline/state";
+import { PipelineStateManager } from "../pipeline/state-manager";
 import { codeRequestToolSchema, logRequestToolSchema, RequestSubAgentCalls } from "../types";
-
-import { formatFacetValues } from "./utils";
+import { formatFacetValues } from "../utils";
 type ReasoningResponse = ReasoningStep | RequestSubAgentCalls;
 
 export const createPrompt = ({
@@ -84,6 +85,9 @@ export class Reasoner {
   async invoke(params: { parentId: string; maxSteps?: number }): Promise<ReasoningResponse> {
     logger.info(`Reasoning about query: ${this.config.query}`);
 
+    // HACK: stream single reasoning update just to start the step in the UI
+    this.state.addStreamingUpdate("reasoning", params.parentId, "");
+
     // Inject system prompt into history
     const prompt = createPrompt({
       ...params,
@@ -114,7 +118,7 @@ export class Reasoner {
         if (part.type === "text-delta") {
           text += part.textDelta;
           // If this is root cause analysis (no tool calls), stream text as it's generated
-          this.state.addStreamingStep("reasoning", part.textDelta, params.parentId);
+          this.state.addStreamingUpdate("reasoning", params.parentId, part.textDelta);
         } else if (part.type === "reasoning") {
           process.stdout.write(`${part.textDelta}\n`);
         }
@@ -133,11 +137,11 @@ export class Reasoner {
     let output: ReasoningResponse;
     if (finalizedToolCalls.length === 0) {
       output = {
+        id: uuidv4(),
         type: "reasoning",
         timestamp: new Date(),
-        content: text,
+        data: text,
       };
-      this.state.addIntermediateStep(output, params.parentId);
     } else {
       output = {
         type: "subAgentCalls",

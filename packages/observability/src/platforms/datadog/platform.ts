@@ -50,6 +50,7 @@ Use Datadog Log Search Syntax to search for logs.
 ## Rules
 - Excluding the service attribute, when using attribute filters, use *:"<keyword>" instead of a specific attribute like <attribute>:"<keyword>"
 - If you are going to use an attribute filter, always use the * key. Attribute filters with specific words for the key (first term before the colon) are NOT allowed.
+- If you use attribute filters, you must always use a colon (:) between the * and the keyword (i.e. *:"<keyword>")
 
 ## Best practices (examples):
 - GOOD: (service:orders OR service:payments) AND (*:"67ec59004bb8930018a81adc" OR *:"67ec59004bb8930018a81def")
@@ -61,6 +62,7 @@ Use Datadog Log Search Syntax to search for logs.
 - BAD (wrong tag for log severity, should be "status" not "level"): service:orders AND level:error
 - BAD (missing quotes around keyword terms): service:orders *:No matching document *:duplicate key
 - BAD (uses specific attribute tag instead of using *): service:orders item:"<keyword>"
+- BAD (missing colon for attribute filter): service:orders *"<keyword>"
 
 ## Pagination
 - Page cursors are a feature in Datadog log and span search that allows you to paginate through results.

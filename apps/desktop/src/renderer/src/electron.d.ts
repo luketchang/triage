@@ -12,9 +12,9 @@ import {
   CodebaseOverview,
   CodebaseOverviewProgressUpdate,
   FacetData,
-  LogQueryParams,
+  LogSearchInput,
   LogsWithPagination,
-  TraceQueryParams,
+  TraceSearchInput,
   TracesWithPagination,
   UserMessage,
 } from "./types";
@@ -82,7 +82,7 @@ declare global {
        * @param params Query parameters for fetching logs
        * @returns Promise with the fetched logs
        */
-      fetchLogs: (params: LogQueryParams) => Promise<LogsWithPagination>;
+      fetchLogs: (params: LogSearchInput) => Promise<LogsWithPagination>;
 
       /**
        * Get log facet values for a given time range
@@ -97,7 +97,7 @@ declare global {
        * @param params Query parameters for fetching traces
        * @returns Promise with the fetched traces
        */
-      fetchTraces: (params: TraceQueryParams) => Promise<TracesWithPagination>;
+      fetchTraces: (params: TraceSearchInput) => Promise<TracesWithPagination>;
 
       /**
        * Get span facet values for a given time range
