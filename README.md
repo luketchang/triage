@@ -2,6 +2,10 @@
 
 Triage is AI developer tool for investigating production issues. It searches and reasons through your telemetry data and code, analyzing root cause and surfacing relevant evidence.
 
+## Demo
+
+![Demo](./demo.gif)
+
 ## System Architecture
 
 The system consists of two main components:
